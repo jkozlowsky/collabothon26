@@ -1,0 +1,34 @@
+{
+  "volatility": {
+    "term": "Volatility",
+    "definition": "How much and how fast a price swings up and down. High volatility means big jumps in both directions."
+  },
+  "drawdown": {
+    "term": "Drawdown",
+    "definition": "A fall from a previous high, in percent. After a −50% drawdown the price must rise +100% to get back."
+  },
+  "leverage": {
+    "term": "Leverage",
+    "definition": "Investing with borrowed money. It multiplies gains and losses on your own money, and the loan stays even when the investment falls."
+  },
+  "risk-capacity": {
+    "term": "Risk capacity",
+    "definition": "How much money you could lose without it hurting your daily life or your plans."
+  },
+  "leading-room": {
+    "term": "Leading room (리딩방)",
+    "definition": "A Korean name for paid chat rooms that sell “sure” stock tips. Regulators warn about them because many are used to hype stocks."
+  },
+  "pump-and-dump": {
+    "term": "Pump and dump",
+    "definition": "Someone buys a stock cheaply, hypes it so others buy and the price rises, then sells. When the buying stops, the price crashes."
+  },
+  "diversification": {
+    "term": "Diversification",
+    "definition": "Spreading money over many different investments, so that one failure is only a small part of what you own."
+  },
+  "concentration-risk": {
+    "term": "Concentration risk",
+    "definition": "The risk of having a large share of your money in one place: one company, one sector or one bet."
+  }
+}

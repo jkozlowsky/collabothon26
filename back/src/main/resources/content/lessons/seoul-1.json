@@ -1,0 +1,114 @@
+{
+  "id": "seoul-1",
+  "story": "seoul",
+  "title": "The chat that always knows",
+  "place": "Yeouido · office chat",
+  "minutes": 4,
+  "xp": 50,
+  "concepts": ["volatility", "drawdown"],
+  "steps": [
+    {
+      "type": "chat",
+      "id": "c1",
+      "title": "Team chat · 4 people",
+      "messages": [
+        { "from": "Min-jun", "text": "Did you see? XYZ is up 40% this week 🚀" },
+        { "from": "Soo-ah", "text": "My cousin's leading room says it doubles by June" },
+        { "from": "Min-jun", "text": "I'm putting my whole bonus in" },
+        { "from": "Ji-woo", "me": true, "text": "I have ₩10M saved… should I?" },
+        { "from": "Soo-ah", "text": "What's there to lose? It only goes up 😎" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t1",
+      "kicker": "Meet Ji-woo",
+      "title": "27 · office worker in Seoul",
+      "body": "Ji-woo saved **₩10,000,000** (about €6,800) over three years. Her chat is full of winners. Before she decides, let's see what a big price [[volatility|swing]] really does to money."
+    },
+    {
+      "type": "predict",
+      "id": "p1",
+      "concepts": ["volatility"],
+      "prompt": "XYZ rose 40% in one week. The next week it fell 40%. Where is Ji-woo's money compared with the start?",
+      "input": { "kind": "slider", "min": -50, "max": 50, "step": 1, "unit": "%" },
+      "answer": -16,
+      "reveal": "₩10M → ₩14M → ₩8.4M. The 40% drop is taken from a bigger amount than the 40% rise was, so the same percent up and down never lands back at zero."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s1",
+      "concepts": ["drawdown"],
+      "prompt": "After a loss, how much must the price rise just to get back to the start? Find the loss that needs a +100% gain.",
+      "model": "drawdownRecovery",
+      "params": {
+        "loss": { "label": "Loss", "min": -80, "max": 0, "step": 5, "value": -10, "unit": "%" }
+      },
+      "output": { "label": "Gain needed to get back", "unit": "%" },
+      "goal": { "condition": { "of": "output", "min": 100, "max": 100 }, "hint": "Think of losing half the money." }
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "title": "Losses weigh more than gains",
+      "body": "−10% needs +11% to recover. −50% needs +100%. −80% needs +400%. That is the maths of a [[drawdown]]: the deeper the fall, the harder the climb back."
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["volatility"],
+      "prompt": "Why doesn't +40% followed by −40% bring Ji-woo back to zero?",
+      "options": [
+        "The −40% is taken from a bigger amount than the +40% was",
+        "The bank charges a fee in between",
+        "Prices always fall faster than they rise"
+      ],
+      "correctIndex": 0,
+      "explanation": "₩10M × 1.4 × 0.6 = ₩8.4M. The second percent applies to the new, larger amount, so the same-sized drop removes more won."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "concepts": ["drawdown"],
+      "prompt": "XYZ fell 50%. What rise does it need to get back to its old price?",
+      "options": ["+50%", "+100%", "+25%"],
+      "correctIndex": 1,
+      "explanation": "Half the money has to double to be whole again: ₩5M × 2 = ₩10M."
+    }
+  ],
+  "variants": {
+    "level:beginner": {
+      "s1": { "goal": { "hint": "Try −50%: the money is cut in half." } }
+    },
+    "lang:plain": {
+      "t1": {
+        "body": "Ji-woo saved **₩10,000,000** (about €6,800) in three years. Her friends say they are winning a lot. Let's see what happens to money when a price goes up and down fast. This is called [[volatility]]."
+      },
+      "p1": {
+        "prompt": "A share price went up 40%. A week later it went down 40%. Is Ji-woo back where she started? Guess her result.",
+        "reveal": "She is at −16%. ₩10M became ₩14M, then ₩8.4M. The second 40% was taken from more money, so it took away more."
+      },
+      "s1": {
+        "prompt": "If you lose money, the price must go up more than it went down to get it back. Move the slider. Find the loss that needs +100% to get back.",
+        "output": { "label": "Rise needed to get back" }
+      },
+      "t2": {
+        "title": "Losing is harder to fix than winning",
+        "body": "Lose 10%, and you need +11% to get back. Lose half, and you need to double your money. The bigger the fall (a [[drawdown]]), the harder it is to get back."
+      },
+      "q1": {
+        "prompt": "Up 40%, then down 40%. Why is Ji-woo not back at the start?",
+        "options": [
+          "The 40% loss is taken from more money than the 40% gain",
+          "The bank takes a fee",
+          "Prices always go down faster"
+        ],
+        "explanation": "₩10M went up to ₩14M. 40% of ₩14M is more than 40% of ₩10M. So she ends with ₩8.4M."
+      },
+      "q2": {
+        "prompt": "A price fell by half. How much must it go up to get back?",
+        "explanation": "Half must double to be whole again: ₩5M × 2 = ₩10M."
+      }
+    }
+  }
+}

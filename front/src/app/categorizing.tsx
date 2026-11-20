@@ -35,7 +35,7 @@ export default function CategorizingScreen() {
   const { state: bank } = useBank();
   // Computed once per visit, so the facts sent are exactly the ones the card previewed.
   const [facts] = useState(() => factsFrom(bank));
-  const [labels] = useState(() => factLabels(facts));
+  const labels = factLabels(facts);
   const [check, setCheck] = useState<'pending' | 'ask' | 'failed'>('pending');
   const [checkAttempt, setCheckAttempt] = useState(0);
   const [phase, setPhase] = useState<Phase>('consent');

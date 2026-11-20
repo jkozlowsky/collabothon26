@@ -83,8 +83,6 @@ public enum Area {
 					lines.add(Rules.holdsLine(f));
 				}
 			}
-			case RETIREMENT -> {
-			}
 		}
 		return lines;
 	}

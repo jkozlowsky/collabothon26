@@ -73,7 +73,7 @@ Categorization = {
 - **lifeStage**: from the onboarding answer only: `starting-out` → student, `building` → family, `settled` → established, `later-life` → pre-retirement; skipped → null.
 - **lessonVariant**: novice → `beginner` + `plain`; intermediate → `beginner` + `standard`; advanced → `advanced` + `standard`. `persona` = `lifeStage`, except `established` and `null` → `null` (F5 base content). 404 from `GET .../categorization` → F5 base content.
 - **explanation**: `role` and `focusAreas`. `focusAreas` probabilities cover all 5 areas. Fallback entries have `probabilities: {}` and the same `because` lines.
-- **Storage**: `V4__categorization.sql` (main has V1–V3), table `categorization (user_id VARCHAR(64) PRIMARY KEY REFERENCES user_profile (user_id) ON DELETE CASCADE, data JSONB NOT NULL)`, written by upsert. A trigger deletes it whenever `user_profile.onboarding_completed_at` changes, so both the demo reset (`DELETE /api/users/{id}/profile/onboarding`) and new onboarding answers start a fresh categorisation.
+- **Storage**: `V5__categorization.sql` (main has V1–V4), table `categorization (user_id VARCHAR(64) PRIMARY KEY REFERENCES user_profile (user_id) ON DELETE CASCADE, data JSONB NOT NULL)`, written by upsert. A trigger deletes it whenever `user_profile.onboarding_completed_at` changes, so both the demo reset (`DELETE /api/users/{id}/profile/onboarding`) and new onboarding answers start a fresh categorisation.
 
 ## Reference
 

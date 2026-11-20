@@ -6,10 +6,11 @@ import { Tappable } from '@/components/onboarding/ui';
 import { colors, radii, spacing, type } from '@/constants/theme';
 import type { FqTeaser } from '@/types/bank';
 
-type Props = { teaser: FqTeaser; onPress: () => void; testID?: string };
+/** `streak`: days in a row, shown after the meta line when above 0. */
+type Props = { teaser: FqTeaser; streak?: number; onPress: () => void; testID?: string };
 
 /** The yellow "Finance Quest" card that sits inside the bank: the way into a lesson that fits this tab. */
-export function FqTeaserCard({ teaser, onPress, testID }: Props) {
+export function FqTeaserCard({ teaser, streak = 0, onPress, testID }: Props) {
   return (
     <Tappable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Finance Quest: ${teaser.title}`} testID={testID} pressedScale={0.98} style={styles.card}>
       <View style={styles.globe}>
@@ -21,7 +22,7 @@ export function FqTeaserCard({ teaser, onPress, testID }: Props) {
           {teaser.title}
         </Text>
         <Text style={styles.meta} numberOfLines={1}>
-          {teaser.meta}
+          {streak > 0 ? `${teaser.meta} · ${streak}-day streak` : teaser.meta}
         </Text>
         <View style={styles.track}>
           <View style={[styles.fill, { width: `${Math.round(teaser.progress * 100)}%` }]} />

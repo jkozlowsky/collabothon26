@@ -122,6 +122,7 @@ test('plays a lesson: glossary sheet, plain toggle, a missed quiz comes back, so
     ],
     scenarioChoices: {},
     lang: 'plain',
+    completedOn: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
   });
   expect(screen.getByText('↻ Drawdown')).toBeOnTheScreen();
 });

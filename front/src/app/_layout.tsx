@@ -11,6 +11,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { colors, elevation, fonts } from '@/constants/theme';
+import { AccountProvider } from '@/hooks/useAccount';
 import { BankProvider } from '@/hooks/useBank';
 import { OnboardingProvider, useOnboarding } from '@/hooks/useOnboarding';
 import { ToastProvider } from '@/hooks/useToast';
@@ -35,6 +36,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.page}>
       <View style={styles.phone}>
         <OnboardingProvider>
+          <AccountProvider>
           <BankProvider>
             <ToastProvider>
               <TransferSheetProvider>
@@ -42,6 +44,7 @@ export default function RootLayout() {
               </TransferSheetProvider>
             </ToastProvider>
           </BankProvider>
+          </AccountProvider>
         </OnboardingProvider>
       </View>
       <StatusBar style="dark" />

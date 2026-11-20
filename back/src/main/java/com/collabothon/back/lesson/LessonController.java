@@ -1,5 +1,7 @@
 package com.collabothon.back.lesson;
 
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -150,6 +152,7 @@ class LessonController {
 
 		int xp = lesson.path("xp").asInt();
 		boolean first = progress.complete(userId, id, xp);
+		progress.recordActivity(userId, req.completedOn() == null ? LocalDate.now(ZoneOffset.UTC) : req.completedOn());
 		return new ResultResponse(first ? xp : 0, first, progress.totalXp(userId), next(lesson));
 	}
 
@@ -207,7 +210,8 @@ class LessonController {
 	record StepResult(@NotBlank String stepId, boolean correctFirstTry) {
 	}
 
-	record ResultRequest(@NotNull List<@Valid StepResult> steps, Map<String, Integer> scenarioChoices, String lang) {
+	record ResultRequest(@NotNull List<@Valid StepResult> steps, Map<String, Integer> scenarioChoices, String lang,
+			LocalDate completedOn) {
 	}
 
 	record ResultResponse(int xpAwarded, boolean firstCompletion, int totalXp, String next) {

@@ -1,5 +1,6 @@
 package com.collabothon.back.lesson;
 
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -32,6 +33,11 @@ class LessonProgress {
 		return jdbc.sql("""
 				INSERT INTO lesson_completion (user_id, lesson_id, xp) VALUES (?, ?, ?)
 				ON CONFLICT (user_id, lesson_id) DO NOTHING""").params(userId, lessonId, xp).update() == 1;
+	}
+
+	void recordActivity(String userId, LocalDate date) {
+		jdbc.sql("INSERT INTO lesson_activity (user_id, completed_on) VALUES (?, ?) ON CONFLICT DO NOTHING")
+			.params(userId, date).update();
 	}
 
 	int totalXp(String userId) {

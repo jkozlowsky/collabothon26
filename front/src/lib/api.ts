@@ -8,17 +8,25 @@ import { Platform } from 'react-native';
  *    metro.config.js proxies /api/* from there to the backend on localhost:8080,
  *    so the same URL works on web, emulator and a physical phone.
  */
-function resolveApiUrl(): string {
+export function resolveApiUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL;
   if (fromEnv) return fromEnv.replace(/\/$/, '');
 
   if (Platform.OS === 'web') return window.location.origin;
 
   const metroHost = Constants.expoConfig?.hostUri;
-  return metroHost ? `http://${metroHost}` : 'http://localhost:8081';
+  if (!metroHost) return 'http://localhost:8081';
+
+  // Expo ngrok tunnels (*.exp.direct) terminate TLS; cleartext HTTP to remote domains
+  // is blocked on phones by Android Network Security Config and iOS ATS.
+  const isTunnel = metroHost.includes('exp.direct') || metroHost.includes('ngrok');
+  return `${isTunnel ? 'https' : 'http'}://${metroHost}`;
 }
 
 export const API_URL = resolveApiUrl();
+
+/** WebSocket base URL following API_URL's host and scheme (http -> ws, https -> wss). */
+export const WS_URL = API_URL.replace(/^http/, 'ws');
 
 export class ApiError extends Error {
   constructor(

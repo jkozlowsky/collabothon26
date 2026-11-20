@@ -59,6 +59,19 @@ test('app opens on the bank; the first Learn tap runs onboarding, skipping it la
   expect(savedOnboarding()).toEqual({ goals: [], skipped: true });
 });
 
+test('skip on the first screen lands on Learn; close goes back to the bank and saves nothing', async () => {
+  await openLearn();
+  await fireEvent.press(await screen.findByTestId('onboarding-close'));
+  expect(await screen.findByTestId('screen-overview')).toBeOnTheScreen();
+  expect(savedOnboarding()).toBeUndefined();
+
+  // Not saved, so the next Learn tap shows onboarding again.
+  await fireEvent.press(screen.getByTestId('nav-learn'));
+  await fireEvent.press(await screen.findByTestId('onboarding-skip-intro'));
+  expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
+  expect(savedOnboarding()).toEqual({ goals: [], skipped: true });
+});
+
 test('a user whose profile says onboarding is completed goes from the bank straight to Learn', async () => {
   stubBackend({ onboardingCompleted: true });
   await renderRouter(routes, { initialUrl: '/' });

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AsyncContent } from '@/components/AsyncContent';
 import { LessonPlayer } from '@/components/lesson/LessonPlayer';
 import { colors } from '@/constants/theme';
+import { localDate, useAccount } from '@/hooks/useAccount';
 import { useApi } from '@/hooks/useApi';
 import { api } from '@/lib/api';
 import { USER_ID } from '@/lib/user';
@@ -14,6 +15,7 @@ import type { Lang, Lesson, LessonResultRequest, LessonResultResponse } from '@/
 const user = encodeURIComponent(USER_ID);
 
 export default function LessonScreen() {
+  const { refreshStats } = useAccount();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [lang, setLang] = useState<Lang>('standard');
   const { data, loading, error, reload } = useApi<Lesson>(`/api/lessons/${id}?lang=${lang}&userId=${user}`);
@@ -37,12 +39,14 @@ export default function LessonScreen() {
           onClose={close}
           onNext={(next) => router.replace({ pathname: '/lesson/[id]', params: { id: next } })}
           onOpenGlossary={() => router.navigate('/glossary')}
-          saveResult={(result: LessonResultRequest) =>
-            api<LessonResultResponse>(`/api/lessons/${lesson.id}/result?userId=${user}`, {
+          saveResult={async (result: LessonResultRequest) => {
+            const saved = await api<LessonResultResponse>(`/api/lessons/${lesson.id}/result?userId=${user}`, {
               method: 'POST',
-              body: JSON.stringify(result),
-            })
-          }
+              body: JSON.stringify({ ...result, completedOn: localDate() }),
+            });
+            refreshStats();
+            return saved;
+          }}
         />
       ) : (
         <AsyncContent loading={loading} error={error} onRetry={reload}>

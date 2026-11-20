@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { CommerzbankLogo } from '@/components/bank/CommerzbankLogo';
 import { HeroBackground } from '@/components/bank/HeroCard';
 import { Tappable } from '@/components/onboarding/ui';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
@@ -22,7 +23,10 @@ export function BankCard({ card, onPress, width }: Props) {
     >
       {dark && <HeroBackground />}
       <View style={styles.top}>
-        <Text style={[styles.brand, { color: ink }]}>{card.brand}</Text>
+        {/* On the yellow card the yellow emblem would vanish, so it sits on a petrol tile there. */}
+        <View style={!dark && styles.logoTile}>
+          <CommerzbankLogo height={dark ? 26 : 20} />
+        </View>
         <Text style={[styles.kind, { color: ink }]}>{card.kind}</Text>
       </View>
       <View style={[styles.chip, !dark && styles.chipOnAccent]} />
@@ -39,7 +43,7 @@ const styles = StyleSheet.create({
   card: { height: 184, borderRadius: radii.card, padding: 18, overflow: 'hidden', justifyContent: 'space-between', ...elevation.mid },
   accent: { backgroundColor: colors.brandAccent },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  brand: type.titleCard,
+  logoTile: { backgroundColor: colors.brandPrimary, borderRadius: 8, padding: 4 },
   kind: type.overline,
   chip: { width: 36, height: 26, borderRadius: 6, backgroundColor: colors.cardChipGold },
   chipOnAccent: { backgroundColor: colors.cardChipOnAccent },

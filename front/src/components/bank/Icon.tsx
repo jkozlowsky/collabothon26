@@ -11,6 +11,8 @@ type Glyph = { set: 'feather'; name: ComponentProps<typeof Feather>['name'] } | 
 /** Figma uses 2px-stroke line icons; Feather matches them, Ionicons outline fills the few gaps. */
 const GLYPHS: Record<BankIconName, Glyph> = {
   home: { set: 'feather', name: 'home' },
+  edit: { set: 'feather', name: 'edit-2' },
+  refresh: { set: 'feather', name: 'rotate-ccw' },
   transfer: { set: 'ion', name: 'swap-horizontal' },
   percent: { set: 'feather', name: 'percent' },
   trending: { set: 'feather', name: 'trending-up' },

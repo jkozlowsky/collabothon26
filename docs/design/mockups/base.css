@@ -1,0 +1,47 @@
+/* Shared by a.html, b.html, c.html: kit tokens, phone frame, artboard labels.
+   Tokens: docs/design/finance-quest-kit.md */
+:root {
+  --primary: #002E3C; --primary-pressed: #001F29; --primary-soft: #E6EEF0;
+  --accent: #FFCC00; --accent-soft: #FFF4CC;
+  --canvas: #F5F7F7; --surface: #FFFFFF; --tint: #E3EDEF;
+  --border: #E1E6E8; --border-strong: #C9D2D6;
+  --text: #0F1E24; --muted: #5F6F76; --on-brand: #FFFFFF; --on-accent: #002E3C;
+  --success: #1E8A5E; --danger: #D64545;
+  --land: #CFE5DD; --land-edge: #9CC3B6; --ocean-light: #1B6F82;
+  --rose: #D9577A; --violet: #6E5AD6; --teal: #1E9AA8; --slate: #9AA5AB;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Inter, system-ui, sans-serif; background: #DCE3E5; color: var(--text);
+  -webkit-font-smoothing: antialiased; font-size: 13px; line-height: 18px; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-align: left; }
+button:focus-visible, label:focus-within { outline: 3px solid var(--ocean-light); outline-offset: 2px; }
+.i { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; }
+.i.sm { width: 16px; height: 16px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Canvas: artboards wrap on wide screens, stack in the index iframes */
+.board { display: flex; flex-wrap: wrap; justify-content: center; gap: 32px 40px; padding: 24px 20px 48px; }
+.dir-head { width: 100%; max-width: 1250px; height: 96px; }
+.dir-head h1 { font: 700 26px/32px Inter, sans-serif; letter-spacing: -0.02em; }
+.dir-head p { font: 400 15px/20px Inter, sans-serif; color: var(--muted); margin-top: 4px; max-width: 60ch; }
+.art { width: 390px; }
+.art figcaption { height: 28px; font: 600 12px/16px Inter, sans-serif; color: var(--text); }
+
+/* Phone: 390x844, status bar 44, home indicator in the bottom 34px safe area */
+.phone { width: 390px; height: 844px; border-radius: 44px; overflow: hidden; position: relative;
+  display: flex; flex-direction: column; background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border-strong), 0 16px 40px rgba(0, 46, 60, .14); }
+.status { height: 44px; flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px; font: 600 15px/20px Inter, sans-serif; }
+.status .batt { width: 26px; height: 12px; border: 1.5px solid currentColor; border-radius: 3px; position: relative; }
+.status .batt::after { content: ""; position: absolute; inset: 1.5px 6px 1.5px 1.5px; background: currentColor; border-radius: 1px; }
+.scroll { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; }
+.home-ind { position: absolute; bottom: 8px; left: 50%; width: 134px; height: 5px; margin-left: -67px;
+  border-radius: 3px; background: var(--text); pointer-events: none; }
+.home-ind.light { background: #FFFFFF; }
+.press { transition: transform 120ms var(--ease-out); }
+.press:active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) { .press:active { transform: none; } * { animation: none !important; } }
+.display, .h, .big, .dir-head p { text-wrap: balance; }

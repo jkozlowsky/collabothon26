@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direction A: Bank-native</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="base.css">
+<style>
+/* A Bank-native: canvas grey, white cards, list rows, petrol actions, yellow almost absent */
+.phone { background: var(--canvas); }
+.nav { height: 52px; flex: none; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 0 8px; }
+.nav h2 { font: 600 15px/20px Inter; text-align: center; }
+.icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 22px; color: var(--primary); }
+.progress { height: 4px; background: var(--tint); margin: 0 20px; border-radius: 2px; }
+.progress span { display: block; height: 100%; background: var(--primary); border-radius: 2px; }
+.content { padding: 12px 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+.step { font: 500 12px/16px Inter; color: var(--muted); }
+.h { font: 700 18px/24px Inter; }
+.body { color: var(--muted); }
+.sec { font: 700 18px/24px Inter; margin: 8px 0 -4px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.card-title { font: 600 12px/16px Inter; color: var(--muted); padding: 12px 16px 4px; }
+.row { min-height: 48px; display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
+.row + .row { border-top: 1px solid var(--border); }
+.row .t { flex: 1; min-width: 0; }
+.row .t b { display: block; font: 600 15px/20px Inter; }
+.row .t small { display: block; font: 400 12px/16px Inter; color: var(--muted); }
+.dense .row { min-height: 44px; padding: 6px 16px; }
+.dense .tile { width: 32px; height: 32px; border-radius: 8px; }
+.tile { width: 40px; height: 40px; border-radius: 10px; background: var(--primary-soft); color: var(--primary); display: grid; place-items: center; flex: none; }
+.foot { flex: none; padding: 12px 20px 34px; background: var(--surface); border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
+.btn { height: 48px; border-radius: 8px; background: var(--primary); color: var(--on-brand); font: 600 15px/20px Inter; display: grid; place-items: center; text-align: center; width: 100%; }
+.btn.text { background: transparent; color: var(--primary); }
+.btn.outline { background: var(--surface); color: var(--primary); border: 1px solid var(--border-strong); }
+.check-row { display: flex; gap: 12px; align-items: flex-start; min-height: 44px; padding: 4px 0 8px; cursor: pointer; }
+.box { width: 24px; height: 24px; border-radius: 6px; border: 2px solid var(--border-strong); flex: none; display: grid; place-items: center; color: #fff; }
+.box.on { background: var(--primary); border-color: var(--primary); }
+.radio { width: 24px; height: 24px; border-radius: 12px; border: 2px solid var(--border-strong); flex: none; }
+.radio.on { border: 7px solid var(--primary); }
+.opt { width: 100%; min-height: 56px; display: flex; align-items: center; gap: 12px; padding: 14px 16px; font: 500 15px/20px Inter; }
+.opt + .opt { border-top: 1px solid var(--border); }
+.opt.on { background: var(--primary-soft); }
+/* persona cards = Account Summary */
+.persona { width: 100%; display: block; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.persona.on { border: 2px solid var(--primary); padding: 13px 15px; }
+.p-head { display: flex; align-items: center; gap: 12px; }
+.avatar { width: 40px; height: 40px; border-radius: 20px; background: var(--primary-soft); color: var(--primary); font: 600 15px/20px Inter; display: grid; place-items: center; flex: none; }
+.p-head .t { flex: 1; }
+.p-head b { font: 600 15px/20px Inter; display: block; }
+.p-head small { color: var(--muted); font: 400 12px/16px Inter; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 10px; }
+.stats small { display: block; font: 400 12px/16px Inter; color: var(--muted); }
+.stats b { font: 600 15px/20px Inter; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 12px/16px Inter; color: var(--primary); background: var(--tint); border-radius: 6px; padding: 4px 8px; }
+.scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.scale button { height: 56px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border-strong); font: 600 18px/24px Inter; text-align: center; }
+.scale button.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.scale-labels { display: flex; justify-content: space-between; font: 500 12px/16px Inter; color: var(--muted); margin-top: 8px; }
+/* result */
+.summary { background: var(--primary); color: #fff; border-radius: 16px; padding: 16px; }
+.summary small { font: 500 12px/16px Inter; color: var(--land); }
+.summary .big { font: 700 26px/32px Inter; letter-spacing: -0.01em; margin: 2px 0 14px; }
+.src { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid rgba(255,255,255,.16); padding-top: 12px; font: 600 12px/16px Inter; }
+.src span { display: inline-flex; align-items: center; gap: 6px; }
+.src .i { color: var(--accent); }
+.src em { font-style: normal; color: var(--land); }
+.meter { display: flex; gap: 3px; }
+.meter i { width: 14px; height: 6px; border-radius: 3px; background: var(--tint); }
+.meter i.f { background: var(--primary); }
+.lvl { text-align: right; }
+.lvl b { display: block; font: 600 12px/16px Inter; margin-bottom: 4px; }
+.lvl .meter { justify-content: flex-end; }
+.dots { display: flex; gap: 6px; }
+.dots i { width: 12px; height: 12px; border-radius: 6px; border: 2px solid var(--primary); }
+.dots i.f { background: var(--primary); }
+.why { padding: 12px 16px; }
+.why + .why { border-top: 1px solid var(--border); }
+.why p { font: 500 13px/18px Inter; }
+.why small { display: block; margin-top: 4px; font: 400 12px/16px Inter; color: var(--muted); }
+.note { display: flex; gap: 8px; color: var(--muted); font: 400 12px/16px Inter; }
+.note .i { color: var(--muted); }
+.ok { display: inline-flex; align-items: center; gap: 4px; font: 600 12px/16px Inter; color: var(--primary); }
+.ok::before { content: ""; width: 8px; height: 8px; border-radius: 4px; background: var(--success); }
+/* analysing */
+.center { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 20px 80px; gap: 16px; }
+.spin { width: 56px; height: 56px; border-radius: 28px; border: 4px solid var(--tint); border-top-color: var(--primary); animation: spin 900ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.state { width: 24px; height: 24px; flex: none; display: grid; place-items: center; color: var(--success); }
+.state .mini { width: 18px; height: 18px; border-radius: 9px; border: 2px solid var(--tint); border-top-color: var(--primary); animation: spin 900ms linear infinite; }
+/* tab bar */
+.tabs { flex: none; height: 84px; background: var(--surface); border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, 1fr); padding-bottom: 34px; }
+.tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font: 500 11px/14px Inter; color: var(--muted); text-align: center; }
+.tab.on { color: var(--primary); font-weight: 600; }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 8px 20px 4px; }
+.topbar .avatar { background: var(--primary); color: #fff; }
+.topbar b { display: block; font: 700 18px/24px Inter; }
+.topbar small { color: var(--muted); font: 400 12px/16px Inter; }
+</style>
+</head>
+<body>
+<main class="board">
+<header class="dir-head">
+  <h1>A Bank-native</h1>
+  <p>Feels like a part of the bank app: account summary cards, quiet list rows, petrol for every action and yellow kept for the Jev mark.</p>
+</header>
+
+<!-- 1 Consent -->
+<figure class="art"><figcaption>1 Consent</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="nav"><span></span><h2>Data consent</h2><span></span></div>
+  <div class="scroll"><div class="content">
+    <div><p class="step">Step 1 of 4</p><p class="h">Tailor lessons to your finances</p></div>
+    <p class="body">With your consent, Finance Quest reads part of your bank data to choose lessons that match your situation.</p>
+    <div class="card dense">
+      <p class="card-title">Data we read</p>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#user"/></svg></span><span class="t"><b>Age</b></span></div>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#wallet"/></svg></span><span class="t"><b>Monthly income</b></span></div>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#safe"/></svg></span><span class="t"><b>Account balance</b></span></div>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#cart"/></svg></span><span class="t"><b>Monthly spending</b></span></div>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#briefcase"/></svg></span><span class="t"><b>Products you hold</b></span></div>
+    </div>
+    <div class="card dense">
+      <p class="card-title">How it's used</p>
+      <div class="row"><span class="t"><b>Purpose</b><small>Only to tailor your lessons.</small></span></div>
+      <div class="row"><span class="t"><b>Sent to TypeSafe AI</b><small>Your data and test answers go to TypeSafe AI, whose Jev model categorises your profile automatically.</small></span></div>
+      <div class="row"><span class="t"><b>Withdraw any time</b><small>In Profile, tap Redo onboarding.</small></span></div>
+    </div>
+  </div></div>
+  <div class="foot">
+    <label class="check-row"><span class="box on"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span><span>I agree that my age, income, balance, spending and products are used to tailor lessons and sent to TypeSafe AI.</span></label>
+    <button class="btn press">Continue</button>
+    <button class="btn text press">Skip for now</button>
+  </div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 2 Connect -->
+<figure class="art"><figcaption>2 Connect your bank (demo)</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="nav"><button class="icon-btn press" aria-label="Back"><svg class="i" aria-hidden="true"><use href="icons.svg#chevron-left"/></svg></button><h2>Connect your bank</h2><span></span></div>
+  <div class="scroll"><div class="content">
+    <div><p class="step">Step 2 of 4</p><p class="h">Choose a demo customer</p></div>
+    <p class="body">This demo uses sample customers instead of a real login. Pick one to see how lessons adapt.</p>
+    <button class="persona press"><div class="p-head"><span class="avatar">L</span><span class="t"><b>Lena, 22</b><small>Student</small></span><span class="radio"></span></div>
+      <div class="stats"><span><small>Income</small><b>€900</b></span><span><small>Savings</small><b>€1,200</b></span><span><small>Spending</small><b>€800</b></span></div>
+      <div class="chips"><span class="chip">Current account</span></div></button>
+    <button class="persona press"><div class="p-head"><span class="avatar">M</span><span class="t"><b>Marco, 38</b><small>Family</small></span><span class="radio"></span></div>
+      <div class="stats"><span><small>Income</small><b>€4,200</b></span><span><small>Savings</small><b>€9,000</b></span><span><small>Spending</small><b>€3,600</b></span></div>
+      <div class="chips"><span class="chip">Current account</span><span class="chip">Savings account</span><span class="chip">Mortgage</span></div></button>
+    <button class="persona on press" aria-pressed="true"><div class="p-head"><span class="avatar">I</span><span class="t"><b>Ingrid, 58</b><small>Pre-retirement</small></span><span class="radio on"></span></div>
+      <div class="stats"><span><small>Income</small><b>€3,800</b></span><span><small>Savings</small><b>€85,000</b></span><span><small>Spending</small><b>€2,900</b></span></div>
+      <div class="chips"><span class="chip">Current account</span><span class="chip">Savings account</span><span class="chip">Life insurance</span><span class="chip">Fund savings plan</span></div></button>
+    <p class="note">Income and spending are per month.</p>
+  </div></div>
+  <div class="foot"><button class="btn press">Continue with Ingrid</button></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 3a Goals -->
+<figure class="art"><figcaption>3a Question 1/6: goals (multi-select)</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="nav"><button class="icon-btn press" aria-label="Back"><svg class="i" aria-hidden="true"><use href="icons.svg#chevron-left"/></svg></button><h2>Question 1 of 6</h2><span></span></div>
+  <div class="progress"><span style="width:16.7%"></span></div>
+  <div class="scroll"><div class="content">
+    <p class="h" style="margin-top:8px">What do you want your money to do?</p>
+    <p class="body">Pick all that apply.</p>
+    <div class="card">
+      <button class="opt press"><span class="box"></span>Build an emergency fund</button>
+      <button class="opt press"><span class="box"></span>Buy a home</button>
+      <button class="opt on press" aria-pressed="true"><span class="box on"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span>Fund my retirement</button>
+      <button class="opt on press" aria-pressed="true"><span class="box on"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span>Grow my wealth</button>
+    </div>
+  </div></div>
+  <div class="foot"><button class="btn press">Next</button></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 3b Knowledge -->
+<figure class="art"><figcaption>3b Question 4/6: knowledge (single choice)</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="nav"><button class="icon-btn press" aria-label="Back"><svg class="i" aria-hidden="true"><use href="icons.svg#chevron-left"/></svg></button><h2>Question 4 of 6</h2><span></span></div>
+  <div class="progress"><span style="width:66.7%"></span></div>
+  <div class="scroll"><div class="content">
+    <p class="h" style="margin-top:8px">What does an ETF that tracks a world index give you?</p>
+    <p class="body">Pick one. It's fine not to know yet.</p>
+    <div class="card">
+      <button class="opt press"><span class="radio"></span>A guaranteed return</button>
+      <button class="opt on press" aria-pressed="true"><span class="radio on"></span>Broad diversification at low cost</button>
+      <button class="opt press"><span class="radio"></span>A stake in one large company</button>
+      <button class="opt press"><span class="radio"></span>I'm not sure</button>
+    </div>
+  </div></div>
+  <div class="foot"><button class="btn press">Next</button></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 3c Confidence -->
+<figure class="art"><figcaption>3c Question 6/6: confidence 1–5</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="nav"><button class="icon-btn press" aria-label="Back"><svg class="i" aria-hidden="true"><use href="icons.svg#chevron-left"/></svg></button><h2>Question 6 of 6</h2><span></span></div>
+  <div class="progress"><span style="width:100%"></span></div>
+  <div class="scroll"><div class="content">
+    <p class="h" style="margin-top:8px">How confident are you making your own investment decisions?</p>
+    <p class="body">There's no right answer. We'll ask again after your lessons to see what changed.</p>
+    <div class="card" style="padding:16px">
+      <div class="scale" role="radiogroup" aria-label="Confidence from 1 to 5">
+        <button class="press" role="radio" aria-checked="false">1</button>
+        <button class="on press" role="radio" aria-checked="true">2</button>
+        <button class="press" role="radio" aria-checked="false">3</button>
+        <button class="press" role="radio" aria-checked="false">4</button>
+        <button class="press" role="radio" aria-checked="false">5</button>
+      </div>
+      <div class="scale-labels"><span>Not confident</span><span>Very confident</span></div>
+    </div>
+  </div></div>
+  <div class="foot"><button class="btn press">See my profile</button></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 4 Analysing -->
+<figure class="art"><figcaption>4 Analysing</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="center">
+    <span class="spin" role="img" aria-label="In progress"></span>
+    <p class="h">Analysing your profile with Jev…</p>
+    <p class="body">Jev, a decision model by TypeSafe AI, sorts your answers and bank data into a learning profile. This takes a few seconds.</p>
+    <div class="card">
+      <div class="row"><span class="state"><svg class="i" aria-hidden="true"><use href="icons.svg#check"/></svg></span><span class="t"><b>Bank data read</b></span></div>
+      <div class="row"><span class="state"><svg class="i" aria-hidden="true"><use href="icons.svg#check"/></svg></span><span class="t"><b>6 answers checked</b></span></div>
+      <div class="row"><span class="state"><span class="mini"></span></span><span class="t"><b>Setting your levels</b></span></div>
+    </div>
+  </div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 5a Result Jev -->
+<figure class="art"><figcaption>5a Result: profiled by Jev</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="nav"><span></span><h2>Your profile</h2><span></span></div>
+  <div class="scroll"><div class="content">
+    <div class="summary">
+      <small>Life stage</small>
+      <p class="big">Pre-retirement</p>
+      <div class="src"><span><svg class="i sm" aria-hidden="true"><use href="icons.svg#bolt"/></svg>Profiled by Jev</span><em>Jev 91%</em></div>
+    </div>
+    <p class="sec">Your levels</p>
+    <div class="card">
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#safe"/></svg></span><span class="t"><b>Saving</b></span><span class="lvl"><b>Advanced</b><span class="meter"><i class="f"></i><i class="f"></i><i class="f"></i></span></span></div>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#trend"/></svg></span><span class="t"><b>Investing</b></span><span class="lvl"><b>Intermediate</b><span class="meter"><i class="f"></i><i class="f"></i><i></i></span></span></div>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#percent"/></svg></span><span class="t"><b>Risk</b></span><span class="lvl"><b>Beginner</b><span class="meter"><i class="f"></i><i></i><i></i></span></span></div>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#sprout"/></svg></span><span class="t"><b>Retirement</b></span><span class="lvl"><b>Intermediate</b><span class="meter"><i class="f"></i><i class="f"></i><i></i></span></span></div>
+    </div>
+    <p class="sec">Goals and horizon</p>
+    <div class="card">
+      <div class="row"><span class="t"><small>Goals</small><b>Fund my retirement, grow my wealth</b></span></div>
+      <div class="row"><span class="t"><small>Horizon</small><b>3–10 years</b></span></div>
+      <div class="row"><span class="t"><small>Confidence today</small><b>2 of 5</b></span><span class="dots" aria-hidden="true"><i class="f"></i><i class="f"></i><i></i><i></i><i></i></span></div>
+    </div>
+    <p class="note">Your confidence today is the starting point. We'll ask again after your lessons.</p>
+    <p class="sec">Why Jev decided this</p>
+    <div class="card">
+      <div class="why"><p>Age 58 + fund savings plan → retirement: intermediate</p><small>Jev 88%</small></div>
+      <div class="why"><p>€85,000 saved, about 29 months of spending, and the emergency fund answer was right → saving: advanced</p><small>Jev 93%</small></div>
+      <div class="why"><p>Picked "a rare opportunity" for high returns with no risk → risk: beginner</p><small>Jev 84%</small></div>
+      <div class="why"><p>Age 58, earning €3,800 a month → life stage: pre-retirement</p><small>Jev 96%</small></div>
+    </div>
+    <p class="note"><svg class="i sm" aria-hidden="true"><use href="icons.svg#lock"/></svg>This profile tailors your lessons. It is not an investment suitability assessment or advice.</p>
+  </div></div>
+  <div class="foot"><button class="btn press">Start learning</button></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 5b Result fallback -->
+<figure class="art"><figcaption>5b Result: rules fallback (offline)</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="nav"><span></span><h2>Your profile</h2><span></span></div>
+  <div class="scroll"><div class="content">
+    <div class="summary">
+      <small>Life stage</small>
+      <p class="big">Pre-retirement</p>
+      <div class="src"><span><svg class="i sm" aria-hidden="true" style="color:var(--land)"><use href="icons.svg#book"/></svg>Profiled with rules (offline)</span></div>
+    </div>
+    <p class="note">Jev couldn't be reached, so simple rules built this profile. Redo onboarding later to try Jev again.</p>
+    <p class="sec">Your levels</p>
+    <div class="card">
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#safe"/></svg></span><span class="t"><b>Saving</b></span><span class="lvl"><b>Intermediate</b><span class="meter"><i class="f"></i><i class="f"></i><i></i></span></span></div>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#trend"/></svg></span><span class="t"><b>Investing</b></span><span class="lvl"><b>Intermediate</b><span class="meter"><i class="f"></i><i class="f"></i><i></i></span></span></div>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#percent"/></svg></span><span class="t"><b>Risk</b></span><span class="lvl"><b>Beginner</b><span class="meter"><i class="f"></i><i></i><i></i></span></span></div>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#sprout"/></svg></span><span class="t"><b>Retirement</b></span><span class="lvl"><b>Beginner</b><span class="meter"><i class="f"></i><i></i><i></i></span></span></div>
+    </div>
+    <p class="sec">Goals and horizon</p>
+    <div class="card">
+      <div class="row"><span class="t"><small>Goals</small><b>Fund my retirement, grow my wealth</b></span></div>
+      <div class="row"><span class="t"><small>Horizon</small><b>3–10 years</b></span></div>
+      <div class="row"><span class="t"><small>Confidence today</small><b>2 of 5</b></span><span class="dots" aria-hidden="true"><i class="f"></i><i class="f"></i><i></i><i></i><i></i></span></div>
+    </div>
+    <p class="sec">Why</p>
+    <div class="card">
+      <div class="why"><p>Age 58 → life stage: pre-retirement</p><small>Rule-based</small></div>
+      <div class="why"><p>Emergency fund answer right → saving: intermediate</p><small>Rule-based</small></div>
+      <div class="why"><p>ETF answer right → investing: intermediate</p><small>Rule-based</small></div>
+      <div class="why"><p>Risk answer wrong → risk: beginner</p><small>Rule-based</small></div>
+      <div class="why"><p>No test question for retirement → retirement: beginner</p><small>Rule-based</small></div>
+    </div>
+    <p class="note"><svg class="i sm" aria-hidden="true"><use href="icons.svg#lock"/></svg>This profile tailors your lessons. It is not an investment suitability assessment or advice.</p>
+  </div></div>
+  <div class="foot"><button class="btn press">Start learning</button></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 6 Profile tab -->
+<figure class="art"><figcaption>6 Profile tab</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="scroll"><div class="topbar"><span class="avatar">I</span><span><b>Ingrid, 58</b><small>Demo customer</small></span></div>
+  <div class="content">
+    <div class="summary">
+      <small>Life stage</small>
+      <p class="big">Pre-retirement</p>
+      <div class="src"><span><svg class="i sm" aria-hidden="true"><use href="icons.svg#bolt"/></svg>Profiled by Jev</span><em>Jev 91%</em></div>
+    </div>
+    <p class="sec">Your levels</p>
+    <div class="card">
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#safe"/></svg></span><span class="t"><b>Saving</b></span><span class="lvl"><b>Advanced</b><span class="meter"><i class="f"></i><i class="f"></i><i class="f"></i></span></span></div>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#trend"/></svg></span><span class="t"><b>Investing</b></span><span class="lvl"><b>Intermediate</b><span class="meter"><i class="f"></i><i class="f"></i><i></i></span></span></div>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#percent"/></svg></span><span class="t"><b>Risk</b></span><span class="lvl"><b>Beginner</b><span class="meter"><i class="f"></i><i></i><i></i></span></span></div>
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#sprout"/></svg></span><span class="t"><b>Retirement</b></span><span class="lvl"><b>Intermediate</b><span class="meter"><i class="f"></i><i class="f"></i><i></i></span></span></div>
+    </div>
+    <p class="sec">Goals and horizon</p>
+    <div class="card">
+      <div class="row"><span class="t"><small>Goals</small><b>Fund my retirement, grow my wealth</b></span></div>
+      <div class="row"><span class="t"><small>Horizon</small><b>3–10 years</b></span></div>
+      <div class="row"><span class="t"><small>Starting confidence, 20 Nov</small><b>2 of 5</b></span><span class="dots" aria-hidden="true"><i class="f"></i><i class="f"></i><i></i><i></i><i></i></span></div>
+    </div>
+    <p class="sec">Why Jev decided this</p>
+    <div class="card">
+      <div class="why"><p>Age 58 + fund savings plan → retirement: intermediate</p><small>Jev 88%</small></div>
+      <div class="why"><p>€85,000 saved, about 29 months of spending, and the emergency fund answer was right → saving: advanced</p><small>Jev 93%</small></div>
+      <div class="why"><p>Picked "a rare opportunity" for high returns with no risk → risk: beginner</p><small>Jev 84%</small></div>
+      <div class="why"><p>Age 58, earning €3,800 a month → life stage: pre-retirement</p><small>Jev 96%</small></div>
+    </div>
+    <p class="sec">Data and consent</p>
+    <div class="card">
+      <div class="row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg></span><span class="t"><b>Bank data shared</b><small>Sent to TypeSafe AI for categorisation. Given 20 Nov 2026.</small></span><span class="ok">On</span></div>
+      <button class="row press" style="width:100%"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#rotate"/></svg></span><span class="t"><b>Redo onboarding</b><small>Pick another demo customer or withdraw consent</small></span><svg class="i" aria-hidden="true" style="color:var(--muted)"><use href="icons.svg#chevron"/></svg></button>
+    </div>
+    <p class="note"><svg class="i sm" aria-hidden="true"><use href="icons.svg#lock"/></svg>This profile tailors your lessons. It is not an investment suitability assessment or advice.</p>
+  </div></div>
+  <nav class="tabs" aria-label="Tabs">
+    <button class="tab press"><svg class="i" aria-hidden="true"><use href="icons.svg#globe"/></svg>Learn</button>
+    <button class="tab press"><svg class="i" aria-hidden="true"><use href="icons.svg#book"/></svg>Glossary</button>
+    <button class="tab on press" aria-current="page"><svg class="i" aria-hidden="true"><use href="icons.svg#user"/></svg>Profile</button>
+  </nav>
+  <span class="home-ind"></span>
+</div></figure>
+</main>
+</body>
+</html>

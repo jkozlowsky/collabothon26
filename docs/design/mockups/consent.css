@@ -1,0 +1,52 @@
+/* Consent card + loading screen (F1, M1): shared by consent-a/b/c.html, on top of base.css.
+   Mirrors the onboarding components in front/src/components/onboarding/ui.tsx, adjusted to the
+   finance-quest-ui skill (type scale only, 20px sides, one yellow focal point per view). */
+:root { --xp: #B58B00; --success-soft: rgba(30, 138, 94, .14); --danger-soft: rgba(214, 69, 69, .14); }
+.dir-head { max-width: 1680px; height: auto; margin-bottom: 8px; }
+.dir-head .motion { font-size: 13px; line-height: 18px; margin-top: 10px; }
+.dir-head .motion b { color: var(--text); }
+
+/* Page, as the onboarding's <Page>: canvas, scrolling body, footer with the buttons */
+.phone.ob { background: var(--canvas); }
+.ob .body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 20px 16px; display: flex; flex-direction: column; gap: 10px; }
+.ob .grow { flex-grow: 1; }
+.ob .foot { flex: none; padding: 8px 20px 34px; display: flex; flex-direction: column; gap: 8px; }
+
+/* Text styles from the kit scale */
+.t-display { font: 700 26px/32px Inter; letter-spacing: -1px; color: var(--text); text-wrap: balance; }
+.t-section { font: 700 18px/24px Inter; }
+.t-card { font: 600 15px/20px Inter; }
+.t-body { font: 400 13px/18px Inter; color: var(--muted); }
+.t-label { font: 500 12px/16px Inter; color: var(--muted); }
+.t-strong { font: 600 12px/16px Inter; }
+.t-over { font: 700 10px/12px Inter; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); }
+
+/* BigButton: 52 high, radius 16, yellow with petrol label; ghost = muted label */
+.big { height: 52px; width: 100%; border-radius: 16px; background: var(--accent); color: var(--on-accent);
+  font: 600 15px/20px Inter; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.big.ghost { background: transparent; color: var(--muted); }
+.big.ghost.on-dark { color: rgba(255, 255, 255, .8); }
+.big.soft { background: var(--primary-soft); color: var(--primary); }
+
+/* IconTile: radius 12, petrol icon on tint (yellow is kept for the button) */
+.tile { width: 44px; height: 44px; border-radius: 12px; background: var(--tint); color: var(--primary); display: grid; place-items: center; flex: none; }
+.tile .i { width: 22px; height: 22px; }
+.tile.lg { width: 64px; height: 64px; }
+.tile.lg .i { width: 32px; height: 32px; }
+.tile.sm { width: 32px; height: 32px; border-radius: 10px; }
+.tile.sm .i { width: 16px; height: 16px; }
+.tile.danger { background: var(--danger-soft); color: var(--danger); }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.note { display: flex; gap: 10px; align-items: flex-start; background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; }
+.note .i { color: var(--primary); width: 18px; height: 18px; margin-top: 1px; }
+
+/* Step states shared by every loading screen */
+.mark { width: 24px; height: 24px; border-radius: 12px; flex: none; display: grid; place-items: center; }
+.mark.done { background: var(--success-soft); color: var(--success); }
+.mark.now { border: 2.5px solid var(--border); border-top-color: var(--primary); animation: spin 900ms linear infinite; }
+.mark.next { border: 2px solid var(--border-strong); }
+.mark.fail { background: var(--danger-soft); color: var(--danger); }
+@keyframes spin { to { transform: rotate(360deg); } }
+/* Reduced motion: the spinner becomes a still, closed petrol ring */
+@media (prefers-reduced-motion: reduce) { .mark.now { border-color: var(--primary); } }

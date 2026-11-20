@@ -1,4 +1,5 @@
 import Feather from '@expo/vector-icons/Feather';
+import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -12,9 +13,11 @@ import {
   BackButton,
   BigButton,
   ChoiceChip,
+  CloseButton,
   FadeIn,
   IconTile,
   OptionCard,
+  SkipLink,
   StepHeader,
   type,
 } from '@/components/onboarding/ui';
@@ -41,21 +44,40 @@ type Step = (typeof STEPS)[number];
 const QUESTIONS = ['life-stage', 'goals', 'experience'] as const;
 
 export default function OnboardingScreen() {
-  const { complete } = useOnboarding();
-  const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState<OnboardingAnswers>({ goals: [] });
+  const { complete, answers: saved } = useOnboarding();
+  // Profile → "Edit answers": straight to the questions, prefilled, and back to the profile when done.
+  const editing = useLocalSearchParams<{ edit?: string }>().edit === '1';
+  const firstStep = editing ? STEPS.indexOf('life-stage') : 0;
+  const [index, setIndex] = useState(firstStep);
+  const [answers, setAnswers] = useState<OnboardingAnswers>(editing ? saved : { goals: [] });
 
   const step: Step = STEPS[index];
   const next = () => setIndex((i) => Math.min(i + 1, STEPS.length - 1));
-  const back = () => setIndex((i) => Math.max(i - 1, 0));
-  const finish = () => complete(answers, false);
+  const back = () => (editing && index === firstStep ? router.back() : setIndex((i) => Math.max(i - 1, 0)));
+  const finish = () => {
+    complete(answers, false);
+    if (editing) router.back();
+  };
+  // Skip: onboarding counts as done (nothing personalised) and Learn opens.
   const skipAll = () => complete({ goals: [] }, true);
+  // Close: nothing is saved, back to the bank; the next Learn tap shows onboarding again.
+  const exit = () => (router.canGoBack() ? router.back() : router.navigate('/'));
   const set = <K extends keyof OnboardingAnswers>(key: K, value: OnboardingAnswers[K]) =>
     setAnswers((a) => ({ ...a, [key]: value }));
 
   if (step === 'welcome') {
     return (
-      <Page dark stepKey={step} footer={<BigButton label="Get started" onPress={next} testID="onboarding-start" />}>
+      <Page
+        dark
+        stepKey={step}
+        header={
+          <View style={styles.row}>
+            <CloseButton onPress={exit} onDark />
+            <SkipLink onPress={skipAll} onDark testID="onboarding-skip-intro" />
+          </View>
+        }
+        footer={<BigButton label="Get started" onPress={next} testID="onboarding-start" />}
+      >
         <View style={styles.grow} />
         <WelcomeHero />
         <View style={{ height: spacing.xxxl }} />
@@ -76,6 +98,7 @@ export default function OnboardingScreen() {
         header={
           <View style={styles.row}>
             <BackButton onPress={back} />
+            <SkipLink onPress={skipAll} testID="onboarding-skip-intro" />
           </View>
         }
         footer={<BigButton label="Next" onPress={next} testID="onboarding-next" />}
@@ -95,6 +118,12 @@ export default function OnboardingScreen() {
     return (
       <Page
         stepKey={step}
+        header={
+          <View style={styles.row}>
+            <BackButton onPress={back} />
+            <CloseButton onPress={exit} />
+          </View>
+        }
         footer={
           <>
             <BigButton label="Let's do it" onPress={next} testID="onboarding-personalise" />

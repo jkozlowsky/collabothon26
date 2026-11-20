@@ -4,17 +4,19 @@ import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-n
 
 import { BankCard } from '@/components/bank/BankCard';
 import { BankScreen } from '@/components/bank/BankScreen';
+import { CommerzbankLogo } from '@/components/bank/CommerzbankLogo';
 import { DepotCard } from '@/components/bank/DepotCard';
 import { DetailSheet } from '@/components/bank/DetailSheet';
 import { FqTeaserCard } from '@/components/bank/FqTeaserCard';
 import { HeroCard } from '@/components/bank/HeroCard';
-import { IconButton } from '@/components/bank/IconButton';
 import { ListCard } from '@/components/bank/ListCard';
 import { ListRow } from '@/components/bank/ListRow';
 import { QuickAction } from '@/components/bank/QuickAction';
 import { Section } from '@/components/bank/Section';
 import { TransactionsSheet } from '@/components/bank/TransactionsSheet';
-import { colors, radii, spacing, type } from '@/constants/theme';
+import { ProfileButton } from '@/components/profile/ProfileButton';
+import { colors, spacing, type } from '@/constants/theme';
+import { useAccount } from '@/hooks/useAccount';
 import { useBank } from '@/hooks/useBank';
 import { useOpenLearnFocus } from '@/hooks/useOpenLearn';
 import { useToast } from '@/hooks/useToast';
@@ -38,6 +40,7 @@ export default function OverviewScreen() {
   const { demoOnly } = useToast();
   const { openTransfer } = useTransferSheet();
   const openLearnFocus = useOpenLearnFocus();
+  const { account: customer, stats } = useAccount();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [allActivity, setAllActivity] = useState(false);
   const { width } = useWindowDimensions();
@@ -48,18 +51,16 @@ export default function OverviewScreen() {
 
   return (
     <BankScreen testID="screen-overview">
+      {/* Commerzbank emblem top left; the greeting sits by the profile avatar on the right. */}
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.initials}>{state.owner.initials}</Text>
-        </View>
+        <CommerzbankLogo height={32} />
         <View style={styles.hello}>
           <Text style={styles.greeting}>{greeting()}</Text>
-          <Text style={styles.name} testID="owner-name">
-            {state.owner.name}
+          <Text style={styles.name} testID="owner-name" numberOfLines={1}>
+            {customer ? `${customer.firstName} ${customer.lastName}` : state.owner.name}
           </Text>
         </View>
-        <IconButton icon="scan" label="Scan" onPress={demoOnly} />
-        <IconButton icon="bell" label="Notifications" onPress={demoOnly} />
+        <ProfileButton />
       </View>
 
       <HeroCard
@@ -82,7 +83,7 @@ export default function OverviewScreen() {
         <QuickAction icon="more" label="More" onPress={demoOnly} />
       </View>
 
-      <FqTeaserCard teaser={state.teasers.home} onPress={() => openLearnFocus(state.teasers.home.focus)} testID="fq-teaser-home" />
+      <FqTeaserCard teaser={state.teasers.home} streak={stats?.currentStreak} onPress={() => openLearnFocus(state.teasers.home.focus)} testID="fq-teaser-home" />
 
       <Section title="Cards" action={{ label: 'Manage', onPress: demoOnly }}>
         <ScrollView
@@ -157,10 +158,8 @@ export default function OverviewScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: -spacing.sm },
-  avatar: { width: 36, height: 36, borderRadius: radii.pill, backgroundColor: colors.brandAccent, alignItems: 'center', justifyContent: 'center' },
-  initials: { ...type.labelStrong, color: colors.textOnAccent },
-  hello: { flex: 1, marginLeft: spacing.xs },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: -spacing.sm },
+  hello: { flex: 1, alignItems: 'flex-end' },
   greeting: { ...type.labelDefault, color: colors.textMuted },
   name: type.titleCard,
   actions: { flexDirection: 'row', marginTop: -spacing.xs },

@@ -34,7 +34,7 @@ import {
   LIFE_STAGES,
   type Option,
 } from '@/constants/onboarding';
-import { brand, radius, spacing } from '@/constants/theme';
+import { colors, radii, spacing } from '@/constants/theme';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import type { Confidence, ConfidenceArea, ConfidenceRatings, Goal, OnboardingAnswers } from '@/types/onboarding';
 
@@ -92,8 +92,8 @@ export default function OnboardingScreen() {
       <Page dark stepKey={step} footer={<BigButton label="Get started" onPress={next} testID="onboarding-start" />}>
         <View style={styles.grow} />
         <WelcomeHero />
-        <View style={{ height: spacing.xl }} />
-        <Text style={[type.overline, { color: brand.accent }]}>FINANCE QUEST</Text>
+        <View style={{ height: spacing.xxxl }} />
+        <Text style={[type.overline, { color: colors.brandAccent }]}>FINANCE QUEST</Text>
         <Text style={[styles.welcomeTitle]}>Invest with confidence — one lesson at a time</Text>
         <Text style={[type.body, { color: 'rgba(255,255,255,0.75)' }]}>
           Short lessons built around your own money. A few minutes a day is enough.
@@ -122,7 +122,7 @@ export default function OnboardingScreen() {
         footer={<BigButton label="Next" onPress={next} testID="onboarding-next" />}
       >
         {copy.illustration}
-        <View style={{ height: spacing.xl }} />
+        <View style={{ height: spacing.xxxl }} />
         <Text style={type.display}>{copy.title}</Text>
         <Text style={type.body}>{copy.body}</Text>
       </Page>
@@ -155,7 +155,7 @@ export default function OnboardingScreen() {
             (b) => (
               <View key={b} style={styles.benefit}>
                 <View style={styles.benefitCheck}>
-                  <Feather name="check" size={14} color={brand.success} />
+                  <Feather name="check" size={14} color={colors.feedbackSuccess} />
                 </View>
                 <Text style={styles.benefitText}>{b}</Text>
               </View>
@@ -163,7 +163,7 @@ export default function OnboardingScreen() {
           )}
         </View>
         <View style={[styles.row, { justifyContent: 'center', gap: 6 }]}>
-          <Feather name="clock" size={14} color={brand.muted} />
+          <Feather name="clock" size={14} color={colors.textMuted} />
           <Text style={type.label}>5 questions · about 1 minute</Text>
         </View>
         <View style={styles.grow} />
@@ -232,7 +232,7 @@ type PageProps = { stepKey: Step; dark?: boolean; header?: ReactNode; footer: Re
 function Page({ stepKey, dark, header, footer, children }: PageProps) {
   return (
     <SafeAreaView
-      style={[styles.page, { backgroundColor: dark ? brand.primary : brand.canvas }]}
+      style={[styles.page, { backgroundColor: dark ? colors.brandPrimary : colors.bgCanvas }]}
       testID={`onboarding-${stepKey}`}
     >
       <StatusBar style={dark ? 'light' : 'dark'} />
@@ -298,8 +298,8 @@ function GoalPicker({ value, onChange }: { value: Goal[]; onChange: (v: Goal[]) 
         })}
       </View>
       <View style={[styles.row, { justifyContent: 'flex-start', gap: 8 }]}>
-        <Feather name="check" size={16} color={value.length ? brand.success : brand.muted} />
-        <Text style={[type.strong, { color: value.length ? brand.success : brand.muted }]}>
+        <Feather name="check" size={16} color={value.length ? colors.feedbackSuccess : colors.textMuted} />
+        <Text style={[type.strong, { color: value.length ? colors.feedbackSuccess : colors.textMuted }]}>
           {value.length} selected
         </Text>
       </View>
@@ -350,7 +350,7 @@ function ConfidenceScales({
                   >
                     <Animated.Text
                       key={String(selected)}
-                      style={[styles.levelText, selected && { color: brand.primary }, selected && motion.pop]}
+                      style={[styles.levelText, selected && { color: colors.brandPrimary }, selected && motion.pop]}
                     >
                       {n}
                     </Animated.Text>
@@ -362,7 +362,7 @@ function ConfidenceScales({
         );
       })}
       <View style={styles.note}>
-        <Feather name="trending-up" size={18} color={brand.primary} />
+        <Feather name="trending-up" size={18} color={colors.brandPrimary} />
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={type.strong}>Why we ask</Text>
           <Text style={type.label}>
@@ -376,24 +376,24 @@ function ConfidenceScales({
 
 const styles = StyleSheet.create({
   page: { flex: 1 },
-  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
-  scroll: { flexGrow: 1, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
+  header: { paddingHorizontal: spacing.xxl, paddingTop: spacing.sm, paddingBottom: spacing.lg },
+  scroll: { flexGrow: 1, paddingHorizontal: spacing.xxl, paddingBottom: spacing.lg },
   content: { flexGrow: 1, gap: 10 },
-  footer: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
+  footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm },
   grow: { flexGrow: 1 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   /** Equal-width side slots keep the page dots exactly centred. */
   side: { flex: 1, alignItems: 'flex-start' },
   welcomeTitle: { fontSize: 30, lineHeight: 36, fontWeight: '700', color: '#fff' },
-  answers: { gap: 10, marginTop: spacing.md },
+  answers: { gap: 10, marginTop: spacing.lg },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, rowGap: 10 },
   benefits: {
-    marginTop: spacing.md,
-    backgroundColor: brand.surface,
-    borderRadius: radius.lg,
+    marginTop: spacing.lg,
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: brand.border,
-    padding: spacing.md,
+    borderColor: colors.borderDefault,
+    padding: spacing.lg,
     gap: 14,
   },
   benefit: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -405,13 +405,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  benefitText: { flex: 1, fontSize: 15, fontWeight: '600', color: brand.text },
+  benefitText: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.textPrimary },
   scaleCard: {
-    backgroundColor: brand.surface,
-    borderRadius: radius.lg,
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: brand.border,
-    padding: spacing.md,
+    borderColor: colors.borderDefault,
+    padding: spacing.lg,
     paddingTop: 20,
     gap: 12,
   },
@@ -419,22 +419,22 @@ const styles = StyleSheet.create({
   level: {
     flex: 1,
     height: 44,
-    borderRadius: radius.md,
-    backgroundColor: brand.tint,
+    borderRadius: radii.tile,
+    backgroundColor: colors.bgTint,
     borderWidth: 2,
     borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  levelSelected: { backgroundColor: brand.accent, borderColor: brand.primary },
-  areaTitle: { fontSize: 15, fontWeight: '600', color: brand.text },
-  areaValue: { fontSize: 12, fontWeight: '700', color: brand.success },
-  levelText: { fontSize: 18, fontWeight: '700', color: brand.muted },
+  levelSelected: { backgroundColor: colors.brandAccent, borderColor: colors.brandPrimary },
+  areaTitle: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  areaValue: { fontSize: 12, fontWeight: '700', color: colors.feedbackSuccess },
+  levelText: { fontSize: 18, fontWeight: '700', color: colors.textMuted },
   note: {
     flexDirection: 'row',
     gap: 10,
-    backgroundColor: brand.accentSoft,
-    borderRadius: radius.md,
+    backgroundColor: colors.brandAccentSoft,
+    borderRadius: radii.tile,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },

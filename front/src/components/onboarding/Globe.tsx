@@ -5,7 +5,7 @@ import Animated, { type CSSStyle } from 'react-native-reanimated';
 import Svg, { Circle, ClipPath, Defs, Ellipse, G, Line, Path, RadialGradient, Stop } from 'react-native-svg';
 
 import { EASE_IN_OUT, motion, Tappable } from '@/components/onboarding/ui';
-import { brand } from '@/constants/theme';
+import { colors } from '@/constants/theme';
 
 /** All globe geometry lives in a 300×300 box; it is scaled to `size`. */
 const VIEW = 300;
@@ -46,7 +46,7 @@ export type GlobePin = {
 export const GLOBE_PINS: GlobePin[] = [
   { x: 82, y: 108, color: '#9AA6AB', icon: 'lock-closed', city: 'Reykjavik', topic: 'Risk & scams', title: 'Too good to be true', meta: 'Unlocks after 2 more lessons', state: 'locked' },
   { x: 132, y: 92, color: '#D9577A', icon: 'flower', city: 'Amsterdam', topic: 'Bubbles & hype', title: 'Tulip mania', meta: 'Completed · 6 of 6', state: 'done' },
-  { x: 170, y: 106, color: brand.accent, icon: 'trending-up', city: 'Frankfurt', topic: 'Investing', title: 'Your first share', meta: 'Lesson 3 of 6 · 4 min', state: 'active' },
+  { x: 170, y: 106, color: colors.brandAccent, icon: 'trending-up', city: 'Frankfurt', topic: 'Investing', title: 'Your first share', meta: 'Lesson 3 of 6 · 4 min', state: 'active' },
   { x: 240, y: 162, color: '#E8833A', icon: 'server', city: 'Mumbai', topic: 'Gold & safe havens', title: 'Why gold glitters', meta: '5 lessons · 3 min each' },
   { x: 140, y: 182, color: '#7A5AF8', icon: 'wallet', city: 'Lagos', topic: 'Budgeting', title: 'Where does it all go?', meta: '4 lessons · 3 min each' },
   { x: 172, y: 238, color: '#1F9AA0', icon: 'leaf', city: 'Nairobi', topic: 'Saving', title: 'Saving on the go', meta: '5 lessons · 4 min each' },
@@ -66,7 +66,7 @@ export function GlobeSphere({ size }: { size: number }) {
         <RadialGradient id="ocean" cx="38%" cy="32%" r="75%">
           <Stop offset="0" stopColor="#3C8C99" />
           <Stop offset="0.45" stopColor="#0E4A59" />
-          <Stop offset="1" stopColor={brand.primary} />
+          <Stop offset="1" stopColor={colors.brandPrimary} />
         </RadialGradient>
         <ClipPath id="sphere">
           <Circle cx={C} cy={C} r={R} />
@@ -170,7 +170,7 @@ function Pin({ pin, scale, selected, onPress }: { pin: GlobePin; scale: number; 
             },
           ]}
         />
-        <Ionicons name={pin.icon} size={Math.round(s * 0.42)} color={pin.state === 'active' ? brand.primary : '#fff'} />
+        <Ionicons name={pin.icon} size={Math.round(s * 0.42)} color={pin.state === 'active' ? colors.brandPrimary : '#fff'} />
         {pin.state === 'done' && (
           <View style={[styles.badge, { width: s * 0.46, height: s * 0.46, borderRadius: s * 0.23 }]}>
             <Ionicons name="checkmark" size={Math.round(s * 0.3)} color="#fff" />
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '-18%',
     right: '-22%',
-    backgroundColor: brand.success,
+    backgroundColor: colors.feedbackSuccess,
     borderWidth: 2,
     borderColor: '#fff',
     alignItems: 'center',

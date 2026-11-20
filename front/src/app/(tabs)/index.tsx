@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AsyncContent } from '@/components/AsyncContent';
 import { Screen } from '@/components/Screen';
-import { colors, spacing } from '@/constants/theme';
+import { colors, radii, spacing, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import type { LessonSummary } from '@/types/lessons';
 
@@ -42,21 +42,25 @@ export default function LearnScreen() {
 }
 
 const styles = StyleSheet.create({
-  list: { gap: spacing.md - 4 },
+  list: { gap: spacing.md },
+  // Matches the Figma "Story Card" shell.
   card: {
     flexDirection: 'row',
-    gap: 14,
-    backgroundColor: colors.surface,
-    borderRadius: 16,
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
+    borderColor: colors.borderDefault,
+    paddingVertical: spacing.md,
+    paddingLeft: spacing.md,
+    paddingRight: 14,
   },
   cardPressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
-  emoji: { fontSize: 34 },
+  emoji: { fontSize: 32 },
   cardBody: { flex: 1, gap: spacing.xs },
-  title: { fontSize: 17, fontWeight: '700', color: colors.text },
-  summary: { fontSize: 14, color: colors.muted },
-  meta: { fontSize: 13, color: colors.muted, marginTop: spacing.xs },
-  xp: { color: colors.xp, fontWeight: '700' },
+  title: type.titleCard,
+  summary: { ...type.labelDefault, color: colors.textMuted },
+  meta: { ...type.labelDefault, color: colors.textMuted },
+  xp: { ...type.labelStrong, color: colors.feedbackXp },
 });

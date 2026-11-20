@@ -1,4 +1,4 @@
-package com.collabothon.back.categorization;
+package com.collabothon.back.categorization.controllers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
@@ -21,10 +21,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -87,42 +84,13 @@ class CategorizationControllerTests {
 
 	private static final Instant START = Instant.parse("2026-06-15T10:00:00Z");
 
-	private static final MovableClock CLOCK = new MovableClock();
+	private static final MovableClock CLOCK = new MovableClock(START);
 
 	@TestBean
 	Clock clock;
 
 	static Clock clock() {
 		return CLOCK;
-	}
-
-	static final class MovableClock extends Clock {
-
-		private final AtomicReference<Instant> now = new AtomicReference<>(START);
-
-		void advance(Duration by) {
-			now.updateAndGet(t -> t.plus(by));
-		}
-
-		void reset() {
-			now.set(START);
-		}
-
-		@Override
-		public ZoneId getZone() {
-			return ZoneId.of("Europe/Berlin");
-		}
-
-		@Override
-		public Clock withZone(ZoneId zone) {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public Instant instant() {
-			return now.get();
-		}
-
 	}
 
 	@Autowired

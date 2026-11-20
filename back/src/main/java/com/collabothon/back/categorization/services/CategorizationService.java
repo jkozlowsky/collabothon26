@@ -1,4 +1,4 @@
-package com.collabothon.back.categorization;
+package com.collabothon.back.categorization.services;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -9,7 +9,6 @@ import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 
-import com.collabothon.back.categorization.Rules.Judgement;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 import com.collabothon.back.categorization.dto.CategorizationDto;
 import com.collabothon.back.categorization.dto.ExplanationDto;
@@ -59,18 +58,20 @@ public class CategorizationService {
 		if (recent.isPresent()) {
 			return recent.get();
 		}
-		JevClient.Result fromJev = jev.ask(answers, facts);
-		Judgement j = fromJev.judgement().orElseGet(() -> Rules.fallback(answers, facts));
+		JevResult fromJev = jev.ask(answers, facts);
+		Judgement j = fromJev.judgement().orElseGet(() -> CategorizationRules.fallback(answers, facts));
 		SharedWithModelDto shared = fromJev.sent() ? new SharedWithModelDto(facts, answers) : null;
 
 		LifeStage lifeStage = LifeStage.fromAnswer(answers.lifeStage());
 		List<ExplanationDto> explanation = List.of(
-				new ExplanationDto(ExplanationOutput.ROLE, j.roleProbabilities(), Rules.roleBecause(answers, facts)),
+				new ExplanationDto(ExplanationOutput.ROLE, j.roleProbabilities(),
+						CategorizationRules.roleBecause(answers, facts)),
 				new ExplanationDto(ExplanationOutput.FOCUS_AREAS, j.focusProbabilities(),
-						Rules.focusBecause(j.focusAreas(), answers, facts)));
+						CategorizationRules.focusBecause(j.focusAreas(), answers, facts)));
 
 		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, j.role(), lifeStage, j.focusAreas(),
-				Rules.confidenceGaps(answers, facts), Rules.lessonVariant(j.role(), lifeStage), explanation, shared,
+				CategorizationRules.confidenceGaps(answers, facts), CategorizationRules.lessonVariant(j.role(), lifeStage),
+				explanation, shared,
 				fromJev.judgement().isPresent() ? CategorizationSource.JEV : CategorizationSource.FALLBACK, j.model(),
 				now);
 		// Inserting only while onboarding is completed turns a reset during the Jev call into a 404.

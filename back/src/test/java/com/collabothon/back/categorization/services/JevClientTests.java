@@ -1,4 +1,4 @@
-package com.collabothon.back.categorization;
+package com.collabothon.back.categorization.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.headerDoesNotExist;
@@ -34,9 +34,9 @@ class JevClientTests {
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
-	private static final JevClient.Result NOT_SENT = new JevClient.Result(Optional.empty(), false);
+	private static final JevResult NOT_SENT = new JevResult(Optional.empty(), false);
 
-	static final JevClient.Result SENT_WITHOUT_ANSWER = new JevClient.Result(Optional.empty(), true);
+	static final JevResult SENT_WITHOUT_ANSWER = new JevResult(Optional.empty(), true);
 
 	private static JevProperties properties(String baseUrl, String apiKey) {
 		return new JevProperties(URI.create(baseUrl), apiKey, JevConsts.DEFAULT_MODEL);

@@ -1,4 +1,4 @@
-package com.collabothon.back.categorization;
+package com.collabothon.back.categorization.controllers;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.collabothon.back.categorization.dto.CategorizationDto;
 import com.collabothon.back.categorization.dto.CategorizationRequestDto;
+import com.collabothon.back.categorization.services.CategorizationService;
 import com.collabothon.back.common.exceptions.NotFoundException;
 
 import lombok.RequiredArgsConstructor;

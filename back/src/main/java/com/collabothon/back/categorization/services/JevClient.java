@@ -1,4 +1,4 @@
-package com.collabothon.back.categorization;
+package com.collabothon.back.categorization.services;
 
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 
@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import com.collabothon.back.categorization.Rules.Judgement;
 import com.collabothon.back.categorization.config.JevProperties;
 import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.FactsDto;
@@ -82,16 +81,9 @@ public class JevClient {
 		this.questions = json.readTree(QUESTIONS);
 	}
 
-	/** {@code judgement} is empty when the caller must fall back to the rules; {@code sent} says if data left. */
-	public record Result(Optional<Judgement> judgement, boolean sent) {
-
-		static final Result SKIPPED = new Result(Optional.empty(), false);
-
-	}
-
-	public Result ask(OnboardingAnswersDto answers, FactsDto facts) {
+	public JevResult ask(OnboardingAnswersDto answers, FactsDto facts) {
 		if (!properties.callsJev()) {
-			return Result.SKIPPED;
+			return JevResult.SKIPPED;
 		}
 		Map<String, Object> state = new LinkedHashMap<>();
 		state.put("answers", answers);
@@ -113,18 +105,18 @@ public class JevClient {
 			if (judgement.isEmpty()) {
 				log.warn("Jev answer broke the contract, using the rules fallback");
 			}
-			return new Result(judgement, true);
+			return new JevResult(judgement, true);
 		}
 		catch (IllegalArgumentException e) {
 			// JevProperties rejects a bad URL or key at startup, so this comes from the response, e.g. a broken
 			// Content-Type; counting it as sent over-reports rather than hides what was shared.
 			log.warn("Jev call failed ({}), using the rules fallback", e.getClass().getSimpleName());
-			return new Result(Optional.empty(), true);
+			return new JevResult(Optional.empty(), true);
 		}
 		catch (RestClientException e) {
 			log.warn("Jev call failed ({}), using the rules fallback",
 					NestedExceptionUtils.getMostSpecificCause(e).getClass().getSimpleName());
-			return new Result(Optional.empty(), !connectionFailed(e));
+			return new JevResult(Optional.empty(), !connectionFailed(e));
 		}
 	}
 
@@ -133,15 +125,12 @@ public class JevClient {
 			.anyMatch(cause -> NOT_SENT.stream().anyMatch(type -> type.isInstance(cause)));
 	}
 
-	private record Choice<E>(E value, Map<String, Double> probabilities) {
-	}
-
 	private static Optional<Judgement> parse(JsonNode response) {
 		if (response == null) {
 			return Optional.empty();
 		}
 		JsonNode answers = response.path("answers");
-		Choice<Role> role = choice(answers.path("role"), Role.values());
+		JevChoice<Role> role = choice(answers.path("role"), Role.values());
 		Map<FocusArea, Double> noul = new EnumMap<>(FocusArea.class);
 		Map<String, Double> focus = new LinkedHashMap<>();
 		for (FocusArea area : FocusArea.values()) {
@@ -157,11 +146,11 @@ public class JevClient {
 		}
 		JsonNode model = response.path("model");
 		boolean validModel = model.isString() && MODEL_ID.matcher(model.stringValue()).matches();
-		return Optional.of(new Judgement(role.value(), role.probabilities(), Rules.focusFromNoul(noul), focus,
-				validModel ? model.stringValue() : null));
+		return Optional.of(new Judgement(role.value(), role.probabilities(), CategorizationRules.focusFromNoul(noul),
+				focus, validModel ? model.stringValue() : null));
 	}
 
-	private static <E extends Enum<E>> Choice<E> choice(JsonNode answer, E[] values) {
+	private static <E extends Enum<E>> JevChoice<E> choice(JsonNode answer, E[] values) {
 		Map<String, E> byLabel = new LinkedHashMap<>();
 		for (E value : values) {
 			byLabel.put(WireNames.of(value), value);
@@ -183,7 +172,7 @@ public class JevClient {
 				|| parsed.get(label.stringValue()) < Collections.max(parsed.values())) {
 			return null;
 		}
-		return new Choice<>(byLabel.get(label.stringValue()), parsed);
+		return new JevChoice<>(byLabel.get(label.stringValue()), parsed);
 	}
 
 	private static Double probability(JsonNode value) {

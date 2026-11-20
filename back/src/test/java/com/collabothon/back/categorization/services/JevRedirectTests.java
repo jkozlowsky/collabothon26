@@ -1,4 +1,4 @@
-package com.collabothon.back.categorization;
+package com.collabothon.back.categorization.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -60,7 +60,7 @@ class JevRedirectTests {
 
 	@Test
 	void redirectIsNotFollowed() {
-		JevClient.Result result = jev.ask(new OnboardingAnswersDto(null, List.of(), "occasional", false), null);
+		JevResult result = jev.ask(new OnboardingAnswersDto(null, List.of(), "occasional", false), null);
 
 		assertThat(ASKED).hasValue(1);
 		assertThat(REDIRECTED).hasValue(0);

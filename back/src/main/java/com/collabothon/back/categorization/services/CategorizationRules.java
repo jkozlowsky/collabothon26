@@ -1,4 +1,4 @@
-package com.collabothon.back.categorization;
+package com.collabothon.back.categorization.services;
 
 import static com.collabothon.back.categorization.consts.FactsConsts.BUFFER_1_3;
 import static com.collabothon.back.categorization.consts.FactsConsts.BUFFER_3_6;
@@ -29,7 +29,7 @@ import com.collabothon.back.categorization.enums.LessonLevel;
 import com.collabothon.back.categorization.enums.LifeStage;
 import com.collabothon.back.categorization.enums.Role;
 
-final class Rules {
+final class CategorizationRules {
 
 	static final double FOCUS_THRESHOLD = 0.5;
 
@@ -61,11 +61,7 @@ final class Rules {
 
 	private static final Set<Experience> SAYS_INVESTING = EnumSet.of(Experience.INVESTING, Experience.PLANNING);
 
-	record Judgement(Role role, Map<String, Double> roleProbabilities, List<FocusArea> focusAreas,
-			Map<String, Double> focusProbabilities, String model) {
-	}
-
-	private Rules() {
+	private CategorizationRules() {
 	}
 
 	static Judgement fallback(OnboardingAnswersDto a, FactsDto f) {

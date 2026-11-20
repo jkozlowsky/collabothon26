@@ -39,13 +39,13 @@ function closeAndGo(target: Href) {
 /**
  * Mount once inside the main layout. Onboarding is a plain stack screen on top of the bank (not a
  * protected one: removing a protected screen rebuilds the stack and loses the bank's tab and scroll),
- * so when it completes this closes it and moves on to Learn.
+ * so when it completes this closes it and moves on to the consent card, which then calls continueToLearn.
  */
 export function useResumeLearnAfterOnboarding() {
   const { done } = useOnboarding();
   const pathname = usePathname();
   useEffect(() => {
-    if (done && pathname === '/onboarding') continueToLearn();
+    if (done && pathname === '/onboarding') closeAndGo('/categorizing');
   }, [done, pathname]);
 }
 

@@ -3,16 +3,24 @@ import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testin
 import { appRoutes as routes } from '@/test-utils/routes';
 
 const PROFILE_URL = /\/api\/users\/demo-user\/profile$/;
+const NOT_YET_URL = /\/api\/(mock-bank\/customers\/demo-user\/facts|users\/demo-user\/categorization)$/;
 let fetchMock: jest.Mock;
 
-/** Backend stub: a new user (no profile yet), an empty lesson list, and a profile PUT that echoes back. */
+/** Backend stub: a new user (no profile, bank accounts or categorisation yet), an empty lesson list, and a profile PUT that echoes back. */
 beforeEach(() => {
   fetchMock = jest.fn((url: string, init?: RequestInit) => {
-    if (PROFILE_URL.test(url) && !init?.method) return Promise.resolve({ ok: false, status: 404, statusText: 'Not Found' });
+    if ((PROFILE_URL.test(url) || NOT_YET_URL.test(url)) && !init?.method)
+      return Promise.resolve({ ok: false, status: 404, statusText: 'Not Found' });
     return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
   });
   globalThis.fetch = fetchMock;
 });
+
+/** A fresh onboarding continues to the consent card, then the loading steps (at least 2.4 s), then Learn. */
+async function passConsent() {
+  await fireEvent.press(await screen.findByTestId('consent-continue'));
+  await screen.findByTestId('screen-learn', {}, { timeout: 4000 });
+}
 
 function savedProfile() {
   const call = fetchMock.mock.calls.find(([url, init]) => PROFILE_URL.test(url) && init?.method === 'PUT');
@@ -37,6 +45,7 @@ test('app opens on the bank; the first Learn tap runs onboarding, skipping it la
 
   expect(await screen.findByTestId('onboarding-invite')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
+  await passConsent();
 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
   expect(savedProfile()).toEqual({ goals: [], confidence: {}, skipped: true });
@@ -90,6 +99,7 @@ test('answers all five questions', async () => {
   await fireEvent.press(screen.getByTestId('confidence-investing-1'));
   expect(screen.getByText('A little')).toBeOnTheScreen();
   await fireEvent.press(screen.getByText('Finish'));
+  await passConsent();
 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
   expect(savedProfile()).toEqual({

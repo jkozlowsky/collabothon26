@@ -366,6 +366,68 @@ test('with reduced motion the active station ring holds still', async () => {
   reduced.mockRestore();
 });
 
+test('restarting onboarding waits for the old profile and categorisation to be deleted, then asks again', async () => {
+  let deleted = false;
+  let finishDelete = () => {};
+  backend({
+    profile: (init) =>
+      init?.method === 'DELETE'
+        ? new Promise((done) => (finishDelete = () => ((deleted = true), done({ ok: true, status: 204 }))))
+        : init?.method
+          ? ok({})
+          : ok({ userId: 'demo-user', goals: [] }),
+    // The old categorisation exists until the DELETE cascades it away.
+    existing: () => (deleted ? fail(404) : ok({ userId: 'demo-user' })),
+  });
+  await renderRouter(routes, { initialUrl: '/profile' });
+  const writes = () =>
+    fetchMock.mock.calls.filter(([url, init]) => url.endsWith('/profile') && init?.method).map(([, init]) => init.method);
+  const existenceChecks = () =>
+    fetchMock.mock.calls.filter(([url, init]) => url.endsWith('/categorization') && !init?.method);
+
+  await fireEvent.press(await screen.findByTestId('restart-onboarding'));
+  await fireEvent.press(await screen.findByTestId('nav-learn'));
+  await fireEvent.press(await screen.findByTestId('onboarding-start'));
+  await fireEvent.press(screen.getByTestId('onboarding-skip'));
+  await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
+
+  // While the slow DELETE runs, the PUT and the existence check both wait for it.
+  expect(await screen.findByTestId('categorizing-checking')).toBeOnTheScreen();
+  expect(writes()).toEqual(['DELETE']);
+  expect(existenceChecks()).toHaveLength(0);
+
+  await act(async () => finishDelete());
+  expect(await screen.findByTestId('categorizing-consent')).toBeOnTheScreen();
+  expect(writes()).toEqual(['DELETE', 'PUT']);
+});
+
+test('a profile write that never finishes still ends in Retry after 10 s', async () => {
+  let release = () => {};
+  backend({
+    profile: (init) =>
+      init?.method === 'DELETE'
+        ? new Promise((done) => (release = () => done({ ok: true, status: 204 })))
+        : init?.method
+          ? ok({})
+          : ok({ userId: 'demo-user', goals: [] }),
+  });
+  try {
+    await renderRouter(routes, { initialUrl: '/profile' });
+    await fireEvent.press(await screen.findByTestId('restart-onboarding'));
+    await fireEvent.press(await screen.findByTestId('nav-learn'));
+    await fireEvent.press(await screen.findByTestId('onboarding-start'));
+    await fireEvent.press(screen.getByTestId('onboarding-skip'));
+    await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
+
+    expect(await screen.findByTestId('categorizing-checking')).toBeOnTheScreen();
+    await act(() => jest.advanceTimersByTimeAsync(10_000));
+    expect(await screen.findByTestId('categorizing-check-retry')).toBeOnTheScreen();
+  } finally {
+    // The profile queue is module state: unblock it so later tests don't wait behind the stuck DELETE.
+    await act(async () => release());
+  }
+});
+
 // Last: unmounting by hand leaves the router's global state behind for later renders.
 test('leaving mid-request aborts it and never navigates', async () => {
   backend({ post: hang });

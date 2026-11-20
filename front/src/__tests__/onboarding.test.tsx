@@ -78,6 +78,7 @@ test('skip on the first screen lands on Learn; close goes back to the bank and s
   // Not saved, so the next Learn tap shows onboarding again.
   await fireEvent.press(screen.getByTestId('nav-learn'));
   await fireEvent.press(await screen.findByTestId('onboarding-skip-intro'));
+  await passConsent();
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
   expect(savedOnboarding()).toEqual({ goals: [], skipped: true });
 });

@@ -9,9 +9,9 @@ import { LockedLessons } from '@/components/categorizing/LockedLessons';
 import { PathSteps, type Step } from '@/components/categorizing/PathSteps';
 import { Button } from '@/components/Button';
 import { colors } from '@/constants/theme';
+import { useBank } from '@/hooks/useBank';
 import { continueToLearn } from '@/hooks/useOpenLearn';
-import { categorize, factLabels, isRetryable, loadConsentData, withTimeout } from '@/lib/categorization';
-import type { ConsentData } from '@/types/categorization';
+import { categorize, factLabels, factsFrom, isCategorized, isRetryable, withTimeout } from '@/lib/categorization';
 
 const STEP_MS = 800;
 const MIN_MS = 2400;
@@ -27,14 +27,17 @@ const ANSWERS_ONLY: StepId[] = ['answers', 'picking'];
 
 const ERROR_TITLE = 'Your path stopped halfway';
 const CHECK_ERROR_TITLE = "Your learning path didn't load";
-const FACTS_ERROR_TITLE = "Your account summary didn't load";
 
 type Phase = 'consent' | 'loading' | 'error';
 
 /** After a fresh onboarding: ask whether account data may be used, then build the learning path. */
 export default function CategorizingScreen() {
-  const [data, setData] = useState<ConsentData | 'failed'>();
-  const [loadAttempt, setLoadAttempt] = useState(0);
+  const { state: bank } = useBank();
+  // Computed once per visit, so the facts sent are exactly the ones the card previewed.
+  const [facts] = useState(() => factsFrom(bank));
+  const [labels] = useState(() => factLabels(facts));
+  const [check, setCheck] = useState<'pending' | 'ask' | 'failed'>('pending');
+  const [checkAttempt, setCheckAttempt] = useState(0);
   const [phase, setPhase] = useState<Phase>('consent');
   const [consent, setConsent] = useState(false);
   const [step, setStep] = useState(0);
@@ -50,23 +53,23 @@ export default function CategorizingScreen() {
 
   useEffect(() => {
     const ctrl = new AbortController();
-    withTimeout(ctrl.signal, loadConsentData).then(
-      (loaded) => {
+    withTimeout(ctrl.signal, isCategorized).then(
+      (categorized) => {
         if (ctrl.signal.aborted) return;
-        if (loaded.kind === 'categorized') continueToLearn();
-        else setData(loaded);
+        if (categorized) continueToLearn();
+        else setCheck('ask');
       },
       (e: unknown) => {
         if (ctrl.signal.aborted) return;
         setRetryable(isRetryable(e));
-        setData('failed');
+        setCheck('failed');
       },
     );
     return () => ctrl.abort();
-  }, [loadAttempt]);
-  const reload = () => {
-    setData(undefined);
-    setLoadAttempt((a) => a + 1);
+  }, [checkAttempt]);
+  const recheck = () => {
+    setCheck('pending');
+    setCheckAttempt((a) => a + 1);
   };
 
   // Leaving with the hardware back button would drop the user out of the flow uncategorised.
@@ -78,8 +81,6 @@ export default function CategorizingScreen() {
   );
 
   const ids = consent ? WITH_ACCOUNTS : ANSWERS_ONLY;
-  const facts = typeof data === 'object' && data.kind === 'ask' ? data.facts : null;
-  const labels = facts ? factLabels(facts) : null;
 
   useEffect(() => {
     if (phase !== 'loading') return;
@@ -88,14 +89,7 @@ export default function CategorizingScreen() {
   }, [phase, ids.length]);
 
   const status = phase === 'loading' ? STEPS[ids[step]] : undefined;
-  const alert =
-    phase === 'error'
-      ? ERROR_TITLE
-      : data === 'failed'
-        ? CHECK_ERROR_TITLE
-        : data?.kind === 'facts-failed'
-          ? FACTS_ERROR_TITLE
-          : undefined;
+  const alert = phase === 'error' ? ERROR_TITLE : check === 'failed' ? CHECK_ERROR_TITLE : undefined;
   // Native announces; web reads FlowPage's live regions (aria-live on a Text is web-only).
   useEffect(() => {
     const message = status ?? alert;
@@ -110,7 +104,7 @@ export default function CategorizingScreen() {
     setStep(0);
     setPhase('loading');
     const [result] = await Promise.allSettled([
-      withTimeout(outer, (signal) => categorize(withConsent, signal)),
+      withTimeout(outer, (signal) => categorize(withConsent ? facts : null, signal)),
       new Promise((r) => setTimeout(r, MIN_MS)),
     ]);
     if (outer.aborted) return;
@@ -121,7 +115,7 @@ export default function CategorizingScreen() {
   };
 
   if (phase === 'consent') {
-    if (data === 'failed') {
+    if (check === 'failed') {
       return (
         <FlowPage
           testID="categorizing-check-error"
@@ -130,7 +124,7 @@ export default function CategorizingScreen() {
           note="You'll start with the general lessons."
           footer={
             <>
-              {retryable && <Button label="Retry" onPress={reload} testID="categorizing-check-retry" />}
+              {retryable && <Button label="Retry" onPress={recheck} testID="categorizing-check-retry" />}
               <Button
                 label="Skip for now"
                 variant={retryable ? 'ghost' : 'primary'}
@@ -147,30 +141,10 @@ export default function CategorizingScreen() {
         </FlowPage>
       );
     }
-    if (data?.kind === 'facts-failed') {
-      return (
-        <FlowPage
-          testID="categorizing-facts-error"
-          center
-          alert={alert}
-          footer={
-            <>
-              <Button label="Retry" onPress={reload} testID="consent-facts-retry" />
-              <Button label="Continue without" variant="secondary" onPress={() => void start(false)} testID="consent-decline" />
-            </>
-          }
-        >
-          <FlowMessage
-            title={FACTS_ERROR_TITLE}
-            body="Try again to see exactly what your account would share, or continue without it."
-          />
-        </FlowPage>
-      );
-    }
-    if (data?.kind !== 'ask') {
+    if (check === 'pending') {
       return (
         <FlowPage testID="categorizing-checking" center>
-          <ActivityIndicator color={colors.brandPrimary} accessibilityLabel="Loading your account summary" />
+          <ActivityIndicator color={colors.brandPrimary} accessibilityLabel="Checking your learning path" />
         </FlowPage>
       );
     }
@@ -178,14 +152,10 @@ export default function CategorizingScreen() {
       <FlowPage
         testID="categorizing-consent"
         footer={
-          labels ? (
-            <>
-              <Button label="Use my account data" onPress={() => void start(true)} testID="consent-accept" />
-              <Button label="Continue without" variant="secondary" onPress={() => void start(false)} testID="consent-decline" />
-            </>
-          ) : (
-            <Button label="Continue" onPress={() => void start(false)} testID="consent-continue" />
-          )
+          <>
+            <Button label="Use my account data" onPress={() => void start(true)} testID="consent-accept" />
+            <Button label="Continue without" variant="secondary" onPress={() => void start(false)} testID="consent-decline" />
+          </>
         }
       >
         <ConsentCard facts={labels} />
@@ -198,7 +168,7 @@ export default function CategorizingScreen() {
     if (i < step) return { id, label, state: 'done', detail: 'Done' };
     if (i > step) return { id, label, state: 'next', detail: phase === 'error' ? 'Not started' : 'Next' };
     if (phase === 'error') return { id, label, state: 'fail', detail: 'Not finished' };
-    return { id, label, state: 'now', detail: id === 'accounts' && labels ? `${labels.length} summaries` : 'In progress' };
+    return { id, label, state: 'now', detail: id === 'accounts' ? `${labels.length} summaries` : 'In progress' };
   });
 
   if (phase === 'loading') {

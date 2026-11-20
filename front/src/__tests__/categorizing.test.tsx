@@ -1,23 +1,24 @@
 import { router } from 'expo-router';
-import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 import { AccessibilityInfo, BackHandler, Platform } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 
 import { ApiError } from '@/lib/api';
-import { factLabels, isRetryable } from '@/lib/categorization';
+import { seedAccount } from '@/lib/bank/seed';
+import { factLabels, factsFrom, isRetryable } from '@/lib/categorization';
 import { appRoutes as routes } from '@/test-utils/routes';
+import type { BankState } from '@/types/bank';
 import type { Facts } from '@/types/categorization';
 
-const TOM: Facts = {
-  ageBand: '26-34',
-  incomeBand: '3.5-5k',
+/** What the app computes from the seed customer (docs/specs/F1-profiling.md, "Facts"). */
+const SEED_FACTS: Facts = {
+  incomeBand: '2-3.5k',
   cashBufferMonths: '6+',
   savingsRate: '20%+',
-  savesRegularly: false,
-  overdraftMonths: 0,
-  holdsInvestments: false,
-  hasMortgage: false,
-  hasInsurance: false,
+  savesRegularly: true,
+  inOverdraft: false,
+  holdsInvestments: true,
+  hasLoan: true,
 };
 
 const ok = (body: unknown) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
@@ -28,20 +29,21 @@ const hang = (init?: RequestInit) =>
     init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))),
   );
 
+/** A profile whose onboarding is done, so /categorizing is open to it. */
+const PROFILE = { userId: 'demo-user', goals: [], onboardingCompleted: true };
+
 type Handler = (init?: RequestInit) => Promise<unknown>;
 let fetchMock: jest.Mock;
 
 /** A user with a saved profile and no categorisation yet, unless a handler says otherwise. */
 function backend({
-  facts = () => ok(TOM),
   post = () => ok({}),
   existing = () => fail(404),
-  profile = (init?: RequestInit) => (init?.method ? ok({}) : ok({ userId: 'demo-user', goals: [] })),
+  profile = (init?: RequestInit) => (init?.method ? ok({}) : ok(PROFILE)),
 }: Record<string, Handler>) {
   fetchMock = jest.fn((url: string, init?: RequestInit) => {
-    if (url.endsWith('/facts')) return facts(init);
     if (url.endsWith('/categorization')) return init?.method === 'POST' ? post(init) : existing(init);
-    if (url.endsWith('/profile')) return profile(init);
+    if (/\/profile(\/onboarding)?$/.test(url)) return profile(init);
     return ok([]);
   });
   globalThis.fetch = fetchMock;
@@ -59,31 +61,66 @@ async function open() {
   await act(async () => router.push('/categorizing'));
 }
 
-test('facts read as plain summaries for every mock customer', () => {
-  expect(factLabels(TOM)).toEqual([
-    'Age group 26–34',
-    '€3,500–5,000 income a month',
+test('the seed customer gives the facts in the spec, and they read as plain summaries', () => {
+  expect(factsFrom(seedAccount())).toEqual(SEED_FACTS);
+  expect(factLabels(SEED_FACTS)).toEqual([
+    '€2,000–3,500 income a month',
     'Over 6 months of spending covered',
     'Keeps 20% or more of income',
-    'Never below zero',
-    'No regular transfers to savings',
-    'No investment products with us',
-    'No mortgage or life insurance with us',
+    'Current account above zero',
+    'Moves money to savings every month',
+    'Investment products with us',
+    'Paying off a loan with us',
   ]);
-  const lena = { ...TOM, ageBand: '18-25', incomeBand: '<1k', cashBufferMonths: '<1', savingsRate: 'negative', overdraftMonths: 2 } as const;
-  expect(factLabels(lena)).toEqual(
-    expect.arrayContaining(['Under €1,000 income a month', 'Spends more than comes in', 'Below zero in 2 of 3 months']),
+});
+
+/** The seed with one account changed, for the band edges. */
+function bank(account: Partial<BankState['account']>, rest: Partial<BankState> = {}): BankState {
+  const seed = seedAccount();
+  return { ...seed, ...rest, account: { ...seed.account, ...account } };
+}
+const EUR = 100;
+
+test('bands are lower-inclusive and upper-exclusive', () => {
+  expect(factsFrom(bank({ monthIn: 1000 * EUR - 1 })).incomeBand).toBe('<1k');
+  expect(factsFrom(bank({ monthIn: 1000 * EUR })).incomeBand).toBe('1-2k');
+  expect(factsFrom(bank({ monthIn: 3500 * EUR })).incomeBand).toBe('3.5-5k');
+  expect(factsFrom(bank({ monthIn: 5000 * EUR })).incomeBand).toBe('5k+');
+
+  const noSavings = { savings: { ...seedAccount().savings, balance: 0 } };
+  expect(factsFrom(bank({ balance: 999, monthOut: 1000 }, noSavings)).cashBufferMonths).toBe('<1');
+  expect(factsFrom(bank({ balance: 1000, monthOut: 1000 }, noSavings)).cashBufferMonths).toBe('1-3');
+  expect(factsFrom(bank({ balance: 3000, monthOut: 1000 }, noSavings)).cashBufferMonths).toBe('3-6');
+  expect(factsFrom(bank({ balance: 6000, monthOut: 1000 }, noSavings)).cashBufferMonths).toBe('6+');
+  expect(factsFrom(bank({ balance: -500, monthOut: 0 }, noSavings)).cashBufferMonths).toBe('6+');
+
+  expect(factsFrom(bank({ monthIn: 1000, monthOut: 1001 })).savingsRate).toBe('negative');
+  expect(factsFrom(bank({ monthIn: 1000, monthOut: 1000 })).savingsRate).toBe('0-10%');
+  expect(factsFrom(bank({ monthIn: 1000, monthOut: 900 })).savingsRate).toBe('10-20%');
+  expect(factsFrom(bank({ monthIn: 1000, monthOut: 800 })).savingsRate).toBe('20%+');
+  expect(factsFrom(bank({ monthIn: 0, monthOut: 1 })).savingsRate).toBe('negative');
+  expect(factsFrom(bank({ monthIn: 0, monthOut: 0 })).savingsRate).toBe('20%+');
+});
+
+test('flags read the bank the way the spec says', () => {
+  const seed = seedAccount();
+  const lena = factsFrom(
+    bank(
+      { balance: -1 },
+      {
+        standingOrders: seed.standingOrders.filter((o) => !o.recipient.startsWith('Depot')),
+        holdings: seed.holdings.filter((h) => h.assetClass === 'cash'),
+        loan: { ...seed.loan, remaining: 0 },
+      },
+    ),
   );
-  const marco = { ...TOM, cashBufferMonths: '1-3', savingsRate: '0-10%', savesRegularly: true, hasMortgage: true } as const;
-  expect(factLabels(marco).slice(5)).toEqual([
-    'Moves money to savings most months',
-    'No investment products with us',
-    'Paying off a mortgage with us',
-    'No life insurance with us',
-  ]);
-  const ingrid = { ...TOM, ageBand: '55-64', savesRegularly: true, holdsInvestments: true, hasInsurance: true } as const;
-  expect(factLabels(ingrid).slice(6)).toEqual(['Investment products with us', 'No mortgage with us', 'Life insurance with us']);
-  expect(factLabels({ ...TOM, incomeBand: '9k' as Facts['incomeBand'] })[1]).toBe('Income band 9k');
+  expect(lena).toMatchObject({ inOverdraft: true, savesRegularly: false, holdsInvestments: false, hasLoan: false });
+  expect(factLabels(lena)).toEqual(
+    expect.arrayContaining(['Current account below zero', 'No regular transfers to savings', 'No investment products with us', 'No loan with us']),
+  );
+  const toSavings = { ...seed.standingOrders[0], interval: 'Monthly · on the 5th', recipient: 'Savings account' };
+  expect(factsFrom(bank({}, { standingOrders: [toSavings] })).savesRegularly).toBe(true);
+  expect(factsFrom(bank({}, { standingOrders: [{ ...toSavings, interval: 'Yearly · in May' }] })).savesRegularly).toBe(false);
 });
 
 test('network errors, timeouts, 5xx and transient 4xx are retryable; other 4xx are not', () => {
@@ -106,10 +143,10 @@ test('consent with account data runs the three steps once, then lands on Learn',
 
   expect(screen.getByTestId('categorizing-loading')).toBeOnTheScreen();
   await act(() => jest.advanceTimersByTimeAsync(800));
-  expect(screen.getByText('8 summaries')).toBeOnTheScreen();
+  expect(screen.getByText('7 summaries')).toBeOnTheScreen();
 
   expect(await learn()).toBeOnTheScreen();
-  expect(bodies()).toEqual([{ consent: true }]);
+  expect(bodies()).toEqual([{ consent: true, facts: SEED_FACTS }]);
 });
 
 test('Continue without sends no consent and skips the accounts step', async () => {
@@ -122,16 +159,16 @@ test('Continue without sends no consent and skips the accounts step', async () =
   expect(bodies()).toEqual([{ consent: false }]);
 });
 
-test('no bank accounts: one Continue, sent without consent', async () => {
-  backend({ facts: () => fail(404) });
+test('the card previews exactly the facts a consent sends', async () => {
+  backend({});
   await open();
 
-  expect(await screen.findByText('No account data to use')).toBeOnTheScreen();
-  expect(screen.queryByTestId('consent-accept')).toBeNull();
-  await fireEvent.press(screen.getByTestId('consent-continue'));
+  const pills = within(await screen.findByTestId('consent-slip')).getAllByText(/./).slice(1);
+  expect(pills.map((p) => p.props.children)).toEqual(factLabels(SEED_FACTS));
+  await fireEvent.press(screen.getByTestId('consent-accept'));
 
   expect(await learn()).toBeOnTheScreen();
-  expect(bodies()).toEqual([{ consent: false }]);
+  expect(bodies()).toEqual([{ consent: true, facts: SEED_FACTS }]);
 });
 
 test('an existing categorisation goes straight to Learn without asking again', async () => {
@@ -141,28 +178,6 @@ test('an existing categorisation goes straight to Learn without asking again', a
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
   expect(screen.queryByTestId('categorizing-consent')).toBeNull();
   expect(posts()).toHaveLength(0);
-});
-
-test('a facts error other than 404 offers Retry instead of claiming there are no accounts', async () => {
-  let attempts = 0;
-  backend({ facts: () => (++attempts === 1 ? fail(503) : ok(TOM)) });
-  await open();
-
-  expect(await screen.findByTestId('consent-facts-retry')).toBeOnTheScreen();
-  expect(screen.queryByText('No account data to use')).toBeNull();
-  expect(screen.getByTestId('flow-alert')).toHaveTextContent("Your account summary didn't load");
-  await fireEvent.press(screen.getByTestId('consent-facts-retry'));
-
-  expect(await screen.findByTestId('consent-accept')).toBeOnTheScreen();
-});
-
-test('Continue without on the facts error sends no consent', async () => {
-  backend({ facts: () => fail(503) });
-  await open();
-
-  await fireEvent.press(await screen.findByTestId('consent-decline'));
-  expect(await learn()).toBeOnTheScreen();
-  expect(bodies()).toEqual([{ consent: false }]);
 });
 
 test('a failed existence check offers Retry and Skip but never a POST that could overwrite a stored consent', async () => {
@@ -197,21 +212,14 @@ test('an existence check that fails for good offers only Skip', async () => {
   expect(screen.queryByText('Try again in a moment.')).toBeNull();
 });
 
-test('an existing categorisation wins even when the facts fail', async () => {
-  backend({ existing: () => ok({ userId: 'demo-user' }), facts: () => fail(503) });
+test('an existence check that never answers shows a spinner, then times out after 10 s into Retry', async () => {
+  backend({ existing: hang });
   await open();
 
-  expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
-  expect(posts()).toHaveLength(0);
-});
-
-test('facts that never arrive show a spinner, then time out after 10 s into Retry', async () => {
-  backend({ facts: hang });
-  await open();
-
-  expect(await screen.findByLabelText('Loading your account summary')).toBeOnTheScreen();
+  expect(await screen.findByLabelText('Checking your learning path')).toBeOnTheScreen();
   await act(() => jest.advanceTimersByTimeAsync(10_000));
-  expect(screen.getByTestId('consent-facts-retry')).toBeOnTheScreen();
+  expect(screen.getByTestId('categorizing-check-retry')).toBeOnTheScreen();
+  expect(posts()).toHaveLength(0);
 });
 
 test('a transient 404 after the profile has settled is retried before it becomes an error', async () => {
@@ -243,7 +251,10 @@ test('Retry after a network error keeps the consent the user gave', async () => 
   await fireEvent.press(screen.getByTestId('categorizing-retry'));
 
   expect(await learn()).toBeOnTheScreen();
-  expect(bodies()).toEqual([{ consent: true }, { consent: true }]);
+  expect(bodies()).toEqual([
+    { consent: true, facts: SEED_FACTS },
+    { consent: true, facts: SEED_FACTS },
+  ]);
 });
 
 test('a 5xx offers Retry and marks only the last step as not finished', async () => {
@@ -375,20 +386,22 @@ test('restarting onboarding waits for the old profile and categorisation to be d
         ? new Promise((done) => (finishDelete = () => ((deleted = true), done({ ok: true, status: 204 }))))
         : init?.method
           ? ok({})
-          : ok({ userId: 'demo-user', goals: [] }),
-    // The old categorisation exists until the DELETE cascades it away.
+          : ok(PROFILE),
+    // The old categorisation exists until the reset's DELETE removes it.
     existing: () => (deleted ? fail(404) : ok({ userId: 'demo-user' })),
   });
   await renderRouter(routes, { initialUrl: '/profile' });
   const writes = () =>
-    fetchMock.mock.calls.filter(([url, init]) => url.endsWith('/profile') && init?.method).map(([, init]) => init.method);
+    fetchMock.mock.calls
+      .filter(([url, init]) => url.endsWith('/profile/onboarding') && init?.method)
+      .map(([, init]) => init.method);
   const existenceChecks = () =>
     fetchMock.mock.calls.filter(([url, init]) => url.endsWith('/categorization') && !init?.method);
 
   await fireEvent.press(await screen.findByTestId('restart-onboarding'));
   await fireEvent.press(await screen.findByTestId('nav-learn'));
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
-  await fireEvent.press(screen.getByTestId('onboarding-skip'));
+  await fireEvent.press(screen.getByTestId('onboarding-next'));
   await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
 
   // While the slow DELETE runs, the PUT and the existence check both wait for it.
@@ -409,14 +422,14 @@ test('a profile write that never finishes still ends in Retry after 10 s', async
         ? new Promise((done) => (release = () => done({ ok: true, status: 204 })))
         : init?.method
           ? ok({})
-          : ok({ userId: 'demo-user', goals: [] }),
+          : ok(PROFILE),
   });
   try {
     await renderRouter(routes, { initialUrl: '/profile' });
     await fireEvent.press(await screen.findByTestId('restart-onboarding'));
     await fireEvent.press(await screen.findByTestId('nav-learn'));
     await fireEvent.press(await screen.findByTestId('onboarding-start'));
-    await fireEvent.press(screen.getByTestId('onboarding-skip'));
+    await fireEvent.press(screen.getByTestId('onboarding-next'));
     await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
 
     expect(await screen.findByTestId('categorizing-checking')).toBeOnTheScreen();

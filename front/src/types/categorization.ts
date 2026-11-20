@@ -1,16 +1,14 @@
-import type { Confidence, ConfidenceArea, Experience, Goal, LearningStyle, LifeStage } from '@/types/onboarding';
+import type { Experience, Goal, LifeStage } from '@/types/onboarding';
 
-/** GET /api/mock-bank/customers/{id}/facts: the only bank data that may leave the bank. */
+/** What `factsFrom` computes on the device from the bank: the only bank data that may leave it. */
 export type Facts = {
-  ageBand: '18-25' | '26-34' | '35-44' | '45-54' | '55-64' | '65+';
   incomeBand: '<1k' | '1-2k' | '2-3.5k' | '3.5-5k' | '5k+';
   cashBufferMonths: '<1' | '1-3' | '3-6' | '6+';
   savingsRate: 'negative' | '0-10%' | '10-20%' | '20%+';
   savesRegularly: boolean;
-  overdraftMonths: number;
+  inOverdraft: boolean;
   holdsInvestments: boolean;
-  hasMortgage: boolean;
-  hasInsurance: boolean;
+  hasLoan: boolean;
 };
 
 export type Role = 'novice' | 'intermediate' | 'advanced';
@@ -24,8 +22,6 @@ export type SharedAnswers = {
   lifeStage: LifeStage | null;
   goals: Goal[];
   experience: Experience | null;
-  learningStyle: LearningStyle | null;
-  confidence: Record<ConfidenceArea, Confidence | null>;
   skipped: boolean;
 };
 
@@ -35,16 +31,16 @@ export type Categorization = {
   consent: boolean;
   bankData: boolean;
   role: Role;
-  lifeStage: LifeStage | null;
+  lifeStage: 'student' | 'family' | 'established' | 'pre-retirement' | null;
   focusAreas: FocusArea[];
-  confidenceGaps: { area: ConfidenceArea; direction: 'under' | 'over'; because: string }[];
+  confidenceGaps: { area: 'saving' | 'investing'; direction: 'under' | 'over'; because: string }[];
   lessonVariant: {
     persona: 'student' | 'family' | 'pre-retirement' | null;
     level: 'beginner' | 'advanced';
     lang: 'plain' | 'standard';
   };
   explanation: {
-    output: 'role' | 'lifeStage' | 'focusAreas';
+    output: 'role' | 'focusAreas';
     probabilities: Record<string, number>;
     because: string[];
   }[];
@@ -53,6 +49,3 @@ export type Categorization = {
   model: string | null;
   categorizedAt: string;
 };
-
-/** What /categorizing needs before it asks: an existing categorisation, or the facts (null: not a bank customer). */
-export type ConsentData = { kind: 'categorized' } | { kind: 'ask'; facts: Facts | null } | { kind: 'facts-failed' };

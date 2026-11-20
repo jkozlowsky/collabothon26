@@ -1,9 +1,9 @@
 import { profileWritesSettled } from '@/hooks/useOnboarding';
 import { api, ApiError } from '@/lib/api';
 import { USER_ID } from '@/lib/user';
-import type { Categorization, ConsentData, Facts } from '@/types/categorization';
+import type { BankState } from '@/types/bank';
+import type { Categorization, Facts } from '@/types/categorization';
 
-const FACTS_PATH = `/api/mock-bank/customers/${encodeURIComponent(USER_ID)}/facts`;
 const CATEGORIZATION_PATH = `/api/users/${encodeURIComponent(USER_ID)}/categorization`;
 
 export const TIMEOUT_MS = 10_000;
@@ -41,22 +41,17 @@ function profileSaved(signal: AbortSignal) {
 }
 
 /**
- * Already categorised wins, whatever the facts did. A failed existence check throws: the caller may retry or
- * skip, but never POST, because a POST could overwrite a stored consent.
+ * Whether this user already has a categorisation. A failed check throws: the caller may retry or skip, but never
+ * POST, because a POST could overwrite a stored consent.
  */
-export async function loadConsentData(signal: AbortSignal): Promise<ConsentData> {
+export async function isCategorized(signal: AbortSignal): Promise<boolean> {
   await profileSaved(signal);
-  const [existing, facts] = await Promise.allSettled([
-    api<Categorization>(CATEGORIZATION_PATH, { signal }).catch(nullOn404),
-    api<Facts>(FACTS_PATH, { signal }).catch(nullOn404),
-  ]);
-  if (existing.status === 'rejected') throw existing.reason;
-  if (existing.value) return { kind: 'categorized' };
-  return facts.status === 'fulfilled' ? { kind: 'ask', facts: facts.value } : { kind: 'facts-failed' };
+  return (await api<Categorization>(CATEGORIZATION_PATH, { signal }).catch(nullOn404)) !== null;
 }
 
-export async function categorize(consent: boolean, signal: AbortSignal): Promise<Categorization> {
-  const body = JSON.stringify({ consent });
+/** `facts` only with consent: the backend refuses account data the user did not agree to share. */
+export async function categorize(facts: Facts | null, signal: AbortSignal): Promise<Categorization> {
+  const body = JSON.stringify(facts ? { consent: true, facts } : { consent: false });
   await profileSaved(signal);
   for (let attempt = 1; ; attempt++) {
     try {
@@ -71,6 +66,41 @@ export async function categorize(consent: boolean, signal: AbortSignal): Promise
 /** Network errors, timeouts, 5xx and the transient 404/408/429 are worth a retry; other 4xx fail the same way again. */
 export function isRetryable(e: unknown) {
   return !(e instanceof ApiError) || e.status >= 500 || [404, 408, 429].includes(e.status);
+}
+
+/** `bounds` are the lower edges of every band after the first (lower-inclusive, upper-exclusive). */
+function band<T>(value: number, bounds: number[], bands: readonly T[]): T {
+  const i = bounds.findIndex((b) => value < b);
+  return bands[i === -1 ? bands.length - 1 : i];
+}
+
+const CENTS_PER_EUR = 100;
+const SAVINGS_TARGET = /^(Savings|Depot)/;
+
+/**
+ * The only bank data that leaves the device: bands and flags, no name, id, exact amount, counterparty or date.
+ * Rules: docs/specs/F1-profiling.md ("Facts").
+ */
+export function factsFrom(bank: BankState): Facts {
+  const { account, savings, standingOrders, holdings, loan } = bank;
+  const net = account.monthIn - account.monthOut;
+  return {
+    incomeBand: band(account.monthIn, [1000 * CENTS_PER_EUR, 2000 * CENTS_PER_EUR, 3500 * CENTS_PER_EUR, 5000 * CENTS_PER_EUR], ['<1k', '1-2k', '2-3.5k', '3.5-5k', '5k+']),
+    cashBufferMonths:
+      account.monthOut === 0
+        ? '6+'
+        : band((account.balance + savings.balance) / account.monthOut, [1, 3, 6], ['<1', '1-3', '3-6', '6+']),
+    savingsRate:
+      account.monthIn === 0
+        ? account.monthOut === 0
+          ? '20%+'
+          : 'negative'
+        : band(net / account.monthIn, [0, 0.1, 0.2], ['negative', '0-10%', '10-20%', '20%+']),
+    savesRegularly: standingOrders.some((o) => o.interval.startsWith('Monthly') && SAVINGS_TARGET.test(o.recipient)),
+    inOverdraft: account.balance < 0,
+    holdsInvestments: holdings.some((h) => h.assetClass !== 'cash'),
+    hasLoan: loan.remaining > 0,
+  };
 }
 
 const INCOME: Record<Facts['incomeBand'], string> = {
@@ -95,21 +125,15 @@ const SAVINGS_RATE: Record<Facts['savingsRate'], string> = {
   '20%+': 'Keeps 20% or more of income',
 };
 
-/** The facts in plain words, one line per summary the consent card shows; an unknown band is shown raw. */
+/** The facts in plain words, one line per summary the consent card shows. */
 export function factLabels(f: Facts): string[] {
   return [
-    `Age group ${f.ageBand.replace('-', '–')}`,
-    INCOME[f.incomeBand] ?? `Income band ${f.incomeBand}`,
-    BUFFER[f.cashBufferMonths] ?? `Cash buffer ${f.cashBufferMonths} months`,
-    SAVINGS_RATE[f.savingsRate] ?? `Savings rate ${f.savingsRate}`,
-    f.overdraftMonths === 0 ? 'Never below zero' : `Below zero in ${f.overdraftMonths} of 3 months`,
-    f.savesRegularly ? 'Moves money to savings most months' : 'No regular transfers to savings',
+    INCOME[f.incomeBand],
+    BUFFER[f.cashBufferMonths],
+    SAVINGS_RATE[f.savingsRate],
+    f.inOverdraft ? 'Current account below zero' : 'Current account above zero',
+    f.savesRegularly ? 'Moves money to savings every month' : 'No regular transfers to savings',
     f.holdsInvestments ? 'Investment products with us' : 'No investment products with us',
-    ...(!f.hasMortgage && !f.hasInsurance
-      ? ['No mortgage or life insurance with us']
-      : [
-          f.hasMortgage ? 'Paying off a mortgage with us' : 'No mortgage with us',
-          f.hasInsurance ? 'Life insurance with us' : 'No life insurance with us',
-        ]),
+    f.hasLoan ? 'Paying off a loan with us' : 'No loan with us',
   ];
 }

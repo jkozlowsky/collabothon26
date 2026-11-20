@@ -4,7 +4,7 @@ import { appRoutes as routes } from '@/test-utils/routes';
 
 const PROFILE_URL = /\/api\/users\/demo-user\/profile$/;
 const ONBOARDING_URL = /\/api\/users\/demo-user\/profile\/onboarding$/;
-const NOT_YET_URL = /\/api\/(mock-bank\/customers\/demo-user\/facts|users\/demo-user\/categorization)$/;
+const CATEGORIZATION_URL = /\/api\/users\/demo-user\/categorization$/;
 let fetchMock: jest.Mock;
 
 const profile = (onboardingCompleted: boolean) => ({
@@ -17,10 +17,10 @@ const profile = (onboardingCompleted: boolean) => ({
   onboardingCompletedAt: null,
 });
 
-/** Backend stub: the user's profile, no bank accounts or categorisation yet, an empty lesson list, and writes that succeed. */
+/** Backend stub: the user's profile, no categorisation yet, an empty lesson list, and writes that succeed. */
 function stubBackend({ onboardingCompleted }: { onboardingCompleted: boolean }) {
   fetchMock = jest.fn((url: string, init?: RequestInit) =>
-    NOT_YET_URL.test(url) && !init?.method
+    CATEGORIZATION_URL.test(url) && !init?.method
       ? Promise.resolve({ ok: false, status: 404, statusText: 'Not Found' })
       : Promise.resolve({
           ok: true,
@@ -35,7 +35,7 @@ beforeEach(() => stubBackend({ onboardingCompleted: false }));
 
 /** A fresh onboarding continues to the consent card, then the loading steps (at least 2.4 s), then Learn. */
 async function passConsent() {
-  await fireEvent.press(await screen.findByTestId('consent-continue'));
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
   await screen.findByTestId('screen-learn', {}, { timeout: 4000 });
 }
 

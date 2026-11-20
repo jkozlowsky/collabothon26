@@ -1,0 +1,48 @@
+import { router, usePathname, type Href } from 'expo-router';
+import { useCallback, useEffect } from 'react';
+
+import { useOnboarding } from '@/hooks/useOnboarding';
+
+/** Where to go once onboarding finishes. Module state is fine: one app, one onboarding at a time. */
+let pendingTarget: Href | null = null;
+
+/**
+ * Opens the Finance Quest module from the bank. The first time (onboarding not done yet) the
+ * onboarding flow opens instead, and the user lands on `target` when it is finished.
+ *
+ * @returns open(target, go) — `go` performs the switch when onboarding is done (defaults to navigating to `target`).
+ */
+export function useOpenLearn() {
+  const { done } = useOnboarding();
+  return useCallback(
+    (target: Href = '/map', go: () => void = () => router.navigate(target)) => {
+      if (done) return go();
+      pendingTarget = target;
+      router.push('/onboarding');
+    },
+    [done],
+  );
+}
+
+/** Opens the Map focused on a story/lesson id (Map may ignore it until stories exist). */
+export function useOpenLearnFocus() {
+  const open = useOpenLearn();
+  return useCallback((focus: string) => open({ pathname: '/map', params: { focus } }), [open]);
+}
+
+/**
+ * Mount once inside the main layout. Onboarding is a plain stack screen on top of the bank (not a
+ * protected one: removing a protected screen rebuilds the stack and loses the bank's tab and scroll),
+ * so when it completes this closes it and moves on to Learn.
+ */
+export function useResumeLearnAfterOnboarding() {
+  const { done } = useOnboarding();
+  const pathname = usePathname();
+  useEffect(() => {
+    if (!done || pathname !== '/onboarding') return;
+    const target = pendingTarget ?? '/map';
+    pendingTarget = null;
+    if (router.canGoBack()) router.back();
+    router.navigate(target);
+  }, [done, pathname]);
+}

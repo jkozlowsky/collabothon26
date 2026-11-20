@@ -10,6 +10,9 @@ const Animated = {
   createAnimatedComponent: (c) => c,
 };
 
+// Layout animation builders (FadeIn.duration(200), LinearTransition…): chainable no-ops.
+const builder = new Proxy(function () {}, { get: () => () => builder, apply: () => builder });
+
 // expo-router/testing-library sets `default.call`, so `default` must be a plain object.
 module.exports = {
   __esModule: true,
@@ -17,4 +20,7 @@ module.exports = {
   ...Animated,
   cubicBezier: () => 'ease',
   useReducedMotion: () => false,
+  FadeIn: builder,
+  FadeOut: builder,
+  LinearTransition: builder,
 };

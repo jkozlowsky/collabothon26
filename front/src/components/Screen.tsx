@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, spacing, type } from '@/constants/theme';
+import { colors, nav, spacing, type } from '@/constants/theme';
 
 type Props = {
   title: string;
@@ -23,7 +23,7 @@ export function Screen({ title, children, scroll = false, testID }: Props) {
   );
 
   return (
-    // Tab bar handles the bottom inset, so only pad the top (notch / status bar).
+    // The floating nav handles the bottom inset; content gets bottom padding to clear it.
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']} testID={testID}>
       {scroll ? (
         <ScrollView contentContainerStyle={styles.content}>{content}</ScrollView>
@@ -44,7 +44,8 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: nav.clearance + spacing.lg,
   },
   title: {
     ...type.displayLarge,

@@ -21,7 +21,6 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import com.collabothon.back.TestcontainersConfiguration;
-import com.collabothon.back.categorization.Categorization.Confidence;
 import com.collabothon.back.categorization.Categorization.OnboardingAnswers;
 import com.sun.net.httpserver.HttpServer;
 
@@ -60,8 +59,7 @@ class JevRedirectTests {
 
 	@Test
 	void redirectIsNotFollowed() {
-		JevClient.Result result = jev.ask(new OnboardingAnswers(null, List.of(), "none", null,
-				new Confidence(null, null, null), false), null, false);
+		JevClient.Result result = jev.ask(new OnboardingAnswers(null, List.of(), "occasional", false), null);
 
 		assertThat(ASKED).hasValue(1);
 		assertThat(REDIRECTED).hasValue(0);

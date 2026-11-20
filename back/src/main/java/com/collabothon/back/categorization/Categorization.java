@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import com.collabothon.back.bank.Facts;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 import lombok.RequiredArgsConstructor;
@@ -39,11 +38,7 @@ public record Categorization(
 	}
 
 	// Serialised verbatim to Jev, so a new component here is sent out too (pinned by a test).
-	public record OnboardingAnswers(String lifeStage, List<String> goals, String experience, String learningStyle,
-			Confidence confidence, boolean skipped) {
-	}
-
-	public record Confidence(Integer budgeting, Integer saving, Integer investing) {
+	public record OnboardingAnswers(String lifeStage, List<String> goals, String experience, boolean skipped) {
 	}
 
 	public enum Role {
@@ -57,28 +52,32 @@ public record Categorization(
 
 	}
 
+	@RequiredArgsConstructor
 	public enum LifeStage {
 
-		STUDENT, ESTABLISHED, FAMILY, PRE_RETIREMENT;
+		STUDENT("starting-out"), FAMILY("building"), ESTABLISHED("settled"), PRE_RETIREMENT("later-life");
+
+		/** The onboarding answer (main's {@code user_profile.life_stage}) this stage comes from. */
+		private final String answer;
 
 		@JsonValue
 		public String wire() {
 			return wireName(this);
 		}
 
-		/** Null stays null; an unknown value is an error, never a silent mapping. */
-		static LifeStage fromWire(String value) {
-			return value == null ? null : Arrays.stream(values())
-				.filter(stage -> stage.wire().equals(value))
+		/** Null stays null; an unknown answer is an error, never a silent mapping. */
+		static LifeStage fromAnswer(String answer) {
+			return answer == null ? null : Arrays.stream(values())
+				.filter(stage -> stage.answer.equals(answer))
 				.findFirst()
-				.orElseThrow(() -> new IllegalArgumentException("Unknown life stage: " + value));
+				.orElseThrow(() -> new IllegalArgumentException("Unknown life stage: " + answer));
 		}
 
 	}
 
 	public enum ConfidenceArea {
 
-		BUDGETING, SAVING, INVESTING;
+		SAVING, INVESTING;
 
 		@JsonValue
 		public String wire() {
@@ -123,7 +122,7 @@ public record Categorization(
 	@RequiredArgsConstructor
 	public enum Output {
 
-		ROLE("role"), LIFE_STAGE("lifeStage"), FOCUS_AREAS("focusAreas");
+		ROLE("role"), FOCUS_AREAS("focusAreas");
 
 		private final String wire;
 

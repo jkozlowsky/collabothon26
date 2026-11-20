@@ -1,30 +1,20 @@
 package com.collabothon.back.categorization;
 
-import static com.collabothon.back.bank.Facts.AGE_18_25;
-import static com.collabothon.back.bank.Facts.AGE_26_34;
-import static com.collabothon.back.bank.Facts.AGE_35_44;
-import static com.collabothon.back.bank.Facts.AGE_45_54;
-import static com.collabothon.back.bank.Facts.AGE_55_64;
-import static com.collabothon.back.bank.Facts.AGE_65_PLUS;
-import static com.collabothon.back.bank.Facts.BUFFER_1_3;
-import static com.collabothon.back.bank.Facts.BUFFER_3_6;
-import static com.collabothon.back.bank.Facts.BUFFER_6_PLUS;
-import static com.collabothon.back.bank.Facts.BUFFER_UNDER_1;
-import static com.collabothon.back.bank.Facts.RATE_10_20;
-import static com.collabothon.back.bank.Facts.RATE_20_PLUS;
-import static com.collabothon.back.bank.Facts.WINDOW_MONTHS;
+import static com.collabothon.back.categorization.Facts.BUFFER_1_3;
+import static com.collabothon.back.categorization.Facts.BUFFER_3_6;
+import static com.collabothon.back.categorization.Facts.BUFFER_6_PLUS;
+import static com.collabothon.back.categorization.Facts.BUFFER_UNDER_1;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import com.collabothon.back.bank.Facts;
-import com.collabothon.back.categorization.Categorization.Confidence;
 import com.collabothon.back.categorization.Categorization.ConfidenceArea;
 import com.collabothon.back.categorization.Categorization.ConfidenceGap;
 import com.collabothon.back.categorization.Categorization.Direction;
@@ -41,33 +31,35 @@ final class Rules {
 
 	static final double FOCUS_THRESHOLD = 0.5;
 
-	static final int LOW_CONFIDENCE = 2;
-
-	static final int HIGH_CONFIDENCE = 4;
-
 	static final String NEUTRAL_LINE = "It fits the answers you gave.";
 
-	private static final String LEARNING_SIMPLE = "simple";
+	static final String SAVES_LINE = "Money goes to savings or investments every month.";
 
-	private static final String LEARNING_DETAILED = "detailed";
+	static final String NO_SAVES_LINE = "No regular transfers to savings or investments.";
 
-	private static final String LAST_MONTHS = "the last " + WINDOW_MONTHS + " months";
+	static final String HOLDS_LINE = "Your accounts with us include investment products.";
+
+	static final String NO_HOLDS_LINE = "No investment products in your accounts with us.";
+
+	static final String OVERSPENT_LINE = "You spent more than you earned this month.";
+
+	static final String OVERDRAFT_LINE = "Your current account is below zero.";
+
+	static final String LOAN_LINE = "You are paying off a loan with us.";
+
+	static final String RETIREMENT_LINE = "You said retirement is close or already here.";
 
 	static final Map<String, String> BUFFER = Map.of(BUFFER_UNDER_1, "less than a month", BUFFER_1_3,
 			"1 to 3 months", BUFFER_3_6, "3 to 6 months", BUFFER_6_PLUS, "more than 6 months");
 
-	private static final Map<String, String> KEPT_OF_INCOME = Map.of(RATE_10_20, "10 to 20%", RATE_20_PLUS,
-			"more than 20%");
-
 	private static final Set<String> SHORT_BUFFER = Set.of(BUFFER_UNDER_1, BUFFER_1_3);
 
-	private static final Set<String> AGE_45_PLUS = Set.of(AGE_45_54, AGE_55_64, AGE_65_PLUS);
-
+	/** Main's onboarding answers to "How do you handle money today?", with their titles. */
 	@RequiredArgsConstructor
 	enum Experience {
 
-		NOT_SAVING("I don't save yet"), NONE("I save, but don't invest yet"), TRIED("Tried it once or twice"),
-		REGULAR("I invest regularly"), EXPERIENCED("I'm pretty experienced");
+		NOT_SAVING("I don't save yet"), OCCASIONAL("I save now and then"), REGULAR("I save regularly"),
+		INVESTING("I save and invest"), PLANNING("I plan my finances ahead");
 
 		private final String label;
 
@@ -78,45 +70,44 @@ final class Rules {
 				.orElseThrow(() -> new IllegalArgumentException("Unknown experience: " + value));
 		}
 
+		String saidLine() {
+			return "You said: " + label + ".";
+		}
+
 	}
 
-	record Judgement(Role role, Map<String, Double> roleProbabilities, LifeStage lifeStage,
-			Map<String, Double> lifeStageProbabilities, List<Area> focusAreas,
+	private static final Set<Experience> SAYS_LITTLE_SAVING = EnumSet.of(Experience.NOT_SAVING,
+			Experience.OCCASIONAL);
+
+	private static final Set<Experience> SAYS_INVESTING = EnumSet.of(Experience.INVESTING, Experience.PLANNING);
+
+	record Judgement(Role role, Map<String, Double> roleProbabilities, List<Area> focusAreas,
 			Map<String, Double> focusProbabilities, String model) {
 	}
 
 	private Rules() {
 	}
 
-	static Judgement fallback(OnboardingAnswers a, Facts f, boolean askLifeStage) {
+	static Judgement fallback(OnboardingAnswers a, Facts f) {
 		Role role = fallbackRole(a, f);
-		return new Judgement(role, Map.of(), askLifeStage ? lifeStageFromAge(f.ageBand()) : null, Map.of(),
-				fallbackFocus(a, f, role), Map.of(), null);
+		return new Judgement(role, Map.of(), fallbackFocus(a, f, role), Map.of(), null);
 	}
 
-	/** The declaration decides; facts only lift a non-investor who saves regularly. */
+	/** The declaration decides; facts only lift someone who saves now and then but does so every month. */
 	static Role fallbackRole(OnboardingAnswers a, Facts f) {
 		return switch (Experience.fromWire(a.experience())) {
-			case REGULAR, EXPERIENCED -> Role.ADVANCED;
-			case TRIED -> Role.INTERMEDIATE;
-			case null, default -> f != null && f.savesRegularly() ? Role.INTERMEDIATE : Role.NOVICE;
-		};
-	}
-
-	static LifeStage lifeStageFromAge(String ageBand) {
-		return switch (ageBand) {
-			case AGE_18_25 -> LifeStage.STUDENT;
-			case AGE_26_34 -> LifeStage.ESTABLISHED;
-			case AGE_35_44, AGE_45_54 -> LifeStage.FAMILY;
-			case AGE_55_64, AGE_65_PLUS -> LifeStage.PRE_RETIREMENT;
-			default -> throw new IllegalArgumentException("Unknown age band: " + ageBand);
+			case INVESTING, PLANNING -> Role.ADVANCED;
+			case REGULAR -> Role.INTERMEDIATE;
+			case OCCASIONAL -> f != null && f.savesRegularly() ? Role.INTERMEDIATE : Role.NOVICE;
+			case NOT_SAVING -> Role.NOVICE;
+			case null -> Role.NOVICE;
 		};
 	}
 
 	static List<Area> fallbackFocus(OnboardingAnswers a, Facts f, Role role) {
 		Set<Area> areas = new LinkedHashSet<>();
 		if (f != null) {
-			if (f.overdraftMonths() > 0) {
+			if (f.inOverdraft() || f.hasLoan()) {
 				areas.add(Area.DEBT);
 			}
 			if (hasShortBuffer(f)) {
@@ -125,9 +116,9 @@ final class Rules {
 			if (!f.holdsInvestments() && f.cashBufferMonths().equals(BUFFER_6_PLUS)) {
 				areas.add(Area.INVESTING);
 			}
-			if (isAge45Plus(f)) {
-				areas.add(Area.RETIREMENT);
-			}
+		}
+		if (LifeStage.fromAnswer(a.lifeStage()) == LifeStage.PRE_RETIREMENT) {
+			areas.add(Area.RETIREMENT);
 		}
 		if (role == Role.NOVICE) {
 			areas.add(Area.RISK);
@@ -143,97 +134,56 @@ final class Rules {
 		return picked.isEmpty() ? sorted.subList(0, 1) : picked;
 	}
 
+	/** Where what the user said about themselves and what their accounts show point different ways. */
 	static List<ConfidenceGap> confidenceGaps(OnboardingAnswers a, Facts f) {
-		if (f == null) {
+		Experience said = Experience.fromWire(a.experience());
+		if (f == null || said == null) {
 			return List.of();
 		}
 		List<ConfidenceGap> gaps = new ArrayList<>();
-		Confidence c = a.confidence();
-		Integer n = c.budgeting();
-		if (isLow(n) && f.overdraftMonths() == 0 && KEPT_OF_INCOME.containsKey(f.savingsRate())) {
-			gaps.add(new ConfidenceGap(ConfidenceArea.BUDGETING, Direction.UNDER,
-					"You rate yourself %d/5 on everyday money, and your current account stayed above zero in %s while you kept %s of your income."
-						.formatted(n, LAST_MONTHS, KEPT_OF_INCOME.get(f.savingsRate()))));
+		if (SAYS_LITTLE_SAVING.contains(said) && f.savesRegularly()) {
+			gaps.add(gap(ConfidenceArea.SAVING, Direction.UNDER, said, SAVES_LINE));
 		}
-		else if (isHigh(n) && f.overdraftMonths() > 0) {
-			gaps.add(new ConfidenceGap(ConfidenceArea.BUDGETING, Direction.OVER,
-					"You rate yourself %d/5 on everyday money, and your current account went below zero in %d of %s."
-						.formatted(n, f.overdraftMonths(), LAST_MONTHS)));
+		else if (!SAYS_LITTLE_SAVING.contains(said) && f.cashBufferMonths().equals(BUFFER_UNDER_1)) {
+			gaps.add(gap(ConfidenceArea.SAVING, Direction.OVER, said, bufferLine(f)));
 		}
-		n = c.saving();
-		if (isLow(n) && f.savesRegularly()) {
-			gaps.add(new ConfidenceGap(ConfidenceArea.SAVING, Direction.UNDER,
-					"You rate yourself %d/5 on saving, and you moved money to savings in most of %s."
-						.formatted(n, LAST_MONTHS)));
+		if (!SAYS_INVESTING.contains(said) && f.holdsInvestments()) {
+			gaps.add(gap(ConfidenceArea.INVESTING, Direction.UNDER, said, HOLDS_LINE));
 		}
-		else if (isHigh(n) && f.cashBufferMonths().equals(BUFFER_UNDER_1)) {
-			gaps.add(new ConfidenceGap(ConfidenceArea.SAVING, Direction.OVER,
-					"You rate yourself %d/5 on saving, and your accounts cover less than a month of spending."
-						.formatted(n)));
-		}
-		n = c.investing();
-		Experience experience = Experience.fromWire(a.experience());
-		if (isLow(n) && f.holdsInvestments()) {
-			gaps.add(new ConfidenceGap(ConfidenceArea.INVESTING, Direction.UNDER,
-					"You rate yourself %d/5 on investing, and your accounts with us include investment products."
-						.formatted(n)));
-		}
-		else if (isHigh(n) && !f.holdsInvestments()
-				&& (experience == Experience.NOT_SAVING || experience == Experience.NONE)) {
-			gaps.add(new ConfidenceGap(ConfidenceArea.INVESTING, Direction.OVER,
-					"You rate yourself %d/5 on investing, and there are no investment products in your accounts with us."
-						.formatted(n)));
+		else if (SAYS_INVESTING.contains(said) && !f.holdsInvestments()) {
+			gaps.add(gap(ConfidenceArea.INVESTING, Direction.OVER, said, NO_HOLDS_LINE));
 		}
 		return gaps;
 	}
 
-	static LessonVariant lessonVariant(Role role, LifeStage lifeStage, String learningStyle) {
-		Lang lang = switch (learningStyle) {
-			case LEARNING_SIMPLE -> Lang.PLAIN;
-			case LEARNING_DETAILED -> Lang.STANDARD;
-			case null, default -> role == Role.NOVICE ? Lang.PLAIN : Lang.STANDARD;
-		};
+	private static ConfidenceGap gap(ConfidenceArea area, Direction direction, Experience said, String shows) {
+		return new ConfidenceGap(area, direction, said.saidLine() + " " + shows);
+	}
+
+	static LessonVariant lessonVariant(Role role, LifeStage lifeStage) {
 		LifeStage persona = lifeStage == LifeStage.ESTABLISHED ? null : lifeStage;
-		return new LessonVariant(persona, role == Role.ADVANCED ? Level.ADVANCED : Level.BEGINNER, lang);
+		return new LessonVariant(persona, role == Role.ADVANCED ? Level.ADVANCED : Level.BEGINNER,
+				role == Role.NOVICE ? Lang.PLAIN : Lang.STANDARD);
 	}
 
 	static List<String> roleBecause(OnboardingAnswers a, Facts f) {
 		List<String> lines = new ArrayList<>();
-		Experience experience = Experience.fromWire(a.experience());
-		if (experience != null) {
-			lines.add("You said: " + experience.label + ".");
-		}
-		Confidence c = a.confidence();
-		List<String> rated = new ArrayList<>();
-		if (c.budgeting() != null) {
-			rated.add(c.budgeting() + "/5 on everyday money");
-		}
-		if (c.saving() != null) {
-			rated.add(c.saving() + "/5 on saving");
-		}
-		if (c.investing() != null) {
-			rated.add(c.investing() + "/5 on investing");
-		}
-		if (!rated.isEmpty()) {
-			lines.add("You rate yourself " + String.join(", ", rated) + ".");
+		Experience said = Experience.fromWire(a.experience());
+		if (said != null) {
+			lines.add(said.saidLine());
 		}
 		if (f != null) {
-			lines.add(f.savesRegularly() ? "You move money to savings in most months."
-					: "No regular transfers to savings in " + LAST_MONTHS + ".");
+			lines.add(f.savesRegularly() ? SAVES_LINE : NO_SAVES_LINE);
 			lines.add(holdsLine(f));
 		}
 		return lines;
-	}
-
-	static List<String> lifeStageBecause(Facts f) {
-		return f.hasMortgage() ? List.of(ageLine(f), "You are paying off a mortgage.") : List.of(ageLine(f));
 	}
 
 	static List<String> focusBecause(List<Area> areas, OnboardingAnswers a, Facts f) {
 		List<Area> goals = Area.fromGoals(a.goals());
 		Set<String> lines = new LinkedHashSet<>();
 		for (Area area : areas) {
-			List<String> own = new ArrayList<>(f == null ? List.of() : area.supportingLines(f));
+			List<String> own = new ArrayList<>(area.supportingLines(a, f));
 			if (goals.contains(area)) {
 				own.add("You picked " + area.wire() + " as a goal.");
 			}
@@ -243,36 +193,15 @@ final class Rules {
 	}
 
 	static String holdsLine(Facts f) {
-		return f.holdsInvestments() ? "Your accounts with us include investment products."
-				: "No investment products in your accounts with us.";
+		return f.holdsInvestments() ? HOLDS_LINE : NO_HOLDS_LINE;
 	}
 
 	static String bufferLine(Facts f) {
 		return "Your accounts cover " + Objects.requireNonNull(BUFFER.get(f.cashBufferMonths())) + " of spending.";
 	}
 
-	static String overdraftLine(Facts f) {
-		return "Your current account went below zero in %d of %s.".formatted(f.overdraftMonths(), LAST_MONTHS);
-	}
-
-	static String ageLine(Facts f) {
-		return "Age group " + f.ageBand() + ".";
-	}
-
 	static boolean hasShortBuffer(Facts f) {
 		return SHORT_BUFFER.contains(f.cashBufferMonths());
-	}
-
-	static boolean isAge45Plus(Facts f) {
-		return AGE_45_PLUS.contains(f.ageBand());
-	}
-
-	private static boolean isLow(Integer confidence) {
-		return confidence != null && confidence <= LOW_CONFIDENCE;
-	}
-
-	private static boolean isHigh(Integer confidence) {
-		return confidence != null && confidence >= HIGH_CONFIDENCE;
 	}
 
 }

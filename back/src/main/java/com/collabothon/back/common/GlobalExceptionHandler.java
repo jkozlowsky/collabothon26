@@ -15,9 +15,4 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
 	}
 
-	@ExceptionHandler(BadRequestException.class)
-	ProblemDetail badRequest(BadRequestException e) {
-		return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
-	}
-
 }

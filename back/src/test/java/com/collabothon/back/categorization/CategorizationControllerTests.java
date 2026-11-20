@@ -62,23 +62,23 @@ class CategorizationControllerTests {
 
 	private static final String SPEC = "docs/specs/F1-profiling.md";
 
-	private static final String TOM_ANSWERS = """
-			{"lifeStage": null, "goals": ["start-investing", "etfs"], "experience": "none", "learningStyle": "visual",
-			 "confidence": {"budgeting": 2, "saving": 3, "investing": 4}, "skipped": false}""";
+	private static final String ANSWERS = """
+			{"lifeStage": "building", "goals": ["start-saving", "stocks-etfs"], "experience": "occasional",
+			 "skipped": false}""";
 
-	private static final String TOM_FACTS = """
-			{"ageBand": "26-34", "incomeBand": "3.5-5k", "cashBufferMonths": "6+", "savingsRate": "20%+",
-			 "savesRegularly": false, "overdraftMonths": 0,
-			 "holdsInvestments": false, "hasMortgage": false, "hasInsurance": false}""";
+	/** What the app computes from the front seed customer (spec: `factsFrom` on the seed). */
+	private static final String FACTS = """
+			{"incomeBand": "2-3.5k", "cashBufferMonths": "6+", "savingsRate": "20%+", "savesRegularly": true,
+			 "inOverdraft": false, "holdsInvestments": true, "hasLoan": true}""";
+
+	private static final String WITH_FACTS = "{\"consent\": true, \"facts\": " + FACTS + "}";
 
 	private static final String JEV_ANSWER = """
 			{"model": "jev-2026-05", "answers": {
-			  "role": {"type": "choice", "choice": "intermediate", "confidence": 0.9,
-			           "probabilities": {"novice": 0.06, "intermediate": 0.9, "advanced": 0.04}},
-			  "lifeStage": {"type": "choice", "choice": "established", "confidence": 0.8,
-			                "probabilities": {"student": 0.1, "established": 0.8, "family": 0.08, "pre-retirement": 0.02}},
+			  "role": {"type": "choice", "choice": "intermediate", "confidence": 0.8,
+			           "probabilities": {"novice": 0.1, "intermediate": 0.8, "advanced": 0.1}},
 			  "focus_saving": {"type": "noul", "noul": 0.2},
-			  "focus_debt": {"type": "noul", "noul": 0.05},
+			  "focus_debt": {"type": "noul", "noul": 0.7},
 			  "focus_investing": {"type": "noul", "noul": 0.9},
 			  "focus_risk": {"type": "noul", "noul": 0.6},
 			  "focus_retirement": {"type": "noul", "noul": 0.1}},
@@ -147,9 +147,9 @@ class CategorizationControllerTests {
 
 	// The reset also drops any earlier categorisation, so each test starts without a reusable result.
 	private void onboard(String userId, String answers) throws Exception {
-		mvc.perform(delete("/api/users/{id}/profile", userId)).andExpect(status().isNoContent());
-		mvc.perform(put("/api/users/{id}/profile", userId).contentType(MediaType.APPLICATION_JSON).content(answers))
-			.andExpect(status().isOk());
+		mvc.perform(delete("/api/users/{id}/profile/onboarding", userId)).andExpect(status().isNoContent());
+		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
+			.content(answers)).andExpect(status().isOk());
 	}
 
 	private ResultActions categorize(String userId, String body) throws Exception {
@@ -170,46 +170,41 @@ class CategorizationControllerTests {
 	}
 
 	@Test
-	void tomIsCategorisedByJev() throws Exception {
-		onboard("tom", TOM_ANSWERS);
+	void alexIsCategorisedByJev() throws Exception {
+		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(method(HttpMethod.POST))
 			.andExpect(header("Authorization", "Bearer test-key"))
 			.andExpect(content().json("""
 					{"model": "jev-latest", "state": {"answers": %s, "facts": %s}, "questions": %s}"""
-				.formatted(TOM_ANSWERS, TOM_FACTS, specQuestions()), JsonCompareMode.STRICT))
+				.formatted(ANSWERS, FACTS, specQuestions()), JsonCompareMode.STRICT))
 			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 
 		String expected = """
-				{"userId": "tom", "consent": true, "bankData": true, "role": "intermediate", "lifeStage": "established",
-				 "focusAreas": ["investing", "risk"],
+				{"userId": "alex", "consent": true, "bankData": true, "role": "intermediate", "lifeStage": "family",
+				 "focusAreas": ["investing", "debt", "risk"],
 				 "confidenceGaps": [
-				   {"area": "budgeting", "direction": "under",
-				    "because": "You rate yourself 2/5 on everyday money, and your current account stayed above zero in the last 3 months while you kept more than 20%% of your income."},
-				   {"area": "investing", "direction": "over",
-				    "because": "You rate yourself 4/5 on investing, and there are no investment products in your accounts with us."}],
-				 "lessonVariant": {"persona": null, "level": "beginner", "lang": "standard"},
+				   {"area": "saving", "direction": "under",
+				    "because": "You said: I save now and then. Money goes to savings or investments every month."},
+				   {"area": "investing", "direction": "under",
+				    "because": "You said: I save now and then. Your accounts with us include investment products."}],
+				 "lessonVariant": {"persona": "family", "level": "beginner", "lang": "standard"},
 				 "explanation": [
-				   {"output": "role", "probabilities": {"novice": 0.06, "intermediate": 0.9, "advanced": 0.04},
-				    "because": ["You said: I save, but don't invest yet.",
-				                "You rate yourself 2/5 on everyday money, 3/5 on saving, 4/5 on investing.",
-				                "No regular transfers to savings in the last 3 months.",
-				                "No investment products in your accounts with us."]},
-				   {"output": "lifeStage",
-				    "probabilities": {"student": 0.1, "established": 0.8, "family": 0.08, "pre-retirement": 0.02},
-				    "because": ["Age group 26-34."]},
+				   {"output": "role", "probabilities": {"novice": 0.1, "intermediate": 0.8, "advanced": 0.1},
+				    "because": ["You said: I save now and then.", "Money goes to savings or investments every month.",
+				                "Your accounts with us include investment products."]},
 				   {"output": "focusAreas",
-				    "probabilities": {"saving": 0.2, "debt": 0.05, "investing": 0.9, "risk": 0.6, "retirement": 0.1},
-				    "because": ["No investment products in your accounts with us.",
-				                "Your accounts cover more than 6 months of spending.", "You picked investing as a goal.",
-				                "It fits the answers you gave."]}],
+				    "probabilities": {"saving": 0.2, "debt": 0.7, "investing": 0.9, "risk": 0.6, "retirement": 0.1},
+				    "because": ["Your accounts cover more than 6 months of spending.", "You picked investing as a goal.",
+				                "You are paying off a loan with us.",
+				                "Your accounts with us include investment products."]}],
 				 "sharedWithModel": {"facts": %s, "answers": %s},
 				 "source": "jev", "model": "jev-2026-05", "categorizedAt": "2026-06-15T10:00:00Z"}"""
-			.formatted(TOM_FACTS, TOM_ANSWERS);
+			.formatted(FACTS, ANSWERS);
 
-		categorize("tom", "{\"consent\": true}").andExpect(status().isOk())
+		categorize("alex", WITH_FACTS).andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json(expected, JsonCompareMode.STRICT));
-		mvc.perform(get("/api/users/tom/categorization"))
+		mvc.perform(get("/api/users/alex/categorization"))
 			.andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json(expected, JsonCompareMode.STRICT));
 	}
@@ -225,21 +220,19 @@ class CategorizationControllerTests {
 						withSuccess(JEV_ANSWER.replace("\"noul\": 0.9", "\"noul\": 1.5"), MediaType.APPLICATION_JSON)),
 				Arguments.of("missing question",
 						withSuccess(JEV_ANSWER.replace("focus_debt", "focus_other"), MediaType.APPLICATION_JSON)),
-				Arguments.of("asked life stage missing",
-						withSuccess(JEV_ANSWER.replace("\"lifeStage\"", "\"lifeStage_x\""), MediaType.APPLICATION_JSON)),
 				Arguments.of("probability label outside the set",
-						withSuccess(JEV_ANSWER.replace("\"advanced\": 0.04", "\"expert\": 0.04"),
+						withSuccess(JEV_ANSWER.replace("\"advanced\": 0.1", "\"expert\": 0.1"),
 								MediaType.APPLICATION_JSON)),
 				Arguments.of("probabilities missing a label",
-						withSuccess(JEV_ANSWER.replace(", \"advanced\": 0.04", ""), MediaType.APPLICATION_JSON)),
+						withSuccess(JEV_ANSWER.replace(", \"advanced\": 0.1", ""), MediaType.APPLICATION_JSON)),
 				Arguments.of("empty probabilities",
-						withSuccess(JEV_ANSWER.replace("{\"novice\": 0.06, \"intermediate\": 0.9, \"advanced\": 0.04}", "{}"),
+						withSuccess(JEV_ANSWER.replace("{\"novice\": 0.1, \"intermediate\": 0.8, \"advanced\": 0.1}", "{}"),
 								MediaType.APPLICATION_JSON)),
 				Arguments.of("choice is not the most likely label",
 						withSuccess(JEV_ANSWER.replace("\"choice\": \"intermediate\"", "\"choice\": \"novice\""),
 								MediaType.APPLICATION_JSON)),
 				Arguments.of("negative probability",
-						withSuccess(JEV_ANSWER.replace("\"noul\": 0.05", "\"noul\": -0.1"), MediaType.APPLICATION_JSON)),
+						withSuccess(JEV_ANSWER.replace("\"noul\": 0.7", "\"noul\": -0.1"), MediaType.APPLICATION_JSON)),
 				Arguments.of("empty body", withSuccess("", MediaType.APPLICATION_JSON)),
 				Arguments.of("body is not JSON", withSuccess("not json", MediaType.APPLICATION_JSON)));
 	}
@@ -247,87 +240,120 @@ class CategorizationControllerTests {
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("brokenJev")
 	void brokenJevFallsBackToRules(String name, ResponseCreator response) throws Exception {
-		onboard("tom", TOM_ANSWERS);
+		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL)).andRespond(response);
 
-		categorize("tom", "{\"consent\": true}").andExpect(status().isOk())
+		categorize("alex", WITH_FACTS).andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json("""
-					{"bankData": true, "role": "novice", "lifeStage": "established", "focusAreas": ["investing", "risk"],
-					 "lessonVariant": {"persona": null, "level": "beginner", "lang": "plain"},
-					 "explanation": [{"output": "role", "probabilities": {}}, {"output": "lifeStage", "probabilities": {}},
-					                 {"output": "focusAreas", "probabilities": {}}],
+					{"bankData": true, "role": "intermediate", "lifeStage": "family",
+					 "focusAreas": ["debt", "saving", "investing"],
+					 "lessonVariant": {"persona": "family", "level": "beginner", "lang": "standard"},
+					 "explanation": [{"output": "role", "probabilities": {}}, {"output": "focusAreas", "probabilities": {}}],
 					 "sharedWithModel": {"facts": %s, "answers": %s},
-					 "source": "fallback", "model": null}""".formatted(TOM_FACTS, TOM_ANSWERS)));
+					 "source": "fallback", "model": null}""".formatted(FACTS, ANSWERS)));
 	}
 
 	@Test
 	void probabilityBoundsAreValid() throws Exception {
-		onboard("tom", TOM_ANSWERS);
+		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL))
 			.andRespond(withSuccess(JEV_ANSWER.replace("\"noul\": 0.9", "\"noul\": 1.0")
-				.replace("\"noul\": 0.05", "\"noul\": 0.0"), MediaType.APPLICATION_JSON));
+				.replace("\"noul\": 0.7", "\"noul\": 0.0"), MediaType.APPLICATION_JSON));
 
-		categorize("tom", "{\"consent\": true}").andExpect(status().isOk())
+		categorize("alex", WITH_FACTS).andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.jsonPath("$.source").value("jev"))
 			.andExpect(MockMvcResultMatchers.jsonPath("$.focusAreas[0]").value("investing"));
 	}
 
 	@Test
 	void refusedConnectionSharesNothing() throws Exception {
-		onboard("tom", TOM_ANSWERS);
+		onboard("alex", ANSWERS);
 		// The chain the JDK client really throws for a refused port.
 		ConnectException refused = new ConnectException();
 		refused.initCause(new ClosedChannelException());
 		jev.expect(requestTo(JEV_URL)).andRespond(withException(refused));
 
-		categorize("tom", "{\"consent\": true}").andExpect(status().isOk())
+		categorize("alex", WITH_FACTS).andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.jsonPath("$.source").value("fallback"))
 			.andExpect(MockMvcResultMatchers.jsonPath("$.sharedWithModel").isEmpty());
 	}
 
 	@Test
 	void withoutConsentNoFactsReachTheModel() throws Exception {
-		onboard("tom", TOM_ANSWERS);
+		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL))
-			.andExpect(jsonPath("$.state.answers.experience").value("none"))
+			.andExpect(jsonPath("$.state.answers.experience").value("occasional"))
 			.andExpect(jsonPath("$.state.facts").doesNotExist())
-			.andExpect(jsonPath("$.questions.lifeStage").doesNotExist())
 			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 
-		categorize("tom", "{\"consent\": false}").andExpect(status().isOk())
+		categorize("alex", "{\"consent\": false}").andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json("""
-					{"consent": false, "bankData": false, "lifeStage": null, "confidenceGaps": [],
-					 "explanation": [{"output": "role"}, {"output": "focusAreas",
+					{"consent": false, "bankData": false, "lifeStage": "family", "confidenceGaps": [],
+					 "explanation": [{"output": "role", "because": ["You said: I save now and then."]},
+					                 {"output": "focusAreas",
 					                  "because": ["You picked investing as a goal.", "It fits the answers you gave."]}],
-					 "sharedWithModel": {"facts": null}, "source": "jev"}""", JsonCompareMode.LENIENT))
-			.andExpect(MockMvcResultMatchers.jsonPath("$.explanation.length()").value(2));
+					 "sharedWithModel": {"facts": null}, "source": "jev"}""", JsonCompareMode.LENIENT));
 	}
 
 	@Test
-	void demoUserIsNotABankCustomer() throws Exception {
-		onboard("demo-user", """
-				{"lifeStage": "student", "goals": ["budget"], "experience": "not-saving", "learningStyle": "simple",
-				 "confidence": {"budgeting": 1}, "skipped": false}""");
+	void consentWithoutFactsUsesNoBankData() throws Exception {
+		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(jsonPath("$.state.facts").doesNotExist())
 			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 
-		categorize("demo-user", "{\"consent\": true}").andExpect(status().isOk())
+		categorize("alex", "{\"consent\": true}").andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json("""
-					{"consent": true, "bankData": false, "lifeStage": "student", "confidenceGaps": [],
-					 "lessonVariant": {"persona": "student", "level": "beginner", "lang": "plain"}}"""));
+					{"consent": true, "bankData": false, "confidenceGaps": [], "sharedWithModel": {"facts": null}}"""));
+	}
+
+	@Test
+	void skippedOnboardingGivesNoLifeStage() throws Exception {
+		onboard("alex", "{\"goals\": [], \"skipped\": true}");
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(jsonPath("$.state.answers.skipped").value(true))
+			.andRespond(withServerError());
+
+		categorize("alex", WITH_FACTS).andExpect(status().isOk())
+			.andExpect(MockMvcResultMatchers.content().json("""
+					{"role": "novice", "lifeStage": null, "confidenceGaps": [],
+					 "lessonVariant": {"persona": null, "level": "beginner", "lang": "plain"}}"""));
 	}
 
 	@Test
 	void rejectsBadRequests() throws Exception {
-		onboard("tom", TOM_ANSWERS);
-		categorize("tom", "{\"consent\": tru").andExpect(status().isBadRequest());
-		categorize("tom", "{}").andExpect(status().isBadRequest());
-		categorize("tom", "{\"consent\": null}").andExpect(status().isBadRequest());
+		onboard("alex", ANSWERS);
+		categorize("alex", "{\"consent\": tru").andExpect(status().isBadRequest());
+		categorize("alex", "{}").andExpect(status().isBadRequest());
+		categorize("alex", "{\"consent\": null}").andExpect(status().isBadRequest());
 		categorize(" ", "{\"consent\": true}").andExpect(status().isBadRequest());
 		categorize("x".repeat(65), "{\"consent\": true}").andExpect(status().isBadRequest());
 		mvc.perform(get("/api/users/{id}/categorization", " ")).andExpect(status().isBadRequest());
 		mvc.perform(get("/api/users/{id}/categorization", "x".repeat(65))).andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void refusesFactsWithoutConsent() throws Exception {
+		onboard("alex", ANSWERS);
+		categorize("alex", "{\"consent\": false, \"facts\": " + FACTS + "}").andExpect(status().isBadRequest());
+		mvc.perform(get("/api/users/alex/categorization")).andExpect(status().isNotFound());
+	}
+
+	static Stream<Arguments> badFacts() {
+		return Stream.of(
+				Arguments.of("income outside the bands", FACTS.replace("\"2-3.5k\"", "\"2-4k\"")),
+				Arguments.of("buffer outside the bands", FACTS.replace("\"6+\"", "\"6\"")),
+				Arguments.of("savings rate outside the bands", FACTS.replace("\"20%+\"", "\"25%\"")),
+				Arguments.of("missing fact", FACTS.replace(", \"hasLoan\": true", "")),
+				Arguments.of("flag that is not a boolean", FACTS.replace("\"hasLoan\": true", "\"hasLoan\": \"maybe\"")),
+				Arguments.of("exact amount instead of a band", FACTS.replace("\"2-3.5k\"", "\"2843.10\"")));
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("badFacts")
+	void rejectsFactsOutsideTheirValues(String name, String facts) throws Exception {
+		onboard("alex", ANSWERS);
+		categorize("alex", "{\"consent\": true, \"facts\": " + facts + "}").andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -336,101 +362,93 @@ class CategorizationControllerTests {
 	}
 
 	@Test
-	void answeredLifeStageWins() throws Exception {
-		onboard("tom", TOM_ANSWERS.replace("\"lifeStage\": null", "\"lifeStage\": \"family\""));
-		jev.expect(requestTo(JEV_URL))
-			.andExpect(jsonPath("$.state.facts").exists())
-			.andExpect(jsonPath("$.questions.lifeStage").doesNotExist())
-			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
-
-		categorize("tom", "{\"consent\": true}").andExpect(status().isOk())
-			.andExpect(MockMvcResultMatchers.jsonPath("$.lifeStage").value("family"))
-			.andExpect(MockMvcResultMatchers.jsonPath("$.lessonVariant.persona").value("family"))
-			.andExpect(MockMvcResultMatchers.jsonPath("$.explanation.length()").value(2));
-	}
-
-	@Test
 	void secondPostReplacesTheStoredResult() throws Exception {
-		onboard("tom", TOM_ANSWERS);
+		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL)).andRespond(withServerError());
 		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 
-		categorize("tom", "{\"consent\": true}").andExpect(MockMvcResultMatchers.jsonPath("$.source").value("fallback"));
-		categorize("tom", "{\"consent\": true}").andExpect(MockMvcResultMatchers.jsonPath("$.source").value("jev"));
-		mvc.perform(get("/api/users/tom/categorization"))
+		categorize("alex", WITH_FACTS).andExpect(MockMvcResultMatchers.jsonPath("$.source").value("fallback"));
+		categorize("alex", WITH_FACTS).andExpect(MockMvcResultMatchers.jsonPath("$.source").value("jev"));
+		mvc.perform(get("/api/users/alex/categorization"))
 			.andExpect(MockMvcResultMatchers.jsonPath("$.source").value("jev"))
-			.andExpect(MockMvcResultMatchers.jsonPath("$.role").value("intermediate"));
+			.andExpect(MockMvcResultMatchers.jsonPath("$.focusAreas[0]").value("investing"));
 	}
 
 	@Test
 	void repeatedPostReusesARecentJevResult() throws Exception {
-		onboard("tom", TOM_ANSWERS);
+		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
-		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(jsonPath("$.state.facts.hasLoan").value(false))
+			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(jsonPath("$.state.facts").doesNotExist())
+			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 
-		categorize("tom", "{\"consent\": true}").andExpect(MockMvcResultMatchers.jsonPath("$.source").value("jev"));
-		categorize("tom", "{\"consent\": true}").andExpect(MockMvcResultMatchers.jsonPath("$.source").value("jev"));
-		// A different consent is a new question for the model.
-		categorize("tom", "{\"consent\": false}").andExpect(MockMvcResultMatchers.jsonPath("$.bankData").value(false));
+		categorize("alex", WITH_FACTS).andExpect(MockMvcResultMatchers.jsonPath("$.source").value("jev"));
+		categorize("alex", WITH_FACTS).andExpect(MockMvcResultMatchers.jsonPath("$.source").value("jev"));
+		// Different facts or a different consent are a new question for the model.
+		categorize("alex", WITH_FACTS.replace("\"hasLoan\": true", "\"hasLoan\": false")).andExpect(status().isOk());
+		categorize("alex", "{\"consent\": false}").andExpect(MockMvcResultMatchers.jsonPath("$.bankData").value(false));
 	}
 
 	@Test
 	void resetDuringTheJevCallIs404() throws Exception {
-		onboard("tom", TOM_ANSWERS);
+		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL)).andRespond(request -> {
-			jdbc.sql("DELETE FROM user_profile WHERE user_id = 'tom'").update();
+			jdbc.sql("UPDATE user_profile SET onboarding_completed = false WHERE user_id = 'alex'").update();
 			return withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON).createResponse(request);
 		});
 
-		categorize("tom", "{\"consent\": true}").andExpect(status().isNotFound())
+		categorize("alex", WITH_FACTS).andExpect(status().isNotFound())
 			.andExpect(MockMvcResultMatchers.jsonPath("$.detail").value("Finish onboarding first"));
 	}
 
 	@Test
 	void modelIdThatIsNotAnIdIsDropped() throws Exception {
-		onboard("tom", TOM_ANSWERS);
+		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(
 				JEV_ANSWER.replace("\"jev-2026-05\"", "\"<b>jev</b> latest\""), MediaType.APPLICATION_JSON));
 
-		categorize("tom", "{\"consent\": true}").andExpect(status().isOk())
+		categorize("alex", WITH_FACTS).andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.jsonPath("$.source").value("jev"))
 			.andExpect(MockMvcResultMatchers.jsonPath("$.model").isEmpty());
 	}
 
 	@Test
 	void changedAnswersAreAskedAgain() throws Exception {
-		onboard("tom", TOM_ANSWERS);
+		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 		jev.expect(requestTo(JEV_URL))
-			.andExpect(jsonPath("$.state.answers.experience").value("tried"))
+			.andExpect(jsonPath("$.state.answers.experience").value("regular"))
 			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 
-		categorize("tom", "{\"consent\": true}").andExpect(status().isOk());
-		mvc.perform(put("/api/users/tom/profile").contentType(MediaType.APPLICATION_JSON)
-			.content(TOM_ANSWERS.replace("\"experience\": \"none\"", "\"experience\": \"tried\"")))
+		categorize("alex", WITH_FACTS).andExpect(status().isOk());
+		mvc.perform(put("/api/users/alex/profile/onboarding").contentType(MediaType.APPLICATION_JSON)
+			.content(ANSWERS.replace("\"occasional\"", "\"regular\"")))
 			.andExpect(status().isOk());
-		categorize("tom", "{\"consent\": true}").andExpect(status().isOk())
-			.andExpect(MockMvcResultMatchers.jsonPath("$.sharedWithModel.answers.experience").value("tried"));
+		categorize("alex", WITH_FACTS).andExpect(status().isOk())
+			.andExpect(MockMvcResultMatchers.jsonPath("$.sharedWithModel.answers.experience").value("regular"));
 	}
 
 	@Test
 	void reuseEndsWithTheWindow() throws Exception {
-		onboard("tom", TOM_ANSWERS);
+		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 
-		categorize("tom", "{\"consent\": true}").andExpect(status().isOk());
+		categorize("alex", WITH_FACTS).andExpect(status().isOk());
 		CLOCK.advance(CategorizationService.RECATEGORIZE_AFTER.plusSeconds(1));
-		categorize("tom", "{\"consent\": true}").andExpect(status().isOk())
+		categorize("alex", WITH_FACTS).andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.jsonPath("$.categorizedAt").value(START.plus(CategorizationService.RECATEGORIZE_AFTER).plusSeconds(1).toString()));
 	}
 
 	@Test
 	void unreadableStoredResultIs404() throws Exception {
-		onboard("tom", TOM_ANSWERS);
-		jdbc.sql("INSERT INTO categorization (user_id, data) VALUES ('tom', '{\"role\": \"wizard\"}'::jsonb)").update();
+		onboard("alex", ANSWERS);
+		jdbc.sql("INSERT INTO categorization (user_id, data) VALUES ('alex', '{\"role\": \"wizard\"}'::jsonb)").update();
 
-		mvc.perform(get("/api/users/tom/categorization")).andExpect(status().isNotFound());
+		mvc.perform(get("/api/users/alex/categorization")).andExpect(status().isNotFound());
 	}
 
 	@Test
@@ -446,14 +464,16 @@ class CategorizationControllerTests {
 	}
 
 	@Test
-	void profileResetRemovesTheCategorisation() throws Exception {
+	void onboardingResetRemovesTheCategorisation() throws Exception {
 		onboard("lena", "{\"goals\": [], \"skipped\": true}");
 		jev.expect(requestTo(JEV_URL)).andRespond(withServerError());
 		categorize("lena", "{\"consent\": true}").andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.jsonPath("$.sharedWithModel.answers.skipped").value(true));
 
-		mvc.perform(delete("/api/users/lena/profile")).andExpect(status().isNoContent());
+		mvc.perform(delete("/api/users/lena/profile/onboarding")).andExpect(status().isNoContent());
 		mvc.perform(get("/api/users/lena/categorization")).andExpect(status().isNotFound());
+		categorize("lena", "{\"consent\": true}").andExpect(status().isNotFound())
+			.andExpect(MockMvcResultMatchers.jsonPath("$.detail").value("Finish onboarding first"));
 	}
 
 }

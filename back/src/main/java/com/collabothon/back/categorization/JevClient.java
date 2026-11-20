@@ -25,8 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import com.collabothon.back.bank.Facts;
-import com.collabothon.back.categorization.Categorization.LifeStage;
 import com.collabothon.back.categorization.Categorization.OnboardingAnswers;
 import com.collabothon.back.categorization.Categorization.Role;
 import com.collabothon.back.categorization.Rules.Judgement;
@@ -34,7 +32,6 @@ import com.collabothon.back.categorization.Rules.Judgement;
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
-import tools.jackson.databind.node.ObjectNode;
 
 @Service
 @EnableConfigurationProperties(JevProperties.class)
@@ -53,18 +50,11 @@ public class JevClient {
 	private static final String QUESTIONS = """
 			{
 			  "role": {"type": "choice",
-			    "instructions": "Based on this person's self-assessment (experience with saving and investing, confidence from 1 to 5 per area) and, when given, their money habits, which learner level fits best?",
+			    "instructions": "Based on how this person describes their money habits (from not saving yet to planning ahead) and, when given, facts about their accounts, which learner level fits best?",
 			    "criteria": {
-			      "novice": "Does not save or invest yet, or feels unsure (low confidence), and shows few healthy money habits such as regular saving or a cash buffer.",
-			      "intermediate": "Saves or has tried investing, or feels fairly confident, but does not yet act on it consistently, for example saves but has never invested.",
-			      "advanced": "Invests regularly or is experienced and feels confident about it; habits such as regular saving support this."}},
-			  "lifeStage": {"type": "choice",
-			    "instructions": "Which life stage best describes this person?",
-			    "criteria": {
-			      "student": "In education or just starting out, with low or irregular income.",
-			      "established": "Working in an established career, without mortgage or family costs.",
-			      "family": "Mid-life with household costs such as a mortgage or children.",
-			      "pre-retirement": "About ten years or less before retirement."}},
+			      "novice": "Does not save yet or saves only now and then, and shows few healthy money habits such as regular saving or a cash buffer.",
+			      "intermediate": "Saves regularly or has a safety net, but does not invest yet or does not act on it consistently.",
+			      "advanced": "Saves and invests, or plans their finances ahead; habits such as regular saving support this."}},
 			  "focus_saving":     {"type": "noul", "instructions": "Would this person benefit most from learning about building an emergency fund and saving right now?"},
 			  "focus_debt":       {"type": "noul", "instructions": "Would this person benefit most from learning about avoiding overdrafts and expensive debt right now?"},
 			  "focus_investing":  {"type": "noul", "instructions": "Would this person benefit most from learning how investing works, for example funds and ETFs, right now?"},
@@ -77,7 +67,7 @@ public class JevClient {
 
 	private final JevProperties properties;
 
-	private final ObjectNode questions;
+	private final JsonNode questions;
 
 	JevClient(RestClient.Builder builder, JsonMapper json, JevProperties properties) {
 		if (!properties.apiKey().isEmpty()) {
@@ -85,7 +75,7 @@ public class JevClient {
 		}
 		this.rest = builder.baseUrl(properties.baseUrl()).build();
 		this.properties = properties;
-		this.questions = (ObjectNode) json.readTree(QUESTIONS);
+		this.questions = json.readTree(QUESTIONS);
 	}
 
 	/** {@code judgement} is empty when the caller must fall back to the rules; {@code sent} says if data left. */
@@ -95,7 +85,7 @@ public class JevClient {
 
 	}
 
-	public Result ask(OnboardingAnswers answers, Facts facts, boolean askLifeStage) {
+	public Result ask(OnboardingAnswers answers, Facts facts) {
 		if (!properties.callsJev()) {
 			return Result.SKIPPED;
 		}
@@ -104,22 +94,18 @@ public class JevClient {
 		if (facts != null) {
 			state.put("facts", facts);
 		}
-		ObjectNode asked = questions.deepCopy();
-		if (!askLifeStage) {
-			asked.remove("lifeStage");
-		}
 		try {
 			JsonNode response = rest.post()
 				.uri(SYSTEM_ONE_PATH)
 				.contentType(MediaType.APPLICATION_JSON)
-				.body(new Request(properties.model(), state, asked))
+				.body(new Request(properties.model(), state, questions))
 				.retrieve()
 				// Redirects are not followed, so a 3xx would otherwise be parsed like a 200.
 				.onStatus(HttpStatusCode::is3xxRedirection, (request, redirect) -> {
 					throw new RestClientException("Jev redirected");
 				})
 				.body(JsonNode.class);
-			Optional<Judgement> judgement = parse(response, askLifeStage);
+			Optional<Judgement> judgement = parse(response);
 			if (judgement.isEmpty()) {
 				log.warn("Jev answer broke the contract, using the rules fallback");
 			}
@@ -149,14 +135,12 @@ public class JevClient {
 	private record Choice<E>(E value, Map<String, Double> probabilities) {
 	}
 
-	private static Optional<Judgement> parse(JsonNode response, boolean askLifeStage) {
+	private static Optional<Judgement> parse(JsonNode response) {
 		if (response == null) {
 			return Optional.empty();
 		}
 		JsonNode answers = response.path("answers");
 		Choice<Role> role = choice(answers.path("role"), Role.values());
-		Choice<LifeStage> lifeStage = askLifeStage ? choice(answers.path("lifeStage"), LifeStage.values())
-				: new Choice<>(null, Map.of());
 		Map<Area, Double> noul = new EnumMap<>(Area.class);
 		Map<String, Double> focus = new LinkedHashMap<>();
 		for (Area area : Area.values()) {
@@ -167,13 +151,13 @@ public class JevClient {
 			noul.put(area, p);
 			focus.put(area.wire(), p);
 		}
-		if (role == null || lifeStage == null) {
+		if (role == null) {
 			return Optional.empty();
 		}
 		JsonNode model = response.path("model");
 		boolean validModel = model.isString() && MODEL_ID.matcher(model.stringValue()).matches();
-		return Optional.of(new Judgement(role.value(), role.probabilities(), lifeStage.value(),
-				lifeStage.probabilities(), Rules.focusFromNoul(noul), focus, validModel ? model.stringValue() : null));
+		return Optional.of(new Judgement(role.value(), role.probabilities(), Rules.focusFromNoul(noul), focus,
+				validModel ? model.stringValue() : null));
 	}
 
 	private static <E extends Enum<E>> Choice<E> choice(JsonNode answer, E[] values) {

@@ -13,8 +13,6 @@ import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 
-import com.collabothon.back.bank.Facts;
-import com.collabothon.back.categorization.Categorization.Confidence;
 import com.collabothon.back.categorization.Categorization.ConfidenceArea;
 import com.collabothon.back.categorization.Categorization.ConfidenceGap;
 import com.collabothon.back.categorization.Categorization.Direction;
@@ -27,83 +25,103 @@ import com.collabothon.back.categorization.Categorization.Role;
 
 class RulesTests {
 
-	private static final Facts LENA = new Facts("18-25", "<1k", "<1", "negative", false, 2, false, false, false);
+	/** The front seed customer (spec: `factsFrom` on the seed). */
+	private static final Facts ALEX = new Facts("2-3.5k", "6+", "20%+", true, false, true, true);
 
-	private static final Facts TOM = new Facts("26-34", "3.5-5k", "6+", "20%+", false, 0, false, false, false);
+	private static final Facts LENA = new Facts("<1k", "<1", "negative", false, true, false, false);
 
-	private static final Facts MARCO = new Facts("35-44", "3.5-5k", "1-3", "0-10%", true, 0, false, true, false);
-
-	private static final Facts INGRID = new Facts("55-64", "3.5-5k", "6+", "20%+", true, 0, true, false, true);
+	private static final Facts TOM = new Facts("3.5-5k", "6+", "20%+", false, false, false, false);
 
 	private static final Pattern ADVICE = Pattern
 		.compile("\\b(should|must|consider|recommend|buy|sell|switch|invest in|open)\\b", Pattern.CASE_INSENSITIVE);
 
-	private static OnboardingAnswers rated(String experience, Integer budgeting, Integer saving, Integer investing) {
-		return new OnboardingAnswers(null, List.of(), experience, null, new Confidence(budgeting, saving, investing),
-				false);
+	private static OnboardingAnswers said(String experience) {
+		return new OnboardingAnswers(null, List.of(), experience, false);
 	}
 
-	private static final OnboardingAnswers SKIPPED = new OnboardingAnswers(null, List.of(), null, null,
-			new Confidence(null, null, null), true);
+	private static final OnboardingAnswers SKIPPED = new OnboardingAnswers(null, List.of(), null, true);
 
-	@Test
-	void budgetingGap() {
-		assertThat(confidenceGaps(rated(null, 2, null, null), TOM)).containsExactly(new ConfidenceGap(
-				ConfidenceArea.BUDGETING, Direction.UNDER,
-				"You rate yourself 2/5 on everyday money, and your current account stayed above zero in the last 3 months"
-						+ " while you kept more than 20% of your income."));
-		assertThat(confidenceGaps(rated(null, 4, null, null), LENA)).containsExactly(new ConfidenceGap(
-				ConfidenceArea.BUDGETING, Direction.OVER,
-				"You rate yourself 4/5 on everyday money, and your current account went below zero in 2 of the last 3"
-						+ " months."));
-		assertThat(confidenceGaps(rated(null, 3, null, null), LENA)).isEmpty();
-		assertThat(confidenceGaps(rated(null, 2, null, null), LENA)).isEmpty();
+	private static ConfidenceGap gap(ConfidenceArea area, Direction direction, String because) {
+		return new ConfidenceGap(area, direction, because);
 	}
 
 	@Test
-	void savingGap() {
-		assertThat(confidenceGaps(rated(null, null, 1, null), INGRID)).containsExactly(new ConfidenceGap(
-				ConfidenceArea.SAVING, Direction.UNDER,
-				"You rate yourself 1/5 on saving, and you moved money to savings in most of the last 3 months."));
-		assertThat(confidenceGaps(rated(null, null, 5, null), LENA)).containsExactly(new ConfidenceGap(
-				ConfidenceArea.SAVING, Direction.OVER,
-				"You rate yourself 5/5 on saving, and your accounts cover less than a month of spending."));
-		assertThat(confidenceGaps(rated(null, null, 4, null), TOM)).isEmpty();
+	void savingUnderWhenTheySayLittleButSaveEveryMonth() {
+		assertThat(confidenceGaps(said("not-saving"), ALEX)).contains(gap(ConfidenceArea.SAVING, Direction.UNDER,
+				"You said: I don't save yet. Money goes to savings or investments every month."));
+		assertThat(confidenceGaps(said("occasional"), ALEX)).contains(gap(ConfidenceArea.SAVING, Direction.UNDER,
+				"You said: I save now and then. Money goes to savings or investments every month."));
+		assertThat(confidenceGaps(said("occasional"), TOM)).isEmpty();
 	}
 
 	@Test
-	void investingGap() {
-		assertThat(confidenceGaps(rated("regular", null, null, 2), INGRID)).containsExactly(new ConfidenceGap(
-				ConfidenceArea.INVESTING, Direction.UNDER,
-				"You rate yourself 2/5 on investing, and your accounts with us include investment products."));
-		assertThat(confidenceGaps(rated("not-saving", null, null, 4), TOM)).containsExactly(new ConfidenceGap(
-				ConfidenceArea.INVESTING, Direction.OVER,
-				"You rate yourself 4/5 on investing, and there are no investment products in your accounts with us."));
-		assertThat(confidenceGaps(rated("tried", null, null, 5), TOM)).isEmpty();
+	void savingOverWhenTheySaySavingButHaveNoBuffer() {
+		assertThat(confidenceGaps(said("regular"), LENA)).containsExactly(gap(ConfidenceArea.SAVING, Direction.OVER,
+				"You said: I save regularly. Your accounts cover less than a month of spending."));
+		assertThat(confidenceGaps(said("investing"), LENA)).contains(gap(ConfidenceArea.SAVING, Direction.OVER,
+				"You said: I save and invest. Your accounts cover less than a month of spending."));
+		assertThat(confidenceGaps(said("planning"), LENA)).contains(gap(ConfidenceArea.SAVING, Direction.OVER,
+				"You said: I plan my finances ahead. Your accounts cover less than a month of spending."));
+		assertThat(confidenceGaps(said("occasional"), LENA)).isEmpty();
 	}
 
 	@Test
-	void noGapsWithoutBankDataOrRating() {
-		assertThat(confidenceGaps(rated("none", 1, 5, 5), null)).isEmpty();
-		assertThat(confidenceGaps(rated("none", null, null, null), LENA)).isEmpty();
+	void investingUnderWhenTheyDoNotSayInvestingButHoldInvestments() {
+		assertThat(confidenceGaps(said("regular"), ALEX)).containsExactly(gap(ConfidenceArea.INVESTING,
+				Direction.UNDER, "You said: I save regularly. Your accounts with us include investment products."));
+		assertThat(confidenceGaps(said("not-saving"), ALEX)).contains(gap(ConfidenceArea.INVESTING, Direction.UNDER,
+				"You said: I don't save yet. Your accounts with us include investment products."));
+		assertThat(confidenceGaps(said("investing"), ALEX)).isEmpty();
+	}
+
+	@Test
+	void investingOverWhenTheySayInvestingButHoldNone() {
+		assertThat(confidenceGaps(said("planning"), TOM)).containsExactly(gap(ConfidenceArea.INVESTING,
+				Direction.OVER, "You said: I plan my finances ahead. No investment products in your accounts with us."));
+		assertThat(confidenceGaps(said("investing"), TOM)).containsExactly(gap(ConfidenceArea.INVESTING,
+				Direction.OVER, "You said: I save and invest. No investment products in your accounts with us."));
+		assertThat(confidenceGaps(said("regular"), TOM)).isEmpty();
+	}
+
+	@Test
+	void noGapsWithoutBankDataOrAnExperienceAnswer() {
+		assertThat(confidenceGaps(said("not-saving"), null)).isEmpty();
+		assertThat(confidenceGaps(SKIPPED, ALEX)).isEmpty();
 	}
 
 	@Test
 	void declarationDecidesTheFallbackRole() {
-		assertThat(Rules.fallbackRole(rated("experienced", null, null, null), null)).isEqualTo(Role.ADVANCED);
-		assertThat(Rules.fallbackRole(rated("regular", null, null, null), TOM)).isEqualTo(Role.ADVANCED);
-		assertThat(Rules.fallbackRole(rated("tried", null, null, null), LENA)).isEqualTo(Role.INTERMEDIATE);
-		assertThat(Rules.fallbackRole(rated(null, null, null, null), INGRID)).isEqualTo(Role.INTERMEDIATE);
-		assertThat(Rules.fallbackRole(rated("none", null, null, null), TOM)).isEqualTo(Role.NOVICE);
+		assertThat(Rules.fallbackRole(said("investing"), TOM)).isEqualTo(Role.ADVANCED);
+		assertThat(Rules.fallbackRole(said("planning"), null)).isEqualTo(Role.ADVANCED);
+		assertThat(Rules.fallbackRole(said("regular"), LENA)).isEqualTo(Role.INTERMEDIATE);
+		assertThat(Rules.fallbackRole(said("occasional"), ALEX)).isEqualTo(Role.INTERMEDIATE);
+		assertThat(Rules.fallbackRole(said("occasional"), TOM)).isEqualTo(Role.NOVICE);
+		assertThat(Rules.fallbackRole(said("occasional"), null)).isEqualTo(Role.NOVICE);
+		assertThat(Rules.fallbackRole(said("not-saving"), ALEX)).isEqualTo(Role.NOVICE);
+		assertThat(Rules.fallbackRole(SKIPPED, ALEX)).isEqualTo(Role.NOVICE);
 	}
 
 	@Test
 	void fallbackFocusKeepsTheFixedOrder() {
-		OnboardingAnswers goals = new OnboardingAnswers(null, List.of("insurance", "taxes", "budget"), "not-saving",
-				null, new Confidence(null, null, null), false);
+		OnboardingAnswers goals = new OnboardingAnswers(null, List.of("insurance", "budget"), "not-saving", false);
 		assertThat(Rules.fallbackFocus(goals, LENA, Role.NOVICE)).containsExactly(Area.DEBT, Area.SAVING, Area.RISK);
-		assertThat(Rules.fallbackFocus(SKIPPED, INGRID, Role.ADVANCED)).containsExactly(Area.RETIREMENT);
+		OnboardingAnswers laterLife = new OnboardingAnswers("later-life", List.of("stocks-etfs"), "planning", false);
+		assertThat(Rules.fallbackFocus(laterLife, ALEX, Role.ADVANCED)).containsExactly(Area.DEBT, Area.RETIREMENT,
+				Area.INVESTING);
+		assertThat(Rules.fallbackFocus(laterLife, null, Role.ADVANCED)).containsExactly(Area.RETIREMENT,
+				Area.INVESTING);
+		assertThat(Rules.fallbackFocus(SKIPPED, TOM, Role.ADVANCED)).containsExactly(Area.INVESTING);
 		assertThat(Rules.fallbackFocus(SKIPPED, null, Role.ADVANCED)).containsExactly(Area.SAVING);
+	}
+
+	@Test
+	void everyGoalOfMainsOnboardingPointsToAnArea() {
+		List<String> goals = List.of("budget", "money-habits", "banking-basics", "start-saving", "emergency-fund",
+				"inflation", "pay-off-debt", "credit-cards", "loans-mortgages", "start-investing", "stocks-etfs",
+				"crypto", "retirement", "insurance", "scams");
+		assertThat(goals).allSatisfy(goal -> assertThat(Area.fromGoals(List.of(goal))).hasSize(1));
+		assertThat(Area.fromGoals(List.of("crypto", "scams", "budget", "stocks-etfs")))
+			.containsExactly(Area.INVESTING, Area.RISK, Area.SAVING);
 	}
 
 	@Test
@@ -115,64 +133,64 @@ class RulesTests {
 	}
 
 	@Test
-	void lessonVariant() {
-		assertThat(Rules.lessonVariant(Role.NOVICE, LifeStage.FAMILY, null))
+	void lifeStageComesFromTheAnswerOnly() {
+		assertThat(Arrays.asList("starting-out", "building", "settled", "later-life", null).stream()
+			.map(LifeStage::fromAnswer)).containsExactly(LifeStage.STUDENT, LifeStage.FAMILY, LifeStage.ESTABLISHED,
+					LifeStage.PRE_RETIREMENT, null);
+		assertThatThrownBy(() -> LifeStage.fromAnswer("student")).isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Test
+	void lessonVariantFollowsTheRole() {
+		assertThat(Rules.lessonVariant(Role.NOVICE, LifeStage.FAMILY))
 			.isEqualTo(new LessonVariant(LifeStage.FAMILY, Level.BEGINNER, Lang.PLAIN));
-		assertThat(Rules.lessonVariant(Role.NOVICE, LifeStage.ESTABLISHED, "detailed"))
+		assertThat(Rules.lessonVariant(Role.INTERMEDIATE, LifeStage.ESTABLISHED))
 			.isEqualTo(new LessonVariant(null, Level.BEGINNER, Lang.STANDARD));
-		assertThat(Rules.lessonVariant(Role.ADVANCED, null, "simple"))
-			.isEqualTo(new LessonVariant(null, Level.ADVANCED, Lang.PLAIN));
+		assertThat(Rules.lessonVariant(Role.ADVANCED, null))
+			.isEqualTo(new LessonVariant(null, Level.ADVANCED, Lang.STANDARD));
 	}
 
 	@Test
-	void lifeStageFromEveryAgeBand() {
-		assertThat(Facts.AGE_BANDS.stream().map(Rules::lifeStageFromAge)).containsExactly(LifeStage.STUDENT,
-				LifeStage.ESTABLISHED, LifeStage.FAMILY, LifeStage.FAMILY, LifeStage.PRE_RETIREMENT,
-				LifeStage.PRE_RETIREMENT);
-		assertThatThrownBy(() -> Rules.lifeStageFromAge("75+")).isInstanceOf(IllegalArgumentException.class);
-	}
-
-	@Test
-	void lifeStageBecauseNamesTheMortgage() {
-		assertThat(Rules.lifeStageBecause(MARCO)).containsExactly("Age group 35-44.", "You are paying off a mortgage.");
-		assertThat(Rules.lifeStageBecause(TOM)).containsExactly("Age group 26-34.");
+	void roleBecauseUsesTheAnswerAndTheHabits() {
+		assertThat(Rules.roleBecause(said("occasional"), ALEX)).containsExactly("You said: I save now and then.",
+				"Money goes to savings or investments every month.",
+				"Your accounts with us include investment products.");
+		assertThat(Rules.roleBecause(said("regular"), TOM)).containsExactly("You said: I save regularly.",
+				"No regular transfers to savings or investments.", "No investment products in your accounts with us.");
+		assertThat(Rules.roleBecause(SKIPPED, null)).isEmpty();
 	}
 
 	@Test
 	void focusBecauseListsOnlySupportingLines() {
 		assertThat(Rules.focusBecause(List.of(Area.DEBT, Area.SAVING, Area.RISK), SKIPPED, LENA)).containsExactly(
-				"Your current account went below zero in 2 of the last 3 months.",
-				"Your accounts cover less than a month of spending.", "You spent more than you earned.",
-				Rules.NEUTRAL_LINE);
-		OnboardingAnswers investingGoal = new OnboardingAnswers(null, List.of("etfs"), null, null,
-				new Confidence(null, null, null), false);
-		assertThat(Rules.focusBecause(List.of(Area.SAVING, Area.INVESTING), investingGoal, TOM)).containsExactly(
-				Rules.NEUTRAL_LINE, "No investment products in your accounts with us.",
-				"Your accounts cover more than 6 months of spending.", "You picked investing as a goal.");
+				"Your current account is below zero.", "Your accounts cover less than a month of spending.",
+				"You spent more than you earned this month.", Rules.NEUTRAL_LINE);
+		OnboardingAnswers laterLife = new OnboardingAnswers("later-life", List.of("stocks-etfs"), null, false);
+		assertThat(Rules.focusBecause(List.of(Area.RETIREMENT, Area.INVESTING, Area.DEBT, Area.RISK), laterLife, ALEX))
+			.containsExactly("You said retirement is close or already here.",
+					"Your accounts cover more than 6 months of spending.", "You picked investing as a goal.",
+					"You are paying off a loan with us.", "Your accounts with us include investment products.");
+		assertThat(Rules.focusBecause(List.of(Area.RETIREMENT, Area.SAVING), laterLife, null))
+			.containsExactly("You said retirement is close or already here.", Rules.NEUTRAL_LINE);
 	}
 
 	@Test
 	void everyBufferBandHasALine() {
-		assertThat(Rules.BUFFER.keySet()).isEqualTo(Set.copyOf(Facts.CASH_BUFFER_BANDS));
+		assertThat(Rules.BUFFER.keySet()).isEqualTo(Set.of(Facts.BUFFER_UNDER_1, Facts.BUFFER_1_3, Facts.BUFFER_3_6,
+				Facts.BUFFER_6_PLUS));
 	}
 
 	@Test
 	void linesAreObservations() {
 		List<String> lines = new ArrayList<>();
-		List<String> experiences = new ArrayList<>(Arrays.asList("not-saving", "none", "tried", "regular",
-				"experienced", null));
-		for (Facts facts : Arrays.asList(LENA, TOM, MARCO, INGRID, null)) {
-			for (String experience : experiences) {
-				for (int confidence : List.of(1, 5)) {
-					OnboardingAnswers a = new OnboardingAnswers(null, List.of("etfs", "insurance", "retirement"),
-							experience, null, new Confidence(confidence, confidence, confidence), false);
-					lines.addAll(Rules.roleBecause(a, facts));
-					lines.addAll(Rules.focusBecause(List.of(Area.values()), a, facts));
-					confidenceGaps(a, facts).forEach(gap -> lines.add(gap.because()));
-				}
-			}
-			if (facts != null) {
-				lines.addAll(Rules.lifeStageBecause(facts));
+		for (Facts facts : Arrays.asList(ALEX, LENA, TOM, null)) {
+			for (String experience : Arrays.asList("not-saving", "occasional", "regular", "investing", "planning",
+					null)) {
+				OnboardingAnswers a = new OnboardingAnswers("later-life", List.of("stocks-etfs", "insurance",
+						"retirement"), experience, false);
+				lines.addAll(Rules.roleBecause(a, facts));
+				lines.addAll(Rules.focusBecause(List.of(Area.values()), a, facts));
+				confidenceGaps(a, facts).forEach(gap -> lines.add(gap.because()));
 			}
 		}
 		assertThat(lines).isNotEmpty().noneMatch(line -> ADVICE.matcher(line).find());

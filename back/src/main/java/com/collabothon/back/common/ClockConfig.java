@@ -1,4 +1,4 @@
-package com.collabothon.back.bank;
+package com.collabothon.back.common;
 
 import java.time.Clock;
 import java.time.ZoneId;

@@ -32,12 +32,14 @@ class CategorizationWithoutKeyTests {
 
 	@Test
 	void fallsBackWithoutCallingJev() throws Exception {
-		mvc.perform(put("/api/users/tom/profile").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"goals\": [\"etfs\"], \"experience\": \"none\", \"skipped\": false}"))
+		mvc.perform(put("/api/users/tom/profile/onboarding").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"goals\": [\"stocks-etfs\"], \"experience\": \"occasional\", \"skipped\": false}"))
 			.andExpect(status().isOk());
 
 		mvc.perform(post("/api/users/tom/categorization").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"consent\": true}"))
+			.content("""
+					{"consent": true, "facts": {"incomeBand": "2-3.5k", "cashBufferMonths": "6+", "savingsRate": "20%+",
+					 "savesRegularly": true, "inOverdraft": false, "holdsInvestments": true, "hasLoan": true}}"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.bankData").value(true))
 			.andExpect(jsonPath("$.source").value("fallback"))

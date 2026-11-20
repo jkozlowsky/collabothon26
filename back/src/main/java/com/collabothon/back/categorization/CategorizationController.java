@@ -1,6 +1,7 @@
 package com.collabothon.back.categorization;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -29,8 +30,8 @@ class CategorizationController {
 
 	@PostMapping
 	Categorization categorize(@PathVariable @NotBlank @Size(max = MAX_USER_ID_LENGTH) String userId,
-			@Valid @RequestBody ConsentRequest request) {
-		return service.categorize(userId, request.consent());
+			@Valid @RequestBody CategorizationRequest request) {
+		return service.categorize(userId, request.consent(), request.facts());
 	}
 
 	@GetMapping
@@ -38,7 +39,14 @@ class CategorizationController {
 		return service.find(userId).orElseThrow(() -> new NotFoundException("Not categorised yet"));
 	}
 
-	record ConsentRequest(@NotNull Boolean consent) {
+	record CategorizationRequest(@NotNull Boolean consent, @Valid Facts facts) {
+
+		/** We refuse account data the user did not agree to share. */
+		@AssertTrue(message = "facts are only accepted with consent")
+		boolean isFactsOnlyWithConsent() {
+			return facts == null || Boolean.TRUE.equals(consent);
+		}
+
 	}
 
 }

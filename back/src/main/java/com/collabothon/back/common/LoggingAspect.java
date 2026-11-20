@@ -33,7 +33,7 @@ class LoggingAspect {
 			}
 			return result;
 		}
-		catch (NotFoundException | BadRequestException e) {
+		catch (NotFoundException e) {
 			log.info("{} rejected after {} ms: {}", method, millisSince(start), e.getClass().getSimpleName());
 			throw e;
 		}

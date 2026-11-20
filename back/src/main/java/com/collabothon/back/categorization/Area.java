@@ -1,23 +1,25 @@
 package com.collabothon.back.categorization;
 
-import static com.collabothon.back.bank.Facts.BUFFER_6_PLUS;
-import static com.collabothon.back.bank.Facts.RATE_NEGATIVE;
+import static com.collabothon.back.categorization.Facts.BUFFER_6_PLUS;
+import static com.collabothon.back.categorization.Facts.RATE_NEGATIVE;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-import com.collabothon.back.bank.Facts;
+import com.collabothon.back.categorization.Categorization.LifeStage;
+import com.collabothon.back.categorization.Categorization.OnboardingAnswers;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum Area {
 
-	SAVING("budget", "money-habits", "banking-basics", "start-saving", "emergency-fund", "big-purchase", "buy-home"),
+	// Goal groups from main's onboarding (front/src/constants/onboarding.ts).
+	SAVING("budget", "money-habits", "banking-basics", "start-saving", "emergency-fund", "inflation"),
 	DEBT("pay-off-debt", "credit-cards", "loans-mortgages"),
-	INVESTING("start-investing", "stocks", "etfs", "bonds", "sustainable-investing", "crypto", "inflation"),
-	RISK("diversification", "risk", "insurance", "scams"),
-	RETIREMENT("retirement", "kids-future", "family-money");
+	INVESTING("start-investing", "stocks-etfs", "crypto"),
+	RISK("insurance", "scams"),
+	RETIREMENT("retirement");
 
 	private final Set<String> goals;
 
@@ -42,21 +44,30 @@ public enum Area {
 			.toList();
 	}
 
-	/** Only the facts that argue for this area; a fact that argues against it is left out. */
-	List<String> supportingLines(Facts f) {
+	/** Only the lines that argue for this area; a fact that argues against it is left out. */
+	List<String> supportingLines(OnboardingAnswers a, Facts f) {
 		List<String> lines = new ArrayList<>();
+		if (this == RETIREMENT && LifeStage.fromAnswer(a.lifeStage()) == LifeStage.PRE_RETIREMENT) {
+			lines.add(Rules.RETIREMENT_LINE);
+		}
+		if (f == null) {
+			return lines;
+		}
 		switch (this) {
 			case SAVING -> {
 				if (Rules.hasShortBuffer(f)) {
 					lines.add(Rules.bufferLine(f));
 				}
 				if (f.savingsRate().equals(RATE_NEGATIVE)) {
-					lines.add("You spent more than you earned.");
+					lines.add(Rules.OVERSPENT_LINE);
 				}
 			}
 			case DEBT -> {
-				if (f.overdraftMonths() > 0) {
-					lines.add(Rules.overdraftLine(f));
+				if (f.inOverdraft()) {
+					lines.add(Rules.OVERDRAFT_LINE);
+				}
+				if (f.hasLoan()) {
+					lines.add(Rules.LOAN_LINE);
 				}
 			}
 			case INVESTING -> {
@@ -73,9 +84,6 @@ public enum Area {
 				}
 			}
 			case RETIREMENT -> {
-				if (Rules.isAge45Plus(f)) {
-					lines.add(Rules.ageLine(f));
-				}
 			}
 		}
 		return lines;

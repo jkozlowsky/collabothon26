@@ -1,20 +1,37 @@
-import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import { appRoutes as routes } from '@/test-utils/routes';
 
 const PROFILE_URL = /\/api\/users\/demo-user\/profile$/;
+const ONBOARDING_URL = /\/api\/users\/demo-user\/profile\/onboarding$/;
 const NOT_YET_URL = /\/api\/(mock-bank\/customers\/demo-user\/facts|users\/demo-user\/categorization)$/;
 let fetchMock: jest.Mock;
 
-/** Backend stub: a new user (no profile, bank accounts or categorisation yet), an empty lesson list, and a profile PUT that echoes back. */
-beforeEach(() => {
-  fetchMock = jest.fn((url: string, init?: RequestInit) => {
-    if ((PROFILE_URL.test(url) || NOT_YET_URL.test(url)) && !init?.method)
-      return Promise.resolve({ ok: false, status: 404, statusText: 'Not Found' });
-    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
-  });
-  globalThis.fetch = fetchMock;
+const profile = (onboardingCompleted: boolean) => ({
+  userId: 'demo-user',
+  lifeStage: null,
+  goals: onboardingCompleted ? ['budget'] : [],
+  experience: null,
+  onboardingCompleted,
+  onboardingSkipped: false,
+  onboardingCompletedAt: null,
 });
+
+/** Backend stub: the user's profile, no bank accounts or categorisation yet, an empty lesson list, and writes that succeed. */
+function stubBackend({ onboardingCompleted }: { onboardingCompleted: boolean }) {
+  fetchMock = jest.fn((url: string, init?: RequestInit) =>
+    NOT_YET_URL.test(url) && !init?.method
+      ? Promise.resolve({ ok: false, status: 404, statusText: 'Not Found' })
+      : Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(PROFILE_URL.test(url) ? profile(onboardingCompleted) : []),
+        }),
+  );
+  globalThis.fetch = fetchMock;
+}
+
+beforeEach(() => stubBackend({ onboardingCompleted: false }));
 
 /** A fresh onboarding continues to the consent card, then the loading steps (at least 2.4 s), then Learn. */
 async function passConsent() {
@@ -22,8 +39,8 @@ async function passConsent() {
   await screen.findByTestId('screen-learn', {}, { timeout: 4000 });
 }
 
-function savedProfile() {
-  const call = fetchMock.mock.calls.find(([url, init]) => PROFILE_URL.test(url) && init?.method === 'PUT');
+function savedOnboarding() {
+  const call = fetchMock.mock.calls.find(([url, init]) => ONBOARDING_URL.test(url) && init?.method === 'PUT');
   return call && JSON.parse(call[1].body);
 }
 
@@ -40,25 +57,20 @@ test('app opens on the bank; the first Learn tap runs onboarding, skipping it la
 
   await fireEvent.press(screen.getByTestId('nav-learn'));
   expect(await screen.findByTestId('onboarding-welcome')).toBeOnTheScreen();
+  expect(screen.getByText('Finances with confidence — one lesson at a time')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-start'));
-  await fireEvent.press(screen.getByTestId('onboarding-skip'));
+  await fireEvent.press(screen.getByTestId('onboarding-next'));
 
   expect(await screen.findByTestId('onboarding-invite')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
   await passConsent();
 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
-  expect(savedProfile()).toEqual({ goals: [], confidence: {}, skipped: true });
+  expect(savedOnboarding()).toEqual({ goals: [], skipped: true });
 });
 
-test('a returning user with a saved profile goes from the bank straight to Learn', async () => {
-  fetchMock.mockImplementation((url: string) =>
-    Promise.resolve({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(PROFILE_URL.test(url) ? { userId: 'demo-user', goals: ['budget'] } : []),
-    }),
-  );
+test('a user whose profile says onboarding is completed goes from the bank straight to Learn', async () => {
+  stubBackend({ onboardingCompleted: true });
   await renderRouter(routes, { initialUrl: '/' });
   // Let the profile request resolve before tapping Learn.
   await screen.findByTestId('screen-overview');
@@ -69,79 +81,44 @@ test('a returning user with a saved profile goes from the bank straight to Learn
   expect(screen.queryByTestId('onboarding-welcome')).toBeNull();
 });
 
-test('answers all five questions', async () => {
+test('answers all three questions', async () => {
   await openLearn();
 
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
-  for (let i = 0; i < 3; i++) await fireEvent.press(screen.getByTestId('onboarding-next'));
+  await fireEvent.press(screen.getByTestId('onboarding-next'));
   await fireEvent.press(screen.getByTestId('onboarding-personalise'));
 
   // Continue stays disabled until the question is answered.
   expect(screen.getByTestId('onboarding-continue')).toBeDisabled();
-  await fireEvent.press(screen.getByTestId('option-family'));
+  await fireEvent.press(screen.getByTestId('option-building'));
   await fireEvent.press(screen.getByTestId('onboarding-continue'));
 
   // No limit on how many topics you pick.
-  for (const g of ['start-saving', 'emergency-fund', 'budget', 'etfs', 'taxes'])
+  for (const g of ['start-saving', 'emergency-fund', 'budget', 'stocks-etfs', 'scams'])
     await fireEvent.press(screen.getByTestId(`goal-${g}`));
   expect(screen.getByText('5 selected')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-continue'));
 
-  await fireEvent.press(screen.getByTestId('option-not-saving'));
-  await fireEvent.press(screen.getByTestId('onboarding-continue'));
-  await fireEvent.press(screen.getByTestId('option-simple'));
-  await fireEvent.press(screen.getByTestId('onboarding-continue'));
-
-  // Three 1-5 scales on one page; Finish unlocks only once all three are rated.
-  await fireEvent.press(screen.getByTestId('confidence-budgeting-2'));
-  await fireEvent.press(screen.getByTestId('confidence-saving-4'));
+  // The third question is the last one.
   expect(screen.getByTestId('onboarding-continue')).toBeDisabled();
-  await fireEvent.press(screen.getByTestId('confidence-investing-1'));
-  expect(screen.getByText('A little')).toBeOnTheScreen();
+  await fireEvent.press(screen.getByTestId('option-not-saving'));
   await fireEvent.press(screen.getByText('Finish'));
   await passConsent();
 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
-  expect(savedProfile()).toEqual({
-    lifeStage: 'family',
-    goals: ['start-saving', 'emergency-fund', 'budget', 'etfs', 'taxes'],
+  expect(savedOnboarding()).toEqual({
+    lifeStage: 'building',
+    goals: ['start-saving', 'emergency-fund', 'budget', 'stocks-etfs', 'scams'],
     experience: 'not-saving',
-    learningStyle: 'simple',
-    confidence: { budgeting: 2, saving: 4, investing: 1 },
     skipped: false,
   });
 });
 
-test('intro illustrations react to taps', async () => {
+test('the back arrow returns from the intro slide to the welcome screen', async () => {
   await openLearn();
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
+  expect(screen.getByTestId('onboarding-intro')).toBeOnTheScreen();
 
-  // Globe: a pin or its topic chip switches the lesson card.
-  expect(screen.getByText('Your first share')).toBeOnTheScreen();
-  await fireEvent.press(screen.getByTestId('pin-Nairobi'));
-  expect(screen.getByText('Saving on the go')).toBeOnTheScreen();
-  await fireEvent.press(screen.getByTestId('topic-6'));
-  expect(screen.getByText('When prices run away')).toBeOnTheScreen();
-
-  // Account card: tapping a number swaps the lesson made from it; the eye hides amounts.
-  await fireEvent.press(screen.getByTestId('onboarding-next'));
-  expect(screen.getByText('Where did your €1,268 go?')).toBeOnTheScreen();
-  await fireEvent.press(screen.getByTestId('account-in'));
-  expect(screen.getByText('Saving €215 a month?')).toBeOnTheScreen();
-  await fireEvent.press(screen.getByTestId('account-eye'));
-  // Scoped to the onboarding page: the bank underneath shows the same balance.
-  expect(within(screen.getByTestId(/^onboarding-intro/)).queryByText('€ 4,280.52')).toBeNull();
-
-  // The back arrow returns to the previous intro page, and from the first one to the welcome screen.
-  await fireEvent.press(screen.getByTestId('onboarding-back'));
-  expect(screen.getByTestId('onboarding-intro-lessons')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-back'));
   expect(screen.getByTestId('onboarding-welcome')).toBeOnTheScreen();
-  await fireEvent.press(screen.getByTestId('onboarding-start'));
-  await fireEvent.press(screen.getByTestId('onboarding-next'));
-
-  // Confidence: the next step can be ticked off.
-  await fireEvent.press(screen.getByTestId('onboarding-next'));
-  await fireEvent.press(screen.getByTestId('next-step'));
-  expect(screen.getByText('+10 XP')).toBeOnTheScreen();
 });

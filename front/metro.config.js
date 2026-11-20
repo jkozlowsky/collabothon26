@@ -14,6 +14,11 @@ const METRO_PROXY_MIDDLEWARES =
   globalThis.__financeQuestMetroProxyMiddlewares ??
   (globalThis.__financeQuestMetroProxyMiddlewares = new WeakSet());
 
+function withoutOrigin(headers) {
+  const { origin: _origin, ...rest } = headers;
+  return rest;
+}
+
 function isWsProxyPath(url) {
   if (!url) return false;
   const { pathname } = new URL(url, 'http://localhost');
@@ -144,7 +149,9 @@ config.server.enhanceMiddleware = (metroMiddleware) => {
     const target = new URL(req.url, BACKEND_URL);
     const upstream = http.request(
       target,
-      { method: req.method, headers: { ...req.headers, host: target.host } },
+      // Drop Origin: to the browser this is a same-origin request to Metro, so the backend's CORS
+      // allow-list must not apply (it would reject e.g. a tunnel URL or another dev port).
+      { method: req.method, headers: { ...withoutOrigin(req.headers), host: target.host } },
       (backendRes) => {
         res.writeHead(backendRes.statusCode, backendRes.headers);
         backendRes.pipe(res);

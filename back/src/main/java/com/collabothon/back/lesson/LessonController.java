@@ -83,16 +83,23 @@ class LessonController {
 
 		List<String> keys = new ArrayList<>();
 		progress.variantProfile(userId).ifPresent(p -> {
+			// Onboarding answers (UserProfileController.OnboardingRequest) mapped onto content variants.
 			if (p.experience() != null) {
 				switch (p.experience()) {
-					case "not-saving", "none" -> keys.add("level:beginner");
-					case "regular", "experienced" -> keys.add("level:advanced");
+					case "not-saving", "occasional" -> keys.add("level:beginner");
+					case "investing", "planning" -> keys.add("level:advanced");
 					default -> {
 					}
 				}
 			}
 			if (p.lifeStage() != null) {
-				keys.add("persona:" + p.lifeStage());
+				switch (p.lifeStage()) {
+					case "starting-out" -> keys.add("persona:student");
+					case "building" -> keys.add("persona:family");
+					case "later-life" -> keys.add("persona:pre-retirement");
+					default -> {
+					}
+				}
 			}
 		});
 		if (lang.equals("plain")) {

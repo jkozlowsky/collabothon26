@@ -7,7 +7,7 @@ import java.util.Set;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** Per-user lesson progress (V5 tables). Plain SQL: the upserts are one statement each. */
+/** Per-user lesson progress (V4 tables). Plain SQL: the upserts are one statement each. */
 @Repository
 class LessonProgress {
 

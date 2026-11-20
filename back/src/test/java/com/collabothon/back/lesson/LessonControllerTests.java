@@ -57,8 +57,8 @@ class LessonControllerTests {
 
 	@Test
 	void personaFromProfilePicksTheActionTextOnceUnlocked() throws Exception {
-		mvc.perform(put("/api/users/grandpa/profile").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"lifeStage\":\"pre-retirement\",\"goals\":[],\"skipped\":false}")).andExpect(status().isOk());
+		mvc.perform(put("/api/users/grandpa/profile/onboarding").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"lifeStage\":\"later-life\",\"goals\":[],\"skipped\":false}")).andExpect(status().isOk());
 		// Without a user id the lesson is open and unpersonalised.
 		mvc.perform(get("/api/lessons/seoul-5"))
 			.andExpect(jsonPath("$.steps[3].body").value(

@@ -18,7 +18,4 @@ public final class FactsConsts {
 
 	public static final String SAVINGS_RATES = "negative|0-10%|10-20%|20%\\+";
 
-	private FactsConsts() {
-	}
-
 }

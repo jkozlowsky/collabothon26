@@ -6,6 +6,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.collabothon.back.common.consts.TimeConsts;
+
 final class MovableClock extends Clock {
 
 	private final Instant start;
@@ -27,7 +29,7 @@ final class MovableClock extends Clock {
 
 	@Override
 	public ZoneId getZone() {
-		return ZoneId.of("Europe/Berlin");
+		return TimeConsts.ZONE;
 	}
 
 	@Override

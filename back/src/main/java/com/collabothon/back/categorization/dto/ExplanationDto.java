@@ -5,5 +5,8 @@ import java.util.Map;
 
 import com.collabothon.back.categorization.enums.ExplanationOutput;
 
-public record ExplanationDto(ExplanationOutput output, Map<String, Double> probabilities, List<String> because) {
-}
+public record ExplanationDto(
+		ExplanationOutput output,
+		Map<String, Double> probabilities,
+		List<String> because
+) {}

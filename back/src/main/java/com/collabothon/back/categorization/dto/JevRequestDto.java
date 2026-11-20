@@ -4,5 +4,8 @@ import java.util.Map;
 
 import tools.jackson.databind.JsonNode;
 
-public record JevRequestDto(String model, Map<String, Object> state, JsonNode questions) {
-}
+public record JevRequestDto(
+		String model,
+		Map<String, Object> state,
+		JsonNode questions
+) {}

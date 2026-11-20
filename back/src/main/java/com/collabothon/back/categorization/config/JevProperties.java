@@ -1,8 +1,16 @@
 package com.collabothon.back.categorization.config;
 
+import static com.collabothon.back.categorization.consts.JevConsts.API_KEY_PATTERN;
+import static com.collabothon.back.categorization.consts.JevConsts.DEFAULT_BASE_URL;
+import static com.collabothon.back.categorization.consts.JevConsts.DEFAULT_MODEL;
+import static com.collabothon.back.categorization.consts.JevConsts.LOOPBACK_HOSTS;
+import static com.collabothon.back.categorization.consts.JevConsts.MAX_PORT;
+import static com.collabothon.back.categorization.consts.JevConsts.MIN_PORT;
+import static com.collabothon.back.categorization.consts.JevConsts.NO_PORT;
+import static com.collabothon.back.categorization.consts.JevConsts.WEB_SCHEMES;
+
 import java.net.URI;
 import java.util.Locale;
-import java.util.Set;
 
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
@@ -13,27 +21,21 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
-import com.collabothon.back.categorization.consts.JevConsts;
-
 @ConfigurationProperties("jev")
 @Validated
 public record JevProperties(
-		@NotNull @DefaultValue(JevConsts.DEFAULT_BASE_URL) URI baseUrl,
-		@Pattern(regexp = "[\\x21-\\x7E]*", message = "jev.api-key must be printable ASCII without spaces")
-		@DefaultValue("") String apiKey,
-		@NotBlank @DefaultValue(JevConsts.DEFAULT_MODEL) String model) {
+		@NotNull
+		@DefaultValue(DEFAULT_BASE_URL)
+		URI baseUrl,
+		@Pattern(regexp = API_KEY_PATTERN, message = "jev.api-key must be printable ASCII without spaces")
+		@DefaultValue("")
+		String apiKey,
+		@NotBlank
+		@DefaultValue(DEFAULT_MODEL)
+		String model
+) {
 
-	private static final String DEFAULT_HOST = URI.create(JevConsts.DEFAULT_BASE_URL).getHost();
-
-	private static final int NO_PORT = -1;
-
-	private static final int MIN_PORT = 1;
-
-	private static final int MAX_PORT = 65_535;
-
-	private static final Set<String> WEB_SCHEMES = Set.of("http", "https");
-
-	private static final Set<String> LOOPBACK_HOSTS = Set.of("localhost", "127.0.0.1", "[::1]");
+	private static final String DEFAULT_HOST = URI.create(DEFAULT_BASE_URL).getHost();
 
 	public JevProperties {
 		apiKey = apiKey == null ? "" : apiKey.strip();

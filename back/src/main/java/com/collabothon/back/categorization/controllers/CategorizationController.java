@@ -1,5 +1,7 @@
 package com.collabothon.back.categorization.controllers;
 
+import static com.collabothon.back.categorization.consts.CategorizationConsts.MAX_USER_ID_LENGTH;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -23,9 +25,6 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/users/{userId}/categorization")
 @RequiredArgsConstructor
 class CategorizationController {
-
-	/** {@code user_profile.user_id} is VARCHAR(64). */
-	private static final int MAX_USER_ID_LENGTH = 64;
 
 	private final CategorizationService service;
 

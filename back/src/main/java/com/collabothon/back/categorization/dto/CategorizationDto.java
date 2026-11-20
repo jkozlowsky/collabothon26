@@ -21,5 +21,5 @@ public record CategorizationDto(
 		SharedWithModelDto sharedWithModel,
 		CategorizationSource source,
 		String model,
-		Instant categorizedAt) {
-}
+		Instant categorizedAt
+) {}

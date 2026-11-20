@@ -1,5 +1,6 @@
 package com.collabothon.back.categorization.services;
 
+import static com.collabothon.back.categorization.consts.CategorizationConsts.FOCUS_THRESHOLD;
 import static com.collabothon.back.categorization.consts.FactsConsts.BUFFER_1_3;
 import static com.collabothon.back.categorization.consts.FactsConsts.BUFFER_3_6;
 import static com.collabothon.back.categorization.consts.FactsConsts.BUFFER_6_PLUS;
@@ -31,8 +32,6 @@ import com.collabothon.back.categorization.enums.Role;
 
 final class CategorizationRules {
 
-	static final double FOCUS_THRESHOLD = 0.5;
-
 	static final String NEUTRAL_LINE = "It fits the answers you gave.";
 
 	static final String SAVES_LINE = "Money goes to savings or investments every month.";
@@ -60,9 +59,6 @@ final class CategorizationRules {
 			Experience.OCCASIONAL);
 
 	private static final Set<Experience> SAYS_INVESTING = EnumSet.of(Experience.INVESTING, Experience.PLANNING);
-
-	private CategorizationRules() {
-	}
 
 	static Judgement fallback(OnboardingAnswersDto a, FactsDto f) {
 		Role role = fallbackRole(a, f);

@@ -4,10 +4,12 @@ import java.time.Duration;
 
 public final class CategorizationConsts {
 
+	/** {@code user_profile.user_id} is VARCHAR(64). */
+	public static final int MAX_USER_ID_LENGTH = 64;
+
 	/** A repeated POST with the same answers, consent and facts inside this window reuses the Jev result. */
 	public static final Duration RECATEGORIZE_AFTER = Duration.ofMinutes(5);
 
-	private CategorizationConsts() {
-	}
+	public static final double FOCUS_THRESHOLD = 0.5;
 
 }

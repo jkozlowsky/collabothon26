@@ -43,7 +43,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Slf4j
 public class JevClient {
 
-	private static final Pattern MODEL_ID = Pattern.compile("[A-Za-z0-9._:-]{1,64}");
+	private static final Pattern MODEL_ID = Pattern.compile(JevConsts.MODEL_ID_PATTERN);
 
 	// Anywhere in the cause chain, these mean the connection was never up, so the body cannot have left.
 	private static final List<Class<? extends Throwable>> NOT_SENT = List.of(ConnectException.class,

@@ -70,8 +70,8 @@ public class CategorizationService {
 						CategorizationRules.focusBecause(j.focusAreas(), answers, facts)));
 
 		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, j.role(), lifeStage, j.focusAreas(),
-				CategorizationRules.confidenceGaps(answers, facts), CategorizationRules.lessonVariant(j.role(), lifeStage),
-				explanation, shared,
+				CategorizationRules.confidenceGaps(answers, facts),
+				CategorizationRules.lessonVariant(j.role(), lifeStage), explanation, shared,
 				fromJev.judgement().isPresent() ? CategorizationSource.JEV : CategorizationSource.FALLBACK, j.model(),
 				now);
 		// Inserting only while onboarding is completed turns a reset during the Jev call into a 404.

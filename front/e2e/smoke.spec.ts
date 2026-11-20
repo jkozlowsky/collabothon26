@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('app opens on the bank; Learn runs onboarding, then Map; Bank comes back; a transfer lowers the balance', async ({ page }) => {
+test('app opens on the bank; Learn runs onboarding and the consent card, then Map; Bank comes back; a transfer lowers the balance', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('owner-name')).toHaveText('Alex Krause');
   await expect(page.getByTestId('main-balance')).toHaveText('€ 4,280.52');
@@ -10,7 +10,9 @@ test('app opens on the bank; Learn runs onboarding, then Map; Bank comes back; a
   await page.getByTestId('onboarding-start').click();
   await page.getByTestId('onboarding-skip').click();
   await page.getByTestId('onboarding-skip-all').click();
-  await expect(page.getByTestId('screen-learn')).toBeVisible();
+  // demo-user has no bank accounts, so the consent card offers a single Continue.
+  await page.getByTestId('consent-continue').click();
+  await expect(page.getByTestId('screen-learn')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId(/^lesson-/).first()).toBeVisible();
 
   // Back to the bank, then send Anna € 25.

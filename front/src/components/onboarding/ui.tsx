@@ -210,16 +210,6 @@ export function ChoiceChip({ label, selected, disabled, onPress, testID }: ChipP
   );
 }
 
-export function PageDots({ count, active }: { count: number; active: number }) {
-  return (
-    <View style={styles.dots} accessibilityLabel={`Page ${active + 1} of ${count}`}>
-      {Array.from({ length: count }, (_, i) => (
-        <Animated.View key={i} style={[styles.dot, motion.size, i === active && styles.dotActive]} />
-      ))}
-    </View>
-  );
-}
-
 type StepHeaderProps = { step: number; total: number; onBack: () => void; onSkip: () => void };
 
 export function StepHeader({ step, total, onBack, onSkip }: StepHeaderProps) {
@@ -365,9 +355,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.borderStrong },
-  dotActive: { width: 24, backgroundColor: colors.brandPrimary },
   stepHeader: { gap: spacing.lg },
   stepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   back: {

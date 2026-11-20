@@ -42,10 +42,10 @@ export async function openApp(page: Page) {
 
 export const tap = (page: Page, testId: string) => page.getByTestId(testId).click();
 
-/** Welcome → three intro slides → the "answer a few questions?" page. */
+/** Welcome → intro slide → the "answer a few questions?" page. */
 export async function goToInvite(page: Page) {
   await tap(page, 'onboarding-start');
-  for (let i = 0; i < 3; i++) await tap(page, 'onboarding-next');
+  await tap(page, 'onboarding-next');
   await expect(page.getByTestId('onboarding-invite')).toBeVisible();
 }
 

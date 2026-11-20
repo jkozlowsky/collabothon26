@@ -23,7 +23,7 @@ test('a new user can skip the questions; that is saved and onboarding does not c
   expect((await getProfile(request)).onboardingCompleted).toBe(false);
   await openApp(page);
   await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
-  await expect(page.getByText('Invest with confidence — one lesson at a time')).toBeVisible();
+  await expect(page.getByText('Finances with confidence — one lesson at a time')).toBeVisible();
 
   await goToInvite(page);
   await expect(page.getByText('Got a minute for a few questions?')).toBeVisible();
@@ -37,10 +37,12 @@ test('a new user can skip the questions; that is saved and onboarding does not c
   await expectOnLearn(page);
 });
 
-test('"Skip" on an intro slide jumps straight to the questions invite', async ({ page }) => {
+test('the welcome screen talks about finances, and one intro slide leads to the questions', async ({ page }) => {
   await openApp(page);
+  await expect(page.getByText('Finances with confidence — one lesson at a time')).toBeVisible();
   await tap(page, 'onboarding-start');
-  await tap(page, 'onboarding-skip');
+  await expect(page.getByTestId('onboarding-intro')).toBeVisible();
+  await tap(page, 'onboarding-next');
   await expect(page.getByTestId('onboarding-invite')).toBeVisible();
 });
 
@@ -126,13 +128,10 @@ test('skipping in the middle of the questions keeps the answers given so far', a
   });
 });
 
-test('the back arrow steps back through questions and intro slides, keeping answers', async ({ page }) => {
+test('the back arrow steps back through questions and the intro slide, keeping answers', async ({ page }) => {
   await openApp(page);
   await tap(page, 'onboarding-start');
-  await tap(page, 'onboarding-next');
-  await expect(page.getByTestId('onboarding-intro-personal')).toBeVisible();
-  await tap(page, 'onboarding-back');
-  await expect(page.getByTestId('onboarding-intro-lessons')).toBeVisible();
+  await expect(page.getByTestId('onboarding-intro')).toBeVisible();
   await tap(page, 'onboarding-back');
   await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
 

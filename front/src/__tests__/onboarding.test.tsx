@@ -57,8 +57,9 @@ test('app opens on onboarding; skipping the questions lands on Learn', async () 
   await renderRouter(routes, { initialUrl: '/' });
 
   expect(await screen.findByTestId('onboarding-welcome')).toBeOnTheScreen();
+  expect(screen.getByText('Finances with confidence — one lesson at a time')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-start'));
-  await fireEvent.press(screen.getByTestId('onboarding-skip'));
+  await fireEvent.press(screen.getByTestId('onboarding-next'));
 
   expect(await screen.findByTestId('onboarding-invite')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
@@ -79,7 +80,7 @@ test('answers all five questions', async () => {
   await renderRouter(routes, { initialUrl: '/' });
 
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
-  for (let i = 0; i < 3; i++) await fireEvent.press(screen.getByTestId('onboarding-next'));
+  await fireEvent.press(screen.getByTestId('onboarding-next'));
   await fireEvent.press(screen.getByTestId('onboarding-personalise'));
 
   // Continue stays disabled until the question is answered.
@@ -117,14 +118,11 @@ test('answers all five questions', async () => {
   });
 });
 
-test('the back arrow steps back through the intro slides to the welcome screen', async () => {
+test('the back arrow returns from the intro slide to the welcome screen', async () => {
   await renderRouter(routes, { initialUrl: '/' });
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
-  await fireEvent.press(screen.getByTestId('onboarding-next'));
-  expect(screen.getByTestId('onboarding-intro-personal')).toBeOnTheScreen();
+  expect(screen.getByTestId('onboarding-intro')).toBeOnTheScreen();
 
-  await fireEvent.press(screen.getByTestId('onboarding-back'));
-  expect(screen.getByTestId('onboarding-intro-lessons')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-back'));
   expect(screen.getByTestId('onboarding-welcome')).toBeOnTheScreen();
 });

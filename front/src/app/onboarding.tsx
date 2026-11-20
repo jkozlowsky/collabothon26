@@ -6,9 +6,7 @@ import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
-  ConfidenceIllustration,
   LessonGlobeIllustration,
-  PersonalIllustration,
   WelcomeHero,
 } from '@/components/onboarding/Illustrations';
 import {
@@ -19,8 +17,6 @@ import {
   IconTile,
   motion,
   OptionCard,
-  PageDots,
-  SkipLink,
   StepHeader,
   Tappable,
   type,
@@ -40,9 +36,7 @@ import type { Confidence, ConfidenceArea, ConfidenceRatings, Goal, OnboardingAns
 
 const STEPS = [
   'welcome',
-  'intro-lessons',
-  'intro-personal',
-  'intro-confidence',
+  'intro',
   'invite',
   'life-stage',
   'goals',
@@ -52,26 +46,7 @@ const STEPS = [
 ] as const;
 type Step = (typeof STEPS)[number];
 
-const INTRO_PAGES = ['intro-lessons', 'intro-personal', 'intro-confidence'] as const;
 const QUESTIONS = ['life-stage', 'goals', 'experience', 'learning-style', 'confidence'] as const;
-
-const INTRO_COPY = {
-  'intro-lessons': {
-    title: 'A world of money lessons',
-    body: 'Budgeting, saving, inflation, investing, spotting scams. Every pin is a short path of 2–5 minute lessons set in a real place — from tulip mania in Amsterdam to saving on the go in Nairobi.',
-    illustration: <LessonGlobeIllustration />,
-  },
-  'intro-personal': {
-    title: 'Lessons that fit your life',
-    body: 'Finance Quest lives inside your banking app, so lessons start from your real numbers — your balance, what comes in and what goes out. The examples match where you are in life: studying, raising a family or planning retirement.',
-    illustration: <PersonalIllustration />,
-  },
-  'intro-confidence': {
-    title: 'Grow confidence, not just knowledge',
-    body: 'Before and after each lesson we ask how sure you feel. Watch that number grow — then take one small real step.',
-    illustration: <ConfidenceIllustration />,
-  },
-} satisfies Record<(typeof INTRO_PAGES)[number], { title: string; body: string; illustration: ReactNode }>;
 
 export default function OnboardingScreen() {
   const { complete } = useOnboarding();
@@ -79,7 +54,6 @@ export default function OnboardingScreen() {
   const [answers, setAnswers] = useState<OnboardingAnswers>({ goals: [], confidence: {} });
 
   const step: Step = STEPS[index];
-  const goTo = (s: Step) => setIndex(STEPS.indexOf(s));
   const next = () => setIndex((i) => Math.min(i + 1, STEPS.length - 1));
   const back = () => setIndex((i) => Math.max(i - 1, 0));
   const finish = () => complete(answers, false);
@@ -94,7 +68,7 @@ export default function OnboardingScreen() {
         <WelcomeHero />
         <View style={{ height: spacing.xxxl }} />
         <Text style={[type.overline, { color: colors.brandAccent }]}>FINANCE QUEST</Text>
-        <Text style={[styles.welcomeTitle]}>Invest with confidence — one lesson at a time</Text>
+        <Text style={[styles.welcomeTitle]}>Finances with confidence — one lesson at a time</Text>
         <Text style={[type.body, { color: 'rgba(255,255,255,0.75)' }]}>
           Short lessons built around your own money. A few minutes a day is enough.
         </Text>
@@ -103,28 +77,24 @@ export default function OnboardingScreen() {
     );
   }
 
-  if (step === 'intro-lessons' || step === 'intro-personal' || step === 'intro-confidence') {
-    const copy = INTRO_COPY[step];
+  if (step === 'intro') {
     return (
       <Page
         stepKey={step}
         header={
           <View style={styles.row}>
-            <View style={styles.side}>
-              <BackButton onPress={back} />
-            </View>
-            <PageDots count={INTRO_PAGES.length} active={INTRO_PAGES.indexOf(step)} />
-            <View style={[styles.side, { alignItems: 'flex-end' }]}>
-              <SkipLink onPress={() => goTo('invite')} />
-            </View>
+            <BackButton onPress={back} />
           </View>
         }
         footer={<BigButton label="Next" onPress={next} testID="onboarding-next" />}
       >
-        {copy.illustration}
+        <LessonGlobeIllustration />
         <View style={{ height: spacing.xxxl }} />
-        <Text style={type.display}>{copy.title}</Text>
-        <Text style={type.body}>{copy.body}</Text>
+        <Text style={type.display}>A world of money lessons</Text>
+        <Text style={type.body}>
+          Budgeting, saving, borrowing, investing, spotting scams. Every pin is a short path of 2–5 minute lessons set in
+          a real place — from tulip mania in Amsterdam to saving on the go in Nairobi.
+        </Text>
       </Page>
     );
   }
@@ -386,8 +356,6 @@ const styles = StyleSheet.create({
   footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm },
   grow: { flexGrow: 1 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  /** Equal-width side slots keep the page dots exactly centred. */
-  side: { flex: 1, alignItems: 'flex-start' },
   welcomeTitle: { fontSize: 30, lineHeight: 36, fontWeight: '700', color: '#fff' },
   answers: { gap: 10, marginTop: spacing.lg },
   goalGroup: { gap: spacing.xs + spacing.xxs },

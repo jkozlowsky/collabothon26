@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useReducedMotion, type CSSAnimationKeyframes, type CSSAnimationProperties } from 'react-native-reanimated';
 
-import { Globe, GLOBE_PINS, GlobeSphere } from '@/components/onboarding/Globe';
+import { Globe, GLOBE_PINS } from '@/components/onboarding/Globe';
 import { EASE_IN_OUT, EASE_OUT, motion } from '@/components/onboarding/ui';
 import { colors, radii, spacing } from '@/constants/theme';
 
@@ -113,99 +113,6 @@ export function LessonGlobeIllustration() {
   );
 }
 
-/** Intro 2: your account becomes a lesson made for you. Illustration only. */
-export function PersonalIllustration() {
-  return (
-    <View style={[card.wrap, { gap: 12 }]} accessible={false} importantForAccessibility="no-hide-descendants">
-      <View style={personal.account}>
-        <View style={card.headerRow}>
-          <Text style={personal.accountLabel}>Main account · available</Text>
-          <Feather name="eye" size={16} color="rgba(255,255,255,0.75)" />
-        </View>
-        <Text style={personal.amount}>€ 4,280.52</Text>
-        <Text style={personal.iban}>DE89 3704 •••• •••• 4821</Text>
-        <View style={personal.pills}>
-          <View style={[personal.pill, { flex: 1 }]}>
-            <Text style={personal.pillLabel}>In this month</Text>
-            <Text style={[personal.pillValue, { color: '#7FD9A8' }]}>+€ 2,150.00</Text>
-          </View>
-          <View style={[personal.pill, personal.pillOn, { flex: 1 }]}>
-            <Text style={personal.pillLabel}>Out this month</Text>
-            <Text style={personal.pillValue}>−€ 1,268.40</Text>
-          </View>
-        </View>
-      </View>
-      <View style={personal.becomes}>
-        <Feather name="repeat" size={13} color={colors.textMuted} />
-        <Text style={card.meta}>becomes a lesson made for you</Text>
-      </View>
-      <Animated.View style={[personal.lesson, enter(300)]}>
-        <GlobeSphere size={52} />
-        <View style={{ flex: 1, gap: 3 }}>
-          <Text style={card.overline}>FINANCE QUEST · BUDGETING</Text>
-          <Text style={path.title} numberOfLines={1}>
-            Where did your €1,268 go?
-          </Text>
-          <Text style={path.meta}>Lesson 2 of 5 · 4 min</Text>
-        </View>
-        <Feather name="chevron-right" size={18} color={colors.brandPrimary} />
-      </Animated.View>
-      <View style={[path.track, { marginTop: -4 }]}>
-        <View style={[path.fill, { width: '40%', backgroundColor: colors.brandPrimary }]} />
-      </View>
-    </View>
-  );
-}
-
-const GROW = { from: { opacity: 0, transform: [{ scaleX: 0.3 }] }, to: { opacity: 1, transform: [{ scaleX: 1 }] } };
-
-/** Intro 3: confidence before vs. after a lesson. The bars fill in one by one. Illustration only. */
-export function ConfidenceIllustration() {
-  const reduced = useReducedMotion();
-  const rows = [
-    { label: 'Before lesson', value: 2, color: colors.borderStrong, valueColor: colors.textMuted },
-    { label: 'After lesson', value: 4, color: colors.feedbackSuccess, valueColor: colors.feedbackSuccess },
-  ];
-  return (
-    <View style={[card.wrap, { gap: 14 }]} accessible={false} importantForAccessibility="no-hide-descendants">
-      <Text style={[card.overline, { color: colors.textMuted }]}>YOUR CONFIDENCE · SAVING</Text>
-      {rows.map((r, row) => (
-        <View key={r.label} style={{ gap: 8 }}>
-          <View style={card.headerRow}>
-            <Text style={path.title}>{r.label}</Text>
-            <Text style={[path.title, { color: r.valueColor }]}>{r.value} / 5</Text>
-          </View>
-          <View style={conf.scale}>
-            {[1, 2, 3, 4, 5].map((i) => {
-              const filled = i <= r.value;
-              return (
-                <Animated.View
-                  key={i}
-                  style={[
-                    conf.seg,
-                    { backgroundColor: filled ? r.color : colors.borderDefault },
-                    filled && !reduced && {
-                      animationName: GROW,
-                      animationDuration: 320,
-                      animationDelay: 150 + row * 450 + i * 90,
-                      animationFillMode: 'backwards',
-                      animationTimingFunction: EASE_OUT,
-                    },
-                  ]}
-                />
-              );
-            })}
-          </View>
-        </View>
-      ))}
-      <View style={conf.step}>
-        <Feather name="check" size={16} color={colors.brandPrimary} />
-        <Text style={[path.title, { flex: 1 }]}>Next step: set up a monthly savings transfer</Text>
-      </View>
-    </View>
-  );
-}
-
 const hero = StyleSheet.create({
   stage: { width: 280, height: 280, alignSelf: 'center' },
   glow: {
@@ -271,24 +178,6 @@ const card = StyleSheet.create({
   meta: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
 });
 
-const path = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-  },
-  rowActive: { backgroundColor: colors.brandAccentSoft, borderColor: colors.brandPrimary, borderWidth: 2, padding: 11 },
-  rowLocked: { opacity: 0.55 },
-  title: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
-  meta: { fontSize: 11, color: colors.textMuted },
-  track: { height: 4, borderRadius: 2, backgroundColor: colors.borderDefault, overflow: 'hidden', marginTop: 2 },
-  fill: { height: '100%', backgroundColor: colors.feedbackSuccess },
-  status: { fontSize: 12, fontWeight: '700', color: colors.brandPrimary },
-});
 
 const GLOBE_SIZE = 250;
 
@@ -356,45 +245,4 @@ const globe = StyleSheet.create({
   topicText: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
 });
 
-const personal = StyleSheet.create({
-  account: { backgroundColor: colors.brandPrimary, borderRadius: radii.card, padding: spacing.lg, gap: 4 },
-  accountLabel: { fontSize: 11, color: 'rgba(255,255,255,0.7)' },
-  amount: { fontSize: 28, fontWeight: '700', color: '#fff' },
-  iban: { fontSize: 11, color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5 },
-  pills: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  pill: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: radii.button,
-    padding: 8,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-  },
-  pillOn: { backgroundColor: 'rgba(255,204,0,0.16)', borderColor: colors.brandAccent },
-  pillLabel: { fontSize: 10, color: 'rgba(255,255,255,0.7)' },
-  pillValue: { fontSize: 12, fontWeight: '600', color: '#fff' },
-  becomes: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
-  lesson: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: radii.card,
-    backgroundColor: colors.brandAccentSoft,
-    borderWidth: 1,
-    borderColor: colors.brandAccent,
-  },
-});
 
-const conf = StyleSheet.create({
-  scale: { flexDirection: 'row', gap: 6 },
-  seg: { flex: 1, height: 12, borderRadius: 6 },
-  step: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.brandAccentSoft,
-    borderRadius: radii.tile,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-});

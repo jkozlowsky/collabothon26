@@ -115,5 +115,5 @@ make check     # front: tsc + expo lint + jest; back: JUnit (Testcontainers, nee
 To run one side only: `cd front && npm test` or `cd back && ./mvnw test`.
 
 - **Unit / component tests:** Jest + React Native Testing Library. For routing flows use `renderRouter` from `expo-router/testing-library`. In RNTL 14, `render` and `fireEvent` are async, so `await` them.
-- **E2E on web (optional):** Playwright, using `page.getByTestId('foo')`.
+- **E2E on web:** Playwright smoke test in `front/e2e/`, using `page.getByTestId('foo')`. `cd front && npx playwright install chromium && npm run e2e` starts the backend (Testcontainers) and the web app itself, so Docker must be running. CI runs it in `.github/workflows/e2e.yml`.
 - **Backend on a throwaway DB:** `cd back && ./mvnw spring-boot:test-run` starts the backend on a fresh Testcontainers Postgres.

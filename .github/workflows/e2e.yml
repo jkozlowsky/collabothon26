@@ -1,0 +1,37 @@
+name: e2e
+
+on:
+  pull_request:
+    paths: [back/**, front/**, .github/workflows/e2e.yml]
+  push:
+    branches: [main]
+    paths: [back/**, front/**, .github/workflows/e2e.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: maven
+          cache-dependency-path: back/pom.xml
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: front/package-lock.json
+      - run: npm ci
+        working-directory: front
+      - run: npx playwright install --with-deps --only-shell chromium
+        working-directory: front
+      # playwright.config.ts starts the backend (Testcontainers) and the Expo web server itself.
+      - run: npx playwright test
+        working-directory: front

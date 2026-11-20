@@ -156,7 +156,7 @@ export default function OnboardingScreen() {
       }
     >
       {step === 'life-stage' && (
-        <Question title="Where are you in life right now?" subtitle="We use this to pick examples that feel familiar. Change it any time.">
+        <Question title="Where are you in life?" subtitle="We use this to pick examples that feel familiar. Change it any time.">
           <SingleChoice options={LIFE_STAGES} value={answers.lifeStage} onChange={(v) => set('lifeStage', v)} />
         </Question>
       )}

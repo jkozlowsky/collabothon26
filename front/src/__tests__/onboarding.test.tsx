@@ -83,7 +83,7 @@ test('answers all three questions', async () => {
 
   // Continue stays disabled until the question is answered.
   expect(screen.getByTestId('onboarding-continue')).toBeDisabled();
-  await fireEvent.press(screen.getByTestId('option-family'));
+  await fireEvent.press(screen.getByTestId('option-building'));
   await fireEvent.press(screen.getByTestId('onboarding-continue'));
 
   // No limit on how many topics you pick.
@@ -99,7 +99,7 @@ test('answers all three questions', async () => {
 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
   expect(savedOnboarding()).toEqual({
-    lifeStage: 'family',
+    lifeStage: 'building',
     goals: ['start-saving', 'emergency-fund', 'budget', 'stocks-etfs', 'scams'],
     experience: 'not-saving',
     skipped: false,

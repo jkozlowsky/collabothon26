@@ -69,7 +69,7 @@ class UserProfileController {
 	}
 
 	record OnboardingRequest(
-			@Pattern(regexp = "student|family|established|pre-retirement") String lifeStage,
+			@Pattern(regexp = "starting-out|building|settled|later-life") String lifeStage,
 			@NotNull List<@NotNull @Pattern(regexp = GOALS) String> goals,
 			@Pattern(regexp = "not-saving|occasional|regular|investing|planning") String experience,
 			boolean skipped) {

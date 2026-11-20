@@ -8,10 +8,10 @@ export type IconName = ComponentProps<typeof Feather>['name'];
 export type Option<T> = { value: T; title: string; subtitle: string; icon: IconName };
 
 export const LIFE_STAGES: Option<LifeStage>[] = [
-  { value: 'student', title: 'Studying or just started working', subtitle: 'First salary, first savings', icon: 'book-open' },
-  { value: 'family', title: 'Building a family', subtitle: 'Kids, home, bigger goals', icon: 'home' },
-  { value: 'established', title: 'Established career', subtitle: 'Growing what you have', icon: 'briefcase' },
-  { value: 'pre-retirement', title: 'Getting close to retirement', subtitle: 'Protecting and planning', icon: 'sun' },
+  { value: 'starting-out', title: 'Just starting out', subtitle: 'Studying, a first job, first money of my own', icon: 'book-open' },
+  { value: 'building', title: 'Building my life', subtitle: 'Career, a home, maybe a family', icon: 'home' },
+  { value: 'settled', title: 'Settled in', subtitle: 'Steady income, looking further ahead', icon: 'briefcase' },
+  { value: 'later-life', title: 'Thinking about later life', subtitle: 'Retirement is close or already here', icon: 'sun' },
 ];
 
 /** Topics for the goals question: five areas of three, so the whole step fits one phone screen. */

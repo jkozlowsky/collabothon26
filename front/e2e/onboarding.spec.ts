@@ -54,7 +54,7 @@ test('answers to all three questions are saved on the profile', async ({ page, r
   // 1. Life stage
   await expect(page.getByText('Step 1 of 3')).toBeVisible();
   await expectDisabled(page, 'onboarding-continue');
-  await tap(page, 'option-family');
+  await tap(page, 'option-building');
   await expectDisabled(page, 'onboarding-continue', false);
   await tap(page, 'onboarding-continue');
 
@@ -82,7 +82,7 @@ test('answers to all three questions are saved on the profile', async ({ page, r
 
   const profile = await waitForCompletedOnboarding(request);
   expect(profile).toMatchObject({
-    lifeStage: 'family',
+    lifeStage: 'building',
     goals: goals.filter((g) => g !== 'crypto'),
     experience: 'not-saving',
     onboardingCompleted: true,
@@ -97,7 +97,7 @@ test('skipping in the middle of the questions keeps the answers given so far', a
   await openApp(page);
   await goToInvite(page);
   await tap(page, 'onboarding-personalise');
-  await tap(page, 'option-student');
+  await tap(page, 'option-starting-out');
   await tap(page, 'onboarding-continue');
   await tap(page, 'goal-budget');
   await tap(page, 'onboarding-skip');
@@ -105,7 +105,7 @@ test('skipping in the middle of the questions keeps the answers given so far', a
 
   const profile = await waitForCompletedOnboarding(request);
   expect(profile).toMatchObject({
-    lifeStage: 'student',
+    lifeStage: 'starting-out',
     goals: ['budget'],
     experience: null,
     onboardingSkipped: false,
@@ -121,12 +121,12 @@ test('the back arrow steps back through questions and the intro slide, keeping a
 
   await goToInvite(page);
   await tap(page, 'onboarding-personalise');
-  await tap(page, 'option-established');
+  await tap(page, 'option-settled');
   await tap(page, 'onboarding-continue');
   await expect(page.getByText('Step 2 of 3')).toBeVisible();
   await tap(page, 'onboarding-back');
   await expect(page.getByText('Step 1 of 3')).toBeVisible();
-  await expect(page.getByTestId('option-established')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByTestId('option-settled')).toHaveAttribute('aria-checked', 'true');
 });
 
 test('"Restart onboarding" on Profile clears the answers and the flag; onboarding shows again', async ({ page, request }) => {

@@ -18,34 +18,35 @@
 
 ```bash
 make setup     # one-time: creates .env from .env.example, runs npm install in front/
-make dev       # Postgres + backend + app
+               # edit .env and set your own POSTGRES_PASSWORD and DB_PASSWORD (must match)
+make dev       # Postgres + backend + browser app (loopback only)
+make phone     # Postgres + backend + phone QR via Expo ngrok tunnel
 ```
 
-`make dev` does three things:
-1. Starts Postgres in Docker.
-2. Starts the backend in the background. If one is already running on :8080, it uses that one. Logs go to `logs/backend.log` (`tail -f logs/backend.log`).
-3. Starts the app once the backend answers.
+`make dev` (and `make phone`) do three things:
+1. Starts Postgres in Docker (`127.0.0.1:5433`).
+2. Starts the backend in the background (`127.0.0.1:8080`). If one is already running on `:8080`, it uses that one. Logs go to `logs/backend.log` (`tail -f logs/backend.log`).
+3. Starts the app once the backend answers (`127.0.0.1:8081`).
 
-You can then open the app in two places:
-- **Browser:** http://localhost:8081
-- **Phone:** scan the QR code with Expo Go (Android) or the camera (iOS).
+Open the app in:
+- **Browser (`make dev`):** http://localhost:8081
+- **Phone (`make phone`):** scan the printed tunnel QR code with Expo Go (Android) or the camera (iOS).
 
 Ctrl+C stops the backend and the app. Postgres keeps running until `make db-stop`.
 
-If you want the Spring logs in their own terminal, run `make back` and `make web` separately instead.
+If you want the Spring logs in their own terminal, run `make back` and `make web` (or `make phone`) separately instead.
 
-### Phone access and WSL
+### Network security & phone access
 
-Under WSL2 a phone can't reach the WSL IP. For that reason `make dev` opens an ngrok tunnel there (`--tunnel ngrok`, no account needed). The QR then points to `*.exp.direct`, which works from any network, including mobile data. The phone does **not** need to be on the same Wi-Fi as your computer.
-
-The backend goes through the same tunnel, because `front/metro.config.js` proxies `/api/*` to `localhost:8080`.
-
-To run without the tunnel, use `NO_TUNNEL=1 make dev`. The phone then has to be on the same network as your computer.
+- **Loopback-only by default:** Postgres (`127.0.0.1:5433`), the Spring backend (`127.0.0.1:8080`), and Metro (`127.0.0.1:8081`) bind only to `127.0.0.1`, so nothing is advertised or reachable on shared Wi-Fi / LAN.
+- **Phone via tunnel QR:** `make phone` opens an Expo ngrok tunnel (`--tunnel ngrok`, no account needed) on every OS (Linux, macOS, WSL) and prints a QR pointing to a random `*.exp.direct` URL. That tunnel URL is the **only** way into the app from another device — your phone does not need to be on the same Wi-Fi, and Metro (`front/metro.config.js`) proxies both `/api/*` and `/ws/*` to `127.0.0.1:8080` through that same tunnel.
+- **Never expose without the tunnel:** User IDs are not authenticated in this prototype, so never expose the backend, Postgres, or Metro directly on LAN / `0.0.0.0` (especially on shared hackathon Wi-Fi).
+- **Database password & git worktrees:** `docker-compose.yml` pins `name: collabothon26`, so every checkout/worktree shares the same `collabothon-postgres` container and `collabothon26_postgres-data` volume. An existing Postgres volume keeps the password it was originally created with: in a new worktree, copy your existing `.env` from the main checkout so the password matches (don't leave the `CHANGE_ME` placeholder), or edit `.env` and run `make db-reset` to recreate the volume with a new password.
 
 If the phone shows "Something went wrong":
 - Shake the phone (or long-press the screen) and tap **Reload**.
 - Make sure Expo Go is up to date.
-- Check the `make dev` terminal. Errors from the phone show up there too.
+- Check the `make phone` terminal. Errors from the phone show up there too.
 
 ## Day-to-day development
 
@@ -98,7 +99,7 @@ front/src/
 ## Manual testing
 
 1. **Browser (fastest):** open http://localhost:8081. Turn on the DevTools device toolbar (`Ctrl+Shift+M`) for a phone-sized view. The Network tab shows the API calls. Native-only modules (camera, notifications, haptics) may not work on web, so always check on a phone before a demo.
-2. **Phone (Expo Go):** scan the QR from `make dev`. See [Phone access and WSL](#phone-access-and-wsl).
+2. **Phone (Expo Go):** scan the QR from `make phone`. See [Network security & phone access](#network-security--phone-access).
 3. **Android emulator:** boot the emulator (`emulator -list-avds`, then `emulator -avd <NAME> &`), then run `make android`.
 4. **Backend only:**
    ```bash

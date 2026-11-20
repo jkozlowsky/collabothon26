@@ -43,8 +43,7 @@ class UserProfileControllerTests {
 	void savingOnboardingStoresAnswersPerUserAndMarksItCompleted() throws Exception {
 		saveOnboarding("anna", """
 				{"lifeStage":"family","goals":["budget","start-saving","stocks-etfs","scams"],
-				 "experience":"not-saving","learningStyle":"simple",
-				 "confidence":{"budgeting":2,"saving":3,"investing":1},"skipped":false}
+				 "experience":"not-saving","skipped":false}
 				""").andExpect(status().isOk()).andExpect(jsonPath("$.onboardingCompleted").value(true));
 		saveOnboarding("ben", "{\"goals\":[],\"skipped\":true}").andExpect(status().isOk());
 
@@ -53,9 +52,7 @@ class UserProfileControllerTests {
 			.andExpect(jsonPath("$.onboardingCompleted").value(true))
 			.andExpect(jsonPath("$.lifeStage").value("family"))
 			.andExpect(jsonPath("$.goals.length()").value(4))
-			.andExpect(jsonPath("$.confidence.budgeting").value(2))
-			.andExpect(jsonPath("$.confidence.saving").value(3))
-			.andExpect(jsonPath("$.confidence.investing").value(1))
+			.andExpect(jsonPath("$.experience").value("not-saving"))
 			.andExpect(jsonPath("$.onboardingSkipped").value(false));
 		mvc.perform(get("/api/users/ben/profile"))
 			.andExpect(jsonPath("$.onboardingCompleted").value(true))
@@ -65,7 +62,7 @@ class UserProfileControllerTests {
 
 	@Test
 	void rejectsUnknownAnswerValues() throws Exception {
-		saveOnboarding("cara", "{\"goals\":[\"get-rich\"],\"confidence\":{\"saving\":9},\"skipped\":false}")
+		saveOnboarding("cara", "{\"goals\":[\"get-rich\"],\"experience\":\"guru\",\"skipped\":false}")
 			.andExpect(status().isBadRequest());
 		mvc.perform(get("/api/users/cara/profile")).andExpect(jsonPath("$.onboardingCompleted").value(false));
 	}

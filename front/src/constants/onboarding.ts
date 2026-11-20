@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import type Feather from '@expo/vector-icons/Feather';
 
-import type { ConfidenceArea, Experience, Goal, LearningStyle, LifeStage } from '@/types/onboarding';
+import type { Experience, Goal, LifeStage } from '@/types/onboarding';
 
 export type IconName = ComponentProps<typeof Feather>['name'];
 
@@ -65,19 +65,3 @@ export const EXPERIENCE: Option<Experience>[] = [
   { value: 'regular', title: 'I invest regularly', subtitle: 'Savings plan or own portfolio', icon: 'trending-up' },
   { value: 'experienced', title: "I'm pretty experienced", subtitle: 'Stocks, bonds, funds, more', icon: 'bar-chart-2' },
 ];
-
-export const LEARNING_STYLES: Option<LearningStyle>[] = [
-  { value: 'simple', title: 'Keep it simple', subtitle: 'Plain language, everyday examples', icon: 'book' },
-  { value: 'detailed', title: 'Give me the details', subtitle: 'Proper terms and the why behind them', icon: 'layers' },
-  { value: 'visual', title: 'Show me visually', subtitle: 'Charts, visuals and short videos', icon: 'play-circle' },
-  { value: 'practice', title: 'Let me practise', subtitle: 'Real-life scenarios and decisions', icon: 'zap' },
-];
-
-export const CONFIDENCE_AREAS: Option<ConfidenceArea>[] = [
-  { value: 'budgeting', title: 'Everyday money', subtitle: 'Budgeting & spending', icon: 'credit-card' },
-  { value: 'saving', title: 'Saving', subtitle: 'Safety net & goals', icon: 'umbrella' },
-  { value: 'investing', title: 'Investing', subtitle: 'Stocks, ETFs & funds', icon: 'trending-up' },
-];
-
-/** Short meaning of each point on the 1-5 confidence scale. */
-export const CONFIDENCE_LABELS = ['Not at all', 'A little', 'Somewhat', 'Fairly', 'Very'] as const;

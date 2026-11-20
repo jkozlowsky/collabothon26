@@ -46,13 +46,13 @@ test('the welcome screen talks about finances, and one intro slide leads to the 
   await expect(page.getByTestId('onboarding-invite')).toBeVisible();
 });
 
-test('answers to all five questions are saved on the profile', async ({ page, request }) => {
+test('answers to all three questions are saved on the profile', async ({ page, request }) => {
   await openApp(page);
   await goToInvite(page);
   await tap(page, 'onboarding-personalise');
 
   // 1. Life stage
-  await expect(page.getByText('Step 1 of 5')).toBeVisible();
+  await expect(page.getByText('Step 1 of 3')).toBeVisible();
   await expectDisabled(page, 'onboarding-continue');
   await tap(page, 'option-family');
   await expectDisabled(page, 'onboarding-continue', false);
@@ -70,26 +70,13 @@ test('answers to all five questions are saved on the profile', async ({ page, re
   await expect(page.getByText(`${goals.length - 1} selected`)).toBeVisible();
   await tap(page, 'onboarding-continue');
 
-  // 3. Saving and investing, with the "I don't save yet" option
+  // 3. Saving and investing, with the "I don't save yet" option. It is the last question.
+  await expect(page.getByText('Step 3 of 3')).toBeVisible();
   await expect(page.getByText('Where are you with saving and investing?')).toBeVisible();
   await expect(page.getByText("But I'd like to start")).toBeVisible();
-  await tap(page, 'option-not-saving');
-  await tap(page, 'onboarding-continue');
-
-  // 4. Learning style, with the note that it can be changed later
-  await expect(page.getByText('You can change it later in Settings.', { exact: false })).toBeVisible();
-  await tap(page, 'option-practice');
-  await tap(page, 'onboarding-continue');
-
-  // 5. Three 1-5 confidence scales; Finish waits for all three.
-  await expect(page.getByText('Step 5 of 5')).toBeVisible();
-  await tap(page, 'confidence-budgeting-4');
-  await tap(page, 'confidence-saving-2');
+  await expect(page.getByTestId('onboarding-continue')).toHaveText('Finish');
   await expectDisabled(page, 'onboarding-continue');
-  await tap(page, 'confidence-investing-1');
-  await tap(page, 'confidence-investing-3'); // changing a rating keeps only the last one
-  await expect(page.getByTestId('confidence-investing').getByText('Somewhat')).toBeVisible();
-  await expectDisabled(page, 'onboarding-continue', false);
+  await tap(page, 'option-not-saving');
   await tap(page, 'onboarding-continue');
   await expectOnLearn(page);
 
@@ -98,8 +85,6 @@ test('answers to all five questions are saved on the profile', async ({ page, re
     lifeStage: 'family',
     goals: goals.filter((g) => g !== 'crypto'),
     experience: 'not-saving',
-    learningStyle: 'practice',
-    confidence: { budgeting: 4, saving: 2, investing: 3 },
     onboardingCompleted: true,
     onboardingSkipped: false,
   });
@@ -123,7 +108,6 @@ test('skipping in the middle of the questions keeps the answers given so far', a
     lifeStage: 'student',
     goals: ['budget'],
     experience: null,
-    confidence: { budgeting: null, saving: null, investing: null },
     onboardingSkipped: false,
   });
 });
@@ -139,9 +123,9 @@ test('the back arrow steps back through questions and the intro slide, keeping a
   await tap(page, 'onboarding-personalise');
   await tap(page, 'option-established');
   await tap(page, 'onboarding-continue');
-  await expect(page.getByText('Step 2 of 5')).toBeVisible();
+  await expect(page.getByText('Step 2 of 3')).toBeVisible();
   await tap(page, 'onboarding-back');
-  await expect(page.getByText('Step 1 of 5')).toBeVisible();
+  await expect(page.getByText('Step 1 of 3')).toBeVisible();
   await expect(page.getByTestId('option-established')).toHaveAttribute('aria-checked', 'true');
 });
 

@@ -27,8 +27,6 @@ const profile = (onboardingCompleted: boolean) => ({
   lifeStage: null,
   goals: onboardingCompleted ? ['budget'] : [],
   experience: null,
-  learningStyle: null,
-  confidence: { budgeting: null, saving: null, investing: null },
   onboardingCompleted,
   onboardingSkipped: false,
   onboardingCompletedAt: null,
@@ -65,7 +63,7 @@ test('app opens on onboarding; skipping the questions lands on Learn', async () 
   await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
-  expect(savedOnboarding()).toEqual({ goals: [], confidence: {}, skipped: true });
+  expect(savedOnboarding()).toEqual({ goals: [], skipped: true });
 });
 
 test('a user whose profile says onboarding is completed goes straight to Learn', async () => {
@@ -76,7 +74,7 @@ test('a user whose profile says onboarding is completed goes straight to Learn',
   expect(screen.queryByTestId('onboarding-welcome')).toBeNull();
 });
 
-test('answers all five questions', async () => {
+test('answers all three questions', async () => {
   await renderRouter(routes, { initialUrl: '/' });
 
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
@@ -94,17 +92,9 @@ test('answers all five questions', async () => {
   expect(screen.getByText('5 selected')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-continue'));
 
-  await fireEvent.press(screen.getByTestId('option-not-saving'));
-  await fireEvent.press(screen.getByTestId('onboarding-continue'));
-  await fireEvent.press(screen.getByTestId('option-simple'));
-  await fireEvent.press(screen.getByTestId('onboarding-continue'));
-
-  // Three 1-5 scales on one page; Finish unlocks only once all three are rated.
-  await fireEvent.press(screen.getByTestId('confidence-budgeting-2'));
-  await fireEvent.press(screen.getByTestId('confidence-saving-4'));
+  // The third question is the last one.
   expect(screen.getByTestId('onboarding-continue')).toBeDisabled();
-  await fireEvent.press(screen.getByTestId('confidence-investing-1'));
-  expect(screen.getByText('A little')).toBeOnTheScreen();
+  await fireEvent.press(screen.getByTestId('option-not-saving'));
   await fireEvent.press(screen.getByText('Finish'));
 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
@@ -112,8 +102,6 @@ test('answers all five questions', async () => {
     lifeStage: 'family',
     goals: ['start-saving', 'emergency-fund', 'budget', 'stocks-etfs', 'scams'],
     experience: 'not-saving',
-    learningStyle: 'simple',
-    confidence: { budgeting: 2, saving: 4, investing: 1 },
     skipped: false,
   });
 });

@@ -20,15 +20,6 @@ public class UserProfile {
 
 	private String experience;
 
-	private String learningStyle;
-
-	/** Self-rated confidence, 1-5, per area. Asked in onboarding and again after lessons. */
-	private Short confidenceBudgeting;
-
-	private Short confidenceSaving;
-
-	private Short confidenceInvesting;
-
 	/** True once the user finished or skipped onboarding; it is then not shown again. */
 	private boolean onboardingCompleted;
 
@@ -44,15 +35,10 @@ public class UserProfile {
 		this.goals = List.of();
 	}
 
-	void completeOnboarding(String lifeStage, List<String> goals, String experience, String learningStyle,
-			Short confidenceBudgeting, Short confidenceSaving, Short confidenceInvesting, boolean skipped) {
+	void completeOnboarding(String lifeStage, List<String> goals, String experience, boolean skipped) {
 		this.lifeStage = lifeStage;
 		this.goals = List.copyOf(goals);
 		this.experience = experience;
-		this.learningStyle = learningStyle;
-		this.confidenceBudgeting = confidenceBudgeting;
-		this.confidenceSaving = confidenceSaving;
-		this.confidenceInvesting = confidenceInvesting;
 		this.onboardingSkipped = skipped;
 		this.onboardingCompleted = true;
 		this.onboardingCompletedAt = Instant.now();
@@ -63,10 +49,6 @@ public class UserProfile {
 		this.lifeStage = null;
 		this.goals = List.of();
 		this.experience = null;
-		this.learningStyle = null;
-		this.confidenceBudgeting = null;
-		this.confidenceSaving = null;
-		this.confidenceInvesting = null;
 		this.onboardingSkipped = false;
 		this.onboardingCompleted = false;
 		this.onboardingCompletedAt = null;
@@ -86,22 +68,6 @@ public class UserProfile {
 
 	public String getExperience() {
 		return experience;
-	}
-
-	public String getLearningStyle() {
-		return learningStyle;
-	}
-
-	public Short getConfidenceBudgeting() {
-		return confidenceBudgeting;
-	}
-
-	public Short getConfidenceSaving() {
-		return confidenceSaving;
-	}
-
-	public Short getConfidenceInvesting() {
-		return confidenceInvesting;
 	}
 
 	public boolean isOnboardingCompleted() {

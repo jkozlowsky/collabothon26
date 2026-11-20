@@ -9,8 +9,6 @@ export type SavedProfile = {
   lifeStage: string | null;
   goals: string[];
   experience: string | null;
-  learningStyle: string | null;
-  confidence: { budgeting: number | null; saving: number | null; investing: number | null };
   onboardingCompleted: boolean;
   onboardingSkipped: boolean;
   onboardingCompletedAt: string | null;

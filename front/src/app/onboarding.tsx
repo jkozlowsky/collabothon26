@@ -2,7 +2,6 @@ import Feather from '@expo/vector-icons/Feather';
 import { StatusBar } from 'expo-status-bar';
 import { useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -15,24 +14,19 @@ import {
   ChoiceChip,
   FadeIn,
   IconTile,
-  motion,
   OptionCard,
   StepHeader,
-  Tappable,
   type,
 } from '@/components/onboarding/ui';
 import {
-  CONFIDENCE_AREAS,
-  CONFIDENCE_LABELS,
   EXPERIENCE,
   GOAL_GROUPS,
-  LEARNING_STYLES,
   LIFE_STAGES,
   type Option,
 } from '@/constants/onboarding';
 import { colors, radii, spacing } from '@/constants/theme';
 import { useOnboarding } from '@/hooks/useOnboarding';
-import type { Confidence, ConfidenceArea, ConfidenceRatings, Goal, OnboardingAnswers } from '@/types/onboarding';
+import type { Goal, OnboardingAnswers } from '@/types/onboarding';
 
 const STEPS = [
   'welcome',
@@ -41,23 +35,21 @@ const STEPS = [
   'life-stage',
   'goals',
   'experience',
-  'learning-style',
-  'confidence',
 ] as const;
 type Step = (typeof STEPS)[number];
 
-const QUESTIONS = ['life-stage', 'goals', 'experience', 'learning-style', 'confidence'] as const;
+const QUESTIONS = ['life-stage', 'goals', 'experience'] as const;
 
 export default function OnboardingScreen() {
   const { complete } = useOnboarding();
   const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState<OnboardingAnswers>({ goals: [], confidence: {} });
+  const [answers, setAnswers] = useState<OnboardingAnswers>({ goals: [] });
 
   const step: Step = STEPS[index];
   const next = () => setIndex((i) => Math.min(i + 1, STEPS.length - 1));
   const back = () => setIndex((i) => Math.max(i - 1, 0));
   const finish = () => complete(answers, false);
-  const skipAll = () => complete({ goals: [], confidence: {} }, true);
+  const skipAll = () => complete({ goals: [] }, true);
   const set = <K extends keyof OnboardingAnswers>(key: K, value: OnboardingAnswers[K]) =>
     setAnswers((a) => ({ ...a, [key]: value }));
 
@@ -121,7 +113,7 @@ export default function OnboardingScreen() {
           wrong answers.
         </Text>
         <View style={styles.benefits}>
-          {['Lessons matched to your goals', 'Examples from your stage of life', 'Your pace and your level of detail'].map(
+          {['Lessons matched to your goals', 'Examples from your stage of life', 'A starting level that fits you'].map(
             (b) => (
               <View key={b} style={styles.benefit}>
                 <View style={styles.benefitCheck}>
@@ -134,7 +126,7 @@ export default function OnboardingScreen() {
         </View>
         <View style={[styles.row, { justifyContent: 'center', gap: 6 }]}>
           <Feather name="clock" size={14} color={colors.textMuted} />
-          <Text style={type.label}>5 questions · about 1 minute</Text>
+          <Text style={type.label}>3 questions · under a minute</Text>
         </View>
         <View style={styles.grow} />
       </Page>
@@ -148,8 +140,6 @@ export default function OnboardingScreen() {
     'life-stage': !!answers.lifeStage,
     goals: answers.goals.length > 0,
     experience: !!answers.experience,
-    'learning-style': !!answers.learningStyle,
-    confidence: CONFIDENCE_AREAS.every((a) => answers.confidence[a.value]),
   }[step];
 
   return (
@@ -178,19 +168,6 @@ export default function OnboardingScreen() {
       {step === 'experience' && (
         <Question title="Where are you with saving and investing?" subtitle="No wrong answers — this just sets your starting level.">
           <SingleChoice options={EXPERIENCE} value={answers.experience} onChange={(v) => set('experience', v)} />
-        </Question>
-      )}
-      {step === 'learning-style' && (
-        <Question title="How do you like to learn?" subtitle="We'll shape every lesson around this. You can change it later in Settings.">
-          <SingleChoice options={LEARNING_STYLES} value={answers.learningStyle} onChange={(v) => set('learningStyle', v)} />
-        </Question>
-      )}
-      {step === 'confidence' && (
-        <Question title="How confident do you feel about…" subtitle="1 = not at all, 5 = very confident. Rate all three.">
-          <ConfidenceScales
-            value={answers.confidence}
-            onChange={(area, v) => set('confidence', { ...answers.confidence, [area]: v })}
-          />
         </Question>
       )}
     </Page>
@@ -281,73 +258,6 @@ function GoalPicker({ value, onChange }: { value: Goal[]; onChange: (v: Goal[]) 
   );
 }
 
-function ConfidenceScales({
-  value,
-  onChange,
-}: {
-  value: ConfidenceRatings;
-  onChange: (area: ConfidenceArea, v: Confidence) => void;
-}) {
-  return (
-    <>
-      {CONFIDENCE_AREAS.map((area) => {
-        const current = value[area.value];
-        return (
-          <View key={area.value} style={styles.scaleCard} testID={`confidence-${area.value}`}>
-            <View style={[styles.row, { gap: 12 }]}>
-              <IconTile icon={area.icon} active={!!current} size={36} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.areaTitle}>{area.title}</Text>
-                <Text style={type.label}>{area.subtitle}</Text>
-              </View>
-              {current && (
-                <Animated.Text key={current} style={[styles.areaValue, motion.swap]}>
-                  {CONFIDENCE_LABELS[current - 1]}
-                </Animated.Text>
-              )}
-            </View>
-            <View style={styles.scale} accessibilityRole="radiogroup" accessibilityLabel={area.title}>
-              {([1, 2, 3, 4, 5] as const).map((n) => {
-                const selected = current === n;
-                return (
-                  <Tappable
-                    key={n}
-                    testID={`confidence-${area.value}-${n}`}
-                    accessibilityRole="radio"
-                    aria-checked={selected}
-                    accessibilityLabel={`${n} of 5, ${CONFIDENCE_LABELS[n - 1]}`}
-                    haptic="selection"
-                    pressedScale={0.9}
-                    onPress={() => onChange(area.value, n)}
-                    containerStyle={{ flex: 1 }}
-                    style={[styles.level, motion.colors, selected && styles.levelSelected]}
-                  >
-                    <Animated.Text
-                      key={String(selected)}
-                      style={[styles.levelText, selected && { color: colors.brandPrimary }, selected && motion.pop]}
-                    >
-                      {n}
-                    </Animated.Text>
-                  </Tappable>
-                );
-              })}
-            </View>
-          </View>
-        );
-      })}
-      <View style={styles.note}>
-        <Feather name="trending-up" size={18} color={colors.brandPrimary} />
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={type.strong}>Why we ask</Text>
-          <Text style={type.label}>
-            We&apos;ll ask again as you learn, so you can see your confidence grow — not just your score.
-          </Text>
-        </View>
-      </View>
-    </>
-  );
-}
-
 const styles = StyleSheet.create({
   page: { flex: 1 },
   header: { paddingHorizontal: spacing.xxl, paddingTop: spacing.sm, paddingBottom: spacing.lg },
@@ -380,36 +290,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   benefitText: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.textPrimary },
-  scaleCard: {
-    backgroundColor: colors.bgSurface,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    padding: spacing.lg,
-    paddingTop: 20,
-    gap: 12,
-  },
-  scale: { flexDirection: 'row', gap: 8 },
-  level: {
-    flex: 1,
-    height: 44,
-    borderRadius: radii.tile,
-    backgroundColor: colors.bgTint,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  levelSelected: { backgroundColor: colors.brandAccent, borderColor: colors.brandPrimary },
-  areaTitle: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
-  areaValue: { fontSize: 12, fontWeight: '700', color: colors.feedbackSuccess },
-  levelText: { fontSize: 18, fontWeight: '700', color: colors.textMuted },
-  note: {
-    flexDirection: 'row',
-    gap: 10,
-    backgroundColor: colors.brandAccentSoft,
-    borderRadius: radii.tile,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
 });

@@ -19,7 +19,7 @@ type OnboardingState = {
 
 const OnboardingContext = createContext<OnboardingState | null>(null);
 
-const EMPTY_ANSWERS: OnboardingAnswers = { goals: [], confidence: {} };
+const EMPTY_ANSWERS: OnboardingAnswers = { goals: [] };
 
 const profilePath = `/api/users/${encodeURIComponent(USER_ID)}/profile`;
 const onboardingPath = `${profilePath}/onboarding`;
@@ -29,9 +29,6 @@ function toAnswers(p: UserProfile): OnboardingAnswers {
     lifeStage: p.lifeStage ?? undefined,
     goals: p.goals,
     experience: p.experience ?? undefined,
-    learningStyle: p.learningStyle ?? undefined,
-    // Drop areas the user did not rate (null from the API).
-    confidence: Object.fromEntries(Object.entries(p.confidence ?? {}).filter(([, v]) => v != null)),
   };
 }
 

@@ -1,4 +1,4 @@
-package com.collabothon.back.common;
+package com.collabothon.back.common.interceptors;
 
 import java.util.concurrent.TimeUnit;
 
@@ -6,6 +6,8 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
+
+import com.collabothon.back.common.exceptions.NotFoundException;
 
 import lombok.extern.slf4j.Slf4j;
 

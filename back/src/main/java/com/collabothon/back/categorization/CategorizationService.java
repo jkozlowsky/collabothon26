@@ -17,7 +17,7 @@ import com.collabothon.back.categorization.Categorization.Output;
 import com.collabothon.back.categorization.Categorization.SharedWithModel;
 import com.collabothon.back.categorization.Categorization.Source;
 import com.collabothon.back.categorization.Rules.Judgement;
-import com.collabothon.back.common.NotFoundException;
+import com.collabothon.back.common.exceptions.NotFoundException;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;

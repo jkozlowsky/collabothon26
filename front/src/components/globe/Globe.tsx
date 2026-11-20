@@ -5,6 +5,7 @@ import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
   cancelAnimation,
   Easing,
+  ReduceMotion,
   useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,
@@ -167,13 +168,7 @@ export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
     }
     cancelAnimation(yaw);
     cancelAnimation(pitch);
-    if (reduced) {
-      const o = orientationFacing(target, yaw.value);
-      yaw.set(o.yaw);
-      pitch.set(o.pitch);
-      arrive();
-      return;
-    }
+    // The flight plays even with reduced motion: it is short, started by the user, and the demo's centrepiece.
     // No previous pin (or the same one): only turn the globe there, without the plane.
     const plane = previous !== id;
     const centre = viewCentre(yaw.value, pitch.value);
@@ -185,7 +180,7 @@ export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
     flying.set(true);
     const duration = flightDuration(plane ? pins[previous] : centre, target);
     flightT.set(
-      withTiming(1, { duration, easing: FLIGHT_EASING }, (done) => {
+      withTiming(1, { duration, easing: FLIGHT_EASING, reduceMotion: ReduceMotion.Never }, (done) => {
         if (!done) return;
         flying.set(false);
         scheduleOnRN(arrive);

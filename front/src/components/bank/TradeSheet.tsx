@@ -27,7 +27,10 @@ type Props = {
  * it shows the user's own concentration and offers a short lesson before they decide.
  */
 /** The parent re-keys this per opening, so it always starts at the nudge. */
-export function TradeSheet({ holding, onClose, onLearn }: Props) {
+export function TradeSheet({ holding: next, onClose, onLearn }: Props) {
+  // Keep the last holding while the sheet slides out after it was closed.
+  const [holding, setHolding] = useState(next);
+  if (next && next !== holding) setHolding(next);
   const { state, placeOrder } = useBank();
   const { show } = useToast();
   const [step, setStep] = useState<'nudge' | 'ticket'>('nudge');
@@ -47,7 +50,7 @@ export function TradeSheet({ holding, onClose, onLearn }: Props) {
 
   return (
     <Sheet
-      visible={!!holding}
+      visible={!!next}
       onClose={onClose}
       title={step === 'nudge' ? 'Before you trade' : `Buy ${holding?.name ?? ''}`}
       onBack={step === 'ticket' ? () => setStep('nudge') : undefined}

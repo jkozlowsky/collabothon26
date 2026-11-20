@@ -20,6 +20,9 @@ module.exports = {
   ...Animated,
   cubicBezier: () => 'ease',
   useReducedMotion: () => false,
+  // Read by react-native-gesture-handler to tell shared values from plain props.
+  isSharedValue: () => false,
+  useComposedEventHandler: () => undefined,
   FadeIn: builder,
   FadeOut: builder,
   LinearTransition: builder,

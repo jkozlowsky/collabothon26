@@ -1,14 +1,14 @@
-import { Tabs } from 'expo-router/tabs';
+import { TopTabs } from 'expo-router/js-top-tabs';
 
 import { colors } from '@/constants/theme';
 
-/** Finance Quest tabs. Their bar is the shared FloatingNav drawn by the (main) layout. */
+/** Finance Quest tabs as a pager (slide + swipe, like the bank side). The bar is the shared FloatingNav. */
 export default function LearnLayout() {
   return (
-    <Tabs tabBar={() => null} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.bgCanvas } }}>
-      <Tabs.Screen name="map" options={{ title: 'Map' }} />
-      <Tabs.Screen name="glossary" options={{ title: 'Glossary' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
-    </Tabs>
+    <TopTabs tabBar={() => null} screenOptions={{ swipeEnabled: true, sceneStyle: { backgroundColor: colors.bgCanvas } }}>
+      <TopTabs.Screen name="map" options={{ title: 'Map' }} />
+      <TopTabs.Screen name="glossary" options={{ title: 'Glossary' }} />
+      <TopTabs.Screen name="profile" options={{ title: 'Profile' }} />
+    </TopTabs>
   );
 }

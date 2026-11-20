@@ -24,6 +24,8 @@ export default function InvestScreen() {
   const openLearnFocus = useOpenLearnFocus();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tradeId, setTradeId] = useState<string | null>(null);
+  // New key per Buy, so the trade sheet starts at the nudge; closing keeps the key so it can slide out.
+  const [tradeOpening, setTradeOpening] = useState(0);
 
   // Look holdings up by id so open sheets show values updated by an order.
   const selected = state.holdings.find((h) => h.id === selectedId) ?? null;
@@ -32,6 +34,7 @@ export default function InvestScreen() {
 
   const buy = (h: Holding) => {
     setSelectedId(null);
+    setTradeOpening((n) => n + 1);
     setTradeId(h.id);
   };
 
@@ -65,7 +68,7 @@ export default function InvestScreen() {
         action={selected && selected.assetClass !== 'cash' ? { label: 'Buy', onPress: () => buy(selected), testID: 'holding-buy' } : undefined}
       />
       <TradeSheet
-        key={tradeId ?? 'closed'}
+        key={tradeOpening}
         holding={trading}
         onClose={() => setTradeId(null)}
         onLearn={() => {

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/bank/Icon';
@@ -16,9 +17,12 @@ type Props = {
 const TONE = { default: colors.textPrimary, positive: colors.feedbackSuccess, negative: colors.feedbackDanger } as const;
 
 /** Read-only bottom sheet for a transaction, card, holding, credit product or standing order. */
-export function DetailSheet({ detail, onClose, action }: Props) {
+export function DetailSheet({ detail: next, onClose, action }: Props) {
+  // Keep showing the last detail while the sheet slides out after `detail` became null.
+  const [detail, setDetail] = useState(next);
+  if (next && next !== detail) setDetail(next);
   return (
-    <Sheet visible={!!detail} onClose={onClose} title={detail?.title} testID="detail-sheet">
+    <Sheet visible={!!next} onClose={onClose} title={detail?.title} testID="detail-sheet">
       {detail && (
         <>
           <View style={styles.hero}>

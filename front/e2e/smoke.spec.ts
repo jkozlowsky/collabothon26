@@ -1,5 +1,16 @@
 import { expect, test } from '@playwright/test';
 
+import { resetOnboarding } from './app';
+
+// The test needs a user who has not been through onboarding yet, and leaves it that way for the next run.
+test.beforeEach(async ({ request }) => {
+  await resetOnboarding(request);
+});
+
+test.afterAll(async ({ request }) => {
+  await resetOnboarding(request);
+});
+
 test('app opens on the bank; Learn runs onboarding, then the globe and a story; Bank comes back; a transfer lowers the balance', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('owner-name')).toHaveText('Alex Krause');
@@ -8,7 +19,7 @@ test('app opens on the bank; Learn runs onboarding, then the globe and a story; 
   // First Learn tap: onboarding, then the Map (lessons come from the backend).
   await page.getByTestId('nav-learn').click();
   await page.getByTestId('onboarding-start').click();
-  await page.getByTestId('onboarding-skip').click();
+  await page.getByTestId('onboarding-next').click();
   await page.getByTestId('onboarding-skip-all').click();
   await expect(page.getByTestId('screen-learn')).toBeVisible();
   await expect(page.getByTestId('globe')).toBeVisible();
@@ -21,7 +32,8 @@ test('app opens on the bank; Learn runs onboarding, then the globe and a story; 
   // Back to the bank, then send Anna € 25.
   await page.getByTestId('nav-bank').click();
   await page.getByTestId('action-transfer').click();
-  await page.getByTestId('contact-anna').click();
+  // Scoped to the sheet: the Payments page (rendered next door in the pager) shows Anna too.
+  await page.getByTestId('transfer-sheet').getByTestId('contact-anna').click();
   await page.getByTestId('key-2').click();
   await page.getByTestId('key-5').click();
   await page.getByTestId('transfer-amount-continue').click();

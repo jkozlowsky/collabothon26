@@ -46,6 +46,7 @@ const GLYPHS: Record<BankIconName, Glyph> = {
   close: { set: 'feather', name: 'x' },
   check: { set: 'feather', name: 'check' },
   delete: { set: 'feather', name: 'delete' },
+  lock: { set: 'feather', name: 'lock' },
 };
 
 export function Icon({ name, size = 22, color }: Props) {

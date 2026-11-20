@@ -1,6 +1,7 @@
-import { fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
+import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { appRoutes } from '@/test-utils/routes';
+import type { LessonSummary } from '@/types/lessons';
 
 // No GL under Jest: make the canvas throw, so the globe takes its static-picture fallback.
 jest.mock('@/components/globe/GlobeScene', () => ({
@@ -9,34 +10,40 @@ jest.mock('@/components/globe/GlobeScene', () => ({
   },
 }));
 
+const lessons: LessonSummary[] = [
+  { id: 'seoul-1', story: 'seoul', title: 'The chat that always knows', place: 'Yeouido', minutes: 4, xp: 50, status: 'done' },
+  { id: 'seoul-2', story: 'seoul', title: 'Pulling everything in', place: 'Gangnam', minutes: 4, xp: 60, status: 'available' },
+  { id: 'seoul-3', story: 'seoul', title: 'Spot the red flags', place: 'Hongdae', minutes: 3, xp: 40, status: 'locked' },
+];
+
 beforeEach(() => {
   jest.spyOn(console, 'error').mockImplementation(() => {});
   globalThis.fetch = jest.fn((url: string) =>
     Promise.resolve({
       ok: true,
       status: 200,
-      json: () => Promise.resolve(url.endsWith('/profile') ? { userId: 'demo-user', goals: [] } : []),
+      json: () => Promise.resolve(url.endsWith('/profile') ? { userId: 'demo-user', goals: [], onboardingCompleted: true } : url.includes('/api/lessons?') ? lessons : []),
     }),
   ) as jest.Mock;
 });
 
 afterEach(() => jest.restoreAllMocks());
 
-test('lists the stories, current first, and opens a story from its callout', async () => {
+test('takes story progress from the backend lessons and opens the story with its lessons', async () => {
   await renderRouter(appRoutes, { initialUrl: '/map' });
 
   expect(await screen.findByText('Where to next?')).toBeOnTheScreen();
   expect(screen.getByText('5 paths · 0 done')).toBeOnTheScreen();
-  expect(screen.getByTestId('globe-pin-seoul')).toHaveProp('accessibilityLabel', 'Seoul, Hype & borrowed money, in progress');
+  await waitFor(() =>
+    expect(screen.getByTestId('globe-pin-seoul')).toHaveProp('accessibilityLabel', 'Seoul, Hype & borrowed money, in progress'),
+  );
 
-  // A card does what its pin does: Berlin is on the fallback picture, so its callout opens.
-  await fireEvent.press(screen.getByTestId('story-card-berlin'));
-  const callout = await screen.findByTestId('pin-callout');
-  expect(within(callout).getByText('What waiting costs')).toBeOnTheScreen();
-  expect(within(callout).getByText('Lesson 1 of 3 · 4 min')).toBeOnTheScreen();
-
-  await fireEvent.press(within(callout).getByTestId('pin-callout-open'));
-  expect(await screen.findByText('Berlin: Safe, but not free')).toBeOnTheScreen();
+  // Seoul is off the fallback picture, so its card opens the story screen directly.
+  await fireEvent.press(screen.getByTestId('story-card-seoul'));
+  expect(await screen.findByTestId('screen-story')).toBeOnTheScreen();
+  expect(screen.getByText('Seoul: Hype & borrowed money')).toBeOnTheScreen();
+  expect(screen.getByTestId('lesson-seoul-2')).toBeOnTheScreen();
+  expect(screen.getByText('Finish the previous lesson first', { exact: false })).toBeOnTheScreen();
 });
 
 test('a coming-soon story has a callout without a button', async () => {

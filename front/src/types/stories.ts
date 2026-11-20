@@ -20,7 +20,7 @@ export type Story = {
   color: StoryColor;
   progress: { done: number; total: number };
   /** Null when the story is finished or coming soon. */
-  nextLesson: { id: number; title: string; minutes: number } | null;
+  nextLesson: { id: string; title: string; minutes: number } | null;
   /** Exactly one story is the current one. */
   current: boolean;
 };

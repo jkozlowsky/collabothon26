@@ -40,7 +40,8 @@ export type BankIconName =
   | 'chevron-left'
   | 'close'
   | 'check'
-  | 'delete';
+  | 'delete'
+  | 'lock';
 
 export type Account = {
   name: string;

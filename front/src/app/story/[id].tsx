@@ -1,46 +1,63 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AsyncContent } from '@/components/AsyncContent';
+import { Icon } from '@/components/bank/Icon';
 import { Screen } from '@/components/Screen';
 import { colors, radii, spacing, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import { STORIES } from '@/lib/stories';
+import { USER_ID } from '@/lib/user';
 import type { LessonSummary } from '@/types/lessons';
 
 /**
- * Placeholder story screen, opened from the globe callout. The real one ("Story — Seoul", Figma 87:3125)
- * has its own spec; until then it lists the backend's lessons so the lesson flow stays reachable.
+ * Story screen, opened from the globe callout: the story's lessons in order.
+ * ponytail: plain list; the designed screen ("Story — Seoul", Figma 87:3125) has its own spec.
  */
 export default function StoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const story = STORIES.find((s) => s.id === id);
-  const { data, loading, error, reload } = useApi<LessonSummary[]>('/api/lessons');
+  const { data, loading, error, reload } = useApi<LessonSummary[]>(`/api/lessons?userId=${encodeURIComponent(USER_ID)}`);
+  // Coming back from a lesson unlocks the next one.
+  useFocusEffect(reload);
 
   return (
-    <Screen title={story ? `${story.city}: ${story.title}` : 'Story'} testID="screen-story" scroll>
+    <Screen title={story ? `${story.city}: ${story.topic}` : 'Story'} testID="screen-story" scroll>
       <AsyncContent loading={loading} error={error} onRetry={reload}>
         {() => (
           <View style={styles.list}>
-            {data?.map((lesson) => (
-              <Pressable
-                key={lesson.id}
-                testID={`lesson-${lesson.id}`}
-                accessibilityRole="button"
-                onPress={() => router.push({ pathname: '/lesson/[id]', params: { id: lesson.id } })}
-                style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-              >
-                <Text style={styles.emoji}>{lesson.emoji}</Text>
-                <View style={styles.cardBody}>
-                  <Text style={styles.title}>{lesson.title}</Text>
-                  <Text style={styles.summary}>{lesson.summary}</Text>
-                  <Text style={styles.meta}>
-                    {lesson.questionCount} questions ·{' '}
-                    <Text style={styles.xp}>+{lesson.xp} XP</Text>
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
+            {data?.filter((lesson) => lesson.story === id).map((lesson, i) => {
+              const locked = lesson.status === 'locked';
+              return (
+                <Pressable
+                  key={lesson.id}
+                  testID={`lesson-${lesson.id}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: locked }}
+                  disabled={locked}
+                  onPress={() => router.push({ pathname: '/lesson/[id]', params: { id: lesson.id } })}
+                  style={({ pressed }) => [styles.card, pressed && styles.cardPressed, locked && styles.locked]}
+                >
+                  <View style={[styles.tile, lesson.status === 'done' && styles.tileDone]}>
+                    {locked ? (
+                      <Icon name="lock" size={18} color={colors.storySlate} />
+                    ) : lesson.status === 'done' ? (
+                      <Icon name="check" size={18} color={colors.feedbackSuccess} />
+                    ) : (
+                      <Text style={styles.number}>{i + 1}</Text>
+                    )}
+                  </View>
+                  <View style={styles.cardBody}>
+                    <Text style={styles.overline}>{lesson.place}</Text>
+                    <Text style={styles.title}>{lesson.title}</Text>
+                    <Text style={styles.meta}>
+                      {lesson.minutes} min · <Text style={styles.xp}>+{lesson.xp} XP</Text>
+                      {locked ? ' · Finish the previous lesson first' : ''}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
           </View>
         )}
       </AsyncContent>
@@ -64,10 +81,13 @@ const styles = StyleSheet.create({
     paddingRight: 14,
   },
   cardPressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
-  emoji: { fontSize: 32 },
+  locked: { opacity: 0.6 },
+  tile: { width: 44, height: 44, borderRadius: radii.tile, backgroundColor: colors.brandAccentSoft, alignItems: 'center', justifyContent: 'center' },
+  tileDone: { backgroundColor: colors.feedbackSuccessSoft },
+  number: { ...type.titleCard, color: colors.brandPrimary },
   cardBody: { flex: 1, gap: spacing.xs },
+  overline: { ...type.overline, color: colors.textMuted },
   title: type.titleCard,
-  summary: { ...type.labelDefault, color: colors.textMuted },
   meta: { ...type.labelDefault, color: colors.textMuted },
   xp: { ...type.labelStrong, color: colors.feedbackXp },
 });

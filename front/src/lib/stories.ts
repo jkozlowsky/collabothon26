@@ -1,3 +1,4 @@
+import type { LessonSummary } from '@/types/lessons';
 import type { Learner, Story } from '@/types/stories';
 
 // ponytail: local mock, replaced by `GET /api/stories` (f4-f5-lessons-spec.md §6) once the backend has it.
@@ -12,8 +13,8 @@ export const STORIES: Story[] = [
     pin: { lat: 37.57, lng: 126.98 },
     icon: 'message-circle',
     color: 'rose',
-    progress: { done: 1, total: 3 },
-    nextLesson: { id: 8, title: 'Borrowed money', minutes: 4 },
+    progress: { done: 0, total: 5 },
+    nextLesson: { id: 'seoul-1', title: 'The chat that always knows', minutes: 4 },
     current: true,
   },
   {
@@ -21,12 +22,12 @@ export const STORIES: Story[] = [
     city: 'Berlin',
     title: 'Safe, but not free',
     topic: 'Cash & inflation',
-    status: 'available',
+    status: 'coming-soon',
     pin: { lat: 52.52, lng: 13.4 },
     icon: 'shield',
     color: 'teal',
-    progress: { done: 0, total: 3 },
-    nextLesson: { id: 10, title: 'What waiting costs', minutes: 4 },
+    progress: { done: 0, total: 0 },
+    nextLesson: null,
     current: false,
   },
   {
@@ -104,4 +105,19 @@ export function sortStories(stories: Story[]) {
 export function storyLabel(s: Story) {
   const state = { inProgress: 'in progress', notStarted: 'not started', done: 'done', comingSoon: 'coming soon' }[calloutState(s)];
   return `${s.city}, ${s.topic}, ${state}`;
+}
+
+/** Progress and next lesson from the backend's lesson list, for stories that have lessons there. */
+export function withLessons(stories: Story[], lessons: LessonSummary[] | undefined): Story[] {
+  if (!lessons) return stories;
+  return stories.map((s) => {
+    const own = lessons.filter((l) => l.story === s.id);
+    if (own.length === 0) return s;
+    const next = own.find((l) => l.status !== 'done');
+    return {
+      ...s,
+      progress: { done: own.filter((l) => l.status === 'done').length, total: own.length },
+      nextLesson: next ? { id: next.id, title: next.title, minutes: next.minutes } : null,
+    };
+  });
 }

@@ -124,7 +124,7 @@ describe('bank shell', () => {
       Promise.resolve({
         ok: true,
         status: 200,
-        json: () => Promise.resolve(url.endsWith('/profile') ? { userId: 'demo-user', goals: [] } : []),
+        json: () => Promise.resolve(url.endsWith('/profile') ? { userId: 'demo-user', goals: [], onboardingCompleted: true } : []),
       }),
     ) as jest.Mock;
   });

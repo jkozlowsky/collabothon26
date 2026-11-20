@@ -6,7 +6,9 @@ import OverviewScreen from '@/app/(main)/(bank)/index';
 import InvestScreen from '@/app/(main)/(bank)/invest';
 import PaymentsScreen from '@/app/(main)/(bank)/payments';
 import LearnLayout from '@/app/(main)/(learn)/_layout';
-import GlossaryScreen from '@/app/(main)/(learn)/glossary';
+import DefinitionScreen from '@/app/(main)/(learn)/glossary/[slug]';
+import GlossaryLayout from '@/app/(main)/(learn)/glossary/_layout';
+import GlossaryScreen from '@/app/(main)/(learn)/glossary/index';
 import MapScreen from '@/app/(main)/(learn)/map';
 import ProfileScreen from '@/app/(main)/(learn)/profile';
 import RootLayout from '@/app/_layout';
@@ -25,6 +27,8 @@ export const appRoutes = {
   '(main)/(bank)/invest': InvestScreen,
   '(main)/(learn)/_layout': LearnLayout,
   '(main)/(learn)/map': MapScreen,
-  '(main)/(learn)/glossary': GlossaryScreen,
+  '(main)/(learn)/glossary/_layout': GlossaryLayout,
+  '(main)/(learn)/glossary/index': GlossaryScreen,
+  '(main)/(learn)/glossary/[slug]': DefinitionScreen,
   '(main)/(learn)/profile': ProfileScreen,
 };

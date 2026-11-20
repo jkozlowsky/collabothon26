@@ -11,7 +11,6 @@ public record CategorizationRequestDto(
 		FactsDto facts
 ) {
 
-	/** We refuse account data the user did not agree to share. */
 	@AssertTrue(message = "facts are only accepted with consent")
 	boolean isFactsOnlyWithConsent() {
 		return facts == null || Boolean.TRUE.equals(consent);

@@ -2,11 +2,31 @@
 // backend through the same Expo tunnel it uses for Metro. Also default Metro's HTTP
 // server to 127.0.0.1 (Expo SDK 58 otherwise binds *:8081 under --tunnel).
 const { getDefaultConfig } = require('expo/metro-config');
+const fs = require('fs');
 const http = require('http');
 const net = require('net');
+const os = require('os');
+const path = require('path');
 const tls = require('tls');
 
+// Work around an Expo SDK 58 bug: --tunnel ngrok runs `adb reverse` whenever ANDROID_HOME
+// (or ~/Android/Sdk) exists, even without platform-tools/adb, and crashes with ENOENT.
+// scripts/dev.sh does the same for `make phone`; this covers `npm run phone`.
+const androidSdkRoot = process.env.ANDROID_HOME || path.join(os.homedir(), 'Android', 'Sdk');
+if (!fs.existsSync(path.join(androidSdkRoot, 'platform-tools', 'adb'))) {
+  process.env.ANDROID_HOME = '/nonexistent';
+}
+
 const config = getDefaultConfig(__dirname);
+
+// Cap Metro's transform workers (default: CPU cores - 1). On a 20-core laptop with 16 GB RAM
+// the default forks ~19 workers; a cold Android bundle then took 114 s, pushed the machine
+// into full swap, and the ngrok agent dropped its session mid-download ("Tunnel connection
+// has been closed"), which Expo Go reports as "Failed to download remote update".
+// With 4 workers the same cold bundle took ~6 s and the tunnel stayed up.
+// Override with METRO_MAX_WORKERS=<n> (or `expo start --max-workers <n>`).
+config.maxWorkers = Number(process.env.METRO_MAX_WORKERS) || Math.min(4, config.maxWorkers ?? 4);
+
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://127.0.0.1:8080';
 
 const PATCHED_CREATE_SERVER = Symbol.for('finance-quest.metro.createServerPatched');

@@ -21,6 +21,7 @@ make setup     # one-time: creates .env from .env.example, runs npm install in f
                # edit .env and set your own POSTGRES_PASSWORD and DB_PASSWORD (must match)
 make dev       # Postgres + backend + browser app (loopback only)
 make phone     # Postgres + backend + phone QR via Expo ngrok tunnel
+make phone-usb # Postgres + backend + Android phone over a USB cable (no network at all)
 ```
 
 `make dev` (and `make phone`) do three things:
@@ -40,8 +41,14 @@ If you want the Spring logs in their own terminal, run `make back` and `make web
 
 - **Loopback-only by default:** Postgres (`127.0.0.1:5433`), the Spring backend (`127.0.0.1:8080`), and Metro (`127.0.0.1:8081`) bind only to `127.0.0.1`, so nothing is advertised or reachable on shared Wi-Fi / LAN.
 - **Phone via tunnel QR:** `make phone` opens an Expo ngrok tunnel (`--tunnel ngrok`, no account needed) on every OS (Linux, macOS, WSL) and prints a QR pointing to a random `*.exp.direct` URL. That tunnel URL is the **only** way into the app from another device — your phone does not need to be on the same Wi-Fi, and Metro (`front/metro.config.js`) proxies both `/api/*` and `/ws/*` to `127.0.0.1:8080` through that same tunnel.
+- **Phone via USB cable (Android, no network at all):** `make phone-usb` runs `adb reverse tcp:<port> tcp:<port>` and starts Metro on `--localhost`, so the phone's `127.0.0.1:<port>` goes through the cable to the laptop's loopback. Needs `adb` (Fedora: `sudo dnf install android-tools`; Ubuntu: `sudo apt install adb`; macOS: `brew install android-platform-tools`) and **USB debugging** enabled on the phone (Settings → About phone → tap *Build number* 7× → Developer options → USB debugging; accept the "Allow USB debugging?" prompt). In Expo Go tap **Enter URL manually** and type the `exp://127.0.0.1:<port>` URL the script prints (usually `exp://127.0.0.1:8081`). Use this when the Wi-Fi blocks `*.exp.direct` or the tunnel keeps dropping.
+- **Wait for the bundle before scanning:** both phone modes build the Android bundle once over loopback and print `✔ Android bundle built and cached` when done. Scan or open the app after that line. If `make dev` already holds 8081, the phone modes pick the next free port (8082, …) on their own.
 - **Never expose without the tunnel:** User IDs are not authenticated in this prototype, so never expose the backend, Postgres, or Metro directly on LAN / `0.0.0.0` (especially on shared hackathon Wi-Fi).
 - **Database password & git worktrees:** `docker-compose.yml` pins `name: collabothon26`, so every checkout/worktree shares the same `collabothon-postgres` container and `collabothon26_postgres-data` volume. An existing Postgres volume keeps the password it was originally created with: in a new worktree, copy your existing `.env` from the main checkout so the password matches (don't leave the `CHANGE_ME` placeholder), or edit `.env` and run `make db-reset` to recreate the volume with a new password.
+
+If Expo Go shows **"Failed to download remote update"**, it could not fetch the manifest or the JS bundle:
+- The `make phone` terminal printed `Tunnel connection has been closed`: wait for `Tunnel connected.`, then reopen the project in Expo Go. The usual trigger is a slow, memory-hungry cold bundle build. `front/metro.config.js` caps Metro at 4 workers to prevent it (override with `METRO_MAX_WORKERS=<n>`).
+- The network blocks `*.exp.direct` (some event or corporate Wi-Fi does): switch the phone to mobile data, or use `make phone-usb`.
 
 If the phone shows "Something went wrong":
 - Shake the phone (or long-press the screen) and tap **Reload**.

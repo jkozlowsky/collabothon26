@@ -10,7 +10,10 @@ import { StatusBar } from 'expo-status-bar';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import { colors, elevation, fonts } from '@/constants/theme';
+import { BankProvider } from '@/hooks/useBank';
 import { OnboardingProvider, useOnboarding } from '@/hooks/useOnboarding';
+import { ToastProvider } from '@/hooks/useToast';
+import { TransferSheetProvider } from '@/hooks/useTransferSheet';
 
 /** Widest "phone" on web; on a wide desktop window the app is centered at this width. */
 const WEB_PHONE_WIDTH = 430;
@@ -30,7 +33,13 @@ export default function RootLayout() {
     <View style={styles.page}>
       <View style={styles.phone}>
         <OnboardingProvider>
-          <RootStack />
+          <BankProvider>
+            <ToastProvider>
+              <TransferSheetProvider>
+                <RootStack />
+              </TransferSheetProvider>
+            </ToastProvider>
+          </BankProvider>
         </OnboardingProvider>
       </View>
       <StatusBar style="dark" />
@@ -38,11 +47,12 @@ export default function RootLayout() {
   );
 }
 
-/** Until onboarding is done only /onboarding is reachable; afterwards it is gone. */
+/**
+ * The app opens on the bank (host app shell). Finance Quest onboarding is opened from the Learn
+ * button (useOpenLearn), never forced at launch, and closed by useResumeLearnAfterOnboarding.
+ */
 function RootStack() {
-  const { loaded, done } = useOnboarding();
-  // Wait for the saved profile so a returning user never sees onboarding flash by.
-  if (!loaded) return null;
+  const { done } = useOnboarding();
   return (
     <Stack
       screenOptions={{
@@ -50,11 +60,9 @@ function RootStack() {
         contentStyle: { backgroundColor: colors.bgCanvas },
       }}
     >
-      <Stack.Protected guard={!done}>
-        <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-      </Stack.Protected>
+      <Stack.Screen name="(main)" options={{ animation: 'fade' }} />
+      <Stack.Screen name="onboarding" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Protected guard={done}>
-        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
         <Stack.Screen
           name="lesson/[id]"
           options={{

@@ -56,7 +56,7 @@ If the phone shows "Something went wrong":
 
 ### Example in the repo: lessons with a quiz
 
-This is the pattern to copy. The **Learn** tab lists lessons from the database. Tapping one opens a quiz with feedback, an explanation for each question and a result screen.
+This is the pattern to copy. The **Map** tab (Learn side) lists lessons from the database. Tapping one opens a quiz with feedback, an explanation for each question and a result screen.
 
 | Layer | File |
 |---|---|
@@ -65,7 +65,7 @@ This is the pattern to copy. The **Learn** tab lists lessons from the database. 
 | API test | `back/src/test/java/com/collabothon/back/lesson/LessonControllerTests.java` |
 | API types | `front/src/types/lessons.ts` |
 | Data fetching | `front/src/hooks/useApi.ts` |
-| Screens | `front/src/app/(tabs)/index.tsx` (list), `front/src/app/lesson/[id].tsx` (quiz) |
+| Screens | `front/src/app/(main)/(learn)/map.tsx` (list), `front/src/app/lesson/[id].tsx` (quiz) |
 | Screen flow test | `front/src/__tests__/lessons.test.tsx` |
 
 ## Frontend structure
@@ -75,17 +75,16 @@ Uses [Expo Router](https://docs.expo.dev/router/introduction/): every file in `s
 ```
 front/src/
 ├── app/                  # routes only (file = screen)
-│   ├── _layout.tsx       # root Stack; shows onboarding until it is done
-│   ├── onboarding.tsx    # intro + optional personalisation questions (once per user; answers saved on the profile)
-│   ├── (tabs)/           # bottom tab bar
+│   ├── _layout.tsx       # root Stack + providers (onboarding, mock bank, toast, transfer sheet)
+│   ├── onboarding.tsx    # intro + optional personalisation questions; opened by the first Learn tap
+│   ├── (main)/           # bank + Finance Quest, one floating nav (components/bank/FloatingNav) that morphs between them
 │   │   ├── _layout.tsx
-│   │   ├── index.tsx     # Learn  (/)
-│   │   ├── glossary.tsx  # /glossary
-│   │   └── profile.tsx   # /profile
+│   │   ├── (bank)/       # mock banking app, the first screen: index (/) · payments · credits · invest
+│   │   └── (learn)/      # Finance Quest: map (/map, lesson list) · glossary · profile
 │   └── lesson/[id].tsx   # /lesson/1, pushed over the tabs
 ├── components/           # reusable UI (Screen, Button, AsyncContent)
 ├── hooks/                # custom hooks (useXxx.ts)
-├── lib/                  # non-UI code: api.ts (backend client), utils
+├── lib/                  # non-UI code: api.ts (backend client), bank/ (seeded mock bank data, pure logic), utils
 ├── constants/            # theme.ts (colors, spacing), config
 ├── types/                # shared TS types / API DTOs
 └── __tests__/            # Jest tests (never inside app/, every file there is a route)

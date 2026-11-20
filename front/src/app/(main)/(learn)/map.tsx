@@ -7,7 +7,7 @@ import { colors, radii, spacing, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import type { LessonSummary } from '@/types/lessons';
 
-export default function LearnScreen() {
+export default function MapScreen() {
   const { data, loading, error, reload } = useApi<LessonSummary[]>('/api/lessons');
 
   return (

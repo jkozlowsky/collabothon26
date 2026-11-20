@@ -19,7 +19,6 @@ Apply these to every feature and every line of user-facing copy:
 - **Educate, never advise.** The app (and especially the chatbot) explains concepts and consequences; it never recommends buying a specific product. Investment advice is regulated (MiFID II) and a bank jury will check.
 - **Actionable.** A lesson ends with a small real-world step or decision scenario, not just a score.
 - **All generations.** The same content adapts to persona (student / family / pre-retirement), level, and plain vs. standard language.
-- **Measure confidence, not just knowledge.** "How confident do you feel about X?" before and after is a key demo metric.
 - **Short.** Lessons take 2–5 minutes.
 
 ## Features

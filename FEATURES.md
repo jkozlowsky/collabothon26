@@ -62,8 +62,6 @@ Pobranie appki → Profilowanie AI (dane z banku) → Test / onboarding (wiedza,
 - wynik zapisany w profilu użytkownika i używany przez inne moduły
 - zgoda użytkownika na użycie danych (RODO)
 
-💡 Sugestia: pokazać na demo 2–3 różne persony (np. 22, 38 i 58 lat) i jak różnie są profilowane. Bezpośrednio trafia to w „all generations”.
-
 ---
 
 ### F2. Test wiedzy / onboarding i kategoryzacja
@@ -74,8 +72,6 @@ Pobranie appki → Profilowanie AI (dane z banku) → Test / onboarding (wiedza,
 - wynik: poziom wiedzy per kategoria (np. oszczędzanie, inwestowanie, ETF, ryzyko, emerytura)
 - kategoryzacja łączy dane z F1 i wynik testu w jeden profil
 - możliwość pominięcia lub powtórzenia później
-
-💡 Sugestia: dodać pytanie „jak pewnie się czujesz w…?” (skala 1–5). Pewność siebie to wprost metryka z Challenge Card i łatwo pokazać jej wzrost.
 
 ---
 
@@ -89,6 +85,7 @@ Pobranie appki → Profilowanie AI (dane z banku) → Test / onboarding (wiedza,
 ---
 
 ### F4. Lekcje: core aplikacji
+> Szczegóły: [`doc/F4-lekcje.md`](doc/F4-lekcje.md)
 📝 Lekcje w różnych formach, jak w Duolingo:
 - quizy
 - łączenie kafelków (pojęcie ↔ definicja)
@@ -111,6 +108,7 @@ Pobranie appki → Profilowanie AI (dane z banku) → Test / onboarding (wiedza,
 ---
 
 ### F5. Warianty lekcji: inkluzywność
+> Szczegóły: [`doc/F5-warianty.md`](doc/F5-warianty.md)
 📝 Każda lekcja może mieć różne warianty: ta sama treść przechowywana w różnych wersjach.
 
 ✅ Wymagania:
@@ -122,7 +120,7 @@ Pobranie appki → Profilowanie AI (dane z banku) → Test / onboarding (wiedza,
 - wariant dobierany automatycznie na podstawie profilu (F1 + F2), z możliwością ręcznej zmiany
 - dostępność: kontrast, rozmiar czcionki, czytelność
 
-💡 Sugestia: warianty generowane przez LLM z treści bazowej (tylko przepisuje, nie dodaje faktów). Na demo przełączenie persony na żywo daje bardzo mocny efekt „technical + innovation”.
+💡 Sugestia: warianty generowane przez LLM z treści bazowej (tylko przepisuje, nie dodaje faktów).
 
 ---
 
@@ -246,9 +244,7 @@ Pobranie appki → Profilowanie AI (dane z banku) → Test / onboarding (wiedza,
 1. **Zawęzić personę do self-directed investors,** bo tak brzmi Challenge Card. Pewnie część zespołów zrobi ogólną edukację finansową.
 2. **Od wiedzy do działania:** karta mówi, że problem to nie brak informacji, tylko brak odwagi do działania. Każda lekcja może kończyć się małym realnym krokiem.
 3. **Scenariusze i symulacje decyzji** (np. na danych historycznych z giełdy) zamiast samych quizów, bo karta wprost wymienia *missions, challenges, real-world scenarios*.
-4. **Mierzyć pewność siebie, nie tylko wiedzę:** wykres „przed / po” to mocny argument na demo.
-5. **All generations:** na demo pokazać tę samą lekcję dla 2–3 person w różnym wieku.
-6. **Wyróżnienie na tle 15 zespołów:** quizy, streaki, avatar i ranking zrobi prawie każdy. Warto mieć 1–2 rzeczy, których inni nie mają (np. warianty generowane na żywo, scenariusze decyzji, Future You).
+4. **Wyróżnienie na tle 15 zespołów:** quizy, streaki, avatar i ranking zrobi prawie każdy. Warto mieć 1–2 rzeczy, których inni nie mają (np. warianty generowane na żywo, scenariusze decyzji, Future You).
 
 ---
 

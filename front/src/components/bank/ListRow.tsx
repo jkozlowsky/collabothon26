@@ -1,0 +1,74 @@
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { Icon } from '@/components/bank/Icon';
+import { colors, radii, spacing, type } from '@/constants/theme';
+import type { BankIconName } from '@/types/bank';
+
+type Props = {
+  icon: BankIconName;
+  title: string;
+  meta: string;
+  value?: string;
+  /** Second line under the value ("remaining", "Next: 1 Dec"). */
+  valueNote?: string;
+  tone?: 'default' | 'positive' | 'negative';
+  /** Colour only the note (e.g. a holding's % change). */
+  noteTone?: 'default' | 'positive' | 'negative';
+  onPress?: () => void;
+  testID?: string;
+};
+
+const TONE = { default: colors.textPrimary, positive: colors.feedbackSuccess, negative: colors.feedbackDanger } as const;
+const NOTE_TONE = { default: colors.textMuted, positive: colors.feedbackSuccess, negative: colors.feedbackDanger } as const;
+
+/** One line of a bank list: icon tile, title + meta, amount + note. */
+export function ListRow({ icon, title, meta, value, valueNote, tone = 'default', noteTone = 'default', onPress, testID }: Props) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      testID={testID}
+      accessibilityRole={onPress ? 'button' : undefined}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+    >
+      <View style={styles.tile}>
+        <Icon name={icon} size={18} color={colors.brandPrimary} />
+      </View>
+      <View style={styles.body}>
+        <Text style={styles.title} numberOfLines={1}>
+          {title}
+        </Text>
+        <Text style={styles.meta} numberOfLines={1}>
+          {meta}
+        </Text>
+      </View>
+      {value !== undefined && (
+        <View style={styles.right}>
+          <Text style={[styles.value, { color: TONE[tone] }]} numberOfLines={1}>
+            {value}
+          </Text>
+          {valueNote && <Text style={[styles.note, { color: NOTE_TONE[noteTone] }]}>{valueNote}</Text>}
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: 12, paddingVertical: 10, minHeight: 60 },
+  pressed: { backgroundColor: colors.bgCanvas },
+  tile: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.button,
+    backgroundColor: colors.brandPrimarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  body: { flex: 1, gap: 2 },
+  title: type.titleCard,
+  meta: { ...type.labelDefault, color: colors.textMuted },
+  right: { alignItems: 'flex-end', gap: 2, flexShrink: 0 },
+  value: type.titleCard,
+  note: { ...type.labelDefault, color: colors.textMuted },
+});

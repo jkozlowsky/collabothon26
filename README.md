@@ -19,19 +19,21 @@
 ```bash
 make setup     # one-time: creates .env from .env.example, runs npm install in front/
                # edit .env and set your own POSTGRES_PASSWORD and DB_PASSWORD (must match)
-make dev       # Postgres + backend + browser app (loopback only)
-make phone     # Postgres + backend + phone QR via Expo ngrok tunnel
+make dev       # Postgres + backend + app with phone QR (Expo tunnel) and browser at localhost:8081
+make phone     # same as make dev
 make phone-usb # Postgres + backend + Android phone over a USB cable (no network at all)
+make web       # app in the browser only (loopback only, no tunnel)
 ```
 
 `make dev` (and `make phone`) do three things:
 1. Starts Postgres in Docker (`127.0.0.1:5433`).
 2. Starts the backend in the background (`127.0.0.1:8080`). If one is already running on `:8080`, it uses that one. Logs go to `logs/backend.log` (`tail -f logs/backend.log`).
-3. Starts the app once the backend answers (`127.0.0.1:8081`).
+3. Starts the app once the backend answers (`127.0.0.1:8081`) with an Expo ngrok tunnel QR for phones while still serving the browser.
 
 Open the app in:
-- **Browser (`make dev`):** http://localhost:8081
-- **Phone (`make phone`):** scan the printed tunnel QR code with Expo Go (Android) or the camera (iOS).
+- **Browser (`make dev` or `make web`):** http://localhost:8081
+- **Phone (`make dev` or `make phone`):** scan the printed tunnel QR code with Expo Go (Android) or the camera (iOS).
+- **Phone via USB cable (`make phone-usb`):** over USB cable via adb reverse (Android).
 
 Ctrl+C stops the backend and the app. Postgres keeps running until `make db-stop`.
 
@@ -64,7 +66,7 @@ If the phone shows "Something went wrong":
 
 ### Example in the repo: lessons with a quiz
 
-This is the pattern to copy. The **Learn** tab lists lessons from the database. Tapping one opens a quiz with feedback, an explanation for each question and a result screen.
+This is the pattern to copy. The **Map** tab (Learn side) lists lessons from the database. Tapping one opens a quiz with feedback, an explanation for each question and a result screen.
 
 | Layer | File |
 |---|---|
@@ -73,7 +75,7 @@ This is the pattern to copy. The **Learn** tab lists lessons from the database. 
 | API test | `back/src/test/java/com/collabothon/back/lesson/LessonControllerTests.java` |
 | API types | `front/src/types/lessons.ts` |
 | Data fetching | `front/src/hooks/useApi.ts` |
-| Screens | `front/src/app/(tabs)/index.tsx` (list), `front/src/app/lesson/[id].tsx` (quiz) |
+| Screens | `front/src/app/(main)/(learn)/map.tsx` (list), `front/src/app/lesson/[id].tsx` (quiz) |
 | Screen flow test | `front/src/__tests__/lessons.test.tsx` |
 
 ## Frontend structure
@@ -83,17 +85,16 @@ Uses [Expo Router](https://docs.expo.dev/router/introduction/): every file in `s
 ```
 front/src/
 ├── app/                  # routes only (file = screen)
-│   ├── _layout.tsx       # root Stack; shows onboarding until it is done
-│   ├── onboarding.tsx    # intro + optional personalisation questions (once per user; answers saved on the profile)
-│   ├── (tabs)/           # bottom tab bar
+│   ├── _layout.tsx       # root Stack + providers (onboarding, mock bank, toast, transfer sheet)
+│   ├── onboarding.tsx    # intro + optional personalisation questions; opened by the first Learn tap
+│   ├── (main)/           # bank + Finance Quest, one floating nav (components/bank/FloatingNav) that morphs between them
 │   │   ├── _layout.tsx
-│   │   ├── index.tsx     # Learn  (/)
-│   │   ├── glossary.tsx  # /glossary
-│   │   └── profile.tsx   # /profile
+│   │   ├── (bank)/       # mock banking app, the first screen: index (/) · payments · credits · invest
+│   │   └── (learn)/      # Finance Quest: map (/map, lesson list) · glossary · profile
 │   └── lesson/[id].tsx   # /lesson/1, pushed over the tabs
 ├── components/           # reusable UI (Screen, Button, AsyncContent)
 ├── hooks/                # custom hooks (useXxx.ts)
-├── lib/                  # non-UI code: api.ts (backend client), utils
+├── lib/                  # non-UI code: api.ts (backend client), bank/ (seeded mock bank data, pure logic), utils
 ├── constants/            # theme.ts (colors, spacing), config
 ├── types/                # shared TS types / API DTOs
 └── __tests__/            # Jest tests (never inside app/, every file there is a route)
@@ -123,5 +124,8 @@ make check     # front: tsc + expo lint + jest; back: JUnit (Testcontainers, nee
 To run one side only: `cd front && npm test` or `cd back && ./mvnw test`.
 
 - **Unit / component tests:** Jest + React Native Testing Library. For routing flows use `renderRouter` from `expo-router/testing-library`. In RNTL 14, `render` and `fireEvent` are async, so `await` them.
-- **E2E on web:** Playwright smoke test in `front/e2e/`, using `page.getByTestId('foo')`. `cd front && npx playwright install chromium && npm run e2e` starts the backend (Testcontainers) and the web app itself, so Docker must be running. CI runs it in `.github/workflows/e2e.yml`.
+- **E2E on web:** Playwright in `front/e2e/` (a smoke test plus the onboarding flow), using `page.getByTestId('foo')`. `make e2e` (or `cd front && npx playwright install chromium && npm run e2e`) reuses a running backend and web app, or starts the backend on Testcontainers and the web app itself, so Docker must be running. CI runs it in `.github/workflows/e2e.yml`.
+  - The tests act as `demo-user` and **reset its onboarding** (answers and the completed flag) before and after each test.
+  - To leave your own `make dev` session alone, use another port: `cd front && E2E_PORT=8082 npm run e2e`.
+  - After a failure, `npx playwright show-trace front/test-results/<test>/trace.zip` replays it step by step.
 - **Backend on a throwaway DB:** `cd back && ./mvnw spring-boot:test-run` starts the backend on a fresh Testcontainers Postgres.

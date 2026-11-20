@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -9,8 +10,15 @@ export default function ProfileScreen() {
   return (
     <Screen title="Profile" testID="screen-profile">
       <View style={{ flex: 1 }} />
-      {/* Demo helper: clears the saved onboarding answers so the flow can be shown again. */}
-      <Button label="Restart onboarding" onPress={reset} testID="restart-onboarding" />
+      {/* Demo helper: clears the saved onboarding answers; back in the bank, the next Learn tap shows the flow again. */}
+      <Button
+        label="Restart onboarding"
+        onPress={() => {
+          reset();
+          router.navigate('/');
+        }}
+        testID="restart-onboarding"
+      />
     </Screen>
   );
 }

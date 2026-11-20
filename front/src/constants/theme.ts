@@ -42,6 +42,28 @@ export const colors = {
   storyOrange: '#E8833A',
   storyTeal: '#1E9AA8',
   storySlate: '#9AA5AB',
+
+  // Figma effect style "Glass/Nav": white 62% fill, white 95% 1px border, 24 background blur.
+  glassFill: 'rgba(255, 255, 255, 0.62)',
+  glassBorder: 'rgba(255, 255, 255, 0.95)',
+  // Opaque stand-in where real blur is unavailable (Android), so the nav never looks see-through.
+  glassFallback: 'rgba(255, 255, 255, 0.96)',
+  // Bank hero cards: petrol gradient and the translucent tiles on top of it.
+  heroGradientFrom: '#0B4D5E',
+  onBrandTile: 'rgba(255, 255, 255, 0.08)',
+  onBrandMuted: 'rgba(255, 255, 255, 0.7)',
+  cardChipGold: '#E9D49A',
+  cardChipOnAccent: 'rgba(0, 46, 60, 0.18)',
+  scrim: 'rgba(0, 31, 41, 0.4)',
+} as const;
+
+/** Story colours at 14% opacity: icon tiles and avatar backgrounds (Figma recipe). */
+export const tints = {
+  rose: 'rgba(217, 87, 122, 0.14)',
+  violet: 'rgba(110, 90, 214, 0.14)',
+  teal: 'rgba(30, 154, 168, 0.14)',
+  orange: 'rgba(232, 131, 58, 0.14)',
+  slate: 'rgba(154, 165, 171, 0.2)',
 } as const;
 
 
@@ -102,4 +124,17 @@ export const elevation = {
   high: { boxShadow: `0 16px 40px rgba(${SHADOW_RGB}, 0.28)` },
   sheet: { boxShadow: `0 -6px 24px rgba(${SHADOW_RGB}, 0.12)` },
   pin: { boxShadow: `0 4px 8px rgba(${SHADOW_RGB}, 0.30)` },
+  glass: { boxShadow: `0 8px 24px rgba(${SHADOW_RGB}, 0.16)` },
 } as const satisfies Record<string, ViewStyle>;
+
+/** Floating nav geometry (Figma "Floating Nav"): orb 64, pill padding 6, items 66 × 52, 8 gap. */
+export const nav = {
+  orb: 64,
+  itemWidth: 66,
+  pillPadding: 6,
+  gap: 8,
+  /** Distance from the bottom safe-area edge to the nav. */
+  bottomOffset: 12,
+  /** Bottom padding scrolling content needs so its last row clears the nav. */
+  clearance: 64 + 12 + 24,
+} as const;

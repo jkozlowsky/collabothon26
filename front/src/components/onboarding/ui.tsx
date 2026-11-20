@@ -5,6 +5,7 @@ import { Platform, Pressable, StyleSheet, Text, View, type PressableProps, type 
 import Animated, { cubicBezier, useReducedMotion, type CSSStyle } from 'react-native-reanimated';
 
 import type { IconName } from '@/constants/onboarding';
+import * as theme from '@/constants/theme';
 import { colors, radii, spacing } from '@/constants/theme';
 
 /** Strong ease-out for UI; ease-in-out for things moving across the screen. */
@@ -104,7 +105,7 @@ export function BigButton({ label, onPress, variant = 'primary', onDark, disable
     <Tappable
       testID={testID}
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
+      aria-disabled={disabled}
       disabled={disabled}
       onPress={onPress}
       haptic={ghost ? undefined : 'light'}
@@ -156,7 +157,7 @@ export function OptionCard({ title, subtitle, icon, selected, onPress, testID }:
     <Tappable
       testID={testID}
       accessibilityRole="radio"
-      accessibilityState={{ selected }}
+      aria-checked={selected}
       onPress={onPress}
       haptic="selection"
       pressedScale={0.98}
@@ -185,29 +186,27 @@ export function ChoiceChip({ label, selected, disabled, onPress, testID }: ChipP
     <Tappable
       testID={testID}
       accessibilityRole="checkbox"
-      accessibilityState={{ checked: selected, disabled }}
+      aria-checked={selected}
+      aria-disabled={disabled}
       disabled={disabled}
       onPress={onPress}
       haptic="selection"
-      pressedScale={0.94}
+      pressedScale={0.95}
+      hitSlop={{ top: 2, bottom: 2 }}
+      // Equal-width tiles, three to a row, so a whole group sits on one line.
+      containerStyle={styles.chipSlot}
       style={[styles.chip, selected && styles.chipSelected, disabled && styles.chipDisabled, motion.colors]}
     >
-      {/* Re-keyed so the icon pops each time the chip flips. */}
-      <Animated.View key={String(selected)} style={motion.pop}>
-        <Feather name={selected ? 'check' : 'plus'} size={14} color={selected ? colors.brandAccent : colors.textMuted} />
-      </Animated.View>
-      <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>{label}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+        {label}
+      </Text>
+      {/* A corner badge marks the choice without changing the tile's width. */}
+      {selected && (
+        <Animated.View style={[styles.chipCheck, motion.pop]}>
+          <Feather name="check" size={10} color={colors.textOnAccent} />
+        </Animated.View>
+      )}
     </Tappable>
-  );
-}
-
-export function PageDots({ count, active }: { count: number; active: number }) {
-  return (
-    <View style={styles.dots} accessibilityLabel={`Page ${active + 1} of ${count}`}>
-      {Array.from({ length: count }, (_, i) => (
-        <Animated.View key={i} style={[styles.dot, motion.size, i === active && styles.dotActive]} />
-      ))}
-    </View>
   );
 }
 
@@ -276,12 +275,6 @@ export const motion = {
     transitionDuration: 200,
     transitionTimingFunction: EASE_OUT,
   },
-  /** A pin or tile that rises when selected: a short spring-like overshoot. */
-  lift: {
-    transitionProperty: 'transform',
-    transitionDuration: 280,
-    transitionTimingFunction: cubicBezier(0.34, 1.56, 0.64, 1),
-  },
   /** Width of childless bars (progress fill, page dot). */
   size: {
     transitionProperty: ['width', 'backgroundColor'],
@@ -334,25 +327,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioSelected: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
+  chipSlot: { flex: 1 },
   chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingLeft: 14,
-    paddingRight: 16,
-    paddingVertical: 10,
-    borderRadius: 999,
+    height: 40,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.button,
     borderWidth: 1,
     borderColor: colors.borderDefault,
     backgroundColor: colors.bgSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chipSelected: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
   chipDisabled: { opacity: 0.45 },
-  chipLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
-  chipLabelSelected: { color: '#fff' },
-  dots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.borderStrong },
-  dotActive: { width: 24, backgroundColor: colors.brandPrimary },
+  chipLabel: { ...theme.type.labelStrong, color: colors.textPrimary },
+  chipLabelSelected: { color: colors.textOnBrand },
+  chipCheck: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 18,
+    height: 18,
+    borderRadius: radii.pill,
+    backgroundColor: colors.brandAccent,
+    borderWidth: 2,
+    borderColor: colors.bgCanvas,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   stepHeader: { gap: spacing.lg },
   stepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   back: {

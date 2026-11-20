@@ -11,7 +11,7 @@ test.afterAll(async ({ request }) => {
   await resetOnboarding(request);
 });
 
-test('app opens on the bank; Learn runs onboarding and the consent card, then Map; Bank comes back; a transfer lowers the balance', async ({ page }) => {
+test('app opens on the bank; Learn runs onboarding and the consent card, then Map; Bank comes back; a transfer lowers the balance', async ({ page, request }) => {
   await page.goto('/');
   await expect(page.getByTestId('owner-name')).toHaveText('Alex Krause');
   await expect(page.getByTestId('main-balance')).toHaveText('€ 4,280.52');
@@ -21,9 +21,12 @@ test('app opens on the bank; Learn runs onboarding and the consent card, then Ma
   await page.getByTestId('onboarding-start').click();
   await page.getByTestId('onboarding-next').click();
   await page.getByTestId('onboarding-skip-all').click();
-  // demo-user has no bank accounts, so the consent card offers a single Continue.
-  await page.getByTestId('consent-continue').click();
+  // The consent card previews the facts from the bank on screen; sharing them sends exactly those.
+  await expect(page.getByTestId('consent-slip')).toContainText('Over 6 months of spending covered');
+  await page.getByTestId('consent-accept').click();
   await expect(page.getByTestId('screen-learn')).toBeVisible({ timeout: 15_000 });
+  const categorization = await (await request.get('/api/users/demo-user/categorization')).json();
+  expect(categorization).toMatchObject({ consent: true, bankData: true, lifeStage: null });
   await expect(page.getByTestId(/^lesson-/).first()).toBeVisible();
 
   // Back to the bank, then send Anna € 25.

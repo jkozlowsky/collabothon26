@@ -52,7 +52,7 @@ If the phone shows "Something went wrong":
 
 - **Frontend:** saving a file reloads the app instantly (Fast Refresh).
 - **Backend:** devtools restarts the app after recompiling. In IntelliJ that's Build → Build Project (`Ctrl+F9`).
-- **Database:** the schema lives only in Flyway migrations (`back/src/main/resources/db/migration/V<n>__description.sql`). Hibernate only validates against it. A new table means a new migration file. Never edit a migration that has already been pushed; add a new one instead. `make db-reset` wipes the local database. If the backend fails to start with a Flyway checksum or version mismatch after a merge (the mock bank moved from V4 to V5 on `feat/profiling`), run `make db-reset` once.
+- **Database:** the schema lives only in Flyway migrations (`back/src/main/resources/db/migration/V<n>__description.sql`). Hibernate only validates against it. A new table means a new migration file. Never edit a migration that has already been pushed; add a new one instead. `make db-reset` wipes the local database. If the backend fails to start with a Flyway checksum or version mismatch after a merge (main rewrote V3 and dropped V4, and V4 is now `categorization`), run `make db-reset` once.
 - **API:** put new endpoints under `/api/**`. The app calls them with `api('/api/...')` from `front/src/lib/api.ts`. The backend URL is resolved automatically on web, emulator and phone. Override it with `EXPO_PUBLIC_API_URL` in `front/.env` (see `front/.env.example`).
 
 ### Example in the repo: lessons with a quiz

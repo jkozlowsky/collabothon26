@@ -1,5 +1,6 @@
 import { profileWritesSettled } from '@/hooks/useOnboarding';
 import { api, ApiError } from '@/lib/api';
+import { positionCount } from '@/lib/bank/selectors';
 import { USER_ID } from '@/lib/user';
 import type { BankState } from '@/types/bank';
 import type { Categorization, Facts } from '@/types/categorization';
@@ -82,7 +83,7 @@ const SAVINGS_TARGET = /^(Savings|Depot)/;
  * Rules: docs/specs/F1-profiling.md ("Facts").
  */
 export function factsFrom(bank: BankState): Facts {
-  const { account, savings, standingOrders, holdings, loan } = bank;
+  const { account, savings, standingOrders, loan } = bank;
   const net = account.monthIn - account.monthOut;
   return {
     incomeBand: band(account.monthIn, [1000 * CENTS_PER_EUR, 2000 * CENTS_PER_EUR, 3500 * CENTS_PER_EUR, 5000 * CENTS_PER_EUR], ['<1k', '1-2k', '2-3.5k', '3.5-5k', '5k+']),
@@ -98,7 +99,7 @@ export function factsFrom(bank: BankState): Facts {
         : band(net / account.monthIn, [0, 0.1, 0.2], ['negative', '0-10%', '10-20%', '20%+']),
     savesRegularly: standingOrders.some((o) => o.interval.startsWith('Monthly') && SAVINGS_TARGET.test(o.recipient)),
     inOverdraft: account.balance < 0,
-    holdsInvestments: holdings.some((h) => h.assetClass !== 'cash'),
+    holdsInvestments: positionCount(bank) > 0,
     hasLoan: loan.remaining > 0,
   };
 }

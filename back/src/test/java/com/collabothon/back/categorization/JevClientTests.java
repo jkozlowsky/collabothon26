@@ -21,13 +21,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
-import com.collabothon.back.categorization.Categorization.OnboardingAnswers;
+
+import com.collabothon.back.categorization.consts.JevConsts;
+import com.collabothon.back.categorization.dto.FactsDto;
+import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
 
 import tools.jackson.databind.json.JsonMapper;
 
 class JevClientTests {
 
-	private static final OnboardingAnswers ANSWERS = new OnboardingAnswers(null, List.of(), "occasional", false);
+	private static final OnboardingAnswersDto ANSWERS = new OnboardingAnswersDto(null, List.of(), "occasional", false);
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -38,9 +41,9 @@ class JevClientTests {
 	// Both records go to an external model verbatim; a new component must be a deliberate change here.
 	@Test
 	void onlyKnownFieldsAreSentToJev() {
-		assertThat(Arrays.stream(OnboardingAnswers.class.getRecordComponents()).map(RecordComponent::getName))
+		assertThat(Arrays.stream(OnboardingAnswersDto.class.getRecordComponents()).map(RecordComponent::getName))
 			.containsExactly("lifeStage", "goals", "experience", "skipped");
-		assertThat(Arrays.stream(Facts.class.getRecordComponents()).map(RecordComponent::getName)).containsExactly(
+		assertThat(Arrays.stream(FactsDto.class.getRecordComponents()).map(RecordComponent::getName)).containsExactly(
 				"incomeBand", "cashBufferMonths", "savingsRate", "savesRegularly", "inOverdraft", "holdsInvestments",
 				"hasLoan");
 	}
@@ -62,7 +65,7 @@ class JevClientTests {
 	void brokenResponseHeaderFallsBackButCountsAsSent() {
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		server.expect(requestTo("http://localhost:8000" + JevClient.SYSTEM_ONE_PATH))
+		server.expect(requestTo("http://localhost:8000" + JevConsts.SYSTEM_ONE_PATH))
 			.andRespond(withStatus(HttpStatus.OK).header(HttpHeaders.CONTENT_TYPE, "not a type").body("{}"));
 
 		assertThat(new JevClient(builder, JSON, properties("http://localhost:8000", "")).ask(ANSWERS, null))
@@ -73,7 +76,7 @@ class JevClientTests {
 	void failedTlsHandshakeIsNotSent() {
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-		server.expect(requestTo("https://jev.example" + JevClient.SYSTEM_ONE_PATH))
+		server.expect(requestTo("https://jev.example" + JevConsts.SYSTEM_ONE_PATH))
 			.andRespond(withException(new SSLHandshakeException("certificate rejected")));
 
 		assertThat(new JevClient(builder, JSON, properties("https://jev.example", "")).ask(ANSWERS, null))

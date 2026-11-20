@@ -1,0 +1,27 @@
+package com.collabothon.back.categorization.enums;
+
+import java.util.Arrays;
+
+import lombok.RequiredArgsConstructor;
+
+/** Main's onboarding answers to "How do you handle money today?", with their titles. */
+@RequiredArgsConstructor
+public enum Experience {
+
+	NOT_SAVING("I don't save yet"), OCCASIONAL("I save now and then"), REGULAR("I save regularly"),
+	INVESTING("I save and invest"), PLANNING("I plan my finances ahead");
+
+	private final String label;
+
+	public static Experience fromWire(String value) {
+		return value == null ? null : Arrays.stream(values())
+			.filter(e -> WireNames.of(e).equals(value))
+			.findFirst()
+			.orElseThrow(() -> new IllegalArgumentException("Unknown experience: " + value));
+	}
+
+	public String saidLine() {
+		return "You said: " + label + ".";
+	}
+
+}

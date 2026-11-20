@@ -51,6 +51,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.categorization.consts.CategorizationConsts;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(properties = "jev.api-key=test-key")
@@ -438,9 +439,9 @@ class CategorizationControllerTests {
 		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 
 		categorize("alex", WITH_FACTS).andExpect(status().isOk());
-		CLOCK.advance(CategorizationService.RECATEGORIZE_AFTER.plusSeconds(1));
+		CLOCK.advance(CategorizationConsts.RECATEGORIZE_AFTER.plusSeconds(1));
 		categorize("alex", WITH_FACTS).andExpect(status().isOk())
-			.andExpect(MockMvcResultMatchers.jsonPath("$.categorizedAt").value(START.plus(CategorizationService.RECATEGORIZE_AFTER).plusSeconds(1).toString()));
+			.andExpect(MockMvcResultMatchers.jsonPath("$.categorizedAt").value(START.plus(CategorizationConsts.RECATEGORIZE_AFTER).plusSeconds(1).toString()));
 	}
 
 	@Test

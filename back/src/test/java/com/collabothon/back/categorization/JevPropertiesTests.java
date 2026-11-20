@@ -11,6 +11,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.validation.autoconfigure.ValidationAutoConfiguration;
 
+import com.collabothon.back.categorization.consts.JevConsts;
+
 class JevPropertiesTests {
 
 	private final ApplicationContextRunner context = new ApplicationContextRunner()
@@ -69,7 +71,7 @@ class JevPropertiesTests {
 	}
 
 	static JevProperties properties(String baseUrl, String apiKey) {
-		return new JevProperties(URI.create(baseUrl), apiKey, JevProperties.DEFAULT_MODEL);
+		return new JevProperties(URI.create(baseUrl), apiKey, JevConsts.DEFAULT_MODEL);
 	}
 
 }

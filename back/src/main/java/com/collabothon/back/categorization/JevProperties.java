@@ -13,19 +13,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
+import com.collabothon.back.categorization.consts.JevConsts;
+
 @ConfigurationProperties("jev")
 @Validated
 public record JevProperties(
-		@NotNull @DefaultValue(JevProperties.DEFAULT_BASE_URL) URI baseUrl,
+		@NotNull @DefaultValue(JevConsts.DEFAULT_BASE_URL) URI baseUrl,
 		@Pattern(regexp = "[\\x21-\\x7E]*", message = "jev.api-key must be printable ASCII without spaces")
 		@DefaultValue("") String apiKey,
-		@NotBlank @DefaultValue(JevProperties.DEFAULT_MODEL) String model) {
+		@NotBlank @DefaultValue(JevConsts.DEFAULT_MODEL) String model) {
 
-	static final String DEFAULT_BASE_URL = "https://api.typesafe.ai";
-
-	static final String DEFAULT_MODEL = "jev-latest";
-
-	private static final String DEFAULT_HOST = URI.create(DEFAULT_BASE_URL).getHost();
+	private static final String DEFAULT_HOST = URI.create(JevConsts.DEFAULT_BASE_URL).getHost();
 
 	private static final int NO_PORT = -1;
 

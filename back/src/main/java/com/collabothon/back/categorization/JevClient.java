@@ -25,9 +25,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import com.collabothon.back.categorization.Categorization.OnboardingAnswers;
-import com.collabothon.back.categorization.Categorization.Role;
 import com.collabothon.back.categorization.Rules.Judgement;
+import com.collabothon.back.categorization.consts.JevConsts;
+import com.collabothon.back.categorization.dto.FactsDto;
+import com.collabothon.back.categorization.dto.JevRequestDto;
+import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
+import com.collabothon.back.categorization.enums.FocusArea;
+import com.collabothon.back.categorization.enums.Role;
+import com.collabothon.back.categorization.enums.WireNames;
 
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.databind.JsonNode;
@@ -37,8 +42,6 @@ import tools.jackson.databind.json.JsonMapper;
 @EnableConfigurationProperties(JevProperties.class)
 @Slf4j
 public class JevClient {
-
-	static final String SYSTEM_ONE_PATH = "/v1/systemone";
 
 	private static final Pattern MODEL_ID = Pattern.compile("[A-Za-z0-9._:-]{1,64}");
 
@@ -85,7 +88,7 @@ public class JevClient {
 
 	}
 
-	public Result ask(OnboardingAnswers answers, Facts facts) {
+	public Result ask(OnboardingAnswersDto answers, FactsDto facts) {
 		if (!properties.callsJev()) {
 			return Result.SKIPPED;
 		}
@@ -96,9 +99,9 @@ public class JevClient {
 		}
 		try {
 			JsonNode response = rest.post()
-				.uri(SYSTEM_ONE_PATH)
+				.uri(JevConsts.SYSTEM_ONE_PATH)
 				.contentType(MediaType.APPLICATION_JSON)
-				.body(new Request(properties.model(), state, questions))
+				.body(new JevRequestDto(properties.model(), state, questions))
 				.retrieve()
 				// Redirects are not followed, so a 3xx would otherwise be parsed like a 200.
 				.onStatus(HttpStatusCode::is3xxRedirection, (request, redirect) -> {
@@ -129,9 +132,6 @@ public class JevClient {
 			.anyMatch(cause -> NOT_SENT.stream().anyMatch(type -> type.isInstance(cause)));
 	}
 
-	record Request(String model, Map<String, Object> state, JsonNode questions) {
-	}
-
 	private record Choice<E>(E value, Map<String, Double> probabilities) {
 	}
 
@@ -141,9 +141,9 @@ public class JevClient {
 		}
 		JsonNode answers = response.path("answers");
 		Choice<Role> role = choice(answers.path("role"), Role.values());
-		Map<Area, Double> noul = new EnumMap<>(Area.class);
+		Map<FocusArea, Double> noul = new EnumMap<>(FocusArea.class);
 		Map<String, Double> focus = new LinkedHashMap<>();
-		for (Area area : Area.values()) {
+		for (FocusArea area : FocusArea.values()) {
 			Double p = probability(answers.path(area.jevQuestion()).path("noul"));
 			if (p == null) {
 				return Optional.empty();
@@ -163,7 +163,7 @@ public class JevClient {
 	private static <E extends Enum<E>> Choice<E> choice(JsonNode answer, E[] values) {
 		Map<String, E> byLabel = new LinkedHashMap<>();
 		for (E value : values) {
-			byLabel.put(Categorization.wireName(value), value);
+			byLabel.put(WireNames.of(value), value);
 		}
 		JsonNode label = answer.path("choice");
 		JsonNode probabilities = answer.path("probabilities");

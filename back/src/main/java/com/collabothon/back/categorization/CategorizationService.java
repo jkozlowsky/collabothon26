@@ -19,6 +19,8 @@ import com.collabothon.back.categorization.dto.SharedWithModelDto;
 import com.collabothon.back.categorization.enums.CategorizationSource;
 import com.collabothon.back.categorization.enums.ExplanationOutput;
 import com.collabothon.back.categorization.enums.LifeStage;
+import com.collabothon.back.categorization.mappers.OnboardingAnswersMapper;
+import com.collabothon.back.categorization.repositories.ProfileAnswersRepository;
 import com.collabothon.back.common.exceptions.NotFoundException;
 
 import lombok.AccessLevel;

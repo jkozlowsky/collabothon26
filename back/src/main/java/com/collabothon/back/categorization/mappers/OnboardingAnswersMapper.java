@@ -1,16 +1,16 @@
-package com.collabothon.back.categorization;
+package com.collabothon.back.categorization.mappers;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
-
+import com.collabothon.back.categorization.repositories.projections.ProfileAnswersProjection;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
-interface OnboardingAnswersMapper {
+public interface OnboardingAnswersMapper {
 
 	@Mapping(target = "skipped", source = "onboardingSkipped")
-	OnboardingAnswersDto toAnswers(ProfileAnswers profile);
+	OnboardingAnswersDto toAnswers(ProfileAnswersProjection profile);
 
 }

@@ -26,6 +26,6 @@ test('the intro slide shows the globe of lesson topics', async ({ page }) => {
 test('the globe is a picture, not a control', async ({ page }) => {
   await openApp(page);
   await tap(page, 'onboarding-start');
-  // The only buttons on the intro slide are the back arrow and Next.
-  await expect(page.getByTestId('onboarding-intro').getByRole('button')).toHaveCount(2);
+  // The only buttons on the intro slide are the back arrow, Skip and Next.
+  await expect(page.getByTestId('onboarding-intro').getByRole('button')).toHaveCount(3);
 });

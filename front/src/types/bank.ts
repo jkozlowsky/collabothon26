@@ -6,6 +6,8 @@
 /** Semantic icon names; `components/bank/Icon.tsx` maps them to glyphs. */
 export type BankIconName =
   | 'home'
+  | 'edit'
+  | 'refresh'
   | 'transfer'
   | 'percent'
   | 'trending'

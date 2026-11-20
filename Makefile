@@ -1,15 +1,18 @@
 # Local development shortcuts. `make help` lists them.
 SHELL := /bin/bash
-.PHONY: help dev phone setup db db-stop db-reset back front web android check test e2e
+.PHONY: help dev phone phone-usb setup db db-stop db-reset back front web android check test e2e
 
 help: ## List commands
 	@grep -E '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
 
-dev: ## Everything at once: Postgres + backend + web app on localhost (Ctrl+C stops)
+dev: ## Everything at once: Postgres + backend + app with a phone QR (Expo tunnel) and browser at localhost:8081 (Ctrl+C stops)
 	./scripts/dev.sh
 
 phone: ## Everything at once + Expo tunnel QR for a phone (Ctrl+C stops)
 	./scripts/dev.sh --phone
+
+phone-usb: ## Everything at once + Android phone over USB cable (adb reverse, no network at all)
+	./scripts/dev.sh --usb
 
 setup: ## One-time: .env + frontend dependencies
 	@test -f .env || cp .env.example .env

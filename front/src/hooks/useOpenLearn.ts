@@ -45,7 +45,8 @@ export function useResumeLearnAfterOnboarding() {
   const { done } = useOnboarding();
   const pathname = usePathname();
   useEffect(() => {
-    if (done && pathname === '/onboarding') closeAndGo('/categorizing');
+    // No pending target = onboarding was opened from Profile to edit answers; it closes itself.
+    if (done && pathname === '/onboarding' && pendingTarget) closeAndGo('/categorizing');
   }, [done, pathname]);
 }
 

@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AsyncContent } from '@/components/AsyncContent';
 import { Button } from '@/components/Button';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
+import { useAccount } from '@/hooks/useAccount';
 import { useApi } from '@/hooks/useApi';
 import type { LessonDetail } from '@/types/lessons';
 
@@ -20,6 +21,7 @@ export default function LessonScreen() {
 }
 
 function Quiz({ lesson }: { lesson: LessonDetail }) {
+  const { recordCompletion } = useAccount();
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<number>();
   const [score, setScore] = useState(0);
@@ -36,7 +38,9 @@ function Quiz({ lesson }: { lesson: LessonDetail }) {
 
   function next() {
     setPicked(undefined);
-    setIndex((i) => i + 1);
+    setIndex(index + 1);
+    // Finishing the last question completes the lesson: it counts for the streak and XP.
+    if (index + 1 === lesson.questions.length) recordCompletion(lesson.id);
   }
 
   return (

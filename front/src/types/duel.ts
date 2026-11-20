@@ -7,8 +7,9 @@ export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type CategorySlug = 'instruments' | 'risk' | 'costs' | 'money-basics' | 'psychology';
 export type CategoryIcon = 'trend' | 'pie' | 'percent' | 'coins' | 'brain';
 export type Lang = 'en' | 'pl';
-/** Explorer Avatar rank from the Figma kit: 1 Saver, 2 Explorer, 3 Navigator, 4 Investor. */
-export type AvatarRank = 1 | 2 | 3 | 4;
+/** Player avatar from the bank account (GET /api/users/{id}/account): m1–m3, f1–f3. */
+export type { AvatarId } from '@/types/account';
+import type { AvatarId } from '@/types/account';
 
 // ---------- REST ----------
 
@@ -33,7 +34,8 @@ export type RankingRow = {
   rank: number;
   userId: string;
   name: string;
-  avatar: AvatarRank;
+  /** null for bots (the UI shows the bot icon). */
+  avatar: AvatarId | null;
   level: number;
   elo: number;
   /** Elo for category/overall/friends; Elo gained this week for weekly. */
@@ -70,7 +72,7 @@ export type PlayerCard = {
   level: number;
   /** null for bots */
   elo: number | null;
-  avatar: AvatarRank;
+  avatar: AvatarId;
   isBot: boolean;
 };
 

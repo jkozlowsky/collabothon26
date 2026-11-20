@@ -66,6 +66,14 @@ export const tints = {
   slate: 'rgba(154, 165, 171, 0.2)',
 } as const;
 
+/** `story/*` colours by key, as stories name them in their data (`color: 'rose'`). */
+export const storyColors: Record<keyof typeof tints, string> = {
+  rose: colors.storyRose,
+  violet: colors.storyViolet,
+  teal: colors.storyTeal,
+  orange: colors.storyOrange,
+  slate: colors.storySlate,
+};
 
 export const spacing = {
   xxs: 2,

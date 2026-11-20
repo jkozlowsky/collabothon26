@@ -39,8 +39,9 @@ export function useResumeLearnAfterOnboarding() {
   const { done } = useOnboarding();
   const pathname = usePathname();
   useEffect(() => {
-    if (!done || pathname !== '/onboarding') return;
-    const target = pendingTarget ?? '/map';
+    // No pending target = onboarding was opened from Profile to edit answers; it closes itself.
+    if (!done || pathname !== '/onboarding' || !pendingTarget) return;
+    const target = pendingTarget;
     pendingTarget = null;
     if (router.canGoBack()) router.back();
     router.navigate(target);

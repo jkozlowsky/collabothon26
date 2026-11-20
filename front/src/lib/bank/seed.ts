@@ -135,8 +135,8 @@ export function seedAccount(seed: number = DEFAULT_SEED): BankState {
       monthOut: 126840,
     },
     cards: [
-      { id: 'debit', brand: 'MyBank', kind: 'Debit', last4: '4821', holder: 'ALEX KRAUSE', expiry: '12/29', variant: 'dark' },
-      { id: 'credit', brand: 'MyBank', kind: 'Credit', last4: '9034', holder: 'ALEX KRAUSE', expiry: '08/28', variant: 'accent' },
+      { id: 'debit', brand: 'Commerzbank', kind: 'Debit', last4: '4821', holder: 'ALEX KRAUSE', expiry: '12/29', variant: 'dark' },
+      { id: 'credit', brand: 'Commerzbank', kind: 'Credit', last4: '9034', holder: 'ALEX KRAUSE', expiry: '08/28', variant: 'accent' },
     ],
     transactions: [...RECENT, ...history(rng)],
     standingOrders: [
@@ -202,7 +202,7 @@ export function seedAccount(seed: number = DEFAULT_SEED): BankState {
     holdings,
     depotSeries: depotSeries(rng, depotTotal),
     teasers: {
-      home: { title: 'Continue: Your first share', meta: 'Lesson 3 of 6 · 4 min · 5-day streak', progress: 2 / 6, focus: 'frankfurt-first-share' },
+      home: { title: 'Continue: Your first share', meta: 'Lesson 3 of 6 · 4 min', progress: 2 / 6, focus: 'frankfurt-first-share' },
       credits: { title: 'How interest really works', meta: 'Finance Quest · 4 lessons · 3 min each', progress: 0.25, focus: 'interest' },
       invest: { title: 'Before your next trade: diversification', meta: 'Finance Quest · 5 lessons · no advice', progress: 0.2, focus: 'diversification' },
     },

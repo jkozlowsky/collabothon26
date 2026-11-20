@@ -245,10 +245,29 @@ export function BackButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-export function SkipLink({ onPress, label = 'Skip' }: { onPress: () => void; label?: string }) {
+type SkipLinkProps = { onPress: () => void; label?: string; onDark?: boolean; testID?: string };
+
+export function SkipLink({ onPress, label = 'Skip', onDark, testID = 'onboarding-skip' }: SkipLinkProps) {
   return (
-    <Tappable testID="onboarding-skip" accessibilityRole="button" onPress={onPress} hitSlop={12} pressedScale={0.92}>
-      <Text style={styles.skip}>{label}</Text>
+    <Tappable testID={testID} accessibilityRole="button" onPress={onPress} hitSlop={12} pressedScale={0.92}>
+      <Text style={[styles.skip, onDark && styles.onDark]}>{label}</Text>
+    </Tappable>
+  );
+}
+
+/** Leaves onboarding without saving anything: back to where the user came from. */
+export function CloseButton({ onPress, onDark }: { onPress: () => void; onDark?: boolean }) {
+  return (
+    <Tappable
+      testID="onboarding-close"
+      accessibilityRole="button"
+      accessibilityLabel="Close"
+      onPress={onPress}
+      hitSlop={8}
+      pressedScale={0.9}
+      style={[styles.back, onDark && styles.closeOnDark]}
+    >
+      <Feather name="x" size={18} color={onDark ? colors.textOnBrand : colors.brandPrimary} />
     </Tappable>
   );
 }
@@ -369,6 +388,8 @@ const styles = StyleSheet.create({
   },
   stepText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
   skip: { fontSize: 13, fontWeight: '600', color: colors.brandPrimary },
+  onDark: { color: colors.textOnBrand },
+  closeOnDark: { backgroundColor: colors.onBrandTile, borderColor: colors.onBrandTile },
   track: { height: 6, borderRadius: 3, backgroundColor: colors.borderDefault, overflow: 'hidden' },
   trackFill: { height: '100%', borderRadius: 3, backgroundColor: colors.brandAccent },
 });

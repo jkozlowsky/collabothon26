@@ -1,0 +1,125 @@
+/* eslint-disable react/no-unknown-property -- three.js JSX elements take three.js props (args, uniforms, ...). */
+import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
+import { Asset } from 'expo-asset';
+import { useEffect, useMemo, useRef } from 'react';
+import { useAnimatedReaction, type SharedValue } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import { LinearFilter, NoColorSpace, TextureLoader, Vector3, type Group } from 'three';
+
+import { colors } from '@/constants/theme';
+
+type Props = {
+  /** Sphere radius in px; the orthographic camera maps 1 world unit to this many pixels. */
+  radius: number;
+  yaw: SharedValue<number>;
+  pitch: SharedValue<number>;
+  /** False pauses rendering entirely (tab not visible). */
+  active: boolean;
+  /** No frame within FIRST_FRAME_TIMEOUT: the GL context or the texture never came up. */
+  onFail: () => void;
+};
+
+const FIRST_FRAME_TIMEOUT = 5000;
+
+const LAND_TEXTURE = require('../../../assets/globe/land-2048.png');
+
+/** Hex token → raw sRGB vector, so the shader paints exactly the Figma colour (no colour management). */
+function rgb(hex: string) {
+  const n = parseInt(hex.slice(1), 16);
+  return new Vector3(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+}
+
+const VERTEX = /* glsl */ `
+varying vec3 vObj;
+varying vec3 vView;
+void main() {
+  vObj = position;
+  vView = normalize(normalMatrix * normal);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+
+// Flat, illustrative look: ocean gradient in view space (light top-left, deep at the edge), land from the
+// texture, darker rim. UVs come from the object-space position, so lat/lng match src/lib/geo.ts exactly.
+// Keep the shading in sync with scripts/make-globe-texture.mjs (fallback picture).
+const FRAGMENT = /* glsl */ `
+uniform sampler2D land;
+uniform vec3 oceanLight;
+uniform vec3 oceanDeep;
+varying vec3 vObj;
+varying vec3 vView;
+const float PI = 3.141592653589793;
+void main() {
+  vec3 n = normalize(vObj);
+  vec2 uv = vec2(atan(n.x, n.z) / (2.0 * PI) + 0.5, 0.5 - asin(clamp(n.y, -1.0, 1.0)) / PI);
+  vec4 l = texture2D(land, uv);
+  vec3 v = normalize(vView);
+  vec3 ocean = mix(oceanLight, oceanDeep, clamp(length(v.xy - vec2(-0.35, 0.4)) / 1.5, 0.0, 1.0));
+  vec3 c = mix(ocean, l.rgb, l.a) * mix(1.0, 0.72, pow(1.0 - v.z, 2.0));
+  gl_FragColor = vec4(c, 1.0);
+}`;
+
+/**
+ * The three.js globe: one textured sphere turned by `yaw`/`pitch`. Pins and the plane are RN overlays.
+ * The canvas fills its parent.
+ */
+export function GlobeScene({ radius, yaw, pitch, active, onFail }: Props) {
+  const drawn = useRef(false);
+  useEffect(() => {
+    const timer = setTimeout(() => !drawn.current && onFail(), FIRST_FRAME_TIMEOUT);
+    return () => clearTimeout(timer);
+  }, [onFail]);
+
+  return (
+    <Canvas
+      orthographic
+      camera={{ zoom: radius, position: [0, 0, 5] }}
+      frameloop={active ? 'demand' : 'never'}
+      gl={{ antialias: true, alpha: true }}
+    >
+      <Sphere yaw={yaw} pitch={pitch} onFirstFrame={() => (drawn.current = true)} />
+    </Canvas>
+  );
+}
+
+function Sphere({ yaw, pitch, onFirstFrame }: Pick<Props, 'yaw' | 'pitch'> & { onFirstFrame: () => void }) {
+  const group = useRef<Group>(null);
+  const invalidate = useThree((s) => s.invalidate);
+  const loaded = useLoader(TextureLoader, Asset.fromModule(LAND_TEXTURE).uri);
+
+  const uniforms = useMemo(() => {
+    // No flip and no mipmaps: rows are read top-down on every GL backend, and the atan seam stays invisible.
+    const land = loaded.clone();
+    land.flipY = false;
+    land.generateMipmaps = false;
+    land.minFilter = LinearFilter;
+    land.colorSpace = NoColorSpace;
+    land.needsUpdate = true;
+    return { land: { value: land }, oceanLight: { value: rgb(colors.globeOceanLight) }, oceanDeep: { value: rgb(colors.globeOceanDeep) } };
+  }, [loaded]);
+
+  // Render on demand: a new frame only when the orientation changes.
+  useAnimatedReaction(
+    () => yaw.value + pitch.value * 1e3,
+    (next, prev) => {
+      if (next !== prev) scheduleOnRN(invalidate);
+    },
+  );
+
+  const first = useRef(true);
+  useFrame(() => {
+    group.current?.rotation.set(pitch.value, yaw.value, 0, 'XYZ');
+    if (first.current) {
+      first.current = false;
+      onFirstFrame();
+    }
+  });
+
+  return (
+    <group ref={group}>
+      <mesh>
+        <sphereGeometry args={[1, 64, 64]} />
+        <shaderMaterial vertexShader={VERTEX} fragmentShader={FRAGMENT} uniforms={uniforms} />
+      </mesh>
+    </group>
+  );
+}

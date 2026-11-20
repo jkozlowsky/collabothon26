@@ -1,6 +1,7 @@
 /** Answers from the optional personalisation questions. Every field may be missing (user skipped). */
 export type LifeStage = 'student' | 'family' | 'established' | 'pre-retirement';
-export type Experience = 'not-saving' | 'none' | 'tried' | 'regular' | 'experienced';
+/** How the user handles their money today, from not saving yet to planning ahead. */
+export type Experience = 'not-saving' | 'occasional' | 'regular' | 'investing' | 'planning';
 export type Goal =
   | 'budget'
   | 'money-habits'

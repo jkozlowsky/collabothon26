@@ -70,9 +70,9 @@ test('answers to all three questions are saved on the profile', async ({ page, r
   await expect(page.getByText(`${goals.length - 1} selected`)).toBeVisible();
   await tap(page, 'onboarding-continue');
 
-  // 3. Saving and investing, with the "I don't save yet" option. It is the last question.
+  // 3. How the user manages money today, with the "I don't save yet" option. It is the last question.
   await expect(page.getByText('Step 3 of 3')).toBeVisible();
-  await expect(page.getByText('Where are you with saving and investing?')).toBeVisible();
+  await expect(page.getByText('How do you manage your money today?')).toBeVisible();
   await expect(page.getByText("But I'd like to start")).toBeVisible();
   await expect(page.getByTestId('onboarding-continue')).toHaveText('Finish');
   await expectDisabled(page, 'onboarding-continue');

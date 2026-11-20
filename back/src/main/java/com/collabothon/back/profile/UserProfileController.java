@@ -71,7 +71,7 @@ class UserProfileController {
 	record OnboardingRequest(
 			@Pattern(regexp = "student|family|established|pre-retirement") String lifeStage,
 			@NotNull List<@NotNull @Pattern(regexp = GOALS) String> goals,
-			@Pattern(regexp = "not-saving|none|tried|regular|experienced") String experience,
+			@Pattern(regexp = "not-saving|occasional|regular|investing|planning") String experience,
 			boolean skipped) {
 	}
 

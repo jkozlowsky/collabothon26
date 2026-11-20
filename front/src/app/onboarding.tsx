@@ -166,7 +166,7 @@ export default function OnboardingScreen() {
         </Question>
       )}
       {step === 'experience' && (
-        <Question title="Where are you with saving and investing?" subtitle="No wrong answers — this just sets your starting level.">
+        <Question title="How do you manage your money today?" subtitle="No wrong answers — this just sets your starting level.">
           <SingleChoice options={EXPERIENCE} value={answers.experience} onChange={(v) => set('experience', v)} />
         </Question>
       )}

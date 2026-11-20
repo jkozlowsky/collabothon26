@@ -60,8 +60,8 @@ export const GOAL_GROUPS: { title: string; goals: { value: Goal; label: string }
 
 export const EXPERIENCE: Option<Experience>[] = [
   { value: 'not-saving', title: "I don't save yet", subtitle: "But I'd like to start", icon: 'flag' },
-  { value: 'none', title: "I save, but don't invest yet", subtitle: 'Savings account or a piggy bank', icon: 'credit-card' },
-  { value: 'tried', title: 'Tried it once or twice', subtitle: 'Bought a share or an ETF', icon: 'feather' },
-  { value: 'regular', title: 'I invest regularly', subtitle: 'Savings plan or own portfolio', icon: 'trending-up' },
-  { value: 'experienced', title: "I'm pretty experienced", subtitle: 'Stocks, bonds, funds, more', icon: 'bar-chart-2' },
+  { value: 'occasional', title: 'I save now and then', subtitle: "Whatever's left at the end of the month", icon: 'credit-card' },
+  { value: 'regular', title: 'I save regularly', subtitle: 'A budget and a safety net', icon: 'shield' },
+  { value: 'investing', title: 'I save and invest', subtitle: 'Funds, ETFs or shares', icon: 'trending-up' },
+  { value: 'planning', title: 'I plan my finances ahead', subtitle: 'Budget, savings, investments, retirement', icon: 'bar-chart-2' },
 ];

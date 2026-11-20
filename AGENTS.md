@@ -27,6 +27,10 @@ Full feature list, requirements, MUST/SHOULD/COULD priorities and team split: [`
 
 Current app tabs: **Learn** (lesson path, home), **Glossary**, **Profile**.
 
+## Design
+
+Figma is the design source of truth for screens, text styles and effects: [Finance Quest — Globe Learn Screen](https://www.figma.com/design/R4dCZH3fl7LqTwbqX3a6Jd/Finance-Quest-%E2%80%94-Globe-Learn-Screen) (fileKey `R4dCZH3fl7LqTwbqX3a6Jd`). Read it through the Figma MCP before building or restyling any UI; the **Design Kit** frame holds the shared styles.
+
 ## Repo map
 
 | Path | What | Agent guide |

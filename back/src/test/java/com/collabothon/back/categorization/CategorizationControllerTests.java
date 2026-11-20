@@ -464,6 +464,18 @@ class CategorizationControllerTests {
 	}
 
 	@Test
+	void newOnboardingAnswersRemoveTheCategorisation() throws Exception {
+		onboard("alex", ANSWERS);
+		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
+		categorize("alex", WITH_FACTS).andExpect(status().isOk());
+
+		mvc.perform(put("/api/users/alex/profile/onboarding").contentType(MediaType.APPLICATION_JSON)
+			.content(ANSWERS.replace("\"occasional\"", "\"regular\"")))
+			.andExpect(status().isOk());
+		mvc.perform(get("/api/users/alex/categorization")).andExpect(status().isNotFound());
+	}
+
+	@Test
 	void onboardingResetRemovesTheCategorisation() throws Exception {
 		onboard("lena", "{\"goals\": [], \"skipped\": true}");
 		jev.expect(requestTo(JEV_URL)).andRespond(withServerError());

@@ -4,8 +4,10 @@ CREATE TABLE categorization (
     data    JSONB NOT NULL
 );
 
--- The demo reset (DELETE /api/users/{id}/profile/onboarding) keeps the profile row and only clears
--- onboarding_completed, so the cascade above never fires for it; the categorisation goes with the answers.
+-- Every new onboarding (each PUT /api/users/{id}/profile/onboarding) and every demo reset
+-- (DELETE .../profile/onboarding, which keeps the row) changes onboarding_completed_at, so the
+-- categorisation built from the previous answers goes with them. The cascade above only covers a
+-- deleted profile row.
 CREATE FUNCTION forget_categorization() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     DELETE FROM categorization WHERE user_id = NEW.user_id;
@@ -13,7 +15,7 @@ BEGIN
 END
 $$;
 
-CREATE TRIGGER onboarding_reset_forgets_categorization
-    AFTER UPDATE OF onboarding_completed ON user_profile
-    FOR EACH ROW WHEN (OLD.onboarding_completed AND NOT NEW.onboarding_completed)
+CREATE TRIGGER new_onboarding_forgets_categorization
+    AFTER UPDATE OF onboarding_completed_at ON user_profile
+    FOR EACH ROW WHEN (OLD.onboarding_completed_at IS DISTINCT FROM NEW.onboarding_completed_at)
     EXECUTE FUNCTION forget_categorization();

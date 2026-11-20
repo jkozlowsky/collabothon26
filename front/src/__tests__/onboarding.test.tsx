@@ -19,19 +19,37 @@ const routes = {
 };
 
 const PROFILE_URL = /\/api\/users\/demo-user\/profile$/;
+const ONBOARDING_URL = /\/api\/users\/demo-user\/profile\/onboarding$/;
 let fetchMock: jest.Mock;
 
-/** Backend stub: a new user (no profile yet), an empty lesson list, and a profile PUT that echoes back. */
-beforeEach(() => {
-  fetchMock = jest.fn((url: string, init?: RequestInit) => {
-    if (PROFILE_URL.test(url) && !init?.method) return Promise.resolve({ ok: false, status: 404, statusText: 'Not Found' });
-    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
-  });
-  globalThis.fetch = fetchMock;
+const profile = (onboardingCompleted: boolean) => ({
+  userId: 'demo-user',
+  lifeStage: null,
+  goals: onboardingCompleted ? ['budget'] : [],
+  experience: null,
+  learningStyle: null,
+  confidence: { budgeting: null, saving: null, investing: null },
+  onboardingCompleted,
+  onboardingSkipped: false,
+  onboardingCompletedAt: null,
 });
 
-function savedProfile() {
-  const call = fetchMock.mock.calls.find(([url, init]) => PROFILE_URL.test(url) && init?.method === 'PUT');
+/** Backend stub: the user's profile, an empty lesson list, and an onboarding PUT that succeeds. */
+function stubBackend({ onboardingCompleted }: { onboardingCompleted: boolean }) {
+  fetchMock = jest.fn((url: string) =>
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(PROFILE_URL.test(url) ? profile(onboardingCompleted) : []),
+    }),
+  );
+  globalThis.fetch = fetchMock;
+}
+
+beforeEach(() => stubBackend({ onboardingCompleted: false }));
+
+function savedOnboarding() {
+  const call = fetchMock.mock.calls.find(([url, init]) => ONBOARDING_URL.test(url) && init?.method === 'PUT');
   return call && JSON.parse(call[1].body);
 }
 
@@ -46,17 +64,11 @@ test('app opens on onboarding; skipping the questions lands on Learn', async () 
   await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
-  expect(savedProfile()).toEqual({ goals: [], confidence: {}, skipped: true });
+  expect(savedOnboarding()).toEqual({ goals: [], confidence: {}, skipped: true });
 });
 
-test('a returning user with a saved profile goes straight to Learn', async () => {
-  fetchMock.mockImplementation((url: string) =>
-    Promise.resolve({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(PROFILE_URL.test(url) ? { userId: 'demo-user', goals: ['budget'] } : []),
-    }),
-  );
+test('a user whose profile says onboarding is completed goes straight to Learn', async () => {
+  stubBackend({ onboardingCompleted: true });
   await renderRouter(routes, { initialUrl: '/' });
 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
@@ -95,7 +107,7 @@ test('answers all five questions', async () => {
   await fireEvent.press(screen.getByText('Finish'));
 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
-  expect(savedProfile()).toEqual({
+  expect(savedOnboarding()).toEqual({
     lifeStage: 'family',
     goals: ['start-saving', 'emergency-fund', 'budget', 'etfs', 'taxes'],
     experience: 'not-saving',
@@ -105,35 +117,14 @@ test('answers all five questions', async () => {
   });
 });
 
-test('intro illustrations react to taps', async () => {
+test('the back arrow steps back through the intro slides to the welcome screen', async () => {
   await renderRouter(routes, { initialUrl: '/' });
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
-
-  // Globe: a pin or its topic chip switches the lesson card.
-  expect(screen.getByText('Your first share')).toBeOnTheScreen();
-  await fireEvent.press(screen.getByTestId('pin-Nairobi'));
-  expect(screen.getByText('Saving on the go')).toBeOnTheScreen();
-  await fireEvent.press(screen.getByTestId('topic-6'));
-  expect(screen.getByText('When prices run away')).toBeOnTheScreen();
-
-  // Account card: tapping a number swaps the lesson made from it; the eye hides amounts.
   await fireEvent.press(screen.getByTestId('onboarding-next'));
-  expect(screen.getByText('Where did your €1,268 go?')).toBeOnTheScreen();
-  await fireEvent.press(screen.getByTestId('account-in'));
-  expect(screen.getByText('Saving €215 a month?')).toBeOnTheScreen();
-  await fireEvent.press(screen.getByTestId('account-eye'));
-  expect(screen.queryByText('€ 4,280.52')).toBeNull();
+  expect(screen.getByTestId('onboarding-intro-personal')).toBeOnTheScreen();
 
-  // The back arrow returns to the previous intro page, and from the first one to the welcome screen.
   await fireEvent.press(screen.getByTestId('onboarding-back'));
   expect(screen.getByTestId('onboarding-intro-lessons')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-back'));
   expect(screen.getByTestId('onboarding-welcome')).toBeOnTheScreen();
-  await fireEvent.press(screen.getByTestId('onboarding-start'));
-  await fireEvent.press(screen.getByTestId('onboarding-next'));
-
-  // Confidence: the next step can be ticked off.
-  await fireEvent.press(screen.getByTestId('onboarding-next'));
-  await fireEvent.press(screen.getByTestId('next-step'));
-  expect(screen.getByText('+10 XP')).toBeOnTheScreen();
 });

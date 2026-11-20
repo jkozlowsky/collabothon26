@@ -42,7 +42,7 @@ export type OnboardingAnswers = {
   confidence: ConfidenceRatings;
 };
 
-/** GET /api/users/{userId}/profile. Missing answers come back as null. */
+/** GET /api/users/{userId}/profile. Always answers; missing answers come back as null. */
 export type UserProfile = {
   userId: string;
   lifeStage: LifeStage | null;
@@ -50,6 +50,8 @@ export type UserProfile = {
   experience: Experience | null;
   learningStyle: LearningStyle | null;
   confidence: Record<ConfidenceArea, Confidence | null>;
+  /** Onboarding was finished or skipped; it is not shown again. */
+  onboardingCompleted: boolean;
   onboardingSkipped: boolean;
-  onboardingCompletedAt: string;
+  onboardingCompletedAt: string | null;
 };

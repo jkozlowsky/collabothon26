@@ -104,7 +104,7 @@ export function BigButton({ label, onPress, variant = 'primary', onDark, disable
     <Tappable
       testID={testID}
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
+      aria-disabled={disabled}
       disabled={disabled}
       onPress={onPress}
       haptic={ghost ? undefined : 'light'}
@@ -156,7 +156,7 @@ export function OptionCard({ title, subtitle, icon, selected, onPress, testID }:
     <Tappable
       testID={testID}
       accessibilityRole="radio"
-      accessibilityState={{ selected }}
+      aria-checked={selected}
       onPress={onPress}
       haptic="selection"
       pressedScale={0.98}
@@ -185,7 +185,8 @@ export function ChoiceChip({ label, selected, disabled, onPress, testID }: ChipP
     <Tappable
       testID={testID}
       accessibilityRole="checkbox"
-      accessibilityState={{ checked: selected, disabled }}
+      aria-checked={selected}
+      aria-disabled={disabled}
       disabled={disabled}
       onPress={onPress}
       haptic="selection"
@@ -275,12 +276,6 @@ export const motion = {
     transitionProperty: ['backgroundColor', 'borderColor', 'opacity'],
     transitionDuration: 200,
     transitionTimingFunction: EASE_OUT,
-  },
-  /** A pin or tile that rises when selected: a short spring-like overshoot. */
-  lift: {
-    transitionProperty: 'transform',
-    transitionDuration: 280,
-    transitionTimingFunction: cubicBezier(0.34, 1.56, 0.64, 1),
   },
   /** Width of childless bars (progress fill, page dot). */
   size: {

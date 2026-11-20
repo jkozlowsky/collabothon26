@@ -24,7 +24,8 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * Profile of one user. The user id comes from the host banking app's session; there is no
  * login in Finance Quest itself (prototype: the id is passed in the path, not authenticated).
- * 404 on GET means the user has not been through onboarding yet.
+ * Every bank customer has a profile: one that was never saved comes back empty, with
+ * {@code onboardingCompleted = false}.
  */
 @RestController
 @RequestMapping("/api/users/{userId}/profile")
@@ -38,30 +39,36 @@ class UserProfileController {
 
 	@GetMapping
 	ProfileDto get(@PathVariable String userId) {
-		return profiles.findById(userId)
-			.map(ProfileDto::from)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+		return ProfileDto.from(profiles.findById(checked(userId)).orElseGet(() -> new UserProfile(userId)));
 	}
 
-	/** Saves the onboarding answers (or that the user skipped them). Repeating it overwrites. */
-	@PutMapping
+	/**
+	 * Saves the onboarding answers (or that the user skipped them) and marks onboarding as completed,
+	 * so the app does not show it again. Repeating it overwrites the answers.
+	 */
+	@PutMapping("/onboarding")
 	@Transactional
 	ProfileDto saveOnboarding(@PathVariable String userId, @Valid @RequestBody OnboardingRequest req) {
-		if (userId.isBlank() || userId.length() > 64) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid user id");
-		}
-		UserProfile profile = profiles.findById(userId).orElseGet(() -> new UserProfile(userId));
+		UserProfile profile = profiles.findById(checked(userId)).orElseGet(() -> new UserProfile(userId));
 		Confidence c = req.confidence() == null ? new Confidence(null, null, null) : req.confidence();
 		profile.completeOnboarding(req.lifeStage(), req.goals().stream().distinct().toList(), req.experience(),
 				req.learningStyle(), c.budgeting(), c.saving(), c.investing(), req.skipped());
 		return ProfileDto.from(profiles.save(profile));
 	}
 
-	/** Demo helper: forget the profile so onboarding shows again. */
-	@DeleteMapping
+	/** Clears the onboarding answers and the completed flag so onboarding shows again (demo "restart"). */
+	@DeleteMapping("/onboarding")
+	@Transactional
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	void reset(@PathVariable String userId) {
-		profiles.deleteById(userId);
+	void resetOnboarding(@PathVariable String userId) {
+		profiles.findById(checked(userId)).ifPresent(UserProfile::resetOnboarding);
+	}
+
+	private static String checked(String userId) {
+		if (userId.isBlank() || userId.length() > 64) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid user id");
+		}
+		return userId;
 	}
 
 	record OnboardingRequest(
@@ -84,12 +91,13 @@ class UserProfileController {
 			+ "|scams|taxes|kids-future|family-money|retirement";
 
 	record ProfileDto(String userId, String lifeStage, List<String> goals, String experience, String learningStyle,
-			Confidence confidence, boolean onboardingSkipped, Instant onboardingCompletedAt) {
+			Confidence confidence, boolean onboardingCompleted, boolean onboardingSkipped,
+			Instant onboardingCompletedAt) {
 		static ProfileDto from(UserProfile p) {
 			return new ProfileDto(p.getUserId(), p.getLifeStage(), p.getGoals(), p.getExperience(),
 					p.getLearningStyle(),
 					new Confidence(p.getConfidenceBudgeting(), p.getConfidenceSaving(), p.getConfidenceInvesting()),
-					p.isOnboardingSkipped(), p.getOnboardingCompletedAt());
+					p.isOnboardingCompleted(), p.isOnboardingSkipped(), p.getOnboardingCompletedAt());
 		}
 	}
 

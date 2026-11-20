@@ -6,13 +6,20 @@ const http = require('http');
 const config = getDefaultConfig(__dirname);
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8080';
 
+function withoutOrigin(headers) {
+  const { origin: _origin, ...rest } = headers;
+  return rest;
+}
+
 config.server.enhanceMiddleware = (metroMiddleware) => (req, res, next) => {
   if (!req.url.startsWith('/api/')) return metroMiddleware(req, res, next);
 
   const target = new URL(req.url, BACKEND_URL);
   const upstream = http.request(
     target,
-    { method: req.method, headers: { ...req.headers, host: target.host } },
+    // Drop Origin: to the browser this is a same-origin request to Metro, so the backend's CORS
+    // allow-list must not apply (it would reject e.g. a tunnel URL or another dev port).
+    { method: req.method, headers: { ...withoutOrigin(req.headers), host: target.host } },
     (backendRes) => {
       res.writeHead(backendRes.statusCode, backendRes.headers);
       backendRes.pipe(res);

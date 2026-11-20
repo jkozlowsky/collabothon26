@@ -1,0 +1,62 @@
+import { expect, type APIRequestContext, type Page } from '@playwright/test';
+
+/** The user the app signs in as (EXPO_PUBLIC_USER_ID unset). Requests go through Metro's /api proxy. */
+export const PROFILE_URL = '/api/users/demo-user/profile';
+const ONBOARDING_URL = `${PROFILE_URL}/onboarding`;
+
+export type SavedProfile = {
+  userId: string;
+  lifeStage: string | null;
+  goals: string[];
+  experience: string | null;
+  learningStyle: string | null;
+  confidence: { budgeting: number | null; saving: number | null; investing: number | null };
+  onboardingCompleted: boolean;
+  onboardingSkipped: boolean;
+  onboardingCompletedAt: string | null;
+};
+
+/** Clear the onboarding answers and flag, so the app shows onboarding again. */
+export async function resetOnboarding(request: APIRequestContext) {
+  const res = await request.delete(ONBOARDING_URL);
+  expect(res.status()).toBe(204);
+}
+
+export async function getProfile(request: APIRequestContext): Promise<SavedProfile> {
+  const res = await request.get(PROFILE_URL);
+  expect(res.ok()).toBe(true);
+  return res.json();
+}
+
+/** Saving runs in the background after the last tap, so wait until the flag flips. */
+export async function waitForCompletedOnboarding(request: APIRequestContext): Promise<SavedProfile> {
+  await expect
+    .poll(async () => (await getProfile(request)).onboardingCompleted, { message: 'onboarding saved' })
+    .toBe(true);
+  return getProfile(request);
+}
+
+export async function openApp(page: Page) {
+  await page.goto('/');
+}
+
+export const tap = (page: Page, testId: string) => page.getByTestId(testId).click();
+
+/** Welcome → three intro slides → the "answer a few questions?" page. */
+export async function goToInvite(page: Page) {
+  await tap(page, 'onboarding-start');
+  for (let i = 0; i < 3; i++) await tap(page, 'onboarding-next');
+  await expect(page.getByTestId('onboarding-invite')).toBeVisible();
+}
+
+export async function expectOnLearn(page: Page) {
+  await expect(page.getByTestId('screen-learn')).toBeVisible();
+  await expect(page.getByTestId('onboarding-welcome')).toHaveCount(0);
+}
+
+/** React Native Web marks disabled pressables with aria-disabled. */
+export async function expectDisabled(page: Page, testId: string, disabled = true) {
+  const el = page.getByTestId(testId);
+  if (disabled) await expect(el).toHaveAttribute('aria-disabled', 'true');
+  else await expect(el).not.toHaveAttribute('aria-disabled', 'true');
+}

@@ -340,7 +340,7 @@ function ConfidenceScales({
                     key={n}
                     testID={`confidence-${area.value}-${n}`}
                     accessibilityRole="radio"
-                    accessibilityState={{ selected }}
+                    aria-checked={selected}
                     accessibilityLabel={`${n} of 5, ${CONFIDENCE_LABELS[n - 1]}`}
                     haptic="selection"
                     pressedScale={0.9}

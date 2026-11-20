@@ -29,6 +29,9 @@ public class UserProfile {
 
 	private Short confidenceInvesting;
 
+	/** True once the user finished or skipped onboarding; it is then not shown again. */
+	private boolean onboardingCompleted;
+
 	private boolean onboardingSkipped;
 
 	private Instant onboardingCompletedAt;
@@ -38,6 +41,7 @@ public class UserProfile {
 
 	UserProfile(String userId) {
 		this.userId = userId;
+		this.goals = List.of();
 	}
 
 	void completeOnboarding(String lifeStage, List<String> goals, String experience, String learningStyle,
@@ -50,7 +54,22 @@ public class UserProfile {
 		this.confidenceSaving = confidenceSaving;
 		this.confidenceInvesting = confidenceInvesting;
 		this.onboardingSkipped = skipped;
+		this.onboardingCompleted = true;
 		this.onboardingCompletedAt = Instant.now();
+	}
+
+	/** Forget the onboarding answers so onboarding shows again. Other profile data stays. */
+	void resetOnboarding() {
+		this.lifeStage = null;
+		this.goals = List.of();
+		this.experience = null;
+		this.learningStyle = null;
+		this.confidenceBudgeting = null;
+		this.confidenceSaving = null;
+		this.confidenceInvesting = null;
+		this.onboardingSkipped = false;
+		this.onboardingCompleted = false;
+		this.onboardingCompletedAt = null;
 	}
 
 	public String getUserId() {
@@ -83,6 +102,10 @@ public class UserProfile {
 
 	public Short getConfidenceInvesting() {
 		return confidenceInvesting;
+	}
+
+	public boolean isOnboardingCompleted() {
+		return onboardingCompleted;
 	}
 
 	public boolean isOnboardingSkipped() {

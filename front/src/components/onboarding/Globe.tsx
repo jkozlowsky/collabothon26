@@ -1,10 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { type CSSStyle } from 'react-native-reanimated';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 import Svg, { Circle, ClipPath, Defs, Ellipse, G, Line, Path, RadialGradient, Stop } from 'react-native-svg';
 
-import { EASE_IN_OUT, motion, Tappable } from '@/components/onboarding/ui';
+import { EASE_IN_OUT, EASE_OUT } from '@/components/onboarding/ui';
 import { colors } from '@/constants/theme';
 
 /** All globe geometry lives in a 300×300 box; it is scaled to `size`. */
@@ -92,103 +92,106 @@ export function GlobeSphere({ size }: { size: number }) {
 type GlobeProps = {
   size: number;
   pins?: GlobePin[];
-  /** Index of the highlighted pin. */
+  /** Index of the highlighted pin (drawn larger, with a glow under it). */
   selected?: number;
-  onSelect?: (index: number) => void;
 };
 
-/** The globe with lesson pins on top. Tapping a pin highlights it. */
-export function Globe({ size, pins = GLOBE_PINS, selected, onSelect }: GlobeProps) {
+/** Pins drop onto the globe one after another; the highlighted one's glow breathes. */
+const PIN_DROP = {
+  from: { opacity: 0, transform: [{ translateY: -14 }] },
+  to: { opacity: 1, transform: [{ translateY: 0 }] },
+};
+const BREATHE = { from: { opacity: 0.25, transform: [{ scale: 0.85 }] }, to: { opacity: 0.55, transform: [{ scale: 1.15 }] } };
+
+/** The globe with lesson pins on top. Decorative. */
+export function Globe({ size, pins = GLOBE_PINS, selected }: GlobeProps) {
+  const reduced = useReducedMotion();
   const scale = size / VIEW;
   const sel = selected === undefined ? undefined : pins[selected];
   return (
     <View style={{ width: size, height: size }}>
       <GlobeSphere size={size} />
       {sel && (
-        // The glow is childless and absolutely placed, so moving it with a transform is cheap.
         <Animated.View
           pointerEvents="none"
           style={[
             styles.glow,
-            glowMotion,
             {
+              left: (sel.x - 28) * scale,
+              top: (sel.y - 10) * scale,
               width: 56 * scale,
               height: 20 * scale,
               backgroundColor: sel.color,
-              transform: [{ translateX: (sel.x - 28) * scale }, { translateY: (sel.y - 10) * scale }],
+            },
+            !reduced && {
+              animationName: BREATHE,
+              animationDuration: 1600,
+              animationDirection: 'alternate',
+              animationIterationCount: 'infinite',
+              animationTimingFunction: EASE_IN_OUT,
             },
           ]}
         />
       )}
       {pins.map((p, i) => (
-        <Pin key={p.city} pin={p} scale={scale} selected={i === selected} onPress={onSelect && (() => onSelect(i))} />
+        <Pin key={p.city} pin={p} scale={scale} selected={i === selected} delay={reduced ? undefined : 200 + i * 90} />
       ))}
     </View>
   );
 }
 
-function Pin({ pin, scale, selected, onPress }: { pin: GlobePin; scale: number; selected: boolean; onPress?: () => void }) {
-  const s = Math.round(40 * scale);
+function Pin({ pin, scale, selected, delay }: { pin: GlobePin; scale: number; selected: boolean; delay?: number }) {
+  // The highlighted pin is drawn larger rather than scaled, so it stays crisp.
+  const s = Math.round((selected ? 50 : 40) * scale);
   // A square with three round corners, turned 45°, reads as a map pin; its tip sits on (x, y).
   const tip = s * Math.SQRT1_2;
   return (
-    <Tappable
-      onPress={onPress}
-      disabled={!onPress}
-      haptic="selection"
-      pressedScale={0.88}
-      hitSlop={6}
-      accessibilityRole="button"
-      accessibilityLabel={`${pin.city}: ${pin.title}`}
-      accessibilityState={{ selected }}
-      testID={`pin-${pin.city}`}
-      containerStyle={{ position: 'absolute', left: pin.x * scale - s / 2, top: pin.y * scale - s / 2 - tip, zIndex: selected ? 2 : 1 }}
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.pinWrap,
+        {
+          position: 'absolute',
+          left: pin.x * scale - s / 2,
+          top: pin.y * scale - s / 2 - tip,
+          width: s,
+          height: s,
+          zIndex: selected ? 2 : 1,
+        },
+        delay !== undefined && {
+          animationName: PIN_DROP,
+          animationDuration: 420,
+          animationDelay: delay,
+          animationFillMode: 'backwards',
+          animationTimingFunction: EASE_OUT,
+        },
+      ]}
     >
-      {/* Grows from its tip, so the selected pin lifts off the map instead of swelling sideways. */}
-      <Animated.View
+      <View
         style={[
-          styles.pinWrap,
-          motion.lift,
+          styles.pin,
           {
             width: s,
             height: s,
-            transformOrigin: ['50%', `${50 + (tip / s) * 100}%`, 0],
-            transform: [{ scale: selected ? 1.28 : 1 }],
+            borderRadius: s / 2,
+            borderBottomRightRadius: 0,
+            backgroundColor: pin.color,
+            borderWidth: Math.max(2, 3 * scale),
           },
         ]}
-      >
-        <View
-          style={[
-            styles.pin,
-            {
-              width: s,
-              height: s,
-              borderRadius: s / 2,
-              borderBottomRightRadius: 0,
-              backgroundColor: pin.color,
-              borderWidth: Math.max(2, 3 * scale),
-            },
-          ]}
-        />
-        <Ionicons name={pin.icon} size={Math.round(s * 0.42)} color={pin.state === 'active' ? colors.brandPrimary : '#fff'} />
-        {pin.state === 'done' && (
-          <View style={[styles.badge, { width: s * 0.46, height: s * 0.46, borderRadius: s * 0.23 }]}>
-            <Ionicons name="checkmark" size={Math.round(s * 0.3)} color="#fff" />
-          </View>
-        )}
-      </Animated.View>
-    </Tappable>
+      />
+      <Ionicons name={pin.icon} size={Math.round(s * 0.42)} color={pin.state === 'active' ? colors.brandPrimary : '#fff'} />
+      {pin.state === 'done' && (
+        <View style={[styles.badge, { width: s * 0.46, height: s * 0.46, borderRadius: s * 0.23 }]}>
+          <Ionicons name="checkmark" size={Math.round(s * 0.3)} color="#fff" />
+        </View>
+      )}
+    </Animated.View>
   );
 }
 
-const glowMotion = {
-  transitionProperty: ['transform', 'backgroundColor'],
-  transitionDuration: 360,
-  transitionTimingFunction: EASE_IN_OUT,
-} satisfies CSSStyle;
-
 const styles = StyleSheet.create({
-  glow: { position: 'absolute', left: 0, top: 0, borderRadius: 999, opacity: 0.45 },
+  glow: { position: 'absolute', borderRadius: 999, opacity: 0.45 },
   pinWrap: { alignItems: 'center', justifyContent: 'center' },
   pin: {
     position: 'absolute',

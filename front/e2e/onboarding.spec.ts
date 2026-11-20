@@ -1,0 +1,161 @@
+import { expect, test } from '@playwright/test';
+
+import {
+  expectDisabled,
+  expectOnLearn,
+  getProfile,
+  goToInvite,
+  openApp,
+  resetOnboarding,
+  tap,
+  waitForCompletedOnboarding,
+} from './app';
+
+test.beforeEach(async ({ request }) => {
+  await resetOnboarding(request);
+});
+
+test.afterAll(async ({ request }) => {
+  await resetOnboarding(request);
+});
+
+test('a new user can skip the questions; that is saved and onboarding does not come back', async ({ page, request }) => {
+  expect((await getProfile(request)).onboardingCompleted).toBe(false);
+  await openApp(page);
+  await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
+  await expect(page.getByText('Invest with confidence — one lesson at a time')).toBeVisible();
+
+  await goToInvite(page);
+  await expect(page.getByText('Got a minute for a few questions?')).toBeVisible();
+  await tap(page, 'onboarding-skip-all');
+  await expectOnLearn(page);
+
+  const profile = await waitForCompletedOnboarding(request);
+  expect(profile).toMatchObject({ onboardingCompleted: true, onboardingSkipped: true, goals: [], lifeStage: null });
+
+  await page.reload();
+  await expectOnLearn(page);
+});
+
+test('"Skip" on an intro slide jumps straight to the questions invite', async ({ page }) => {
+  await openApp(page);
+  await tap(page, 'onboarding-start');
+  await tap(page, 'onboarding-skip');
+  await expect(page.getByTestId('onboarding-invite')).toBeVisible();
+});
+
+test('answers to all five questions are saved on the profile', async ({ page, request }) => {
+  await openApp(page);
+  await goToInvite(page);
+  await tap(page, 'onboarding-personalise');
+
+  // 1. Life stage
+  await expect(page.getByText('Step 1 of 5')).toBeVisible();
+  await expectDisabled(page, 'onboarding-continue');
+  await tap(page, 'option-family');
+  await expectDisabled(page, 'onboarding-continue', false);
+  await tap(page, 'onboarding-continue');
+
+  // 2. Goals: no upper limit, including the newer categories.
+  await expect(page.getByText('Pick as many as you like.', { exact: false })).toBeVisible();
+  const goals = ['budget', 'start-saving', 'credit-cards', 'stocks', 'crypto', 'insurance', 'retirement'];
+  for (const g of goals) await tap(page, `goal-${g}`);
+  await expect(page.getByText(`${goals.length} selected`)).toBeVisible();
+  await tap(page, 'goal-crypto'); // tapping again deselects
+  await expect(page.getByText(`${goals.length - 1} selected`)).toBeVisible();
+  await tap(page, 'onboarding-continue');
+
+  // 3. Saving and investing, with the "I don't save yet" option
+  await expect(page.getByText('Where are you with saving and investing?')).toBeVisible();
+  await expect(page.getByText("But I'd like to start")).toBeVisible();
+  await tap(page, 'option-not-saving');
+  await tap(page, 'onboarding-continue');
+
+  // 4. Learning style, with the note that it can be changed later
+  await expect(page.getByText('You can change it later in Settings.', { exact: false })).toBeVisible();
+  await tap(page, 'option-practice');
+  await tap(page, 'onboarding-continue');
+
+  // 5. Three 1-5 confidence scales; Finish waits for all three.
+  await expect(page.getByText('Step 5 of 5')).toBeVisible();
+  await tap(page, 'confidence-budgeting-4');
+  await tap(page, 'confidence-saving-2');
+  await expectDisabled(page, 'onboarding-continue');
+  await tap(page, 'confidence-investing-1');
+  await tap(page, 'confidence-investing-3'); // changing a rating keeps only the last one
+  await expect(page.getByTestId('confidence-investing').getByText('Somewhat')).toBeVisible();
+  await expectDisabled(page, 'onboarding-continue', false);
+  await tap(page, 'onboarding-continue');
+  await expectOnLearn(page);
+
+  const profile = await waitForCompletedOnboarding(request);
+  expect(profile).toMatchObject({
+    lifeStage: 'family',
+    goals: goals.filter((g) => g !== 'crypto'),
+    experience: 'not-saving',
+    learningStyle: 'practice',
+    confidence: { budgeting: 4, saving: 2, investing: 3 },
+    onboardingCompleted: true,
+    onboardingSkipped: false,
+  });
+
+  await page.reload();
+  await expectOnLearn(page);
+});
+
+test('skipping in the middle of the questions keeps the answers given so far', async ({ page, request }) => {
+  await openApp(page);
+  await goToInvite(page);
+  await tap(page, 'onboarding-personalise');
+  await tap(page, 'option-student');
+  await tap(page, 'onboarding-continue');
+  await tap(page, 'goal-budget');
+  await tap(page, 'onboarding-skip');
+  await expectOnLearn(page);
+
+  const profile = await waitForCompletedOnboarding(request);
+  expect(profile).toMatchObject({
+    lifeStage: 'student',
+    goals: ['budget'],
+    experience: null,
+    confidence: { budgeting: null, saving: null, investing: null },
+    onboardingSkipped: false,
+  });
+});
+
+test('the back arrow steps back through questions and intro slides, keeping answers', async ({ page }) => {
+  await openApp(page);
+  await tap(page, 'onboarding-start');
+  await tap(page, 'onboarding-next');
+  await expect(page.getByTestId('onboarding-intro-personal')).toBeVisible();
+  await tap(page, 'onboarding-back');
+  await expect(page.getByTestId('onboarding-intro-lessons')).toBeVisible();
+  await tap(page, 'onboarding-back');
+  await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
+
+  await goToInvite(page);
+  await tap(page, 'onboarding-personalise');
+  await tap(page, 'option-established');
+  await tap(page, 'onboarding-continue');
+  await expect(page.getByText('Step 2 of 5')).toBeVisible();
+  await tap(page, 'onboarding-back');
+  await expect(page.getByText('Step 1 of 5')).toBeVisible();
+  await expect(page.getByTestId('option-established')).toHaveAttribute('aria-checked', 'true');
+});
+
+test('"Restart onboarding" on Profile clears the answers and the flag; onboarding shows again', async ({ page, request }) => {
+  await openApp(page);
+  await goToInvite(page);
+  await tap(page, 'onboarding-skip-all');
+  await expectOnLearn(page);
+  await waitForCompletedOnboarding(request);
+
+  await page.getByRole('tab', { name: /Profile/ }).click();
+  await tap(page, 'restart-onboarding');
+  await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
+  await expect.poll(async () => (await getProfile(request)).onboardingCompleted).toBe(false);
+  expect((await getProfile(request)).goals).toEqual([]);
+
+  await page.reload();
+  await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
+});

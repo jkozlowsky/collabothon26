@@ -14,7 +14,7 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
     {
-      command: 'npx expo start --web --port 8081',
+      command: 'npx expo start --web --localhost --port 8081',
       url: 'http://localhost:8081',
       timeout: 120_000,
       reuseExistingServer: !process.env.CI,

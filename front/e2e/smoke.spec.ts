@@ -16,7 +16,8 @@ test('app opens on the bank; Learn runs onboarding, then Map; Bank comes back; a
   // Back to the bank, then send Anna € 25.
   await page.getByTestId('nav-bank').click();
   await page.getByTestId('action-transfer').click();
-  await page.getByTestId('contact-anna').click();
+  // Scoped to the sheet: the Payments page (rendered next door in the pager) shows Anna too.
+  await page.getByTestId('transfer-sheet').getByTestId('contact-anna').click();
   await page.getByTestId('key-2').click();
   await page.getByTestId('key-5').click();
   await page.getByTestId('transfer-amount-continue').click();

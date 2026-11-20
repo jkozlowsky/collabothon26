@@ -136,12 +136,15 @@ test('"Restart onboarding" on Profile clears the answers and the flag; onboardin
   await expectOnLearn(page);
   await waitForCompletedOnboarding(request);
 
-  await page.getByRole('tab', { name: /Profile/ }).click();
+  await tap(page, 'nav-profile');
   await tap(page, 'restart-onboarding');
-  await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
+  // Restart goes back to the bank; the next Learn tap shows onboarding again.
+  await expect(page.getByTestId('screen-overview')).toBeVisible();
   await expect.poll(async () => (await getProfile(request)).onboardingCompleted).toBe(false);
   expect((await getProfile(request)).goals).toEqual([]);
+  await tap(page, 'nav-learn');
+  await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
 
-  await page.reload();
+  await openApp(page);
   await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
 });

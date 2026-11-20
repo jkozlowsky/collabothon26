@@ -34,8 +34,10 @@ export async function waitForCompletedOnboarding(request: APIRequestContext): Pr
   return getProfile(request);
 }
 
+/** The app opens on the bank; Finance Quest (and its onboarding, the first time) starts from Learn. */
 export async function openApp(page: Page) {
   await page.goto('/');
+  await page.getByTestId('nav-learn').click();
 }
 
 export const tap = (page: Page, testId: string) => page.getByTestId(testId).click();

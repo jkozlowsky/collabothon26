@@ -25,7 +25,7 @@ Apply these to every feature and every line of user-facing copy:
 
 Full feature list, requirements, MUST/SHOULD/COULD priorities and team split: [`FEATURES.md`](FEATURES.md) (Polish). Read it before starting any feature. The MUST tier is: lesson engine (quiz, matching tiles, text) with one complete lesson, onboarding test + basic profiling, user profile with XP/level.
 
-Current app tabs: **Learn** (lesson path, home), **Glossary**, **Profile**.
+The app opens on a **mock bank** (frontend only, seeded data in `front/src/lib/bank/`): **Overview · Payments · Credits · Invest** plus a **Learn** button. Learn switches the nav to Finance Quest: **Bank · Map** (lesson path) **· Glossary · Profile**. Lessons read the user's numbers through `useBank()` and the selectors in `front/src/lib/bank/selectors.ts`.
 
 ## Design
 

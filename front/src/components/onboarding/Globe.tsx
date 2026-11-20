@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import type { ComponentProps } from 'react';
+import { useId, type ComponentProps } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import Svg, { Circle, ClipPath, Defs, Ellipse, G, Line, Path, RadialGradient, Stop } from 'react-native-svg';
@@ -55,6 +55,8 @@ export const GLOBE_PINS: GlobePin[] = [
 
 /** The globe sphere: ocean, grid and land, without pins. */
 export function GlobeSphere({ size }: { size: number }) {
+  // Unique ids: the bank shows several globes at once, and on web a shared id can point at a hidden copy.
+  const uid = useId().replace(/:/g, '');
   const parallels = [-0.7, -0.35, 0, 0.35, 0.7].map((f) => {
     const y = C + f * R;
     const half = Math.sqrt(R * R - (f * R) ** 2);
@@ -63,17 +65,17 @@ export function GlobeSphere({ size }: { size: number }) {
   return (
     <Svg width={size} height={size} viewBox={`0 0 ${VIEW} ${VIEW}`}>
       <Defs>
-        <RadialGradient id="ocean" cx="38%" cy="32%" r="75%">
+        <RadialGradient id={`ocean-${uid}`} cx="38%" cy="32%" r="75%">
           <Stop offset="0" stopColor="#3C8C99" />
           <Stop offset="0.45" stopColor="#0E4A59" />
           <Stop offset="1" stopColor={colors.brandPrimary} />
         </RadialGradient>
-        <ClipPath id="sphere">
+        <ClipPath id={`sphere-${uid}`}>
           <Circle cx={C} cy={C} r={R} />
         </ClipPath>
       </Defs>
-      <Circle cx={C} cy={C} r={R} fill="url(#ocean)" />
-      <G clipPath="url(#sphere)">
+      <Circle cx={C} cy={C} r={R} fill={`url(#ocean-${uid})`} />
+      <G clipPath={`url(#sphere-${uid})`}>
         {parallels.map((p) => (
           <Line key={p.y} x1={p.x1} y1={p.y} x2={p.x2} y2={p.y} stroke="#fff" strokeOpacity={0.12} strokeWidth={1.2} />
         ))}

@@ -1,12 +1,15 @@
 # Local development shortcuts. `make help` lists them.
 SHELL := /bin/bash
-.PHONY: help dev setup db db-stop db-reset back front web android check test e2e
+.PHONY: help dev phone setup db db-stop db-reset back front web android check test e2e
 
 help: ## List commands
 	@grep -E '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
 
-dev: ## Everything at once: Postgres + backend + web app (Ctrl+C stops)
+dev: ## Everything at once: Postgres + backend + web app on localhost (Ctrl+C stops)
 	./scripts/dev.sh
+
+phone: ## Everything at once + Expo tunnel QR for a phone (Ctrl+C stops)
+	./scripts/dev.sh --phone
 
 setup: ## One-time: .env + frontend dependencies
 	@test -f .env || cp .env.example .env
@@ -24,14 +27,14 @@ db-reset: ## Delete the database with all data (Flyway recreates the schema on b
 back: db ## Spring Boot backend on :8080 (reads .env itself)
 	cd back && ./mvnw spring-boot:run
 
-front: ## Expo dev server: QR for Expo Go, `w` = web, `a` = Android
-	cd front && npx expo start
+front: ## Expo dev server on localhost (`w` = web, `a` = Android)
+	cd front && npx expo start --localhost
 
-web: ## App in the browser at http://localhost:8081
-	cd front && npx expo start --web
+web: ## App in the browser at http://localhost:8081 (loopback only)
+	cd front && npx expo start --web --localhost
 
-android: ## App on a running Android emulator
-	cd front && npx expo start --android
+android: ## App on a running Android emulator (loopback only)
+	cd front && npx expo start --android --localhost
 
 check: ## Frontend typecheck + lint + tests, backend tests
 	cd front && npm run check

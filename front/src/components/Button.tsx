@@ -9,16 +9,19 @@ type Props = {
   label: string;
   onPress: () => void;
   variant?: Variant;
+  disabled?: boolean;
   testID?: string;
 };
 
-export function Button({ label, onPress, variant = 'primary', testID }: Props) {
+export function Button({ label, onPress, variant = 'primary', disabled = false, testID }: Props) {
   return (
     <Pressable
       testID={testID}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.base, variantStyles[variant], pressed && styles.pressed]}
+      style={({ pressed }) => [styles.base, variantStyles[variant], pressed && styles.pressed, disabled && styles.disabled]}
     >
       <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
     </Pressable>
@@ -35,6 +38,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   pressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
+  disabled: { opacity: 0.4 },
   label: type.titleCard,
 });
 

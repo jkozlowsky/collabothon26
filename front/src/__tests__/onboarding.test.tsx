@@ -1,22 +1,6 @@
-import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
-import TabsLayout from '@/app/(tabs)/_layout';
-import GlossaryScreen from '@/app/(tabs)/glossary';
-import LearnScreen from '@/app/(tabs)/index';
-import ProfileScreen from '@/app/(tabs)/profile';
-import RootLayout from '@/app/_layout';
-import LessonScreen from '@/app/lesson/[id]';
-import OnboardingScreen from '@/app/onboarding';
-
-const routes = {
-  _layout: RootLayout,
-  onboarding: OnboardingScreen,
-  '(tabs)/_layout': TabsLayout,
-  '(tabs)/index': LearnScreen,
-  '(tabs)/glossary': GlossaryScreen,
-  '(tabs)/profile': ProfileScreen,
-  'lesson/[id]': LessonScreen,
-};
+import { appRoutes as routes } from '@/test-utils/routes';
 
 const PROFILE_URL = /\/api\/users\/demo-user\/profile$/;
 const ONBOARDING_URL = /\/api\/users\/demo-user\/profile\/onboarding$/;
@@ -51,9 +35,18 @@ function savedOnboarding() {
   return call && JSON.parse(call[1].body);
 }
 
-test('app opens on onboarding; skipping the questions lands on Learn', async () => {
+/** The app opens on the bank; Finance Quest (and its onboarding) starts from the Learn button. */
+async function openLearn() {
   await renderRouter(routes, { initialUrl: '/' });
+  await fireEvent.press(await screen.findByTestId('nav-learn'));
+}
 
+test('app opens on the bank; the first Learn tap runs onboarding, skipping it lands on Learn', async () => {
+  await renderRouter(routes, { initialUrl: '/' });
+  expect(await screen.findByTestId('screen-overview')).toBeOnTheScreen();
+  expect(screen.queryByTestId('onboarding-welcome')).toBeNull();
+
+  await fireEvent.press(screen.getByTestId('nav-learn'));
   expect(await screen.findByTestId('onboarding-welcome')).toBeOnTheScreen();
   expect(screen.getByText('Finances with confidence — one lesson at a time')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-start'));
@@ -66,16 +59,20 @@ test('app opens on onboarding; skipping the questions lands on Learn', async () 
   expect(savedOnboarding()).toEqual({ goals: [], skipped: true });
 });
 
-test('a user whose profile says onboarding is completed goes straight to Learn', async () => {
+test('a user whose profile says onboarding is completed goes from the bank straight to Learn', async () => {
   stubBackend({ onboardingCompleted: true });
   await renderRouter(routes, { initialUrl: '/' });
+  // Let the profile request resolve before tapping Learn.
+  await screen.findByTestId('screen-overview');
+  await act(async () => {});
+  await fireEvent.press(screen.getByTestId('nav-learn'));
 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
   expect(screen.queryByTestId('onboarding-welcome')).toBeNull();
 });
 
 test('answers all three questions', async () => {
-  await renderRouter(routes, { initialUrl: '/' });
+  await openLearn();
 
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
   await fireEvent.press(screen.getByTestId('onboarding-next'));
@@ -107,7 +104,7 @@ test('answers all three questions', async () => {
 });
 
 test('the back arrow returns from the intro slide to the welcome screen', async () => {
-  await renderRouter(routes, { initialUrl: '/' });
+  await openLearn();
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
   expect(screen.getByTestId('onboarding-intro')).toBeOnTheScreen();
 

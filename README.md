@@ -4,6 +4,31 @@
 - `back/` — Spring Boot backend (Maven)
 - `docker-compose.yml` — Postgres 17
 
+## Frontend structure
+
+Uses [Expo Router](https://docs.expo.dev/router/introduction/): every file in `src/app/` is a route.
+
+```
+front/src/
+├── app/                  # routes only (file = screen)
+│   ├── _layout.tsx       # root Stack
+│   └── (tabs)/           # bottom tab bar
+│       ├── _layout.tsx
+│       ├── index.tsx     # Learn  (/)
+│       ├── glossary.tsx  # /glossary
+│       └── profile.tsx   # /profile
+├── components/           # reusable UI (Screen.tsx: safe-area page + title, `scroll` prop)
+├── hooks/                # custom hooks (useXxx.ts)
+├── lib/                  # non-UI code: api.ts (backend client), utils
+├── constants/            # theme.ts (colors, spacing), config
+└── types/                # shared TS types / API DTOs
+```
+
+- Import with the `@/` alias: `import { Screen } from '@/components/Screen'`.
+- Don't add `index.ts` barrel files. Import directly from the file.
+- Give interactive elements a `testID` (it becomes `data-testid` on web for Playwright).
+- Backend URL: set `EXPO_PUBLIC_API_URL` in `front/.env` (default `http://localhost:8080`).
+
 ## Prerequisites
 
 - Node 22+, npm

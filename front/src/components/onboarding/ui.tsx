@@ -1,0 +1,372 @@
+import Feather from '@expo/vector-icons/Feather';
+import * as Haptics from 'expo-haptics';
+import { useState, type ComponentProps, type ReactNode } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { cubicBezier, useReducedMotion, type CSSStyle } from 'react-native-reanimated';
+
+import type { IconName } from '@/constants/onboarding';
+import { brand, radius, spacing } from '@/constants/theme';
+
+/** Strong ease-out for UI; ease-in-out for things moving across the screen. */
+export const EASE_OUT = cubicBezier(0.23, 1, 0.32, 1);
+export const EASE_IN_OUT = cubicBezier(0.77, 0, 0.175, 1);
+
+/** Pop-in for a mark that appears on selection (check, badge). Never from scale 0. */
+export const POP_IN = {
+  from: { opacity: 0, transform: [{ scale: 0.5 }] },
+  '70%': { opacity: 1, transform: [{ scale: 1.12 }] },
+  to: { opacity: 1, transform: [{ scale: 1 }] },
+};
+
+type AnimatedStyle = ComponentProps<typeof Animated.View>['style'];
+
+type HapticKind = 'selection' | 'light' | 'success';
+
+/** Haptics are a bonus on top of the visual: silent on web and never allowed to throw. */
+export function haptic(kind: HapticKind) {
+  if (Platform.OS === 'web') return;
+  const p =
+    kind === 'selection'
+      ? Haptics.selectionAsync()
+      : kind === 'light'
+        ? Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+        : Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  p.catch(() => {});
+}
+
+type TappableProps = Omit<PressableProps, 'style' | 'children'> & {
+  /** Style of the visible (scaling) element; may carry Reanimated transitions. */
+  style?: AnimatedStyle;
+  /** Style of the outer touch area, e.g. `flex: 1` when the tappable sits in a row. */
+  containerStyle?: StyleProp<ViewStyle>;
+  haptic?: HapticKind;
+  /** Scale while the finger is down. 0.97 for buttons; smaller targets can go a bit further. */
+  pressedScale?: number;
+  children?: ReactNode;
+};
+
+/**
+ * Pressable with physical press feedback: shrinks on press-in (120 ms) and springs back on release,
+ * so the response starts before the tap completes. Colors and borders on `style` also cross-fade.
+ */
+export function Tappable({
+  style,
+  containerStyle,
+  haptic: kind,
+  pressedScale = 0.97,
+  onPress,
+  onPressIn,
+  onPressOut,
+  disabled,
+  children,
+  ...rest
+}: TappableProps) {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Pressable
+      {...rest}
+      disabled={disabled}
+      style={containerStyle}
+      pressRetentionOffset={16}
+      onPressIn={(e) => {
+        setPressed(true);
+        onPressIn?.(e);
+      }}
+      onPressOut={(e) => {
+        setPressed(false);
+        onPressOut?.(e);
+      }}
+      onPress={(e) => {
+        if (kind) haptic(kind);
+        onPress?.(e);
+      }}
+    >
+      <Animated.View style={[style, motion.press, { transform: [{ scale: pressed ? pressedScale : 1 }] }]}>
+        {children}
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+type BigButtonProps = {
+  label: string;
+  onPress: () => void;
+  variant?: 'primary' | 'ghost';
+  /** Ghost text color on dark backgrounds. */
+  onDark?: boolean;
+  disabled?: boolean;
+  testID?: string;
+};
+
+export function BigButton({ label, onPress, variant = 'primary', onDark, disabled, testID }: BigButtonProps) {
+  const ghost = variant === 'ghost';
+  return (
+    <Tappable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      haptic={ghost ? undefined : 'light'}
+      style={[
+        styles.button,
+        ghost ? styles.buttonGhost : styles.buttonPrimary,
+        disabled && styles.buttonDisabled,
+        motion.colors,
+      ]}
+    >
+      <Text
+        style={[
+          styles.buttonLabel,
+          ghost ? { color: onDark ? 'rgba(255,255,255,0.8)' : brand.muted } : { color: brand.primary },
+          disabled && { color: brand.muted },
+        ]}
+      >
+        {label}
+      </Text>
+    </Tappable>
+  );
+}
+
+export function IconTile({ icon, active, size = 44 }: { icon: IconName; active?: boolean; size?: number }) {
+  return (
+    <Animated.View
+      style={[
+        styles.tile,
+        motion.colors,
+        { width: size, height: size, backgroundColor: active ? brand.accent : brand.tint },
+      ]}
+    >
+      <Feather name={icon} size={Math.round(size / 2)} color={brand.primary} />
+    </Animated.View>
+  );
+}
+
+type OptionCardProps = {
+  title: string;
+  subtitle: string;
+  icon: IconName;
+  selected: boolean;
+  onPress: () => void;
+  testID?: string;
+};
+
+export function OptionCard({ title, subtitle, icon, selected, onPress, testID }: OptionCardProps) {
+  return (
+    <Tappable
+      testID={testID}
+      accessibilityRole="radio"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      haptic="selection"
+      pressedScale={0.98}
+      style={[styles.option, selected && styles.optionSelected, motion.colors]}
+    >
+      <IconTile icon={icon} active={selected} />
+      <View style={styles.optionText}>
+        <Text style={styles.optionTitle}>{title}</Text>
+        <Text style={styles.optionSubtitle}>{subtitle}</Text>
+      </View>
+      <Animated.View style={[styles.radio, selected && styles.radioSelected, motion.colors]}>
+        {selected && (
+          <Animated.View style={motion.pop}>
+            <Feather name="check" size={14} color="#fff" />
+          </Animated.View>
+        )}
+      </Animated.View>
+    </Tappable>
+  );
+}
+
+type ChipProps = { label: string; selected: boolean; disabled?: boolean; onPress: () => void; testID?: string };
+
+export function ChoiceChip({ label, selected, disabled, onPress, testID }: ChipProps) {
+  return (
+    <Tappable
+      testID={testID}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: selected, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      haptic="selection"
+      pressedScale={0.94}
+      style={[styles.chip, selected && styles.chipSelected, disabled && styles.chipDisabled, motion.colors]}
+    >
+      {/* Re-keyed so the icon pops each time the chip flips. */}
+      <Animated.View key={String(selected)} style={motion.pop}>
+        <Feather name={selected ? 'check' : 'plus'} size={14} color={selected ? brand.accent : brand.muted} />
+      </Animated.View>
+      <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>{label}</Text>
+    </Tappable>
+  );
+}
+
+export function PageDots({ count, active }: { count: number; active: number }) {
+  return (
+    <View style={styles.dots} accessibilityLabel={`Page ${active + 1} of ${count}`}>
+      {Array.from({ length: count }, (_, i) => (
+        <Animated.View key={i} style={[styles.dot, motion.size, i === active && styles.dotActive]} />
+      ))}
+    </View>
+  );
+}
+
+type StepHeaderProps = { step: number; total: number; onBack: () => void; onSkip: () => void };
+
+export function StepHeader({ step, total, onBack, onSkip }: StepHeaderProps) {
+  return (
+    <View style={styles.stepHeader}>
+      <View style={styles.stepRow}>
+        <BackButton onPress={onBack} />
+        <Text style={styles.stepText}>
+          Step {step} of {total}
+        </Text>
+        <SkipLink onPress={onSkip} />
+      </View>
+      <View style={styles.track}>
+        <Animated.View style={[styles.trackFill, motion.size, { width: `${(step / total) * 100}%` }]} />
+      </View>
+    </View>
+  );
+}
+
+export function BackButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Tappable
+      testID="onboarding-back"
+      accessibilityRole="button"
+      accessibilityLabel="Back"
+      onPress={onPress}
+      hitSlop={8}
+      pressedScale={0.9}
+      style={styles.back}
+    >
+      <Feather name="chevron-left" size={20} color={brand.primary} />
+    </Tappable>
+  );
+}
+
+export function SkipLink({ onPress, label = 'Skip' }: { onPress: () => void; label?: string }) {
+  return (
+    <Tappable testID="onboarding-skip" accessibilityRole="button" onPress={onPress} hitSlop={12} pressedScale={0.92}>
+      <Text style={styles.skip}>{label}</Text>
+    </Tappable>
+  );
+}
+
+/** Fades and slides its children in on mount. Re-key it to replay on step change. */
+export function FadeIn({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  const reduced = useReducedMotion();
+  return <Animated.View style={[style, reduced ? motion.fade : motion.enter]}>{children}</Animated.View>;
+}
+
+export const type = StyleSheet.create({
+  display: { fontSize: 26, lineHeight: 32, fontWeight: '700', color: brand.text },
+  body: { fontSize: 15, lineHeight: 22, color: brand.muted },
+  overline: { fontSize: 10, fontWeight: '700', letterSpacing: 1.2, color: brand.xp },
+  strong: { fontSize: 12, fontWeight: '600', color: brand.text },
+  label: { fontSize: 12, fontWeight: '500', color: brand.muted },
+});
+
+/** Shared motion styles (Reanimated CSS transitions and animations; they run on the UI thread). */
+export const motion = {
+  press: { transitionProperty: 'transform', transitionDuration: 120, transitionTimingFunction: EASE_OUT },
+  colors: {
+    transitionProperty: ['backgroundColor', 'borderColor', 'opacity'],
+    transitionDuration: 200,
+    transitionTimingFunction: EASE_OUT,
+  },
+  /** A pin or tile that rises when selected: a short spring-like overshoot. */
+  lift: {
+    transitionProperty: 'transform',
+    transitionDuration: 280,
+    transitionTimingFunction: cubicBezier(0.34, 1.56, 0.64, 1),
+  },
+  /** Width of childless bars (progress fill, page dot). */
+  size: {
+    transitionProperty: ['width', 'backgroundColor'],
+    transitionDuration: 320,
+    transitionTimingFunction: EASE_IN_OUT,
+  },
+  pop: { animationName: POP_IN, animationDuration: 260, animationTimingFunction: EASE_OUT },
+  enter: {
+    animationName: { from: { opacity: 0, transform: [{ translateX: 18 }] }, to: { opacity: 1, transform: [{ translateX: 0 }] } },
+    animationDuration: 320,
+    animationTimingFunction: EASE_OUT,
+  },
+  fade: { animationName: { from: { opacity: 0 }, to: { opacity: 1 } }, animationDuration: 200 },
+  /** Content that swaps in place (a card showing another lesson). Re-key to replay. */
+  swap: {
+    animationName: { from: { opacity: 0, transform: [{ translateY: 6 }] }, to: { opacity: 1, transform: [{ translateY: 0 }] } },
+    animationDuration: 240,
+    animationTimingFunction: EASE_OUT,
+  },
+} satisfies Record<string, CSSStyle>;
+
+const styles = StyleSheet.create({
+  button: { height: 52, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
+  buttonPrimary: { backgroundColor: brand.accent },
+  buttonGhost: { backgroundColor: 'transparent' },
+  buttonDisabled: { backgroundColor: brand.border },
+  buttonLabel: { fontSize: 15, fontWeight: '600' },
+  tile: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md - 1,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    borderColor: brand.border,
+    backgroundColor: brand.surface,
+  },
+  optionSelected: { backgroundColor: brand.accentSoft, borderColor: brand.primary },
+  optionText: { flex: 1, gap: 2 },
+  optionTitle: { fontSize: 15, fontWeight: '600', color: brand.text },
+  optionSubtitle: { fontSize: 13, color: brand.muted },
+  radio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: brand.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioSelected: { backgroundColor: brand.primary, borderColor: brand.primary },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingLeft: 14,
+    paddingRight: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: brand.border,
+    backgroundColor: brand.surface,
+  },
+  chipSelected: { backgroundColor: brand.primary, borderColor: brand.primary },
+  chipDisabled: { opacity: 0.45 },
+  chipLabel: { fontSize: 13, fontWeight: '600', color: brand.text },
+  chipLabelSelected: { color: '#fff' },
+  dots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: brand.borderStrong },
+  dotActive: { width: 24, backgroundColor: brand.primary },
+  stepHeader: { gap: spacing.md },
+  stepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  back: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: brand.surface,
+    borderWidth: 1,
+    borderColor: brand.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepText: { fontSize: 12, fontWeight: '600', color: brand.muted },
+  skip: { fontSize: 13, fontWeight: '600', color: brand.primary },
+  track: { height: 6, borderRadius: 3, backgroundColor: brand.border, overflow: 'hidden' },
+  trackFill: { height: '100%', borderRadius: 3, backgroundColor: brand.accent },
+});

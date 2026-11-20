@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
+import { OnboardingProvider, useOnboarding } from '@/hooks/useOnboarding';
 
 /** Widest "phone" on web; on a wide desktop window the app is centered at this width. */
 const WEB_PHONE_WIDTH = 430;
@@ -11,20 +12,38 @@ export default function RootLayout() {
   return (
     <View style={styles.page}>
       <View style={styles.phone}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen
-            name="lesson/[id]"
-            options={{
-              headerShown: true,
-              title: '',
-              headerShadowVisible: false,
-              contentStyle: { backgroundColor: colors.background },
-            }}
-          />
-        </Stack>
+        <OnboardingProvider>
+          <RootStack />
+        </OnboardingProvider>
       </View>
       <StatusBar style="auto" />
     </View>
+  );
+}
+
+/** Until onboarding is done only /onboarding is reachable; afterwards it is gone. */
+function RootStack() {
+  const { loaded, done } = useOnboarding();
+  // Wait for the saved profile so a returning user never sees onboarding flash by.
+  if (!loaded) return null;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected guard={!done}>
+        <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+      </Stack.Protected>
+      <Stack.Protected guard={done}>
+        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+        <Stack.Screen
+          name="lesson/[id]"
+          options={{
+            headerShown: true,
+            title: '',
+            headerShadowVisible: false,
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        />
+      </Stack.Protected>
+    </Stack>
   );
 }
 

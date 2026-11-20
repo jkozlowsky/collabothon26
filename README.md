@@ -75,7 +75,8 @@ Uses [Expo Router](https://docs.expo.dev/router/introduction/): every file in `s
 ```
 front/src/
 ├── app/                  # routes only (file = screen)
-│   ├── _layout.tsx       # root Stack
+│   ├── _layout.tsx       # root Stack; shows onboarding until it is done
+│   ├── onboarding.tsx    # intro + optional personalisation questions (once per user; answers saved on the profile)
 │   ├── (tabs)/           # bottom tab bar
 │   │   ├── _layout.tsx
 │   │   ├── index.tsx     # Learn  (/)

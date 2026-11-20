@@ -20,13 +20,23 @@ function resolveApiUrl(): string {
 
 export const API_URL = resolveApiUrl();
 
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
   if (!res.ok) {
-    throw new Error(`API ${res.status} ${res.statusText}: ${path}`);
+    throw new ApiError(res.status, `API ${res.status} ${res.statusText}: ${path}`);
   }
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }

@@ -6,6 +6,7 @@ import LearnScreen from '@/app/(tabs)/index';
 import ProfileScreen from '@/app/(tabs)/profile';
 import RootLayout from '@/app/_layout';
 import LessonScreen from '@/app/lesson/[id]';
+import OnboardingScreen from '@/app/onboarding';
 
 const lessons = [
   { id: 1, emoji: '🛟', title: 'Emergency fund', summary: 's', xp: 50, questionCount: 1 },
@@ -27,7 +28,11 @@ beforeEach(() => {
   globalThis.fetch = jest.fn((url: string) =>
     Promise.resolve({
       ok: true,
-      json: () => Promise.resolve(url.endsWith('/api/lessons') ? lessons : lesson),
+      status: 200,
+      json: () =>
+        Promise.resolve(
+          url.endsWith('/profile') ? { userId: 'demo-user', goals: [] } : url.endsWith('/api/lessons') ? lessons : lesson,
+        ),
     }),
   ) as jest.Mock;
 });
@@ -36,6 +41,7 @@ test('walks from the lesson list through a quiz to the result', async () => {
   await renderRouter(
     {
       _layout: RootLayout,
+      onboarding: OnboardingScreen,
       '(tabs)/_layout': TabsLayout,
       '(tabs)/index': LearnScreen,
       '(tabs)/glossary': GlossaryScreen,
@@ -45,6 +51,7 @@ test('walks from the lesson list through a quiz to the result', async () => {
     { initialUrl: '/' },
   );
 
+  // The user already has a saved profile, so the app opens on Learn.
   await fireEvent.press(await screen.findByTestId('lesson-1'));
   expect(await screen.findByText('How many months?')).toBeOnTheScreen();
 

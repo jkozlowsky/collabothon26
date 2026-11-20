@@ -10,12 +10,14 @@ import GlossaryScreen from '@/app/(main)/(learn)/glossary';
 import MapScreen from '@/app/(main)/(learn)/map';
 import ProfileScreen from '@/app/(main)/(learn)/profile';
 import RootLayout from '@/app/_layout';
+import CategorizingScreen from '@/app/categorizing';
 import LessonScreen from '@/app/lesson/[id]';
 import OnboardingScreen from '@/app/onboarding';
 
 export const appRoutes = {
   _layout: RootLayout,
   onboarding: OnboardingScreen,
+  categorizing: CategorizingScreen,
   'lesson/[id]': LessonScreen,
   '(main)/_layout': MainLayout,
   '(main)/(bank)/_layout': BankLayout,

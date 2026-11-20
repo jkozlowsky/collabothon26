@@ -30,6 +30,12 @@ export function useOpenLearnFocus() {
   return useCallback((focus: string) => open({ pathname: '/map', params: { focus } }), [open]);
 }
 
+/** Closes the screen on top of the bank and goes to `target`. */
+function closeAndGo(target: Href) {
+  if (router.canGoBack()) router.back();
+  router.navigate(target);
+}
+
 /**
  * Mount once inside the main layout. Onboarding is a plain stack screen on top of the bank (not a
  * protected one: removing a protected screen rebuilds the stack and loses the bank's tab and scroll),
@@ -39,10 +45,13 @@ export function useResumeLearnAfterOnboarding() {
   const { done } = useOnboarding();
   const pathname = usePathname();
   useEffect(() => {
-    if (!done || pathname !== '/onboarding') return;
-    const target = pendingTarget ?? '/map';
-    pendingTarget = null;
-    if (router.canGoBack()) router.back();
-    router.navigate(target);
+    if (done && pathname === '/onboarding') continueToLearn();
   }, [done, pathname]);
+}
+
+/** Leaves /categorizing for the Learn screen the user opened onboarding from (the Map by default). */
+export function continueToLearn() {
+  const target = pendingTarget ?? '/map';
+  pendingTarget = null;
+  closeAndGo(target);
 }

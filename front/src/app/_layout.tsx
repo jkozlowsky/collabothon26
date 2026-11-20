@@ -8,6 +8,7 @@ import {
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Platform, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { colors, elevation, fonts } from '@/constants/theme';
 import { BankProvider } from '@/hooks/useBank';
@@ -30,7 +31,8 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <View style={styles.page}>
+    // Gesture Handler needs a root view for the globe and story sheet gestures.
+    <GestureHandlerRootView style={styles.page}>
       <View style={styles.phone}>
         <OnboardingProvider>
           <BankProvider>
@@ -43,7 +45,7 @@ export default function RootLayout() {
         </OnboardingProvider>
       </View>
       <StatusBar style="dark" />
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -63,6 +65,16 @@ function RootStack() {
       <Stack.Screen name="(main)" options={{ animation: 'fade' }} />
       <Stack.Screen name="onboarding" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Protected guard={done}>
+        <Stack.Screen
+          name="story/[id]"
+          options={{
+            headerShown: true,
+            title: '',
+            headerShadowVisible: false,
+            headerTintColor: colors.brandPrimary,
+            headerStyle: { backgroundColor: colors.bgCanvas },
+          }}
+        />
         <Stack.Screen
           name="lesson/[id]"
           options={{

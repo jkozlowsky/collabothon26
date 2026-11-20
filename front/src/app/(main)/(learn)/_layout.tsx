@@ -6,7 +6,8 @@ import { colors } from '@/constants/theme';
 export default function LearnLayout() {
   return (
     <TopTabs tabBar={() => null} screenOptions={{ swipeEnabled: true, sceneStyle: { backgroundColor: colors.bgCanvas } }}>
-      <TopTabs.Screen name="map" options={{ title: 'Map' }} />
+      {/* No swipe on Map: a horizontal drag there turns the globe. */}
+      <TopTabs.Screen name="map" options={{ title: 'Map', swipeEnabled: false }} />
       <TopTabs.Screen name="glossary" options={{ title: 'Glossary' }} />
       <TopTabs.Screen name="profile" options={{ title: 'Profile' }} />
     </TopTabs>

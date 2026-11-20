@@ -1,4 +1,4 @@
-package com.collabothon.back.categorization;
+package com.collabothon.back.categorization.config;
 
 import java.net.URI;
 import java.util.Locale;
@@ -40,7 +40,7 @@ public record JevProperties(
 	}
 
 	/** The hosted API without a key would only answer 401, so that call is skipped. */
-	boolean callsJev() {
+	public boolean callsJev() {
 		return !apiKey.isEmpty() || !DEFAULT_HOST.equalsIgnoreCase(baseUrl.getHost());
 	}
 

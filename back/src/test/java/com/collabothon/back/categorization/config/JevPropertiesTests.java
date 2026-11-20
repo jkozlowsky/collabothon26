@@ -1,4 +1,4 @@
-package com.collabothon.back.categorization;
+package com.collabothon.back.categorization.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -7,7 +7,6 @@ import java.net.URI;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.validation.autoconfigure.ValidationAutoConfiguration;
 
@@ -19,10 +18,6 @@ class JevPropertiesTests {
 		.withConfiguration(AutoConfigurations.of(ConfigurationPropertiesAutoConfiguration.class,
 				ValidationAutoConfiguration.class))
 		.withUserConfiguration(PropertiesOnly.class);
-
-	@EnableConfigurationProperties(JevProperties.class)
-	static class PropertiesOnly {
-	}
 
 	private void starts(String... properties) {
 		context.withPropertyValues(properties).run(app -> assertThat(app).hasNotFailed());
@@ -70,7 +65,7 @@ class JevPropertiesTests {
 		assertThat(properties("https://api.typesafe.ai", " key \n").apiKey()).isEqualTo("key");
 	}
 
-	static JevProperties properties(String baseUrl, String apiKey) {
+	private static JevProperties properties(String baseUrl, String apiKey) {
 		return new JevProperties(URI.create(baseUrl), apiKey, JevConsts.DEFAULT_MODEL);
 	}
 

@@ -1,6 +1,5 @@
 package com.collabothon.back.categorization;
 
-import static com.collabothon.back.categorization.JevPropertiesTests.properties;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.headerDoesNotExist;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -9,6 +8,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 import java.lang.reflect.RecordComponent;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -21,7 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
-
+import com.collabothon.back.categorization.config.JevProperties;
 import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.FactsDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
@@ -37,6 +37,10 @@ class JevClientTests {
 	private static final JevClient.Result NOT_SENT = new JevClient.Result(Optional.empty(), false);
 
 	static final JevClient.Result SENT_WITHOUT_ANSWER = new JevClient.Result(Optional.empty(), true);
+
+	private static JevProperties properties(String baseUrl, String apiKey) {
+		return new JevProperties(URI.create(baseUrl), apiKey, JevConsts.DEFAULT_MODEL);
+	}
 
 	// Both records go to an external model verbatim; a new component must be a deliberate change here.
 	@Test

@@ -1,5 +1,5 @@
-import { useId, useState } from 'react';
-import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { useId, useState, type ReactNode } from 'react';
+import { StyleSheet, Text, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { Icon } from '@/components/bank/Icon';
@@ -52,11 +52,20 @@ export function HeroBackground() {
   );
 }
 
+/** The petrol hero card shell with free content: bank hero cards and the duel league / result cards. */
+export function HeroSurface({ children, style, testID }: { children: ReactNode; style?: StyleProp<ViewStyle>; testID?: string }) {
+  return (
+    <View style={[styles.card, style]} testID={testID}>
+      <HeroBackground />
+      {children}
+    </View>
+  );
+}
+
 /** Figma dark hero card: main account (Home) and instalment loan (Credits). */
 export function HeroCard({ label, amount, caption, stats, hidden, onToggleHidden, testID, amountTestID }: Props) {
   return (
-    <View style={styles.card} testID={testID}>
-      <HeroBackground />
+    <HeroSurface testID={testID}>
       <View style={styles.top}>
         <Text style={styles.label}>{label}</Text>
         <Tappable
@@ -82,7 +91,7 @@ export function HeroCard({ label, amount, caption, stats, hidden, onToggleHidden
           </View>
         ))}
       </View>
-    </View>
+    </HeroSurface>
   );
 }
 

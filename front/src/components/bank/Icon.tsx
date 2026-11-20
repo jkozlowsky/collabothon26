@@ -1,14 +1,16 @@
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import type { ComponentProps } from 'react';
 
 import type { BankIconName } from '@/types/bank';
 
 type Props = { name: BankIconName; size?: number; color: string };
 
-type Glyph = { set: 'feather'; name: ComponentProps<typeof Feather>['name'] } | { set: 'ion'; name: ComponentProps<typeof Ionicons>['name'] };
+type Glyph = { set: 'feather'; name: ComponentProps<typeof Feather>['name'] } | { set: 'ion'; name: ComponentProps<typeof Ionicons>['name'] }
+  | { set: 'mci'; name: ComponentProps<typeof MaterialCommunityIcons>['name'] };
 
-/** Figma uses 2px-stroke line icons; Feather matches them, Ionicons outline fills the few gaps. */
+/** Figma uses 2px-stroke line icons; Feather matches them, Ionicons outline and Material Community fill the few gaps (swords, bot, brain, coins). */
 const GLYPHS: Record<BankIconName, Glyph> = {
   home: { set: 'feather', name: 'home' },
   transfer: { set: 'ion', name: 'swap-horizontal' },
@@ -46,9 +48,23 @@ const GLYPHS: Record<BankIconName, Glyph> = {
   close: { set: 'feather', name: 'x' },
   check: { set: 'feather', name: 'check' },
   delete: { set: 'feather', name: 'delete' },
+  swords: { set: 'mci', name: 'sword-cross' },
+  trophy: { set: 'ion', name: 'trophy-outline' },
+  bot: { set: 'mci', name: 'robot-outline' },
+  users: { set: 'feather', name: 'users' },
+  target: { set: 'feather', name: 'target' },
+  timer: { set: 'feather', name: 'clock' },
+  brain: { set: 'mci', name: 'brain' },
+  'wifi-off': { set: 'feather', name: 'wifi-off' },
+  coins: { set: 'mci', name: 'database-outline' },
+  flame: { set: 'ion', name: 'flame-outline' },
+  refresh: { set: 'feather', name: 'refresh-cw' },
+  'arrow-right': { set: 'feather', name: 'arrow-right' },
 };
 
 export function Icon({ name, size = 22, color }: Props) {
   const g = GLYPHS[name];
-  return g.set === 'feather' ? <Feather name={g.name} size={size} color={color} /> : <Ionicons name={g.name} size={size} color={color} />;
+  if (g.set === 'feather') return <Feather name={g.name} size={size} color={color} />;
+  if (g.set === 'ion') return <Ionicons name={g.name} size={size} color={color} />;
+  return <MaterialCommunityIcons name={g.name} size={size} color={color} />;
 }

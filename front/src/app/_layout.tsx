@@ -75,6 +75,9 @@ function RootStack() {
           }}
         />
       </Stack.Protected>
+      {/* Full-screen duel flow over the tabs. Not behind the onboarding guard, so a reload mid-match can resume. */}
+      <Stack.Screen name="duel/match" />
+      <Stack.Screen name="duel/rankings" />
     </Stack>
   );
 }

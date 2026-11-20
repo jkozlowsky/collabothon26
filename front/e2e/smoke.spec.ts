@@ -1,5 +1,16 @@
 import { expect, test } from '@playwright/test';
 
+import { resetOnboarding } from './app';
+
+// The test needs a user who has not been through onboarding yet, and leaves it that way for the next run.
+test.beforeEach(async ({ request }) => {
+  await resetOnboarding(request);
+});
+
+test.afterAll(async ({ request }) => {
+  await resetOnboarding(request);
+});
+
 test('app opens on the bank; Learn runs onboarding, then Map; Bank comes back; a transfer lowers the balance', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('owner-name')).toHaveText('Alex Krause');
@@ -8,7 +19,7 @@ test('app opens on the bank; Learn runs onboarding, then Map; Bank comes back; a
   // First Learn tap: onboarding, then the Map (lessons come from the backend).
   await page.getByTestId('nav-learn').click();
   await page.getByTestId('onboarding-start').click();
-  await page.getByTestId('onboarding-skip').click();
+  await page.getByTestId('onboarding-next').click();
   await page.getByTestId('onboarding-skip-all').click();
   await expect(page.getByTestId('screen-learn')).toBeVisible();
   await expect(page.getByTestId(/^lesson-/).first()).toBeVisible();

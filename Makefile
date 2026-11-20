@@ -1,9 +1,9 @@
 # Local development shortcuts. `make help` lists them.
 SHELL := /bin/bash
-.PHONY: help dev phone setup db db-stop db-reset back front web android check test
+.PHONY: help dev phone setup db db-stop db-reset back front web android check test e2e
 
 help: ## List commands
-	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
+	@grep -E '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
 
 dev: ## Everything at once: Postgres + backend + web app on localhost (Ctrl+C stops)
 	./scripts/dev.sh
@@ -41,3 +41,6 @@ check: ## Frontend typecheck + lint + tests, backend tests
 	cd back && ./mvnw -q test
 
 test: check
+
+e2e: ## End-to-end tests in Chromium (reuses a running backend/app). Resets demo-user's onboarding
+	cd front && npx playwright install chromium && npx playwright test

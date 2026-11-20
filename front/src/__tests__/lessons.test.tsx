@@ -25,7 +25,7 @@ beforeEach(() => {
       status: 200,
       json: () =>
         Promise.resolve(
-          url.endsWith('/profile') ? { userId: 'demo-user', goals: [] } : url.endsWith('/api/lessons') ? lessons : lesson,
+          url.endsWith('/profile') ? { userId: 'demo-user', goals: [], onboardingCompleted: true } : url.endsWith('/api/lessons') ? lessons : lesson,
         ),
     }),
   ) as jest.Mock;

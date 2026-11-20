@@ -1,9 +1,31 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 
+/** Port of the Expo web server. Override (E2E_PORT=8082) to test without touching a running `make dev`. */
+const WEB_PORT = Number(process.env.E2E_PORT ?? 8081);
+const WEB_URL = `http://localhost:${WEB_PORT}`;
+
+/**
+ * End-to-end tests: the web build of the app in Chromium against the real backend.
+ * Locally a running backend and Expo web server (e.g. from `make dev`) are reused; otherwise the
+ * backend starts on a throwaway Testcontainers Postgres (Docker must be running). CI always starts both.
+ */
 export default defineConfig({
   testDir: 'e2e',
+  // Every test drives the same signed-in user (demo-user), so they must not run side by side.
+  workers: 1,
+  fullyParallel: false,
+  retries: process.env.CI ? 1 : 0,
   timeout: 90_000,
-  use: { baseURL: 'http://localhost:8081' },
+  expect: { timeout: 10_000 },
+  reporter: process.env.CI ? 'github' : 'list',
+  use: {
+    ...devices['Pixel 7'],
+    baseURL: WEB_URL,
+    // The first page load waits for Metro to bundle the app.
+    navigationTimeout: 120_000,
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+  },
   // Metro bundles on the first request and proxies /api/* to the backend (metro.config.js).
   webServer: [
     {
@@ -14,8 +36,8 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
     {
-      command: 'npx expo start --web --localhost --port 8081',
-      url: 'http://localhost:8081',
+      command: `npx expo start --web --localhost --port ${WEB_PORT}`,
+      url: WEB_URL,
       timeout: 120_000,
       reuseExistingServer: !process.env.CI,
     },

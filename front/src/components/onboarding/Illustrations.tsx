@@ -1,11 +1,10 @@
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useReducedMotion, type CSSAnimationKeyframes, type CSSAnimationProperties } from 'react-native-reanimated';
 
-import { Globe, GLOBE_PINS, GlobeSphere } from '@/components/onboarding/Globe';
-import { EASE_IN_OUT, EASE_OUT, haptic, motion, Tappable } from '@/components/onboarding/ui';
+import { Globe, GLOBE_PINS } from '@/components/onboarding/Globe';
+import { EASE_IN_OUT, EASE_OUT, motion } from '@/components/onboarding/ui';
 import { colors, radii, spacing } from '@/constants/theme';
 
 const FLOAT = { from: { transform: [{ translateY: 0 }] }, to: { transform: [{ translateY: -7 }] } };
@@ -75,204 +74,41 @@ export function WelcomeHero() {
   );
 }
 
-/** Intro 1: a globe of lesson paths, one pin per topic. Tap a pin or a topic to highlight it. */
+/** The lesson in progress, highlighted on the globe and shown on its card. */
+const CURRENT = GLOBE_PINS.findIndex((p) => p.state === 'active');
+
+/** Intro 1: a globe of lesson paths, one pin per topic. Illustration only. */
 export function LessonGlobeIllustration() {
-  const [selected, setSelected] = useState(GLOBE_PINS.findIndex((p) => p.state === 'active'));
-  const pin = GLOBE_PINS[selected];
-  const action = pin.state === 'done' ? 'Review' : pin.state === 'locked' ? 'Locked' : pin.state === 'active' ? 'Continue' : 'Start';
+  const pin = GLOBE_PINS[CURRENT];
   return (
-    <View>
+    <View accessible={false} importantForAccessibility="no-hide-descendants">
       <View style={globe.stage}>
         <View style={globe.orbit} />
         <View style={globe.shadow} />
         <View style={globe.sphere}>
-          <Globe size={GLOBE_SIZE} selected={selected} onSelect={setSelected} />
+          <Globe size={GLOBE_SIZE} selected={CURRENT} />
         </View>
-        <Animated.View key={pin.city} style={[globe.card, motion.swap]} testID="globe-card">
+        <Animated.View style={[globe.card, enter(350)]} testID="globe-card">
           <View style={globe.cityRow}>
             <View style={[globe.dot, { backgroundColor: pin.color }]} />
             <Text style={card.overline}>{pin.city.toUpperCase()}</Text>
           </View>
           <Text style={globe.cardTitle}>{pin.title}</Text>
           <Text style={card.meta}>{pin.meta}</Text>
-          <View style={[globe.cardButton, pin.state === 'locked' && globe.cardButtonLocked]}>
-            {pin.state === 'locked' && <Feather name="lock" size={12} color={colors.textMuted} />}
-            <Text style={[globe.cardButtonText, pin.state === 'locked' && { color: colors.textMuted }]}>{action}</Text>
-            {pin.state !== 'locked' && <Feather name="arrow-right" size={13} color={colors.brandPrimary} />}
+          <View style={globe.cardButton}>
+            <Text style={globe.cardButtonText}>Continue</Text>
+            <Feather name="arrow-right" size={13} color={colors.brandPrimary} />
           </View>
         </Animated.View>
       </View>
       <View style={globe.topics}>
-        {GLOBE_PINS.map((p, i) => {
-          const on = i === selected;
-          return (
-            <Tappable
-              key={p.topic}
-              testID={`topic-${i}`}
-              accessibilityRole="button"
-              accessibilityState={{ selected: on }}
-              haptic="selection"
-              pressedScale={0.93}
-              onPress={() => setSelected(i)}
-              style={[globe.topic, motion.colors, on && { borderColor: p.color, backgroundColor: `${p.color}22` }]}
-            >
-              <Animated.View style={[globe.dot, motion.lift, { backgroundColor: p.color, transform: [{ scale: on ? 1.5 : 1 }] }]} />
-              <Text style={globe.topicText}>{p.topic}</Text>
-            </Tappable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
-const PERSONAL_LESSONS = {
-  out: { overline: 'BUDGETING', title: 'Where did your €1,268 go?', meta: 'Lesson 2 of 5 · 4 min', progress: '40%' },
-  in: { overline: 'SAVING', title: 'Saving €215 a month?', meta: 'Lesson 1 of 4 · 3 min', progress: '12%' },
-} as const;
-
-/** Intro 2: your account becomes a lesson made for you. Tap a number to see its lesson. */
-export function PersonalIllustration() {
-  const [focus, setFocus] = useState<'in' | 'out'>('out');
-  const [hidden, setHidden] = useState(false);
-  const lesson = PERSONAL_LESSONS[focus];
-  const pill = (key: 'in' | 'out', label: string, value: string, color?: string) => (
-    <Tappable
-      testID={`account-${key}`}
-      accessibilityRole="button"
-      accessibilityState={{ selected: focus === key }}
-      haptic="selection"
-      pressedScale={0.95}
-      onPress={() => setFocus(key)}
-      containerStyle={{ flex: 1 }}
-      style={[personal.pill, motion.colors, focus === key && personal.pillOn]}
-    >
-      <Text style={personal.pillLabel}>{label}</Text>
-      <Text style={[personal.pillValue, color ? { color } : null]}>{hidden ? '€ •••••' : value}</Text>
-    </Tappable>
-  );
-  return (
-    <View style={[card.wrap, { gap: 12 }]}>
-      <View style={personal.account}>
-        <View style={card.headerRow}>
-          <Text style={personal.accountLabel}>Main account · available</Text>
-          <Tappable
-            testID="account-eye"
-            accessibilityRole="button"
-            accessibilityLabel={hidden ? 'Show balance' : 'Hide balance'}
-            hitSlop={12}
-            pressedScale={0.85}
-            haptic="selection"
-            onPress={() => setHidden((h) => !h)}
-          >
-            <Animated.View key={String(hidden)} style={motion.pop}>
-              <Feather name={hidden ? 'eye-off' : 'eye'} size={16} color="rgba(255,255,255,0.75)" />
-            </Animated.View>
-          </Tappable>
-        </View>
-        <Animated.Text key={String(hidden)} style={[personal.amount, motion.fade]}>
-          {hidden ? '€ ••••••' : '€ 4,280.52'}
-        </Animated.Text>
-        <Text style={personal.iban}>DE89 3704 •••• •••• 4821</Text>
-        <View style={personal.pills}>
-          {pill('in', 'In this month', '+€ 2,150.00', '#7FD9A8')}
-          {pill('out', 'Out this month', '−€ 1,268.40')}
-        </View>
-      </View>
-      <View style={personal.becomes}>
-        <Animated.View key={focus} style={{ animationName: { from: { transform: [{ rotate: '-180deg' }] }, to: { transform: [{ rotate: '0deg' }] } }, animationDuration: 420, animationTimingFunction: EASE_OUT }}>
-          <Feather name="repeat" size={13} color={colors.textMuted} />
-        </Animated.View>
-        <Text style={card.meta}>Tap a number — it becomes a lesson</Text>
-      </View>
-      <View style={personal.lesson}>
-        <GlobeSphere size={52} />
-        <Animated.View key={focus} style={[{ flex: 1, gap: 3 }, motion.swap]}>
-          <Text style={card.overline}>FINANCE QUEST · {lesson.overline}</Text>
-          <Text style={path.title} numberOfLines={1}>
-            {lesson.title}
-          </Text>
-          <Text style={path.meta}>{lesson.meta}</Text>
-        </Animated.View>
-        <Feather name="chevron-right" size={18} color={colors.brandPrimary} />
-      </View>
-      <View style={[path.track, { marginTop: -4 }]}>
-        <Animated.View style={[path.fill, motion.size, { width: lesson.progress, backgroundColor: colors.brandPrimary }]} />
-      </View>
-    </View>
-  );
-}
-
-const GROW = { from: { opacity: 0, transform: [{ scaleX: 0.3 }] }, to: { opacity: 1, transform: [{ scaleX: 1 }] } };
-
-/** Intro 3: confidence before vs. after a lesson. The bars fill in; tap the next step to tick it off. */
-export function ConfidenceIllustration() {
-  const reduced = useReducedMotion();
-  const [stepDone, setStepDone] = useState(false);
-  const rows = [
-    { label: 'Before lesson', value: 2, color: colors.borderStrong, valueColor: colors.textMuted },
-    { label: 'After lesson', value: 4, color: colors.feedbackSuccess, valueColor: colors.feedbackSuccess },
-  ];
-  return (
-    <View style={[card.wrap, { gap: 14 }]}>
-      <Text style={[card.overline, { color: colors.textMuted }]}>YOUR CONFIDENCE · SAVING</Text>
-      {rows.map((r, row) => (
-        <View key={r.label} style={{ gap: 8 }}>
-          <View style={card.headerRow}>
-            <Text style={path.title}>{r.label}</Text>
-            <Text style={[path.title, { color: r.valueColor }]}>{r.value} / 5</Text>
+        {GLOBE_PINS.map((p) => (
+          <View key={p.topic} style={globe.topic}>
+            <View style={[globe.dot, { backgroundColor: p.color }]} />
+            <Text style={globe.topicText}>{p.topic}</Text>
           </View>
-          <View style={conf.scale}>
-            {[1, 2, 3, 4, 5].map((i) => {
-              const filled = i <= r.value;
-              return (
-                <Animated.View
-                  key={i}
-                  style={[
-                    conf.seg,
-                    { backgroundColor: filled ? r.color : colors.borderDefault },
-                    filled && !reduced && {
-                      animationName: GROW,
-                      animationDuration: 320,
-                      animationDelay: 150 + row * 450 + i * 90,
-                      animationFillMode: 'backwards',
-                      animationTimingFunction: EASE_OUT,
-                    },
-                  ]}
-                />
-              );
-            })}
-          </View>
-        </View>
-      ))}
-      <Tappable
-        testID="next-step"
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: stepDone }}
-        pressedScale={0.97}
-        onPress={() => {
-          if (!stepDone) haptic('success');
-          setStepDone((d) => !d);
-        }}
-        style={[conf.step, motion.colors, stepDone && conf.stepDone]}
-      >
-        <Animated.View style={[conf.tick, motion.colors, stepDone && conf.tickDone]}>
-          {stepDone && (
-            <Animated.View style={motion.pop}>
-              <Feather name="check" size={13} color="#fff" />
-            </Animated.View>
-          )}
-        </Animated.View>
-        <Text style={[path.title, { flex: 1 }, stepDone && { color: colors.feedbackSuccess }]}>
-          {stepDone ? 'Done! Monthly savings transfer set' : 'Next step: set up a monthly savings transfer'}
-        </Text>
-        {stepDone && (
-          <Animated.View style={[conf.xp, motion.pop]}>
-            <Feather name="zap" size={11} color={colors.feedbackXp} />
-            <Text style={conf.xpText}>+10 XP</Text>
-          </Animated.View>
-        )}
-      </Tappable>
+        ))}
+      </View>
     </View>
   );
 }
@@ -342,24 +178,6 @@ const card = StyleSheet.create({
   meta: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
 });
 
-const path = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-  },
-  rowActive: { backgroundColor: colors.brandAccentSoft, borderColor: colors.brandPrimary, borderWidth: 2, padding: 11 },
-  rowLocked: { opacity: 0.55 },
-  title: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
-  meta: { fontSize: 11, color: colors.textMuted },
-  track: { height: 4, borderRadius: 2, backgroundColor: colors.borderDefault, overflow: 'hidden', marginTop: 2 },
-  fill: { height: '100%', backgroundColor: colors.feedbackSuccess },
-  status: { fontSize: 12, fontWeight: '700', color: colors.brandPrimary },
-});
 
 const GLOBE_SIZE = 250;
 
@@ -409,7 +227,6 @@ const globe = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
-  cardButtonLocked: { backgroundColor: colors.bgTint },
   cityRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   cardButtonText: { fontSize: 13, fontWeight: '700', color: colors.brandPrimary },
   topics: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: spacing.lg },
@@ -428,66 +245,4 @@ const globe = StyleSheet.create({
   topicText: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
 });
 
-const personal = StyleSheet.create({
-  account: { backgroundColor: colors.brandPrimary, borderRadius: radii.card, padding: spacing.lg, gap: 4 },
-  accountLabel: { fontSize: 11, color: 'rgba(255,255,255,0.7)' },
-  amount: { fontSize: 28, fontWeight: '700', color: '#fff' },
-  iban: { fontSize: 11, color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5 },
-  pills: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  pill: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: radii.button,
-    padding: 8,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-  },
-  pillOn: { backgroundColor: 'rgba(255,204,0,0.16)', borderColor: colors.brandAccent },
-  pillLabel: { fontSize: 10, color: 'rgba(255,255,255,0.7)' },
-  pillValue: { fontSize: 12, fontWeight: '600', color: '#fff' },
-  becomes: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
-  lesson: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: radii.card,
-    backgroundColor: colors.brandAccentSoft,
-    borderWidth: 1,
-    borderColor: colors.brandAccent,
-  },
-});
 
-const conf = StyleSheet.create({
-  scale: { flexDirection: 'row', gap: 6 },
-  seg: { flex: 1, height: 12, borderRadius: 6 },
-  stepDone: { backgroundColor: 'rgba(30, 138, 94, 0.12)' },
-  tick: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: colors.brandPrimary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tickDone: { backgroundColor: colors.feedbackSuccess, borderColor: colors.feedbackSuccess },
-  xp: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: colors.bgSurface,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  xpText: { fontSize: 11, fontWeight: '700', color: colors.feedbackXp },
-  step: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.brandAccentSoft,
-    borderRadius: radii.tile,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-});

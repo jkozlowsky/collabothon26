@@ -42,7 +42,7 @@ class UserProfileControllerTests {
 	@Test
 	void savingOnboardingStoresAnswersPerUserAndMarksItCompleted() throws Exception {
 		saveOnboarding("anna", """
-				{"lifeStage":"family","goals":["budget","start-saving","etfs","taxes"],
+				{"lifeStage":"family","goals":["budget","start-saving","stocks-etfs","scams"],
 				 "experience":"not-saving","learningStyle":"simple",
 				 "confidence":{"budgeting":2,"saving":3,"investing":1},"skipped":false}
 				""").andExpect(status().isOk()).andExpect(jsonPath("$.onboardingCompleted").value(true));

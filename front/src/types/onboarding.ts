@@ -8,26 +8,16 @@ export type Goal =
   | 'banking-basics'
   | 'start-saving'
   | 'emergency-fund'
-  | 'big-purchase'
-  | 'buy-home'
+  | 'inflation'
   | 'pay-off-debt'
   | 'credit-cards'
   | 'loans-mortgages'
   | 'start-investing'
-  | 'stocks'
-  | 'etfs'
-  | 'bonds'
-  | 'diversification'
-  | 'sustainable-investing'
+  | 'stocks-etfs'
   | 'crypto'
-  | 'inflation'
-  | 'risk'
+  | 'retirement'
   | 'insurance'
-  | 'scams'
-  | 'taxes'
-  | 'kids-future'
-  | 'family-money'
-  | 'retirement';
+  | 'scams';
 
 /** 1 = not at all confident, 5 = very confident. Measured again after lessons. */
 export type Confidence = 1 | 2 | 3 | 4 | 5;

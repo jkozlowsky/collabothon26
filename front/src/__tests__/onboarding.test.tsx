@@ -88,7 +88,7 @@ test('answers all five questions', async () => {
   await fireEvent.press(screen.getByTestId('onboarding-continue'));
 
   // No limit on how many topics you pick.
-  for (const g of ['start-saving', 'emergency-fund', 'budget', 'etfs', 'taxes'])
+  for (const g of ['start-saving', 'emergency-fund', 'budget', 'stocks-etfs', 'scams'])
     await fireEvent.press(screen.getByTestId(`goal-${g}`));
   expect(screen.getByText('5 selected')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-continue'));
@@ -109,7 +109,7 @@ test('answers all five questions', async () => {
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
   expect(savedOnboarding()).toEqual({
     lifeStage: 'family',
-    goals: ['start-saving', 'emergency-fund', 'budget', 'etfs', 'taxes'],
+    goals: ['start-saving', 'emergency-fund', 'budget', 'stocks-etfs', 'scams'],
     experience: 'not-saving',
     learningStyle: 'simple',
     confidence: { budgeting: 2, saving: 4, investing: 1 },

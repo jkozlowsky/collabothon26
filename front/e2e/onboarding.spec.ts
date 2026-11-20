@@ -56,9 +56,12 @@ test('answers to all five questions are saved on the profile', async ({ page, re
   await expectDisabled(page, 'onboarding-continue', false);
   await tap(page, 'onboarding-continue');
 
-  // 2. Goals: no upper limit, including the newer categories.
+  // 2. Goals: grouped by area, no upper limit, all on one screen.
+  for (const area of ['Everyday money', 'Saving', 'Borrowing', 'Investing', 'Protect & plan']) {
+    await expect(page.getByText(area, { exact: true })).toBeVisible();
+  }
   await expect(page.getByText('Pick as many as you like.', { exact: false })).toBeVisible();
-  const goals = ['budget', 'start-saving', 'credit-cards', 'stocks', 'crypto', 'insurance', 'retirement'];
+  const goals = ['budget', 'start-saving', 'credit-cards', 'stocks-etfs', 'crypto', 'insurance', 'retirement'];
   for (const g of goals) await tap(page, `goal-${g}`);
   await expect(page.getByText(`${goals.length} selected`)).toBeVisible();
   await tap(page, 'goal-crypto'); // tapping again deselects

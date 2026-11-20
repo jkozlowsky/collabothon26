@@ -29,7 +29,7 @@ import {
   CONFIDENCE_AREAS,
   CONFIDENCE_LABELS,
   EXPERIENCE,
-  GOALS,
+  GOAL_GROUPS,
   LEARNING_STYLES,
   LIFE_STAGES,
   type Option,
@@ -283,20 +283,24 @@ function GoalPicker({ value, onChange }: { value: Goal[]; onChange: (v: Goal[]) 
   const toggle = (g: Goal) => onChange(value.includes(g) ? value.filter((x) => x !== g) : [...value, g]);
   return (
     <>
-      <View style={styles.chips}>
-        {GOALS.map((g) => {
-          const selected = value.includes(g.value);
-          return (
-            <ChoiceChip
-              key={g.value}
-              testID={`goal-${g.value}`}
-              label={g.label}
-              selected={selected}
-              onPress={() => toggle(g.value)}
-            />
-          );
-        })}
-      </View>
+      {GOAL_GROUPS.map((group) => (
+        <View key={group.title} style={styles.goalGroup}>
+          <Text style={styles.goalGroupTitle} accessibilityRole="header">
+            {group.title}
+          </Text>
+          <View style={styles.goalRow}>
+            {group.goals.map((g) => (
+              <ChoiceChip
+                key={g.value}
+                testID={`goal-${g.value}`}
+                label={g.label}
+                selected={value.includes(g.value)}
+                onPress={() => toggle(g.value)}
+              />
+            ))}
+          </View>
+        </View>
+      ))}
       <View style={[styles.row, { justifyContent: 'flex-start', gap: 8 }]}>
         <Feather name="check" size={16} color={value.length ? colors.feedbackSuccess : colors.textMuted} />
         <Text style={[type.strong, { color: value.length ? colors.feedbackSuccess : colors.textMuted }]}>
@@ -386,7 +390,9 @@ const styles = StyleSheet.create({
   side: { flex: 1, alignItems: 'flex-start' },
   welcomeTitle: { fontSize: 30, lineHeight: 36, fontWeight: '700', color: '#fff' },
   answers: { gap: 10, marginTop: spacing.lg },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, rowGap: 10 },
+  goalGroup: { gap: spacing.xs + spacing.xxs },
+  goalGroupTitle: { ...type.overline, color: colors.textMuted, textTransform: 'uppercase' },
+  goalRow: { flexDirection: 'row', gap: spacing.sm },
   benefits: {
     marginTop: spacing.lg,
     backgroundColor: colors.bgSurface,

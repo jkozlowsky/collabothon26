@@ -85,10 +85,9 @@ class UserProfileController {
 			@Min(1) @Max(5) Short investing) {
 	}
 
-	private static final String GOALS = "budget|money-habits|banking-basics|start-saving|emergency-fund|big-purchase"
-			+ "|buy-home|pay-off-debt|credit-cards|loans-mortgages|start-investing|stocks|etfs"
-			+ "|bonds|diversification|sustainable-investing|crypto|inflation|risk|insurance"
-			+ "|scams|taxes|kids-future|family-money|retirement";
+	private static final String GOALS = "budget|money-habits|banking-basics|start-saving|emergency-fund|inflation"
+			+ "|pay-off-debt|credit-cards|loans-mortgages|start-investing|stocks-etfs|crypto"
+			+ "|retirement|insurance|scams";
 
 	record ProfileDto(String userId, String lifeStage, List<String> goals, String experience, String learningStyle,
 			Confidence confidence, boolean onboardingCompleted, boolean onboardingSkipped,

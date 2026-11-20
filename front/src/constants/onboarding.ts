@@ -14,33 +14,48 @@ export const LIFE_STAGES: Option<LifeStage>[] = [
   { value: 'pre-retirement', title: 'Getting close to retirement', subtitle: 'Protecting and planning', icon: 'sun' },
 ];
 
-/** Grouped loosely: everyday money, saving, borrowing, investing, protecting and planning. */
-export const GOALS: { value: Goal; label: string }[] = [
-  { value: 'budget', label: 'Budget & track spending' },
-  { value: 'money-habits', label: 'Build better money habits' },
-  { value: 'banking-basics', label: 'Get more from my bank account' },
-  { value: 'start-saving', label: "Start saving — I don't save yet" },
-  { value: 'emergency-fund', label: 'Build an emergency fund' },
-  { value: 'big-purchase', label: 'Save for a big purchase' },
-  { value: 'buy-home', label: 'Save for a home' },
-  { value: 'pay-off-debt', label: 'Pay off debt' },
-  { value: 'credit-cards', label: 'Credit cards & overdrafts' },
-  { value: 'loans-mortgages', label: 'Understand loans & mortgages' },
-  { value: 'start-investing', label: 'Start investing' },
-  { value: 'stocks', label: 'How stocks work' },
-  { value: 'etfs', label: 'Understand ETFs' },
-  { value: 'bonds', label: 'Bonds & safer options' },
-  { value: 'diversification', label: "Don't put all eggs in one basket" },
-  { value: 'sustainable-investing', label: 'Sustainable investing' },
-  { value: 'crypto', label: 'Crypto: what it is & its risks' },
-  { value: 'inflation', label: 'Beat inflation' },
-  { value: 'risk', label: 'Manage risk' },
-  { value: 'insurance', label: 'Insurance basics' },
-  { value: 'scams', label: 'Avoid scams' },
-  { value: 'taxes', label: 'Taxes basics' },
-  { value: 'kids-future', label: "Kids' future" },
-  { value: 'family-money', label: 'Talk money with family' },
-  { value: 'retirement', label: 'Plan retirement' },
+/** Topics for the goals question: five areas of three, so the whole step fits one phone screen. */
+export const GOAL_GROUPS: { title: string; goals: { value: Goal; label: string }[] }[] = [
+  {
+    title: 'Everyday money',
+    goals: [
+      { value: 'budget', label: 'Budgeting' },
+      { value: 'money-habits', label: 'Money habits' },
+      { value: 'banking-basics', label: 'Banking' },
+    ],
+  },
+  {
+    title: 'Saving',
+    goals: [
+      { value: 'start-saving', label: 'Start saving' },
+      { value: 'emergency-fund', label: 'Safety net' },
+      { value: 'inflation', label: 'Inflation' },
+    ],
+  },
+  {
+    title: 'Borrowing',
+    goals: [
+      { value: 'pay-off-debt', label: 'Debt' },
+      { value: 'credit-cards', label: 'Credit cards' },
+      { value: 'loans-mortgages', label: 'Loans' },
+    ],
+  },
+  {
+    title: 'Investing',
+    goals: [
+      { value: 'start-investing', label: 'First steps' },
+      { value: 'stocks-etfs', label: 'Stocks & ETFs' },
+      { value: 'crypto', label: 'Crypto' },
+    ],
+  },
+  {
+    title: 'Protect & plan',
+    goals: [
+      { value: 'retirement', label: 'Retirement' },
+      { value: 'insurance', label: 'Insurance' },
+      { value: 'scams', label: 'Scams' },
+    ],
+  },
 ];
 
 export const EXPERIENCE: Option<Experience>[] = [

@@ -1,14 +1,31 @@
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  useFonts,
+} from '@expo-google-fonts/inter';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Platform, StyleSheet, View } from 'react-native';
 
-import { colors } from '@/constants/theme';
+import { colors, elevation, fonts } from '@/constants/theme';
 import { OnboardingProvider, useOnboarding } from '@/hooks/useOnboarding';
 
 /** Widest "phone" on web; on a wide desktop window the app is centered at this width. */
 const WEB_PHONE_WIDTH = 430;
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  // A failed font load falls back to the system font rather than blocking the app.
+  if (!fontsLoaded && !fontError) return null;
+
   return (
     <View style={styles.page}>
       <View style={styles.phone}>
@@ -16,7 +33,7 @@ export default function RootLayout() {
           <RootStack />
         </OnboardingProvider>
       </View>
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
     </View>
   );
 }
@@ -27,7 +44,12 @@ function RootStack() {
   // Wait for the saved profile so a returning user never sees onboarding flash by.
   if (!loaded) return null;
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.bgCanvas },
+      }}
+    >
       <Stack.Protected guard={!done}>
         <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
       </Stack.Protected>
@@ -39,7 +61,9 @@ function RootStack() {
             headerShown: true,
             title: '',
             headerShadowVisible: false,
-            contentStyle: { backgroundColor: colors.background },
+            headerTintColor: colors.brandPrimary,
+            headerStyle: { backgroundColor: colors.bgCanvas },
+            headerTitleStyle: { fontFamily: fonts.semiBold, color: colors.textPrimary },
           }}
         />
       </Stack.Protected>
@@ -50,7 +74,7 @@ function RootStack() {
 const styles = StyleSheet.create({
   page: {
     flex: 1,
-    backgroundColor: Platform.OS === 'web' ? colors.border : colors.background,
+    backgroundColor: Platform.OS === 'web' ? colors.bgTint : colors.bgCanvas,
   },
   phone: {
     flex: 1,
@@ -58,8 +82,8 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' && {
       maxWidth: WEB_PHONE_WIDTH,
       alignSelf: 'center',
-      backgroundColor: colors.background,
-      boxShadow: '0 0 24px rgba(0, 0, 0, 0.08)',
+      backgroundColor: colors.bgCanvas,
+      ...elevation.mid,
     }),
   },
 });

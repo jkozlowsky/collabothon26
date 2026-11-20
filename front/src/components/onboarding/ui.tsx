@@ -5,7 +5,7 @@ import { Platform, Pressable, StyleSheet, Text, View, type PressableProps, type 
 import Animated, { cubicBezier, useReducedMotion, type CSSStyle } from 'react-native-reanimated';
 
 import type { IconName } from '@/constants/onboarding';
-import { brand, radius, spacing } from '@/constants/theme';
+import { colors, radii, spacing } from '@/constants/theme';
 
 /** Strong ease-out for UI; ease-in-out for things moving across the screen. */
 export const EASE_OUT = cubicBezier(0.23, 1, 0.32, 1);
@@ -118,8 +118,8 @@ export function BigButton({ label, onPress, variant = 'primary', onDark, disable
       <Text
         style={[
           styles.buttonLabel,
-          ghost ? { color: onDark ? 'rgba(255,255,255,0.8)' : brand.muted } : { color: brand.primary },
-          disabled && { color: brand.muted },
+          ghost ? { color: onDark ? 'rgba(255,255,255,0.8)' : colors.textMuted } : { color: colors.brandPrimary },
+          disabled && { color: colors.textMuted },
         ]}
       >
         {label}
@@ -134,10 +134,10 @@ export function IconTile({ icon, active, size = 44 }: { icon: IconName; active?:
       style={[
         styles.tile,
         motion.colors,
-        { width: size, height: size, backgroundColor: active ? brand.accent : brand.tint },
+        { width: size, height: size, backgroundColor: active ? colors.brandAccent : colors.bgTint },
       ]}
     >
-      <Feather name={icon} size={Math.round(size / 2)} color={brand.primary} />
+      <Feather name={icon} size={Math.round(size / 2)} color={colors.brandPrimary} />
     </Animated.View>
   );
 }
@@ -194,7 +194,7 @@ export function ChoiceChip({ label, selected, disabled, onPress, testID }: ChipP
     >
       {/* Re-keyed so the icon pops each time the chip flips. */}
       <Animated.View key={String(selected)} style={motion.pop}>
-        <Feather name={selected ? 'check' : 'plus'} size={14} color={selected ? brand.accent : brand.muted} />
+        <Feather name={selected ? 'check' : 'plus'} size={14} color={selected ? colors.brandAccent : colors.textMuted} />
       </Animated.View>
       <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>{label}</Text>
     </Tappable>
@@ -241,7 +241,7 @@ export function BackButton({ onPress }: { onPress: () => void }) {
       pressedScale={0.9}
       style={styles.back}
     >
-      <Feather name="chevron-left" size={20} color={brand.primary} />
+      <Feather name="chevron-left" size={20} color={colors.brandPrimary} />
     </Tappable>
   );
 }
@@ -261,11 +261,11 @@ export function FadeIn({ children, style }: { children: ReactNode; style?: Style
 }
 
 export const type = StyleSheet.create({
-  display: { fontSize: 26, lineHeight: 32, fontWeight: '700', color: brand.text },
-  body: { fontSize: 15, lineHeight: 22, color: brand.muted },
-  overline: { fontSize: 10, fontWeight: '700', letterSpacing: 1.2, color: brand.xp },
-  strong: { fontSize: 12, fontWeight: '600', color: brand.text },
-  label: { fontSize: 12, fontWeight: '500', color: brand.muted },
+  display: { fontSize: 26, lineHeight: 32, fontWeight: '700', color: colors.textPrimary },
+  body: { fontSize: 15, lineHeight: 22, color: colors.textMuted },
+  overline: { fontSize: 10, fontWeight: '700', letterSpacing: 1.2, color: colors.feedbackXp },
+  strong: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
+  label: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
 });
 
 /** Shared motion styles (Reanimated CSS transitions and animations; they run on the UI thread). */
@@ -304,36 +304,36 @@ export const motion = {
 } satisfies Record<string, CSSStyle>;
 
 const styles = StyleSheet.create({
-  button: { height: 52, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
-  buttonPrimary: { backgroundColor: brand.accent },
+  button: { height: 52, borderRadius: radii.card, alignItems: 'center', justifyContent: 'center' },
+  buttonPrimary: { backgroundColor: colors.brandAccent },
   buttonGhost: { backgroundColor: 'transparent' },
-  buttonDisabled: { backgroundColor: brand.border },
+  buttonDisabled: { backgroundColor: colors.borderDefault },
   buttonLabel: { fontSize: 15, fontWeight: '600' },
-  tile: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  tile: { borderRadius: radii.tile, alignItems: 'center', justifyContent: 'center' },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md - 1,
-    borderRadius: radius.lg,
+    gap: spacing.lg,
+    padding: spacing.lg - 1,
+    borderRadius: radii.card,
     borderWidth: 2,
-    borderColor: brand.border,
-    backgroundColor: brand.surface,
+    borderColor: colors.borderDefault,
+    backgroundColor: colors.bgSurface,
   },
-  optionSelected: { backgroundColor: brand.accentSoft, borderColor: brand.primary },
+  optionSelected: { backgroundColor: colors.brandAccentSoft, borderColor: colors.brandPrimary },
   optionText: { flex: 1, gap: 2 },
-  optionTitle: { fontSize: 15, fontWeight: '600', color: brand.text },
-  optionSubtitle: { fontSize: 13, color: brand.muted },
+  optionTitle: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  optionSubtitle: { fontSize: 13, color: colors.textMuted },
   radio: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: brand.borderStrong,
+    borderColor: colors.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioSelected: { backgroundColor: brand.primary, borderColor: brand.primary },
+  radioSelected: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -343,30 +343,30 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: brand.border,
-    backgroundColor: brand.surface,
+    borderColor: colors.borderDefault,
+    backgroundColor: colors.bgSurface,
   },
-  chipSelected: { backgroundColor: brand.primary, borderColor: brand.primary },
+  chipSelected: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
   chipDisabled: { opacity: 0.45 },
-  chipLabel: { fontSize: 13, fontWeight: '600', color: brand.text },
+  chipLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   chipLabelSelected: { color: '#fff' },
   dots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: brand.borderStrong },
-  dotActive: { width: 24, backgroundColor: brand.primary },
-  stepHeader: { gap: spacing.md },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.borderStrong },
+  dotActive: { width: 24, backgroundColor: colors.brandPrimary },
+  stepHeader: { gap: spacing.lg },
   stepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   back: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: brand.surface,
+    backgroundColor: colors.bgSurface,
     borderWidth: 1,
-    borderColor: brand.border,
+    borderColor: colors.borderDefault,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepText: { fontSize: 12, fontWeight: '600', color: brand.muted },
-  skip: { fontSize: 13, fontWeight: '600', color: brand.primary },
-  track: { height: 6, borderRadius: 3, backgroundColor: brand.border, overflow: 'hidden' },
-  trackFill: { height: '100%', borderRadius: 3, backgroundColor: brand.accent },
+  stepText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
+  skip: { fontSize: 13, fontWeight: '600', color: colors.brandPrimary },
+  track: { height: 6, borderRadius: 3, backgroundColor: colors.borderDefault, overflow: 'hidden' },
+  trackFill: { height: '100%', borderRadius: 3, backgroundColor: colors.brandAccent },
 });

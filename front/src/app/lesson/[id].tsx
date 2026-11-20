@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AsyncContent } from '@/components/AsyncContent';
 import { Button } from '@/components/Button';
-import { colors, spacing } from '@/constants/theme';
+import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import type { LessonDetail } from '@/types/lessons';
 
@@ -105,29 +105,55 @@ function Quiz({ lesson }: { lesson: LessonDetail }) {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: spacing.md, gap: spacing.md, maxWidth: 640, width: '100%', alignSelf: 'center' },
-  progressTrack: { height: 8, borderRadius: 4, backgroundColor: colors.border, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: colors.primary },
-  counter: { color: colors.muted, fontSize: 14 },
-  prompt: { fontSize: 20, fontWeight: '700', color: colors.text },
-  options: { gap: 10 },
+  container: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    gap: spacing.lg,
+    maxWidth: 640,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  progressTrack: {
+    height: 5,
+    borderRadius: radii.bar,
+    backgroundColor: colors.borderDefault,
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: radii.bar, backgroundColor: colors.brandPrimary },
+  counter: { ...type.overline, color: colors.brandPrimary },
+  prompt: type.titleSection,
+  options: { gap: spacing.md },
   option: {
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: radii.card,
+    padding: spacing.lg,
   },
   optionPressed: { transform: [{ scale: 0.98 }] },
-  optionCorrect: { backgroundColor: colors.correct, borderColor: colors.correctBorder },
-  optionWrong: { backgroundColor: colors.wrong, borderColor: colors.wrongBorder },
-  optionText: { fontSize: 16, color: colors.text },
-  feedback: { gap: 10, backgroundColor: colors.surface, borderRadius: 14, padding: 16 },
-  feedbackTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
-  feedbackText: { fontSize: 15, color: colors.muted, lineHeight: 21 },
-  result: { alignItems: 'center', gap: 10, paddingVertical: 32 },
+  optionCorrect: {
+    backgroundColor: colors.feedbackSuccessSoft,
+    borderColor: colors.feedbackSuccess,
+    borderWidth: 2,
+  },
+  optionWrong: {
+    backgroundColor: colors.feedbackDangerSoft,
+    borderColor: colors.feedbackDanger,
+    borderWidth: 2,
+  },
+  optionText: type.titleCard,
+  feedback: {
+    gap: spacing.md,
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.card,
+    padding: spacing.lg,
+    ...elevation.low,
+  },
+  feedbackTitle: type.titleCard,
+  feedbackText: { ...type.bodyDefault, color: colors.textMuted },
+  result: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxxl },
   resultEmoji: { fontSize: 56 },
-  resultTitle: { fontSize: 24, fontWeight: '800', color: colors.text },
-  resultScore: { fontSize: 16, color: colors.muted, marginBottom: 12 },
-  xp: { color: colors.xp, fontWeight: '700' },
+  resultTitle: type.displayLarge,
+  resultScore: { ...type.labelDefault, color: colors.textMuted, marginBottom: spacing.md },
+  xp: { ...type.labelStrong, color: colors.feedbackXp },
 });

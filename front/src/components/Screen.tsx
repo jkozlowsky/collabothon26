@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, spacing } from '@/constants/theme';
+import { colors, spacing, type } from '@/constants/theme';
 
 type Props = {
   title: string;
@@ -37,18 +37,17 @@ export function Screen({ title, children, scroll = false, testID }: Props) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bgCanvas,
   },
   fill: {
     flex: 1,
   },
   content: {
-    padding: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.md,
+    ...type.displayLarge,
+    marginBottom: spacing.lg,
   },
 });

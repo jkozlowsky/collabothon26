@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
-import { colors, spacing } from '@/constants/theme';
+import { colors, spacing, type } from '@/constants/theme';
 
 type Props = {
   loading: boolean;
@@ -16,7 +16,7 @@ export function AsyncContent({ loading, error, onRetry, children }: Props) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.brandPrimary} />
       </View>
     );
   }
@@ -33,7 +33,7 @@ export function AsyncContent({ loading, error, onRetry, children }: Props) {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, gap: spacing.sm },
-  title: { fontSize: 17, fontWeight: '600', color: colors.text, textAlign: 'center' },
-  detail: { color: colors.muted, textAlign: 'center', marginBottom: spacing.sm },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl, gap: spacing.sm },
+  title: { ...type.titleSection, textAlign: 'center' },
+  detail: { ...type.bodyDefault, color: colors.textMuted, textAlign: 'center', marginBottom: spacing.sm },
 });

@@ -6,7 +6,7 @@ import Animated, { useReducedMotion, type CSSAnimationKeyframes, type CSSAnimati
 
 import { Globe, GLOBE_PINS, GlobeSphere } from '@/components/onboarding/Globe';
 import { EASE_IN_OUT, EASE_OUT, haptic, motion, Tappable } from '@/components/onboarding/ui';
-import { brand, radius, spacing } from '@/constants/theme';
+import { colors, radii, spacing } from '@/constants/theme';
 
 const FLOAT = { from: { transform: [{ translateY: 0 }] }, to: { transform: [{ translateY: -7 }] } };
 const SWAY = {
@@ -46,9 +46,9 @@ export function WelcomeHero() {
   const reduced = useReducedMotion();
   const bubbles = [
     { pos: { top: 26, right: 0 }, light: true, icon: <View style={hero.check}><Feather name="check" size={11} color="#fff" /></View>, text: 'Correct!' },
-    { pos: { top: 64, left: 0 }, light: true, icon: <Ionicons name="flame" size={13} color={brand.streak} />, text: '5 day streak' },
-    { pos: { bottom: 40, right: 6 }, light: true, icon: <Feather name="zap" size={13} color={brand.xp} />, text: '+40 XP' },
-    { pos: { bottom: 22, left: 14 }, light: false, icon: <Feather name="book-open" size={13} color={brand.accent} />, text: '3 min lesson' },
+    { pos: { top: 64, left: 0 }, light: true, icon: <Ionicons name="flame" size={13} color={colors.feedbackStreak} />, text: '5 day streak' },
+    { pos: { bottom: 40, right: 6 }, light: true, icon: <Feather name="zap" size={13} color={colors.feedbackXp} />, text: '+40 XP' },
+    { pos: { bottom: 22, left: 14 }, light: false, icon: <Feather name="book-open" size={13} color={colors.brandAccent} />, text: '3 min lesson' },
   ];
   return (
     <View style={hero.stage} accessible={false} importantForAccessibility="no-hide-descendants">
@@ -57,7 +57,7 @@ export function WelcomeHero() {
       <Animated.View style={[hero.tileSlot, reduced ? motion.fade : enter(100)]}>
         <Animated.View style={!reduced && loop(SWAY, 3200, 600)}>
           <View style={hero.tile}>
-            <Feather name="trending-up" size={58} color={brand.primary} />
+            <Feather name="trending-up" size={58} color={colors.brandPrimary} />
           </View>
         </Animated.View>
       </Animated.View>
@@ -96,9 +96,9 @@ export function LessonGlobeIllustration() {
           <Text style={globe.cardTitle}>{pin.title}</Text>
           <Text style={card.meta}>{pin.meta}</Text>
           <View style={[globe.cardButton, pin.state === 'locked' && globe.cardButtonLocked]}>
-            {pin.state === 'locked' && <Feather name="lock" size={12} color={brand.muted} />}
-            <Text style={[globe.cardButtonText, pin.state === 'locked' && { color: brand.muted }]}>{action}</Text>
-            {pin.state !== 'locked' && <Feather name="arrow-right" size={13} color={brand.primary} />}
+            {pin.state === 'locked' && <Feather name="lock" size={12} color={colors.textMuted} />}
+            <Text style={[globe.cardButtonText, pin.state === 'locked' && { color: colors.textMuted }]}>{action}</Text>
+            {pin.state !== 'locked' && <Feather name="arrow-right" size={13} color={colors.brandPrimary} />}
           </View>
         </Animated.View>
       </View>
@@ -181,7 +181,7 @@ export function PersonalIllustration() {
       </View>
       <View style={personal.becomes}>
         <Animated.View key={focus} style={{ animationName: { from: { transform: [{ rotate: '-180deg' }] }, to: { transform: [{ rotate: '0deg' }] } }, animationDuration: 420, animationTimingFunction: EASE_OUT }}>
-          <Feather name="repeat" size={13} color={brand.muted} />
+          <Feather name="repeat" size={13} color={colors.textMuted} />
         </Animated.View>
         <Text style={card.meta}>Tap a number — it becomes a lesson</Text>
       </View>
@@ -194,10 +194,10 @@ export function PersonalIllustration() {
           </Text>
           <Text style={path.meta}>{lesson.meta}</Text>
         </Animated.View>
-        <Feather name="chevron-right" size={18} color={brand.primary} />
+        <Feather name="chevron-right" size={18} color={colors.brandPrimary} />
       </View>
       <View style={[path.track, { marginTop: -4 }]}>
-        <Animated.View style={[path.fill, motion.size, { width: lesson.progress, backgroundColor: brand.primary }]} />
+        <Animated.View style={[path.fill, motion.size, { width: lesson.progress, backgroundColor: colors.brandPrimary }]} />
       </View>
     </View>
   );
@@ -210,12 +210,12 @@ export function ConfidenceIllustration() {
   const reduced = useReducedMotion();
   const [stepDone, setStepDone] = useState(false);
   const rows = [
-    { label: 'Before lesson', value: 2, color: brand.borderStrong, valueColor: brand.muted },
-    { label: 'After lesson', value: 4, color: brand.success, valueColor: brand.success },
+    { label: 'Before lesson', value: 2, color: colors.borderStrong, valueColor: colors.textMuted },
+    { label: 'After lesson', value: 4, color: colors.feedbackSuccess, valueColor: colors.feedbackSuccess },
   ];
   return (
     <View style={[card.wrap, { gap: 14 }]}>
-      <Text style={[card.overline, { color: brand.muted }]}>YOUR CONFIDENCE · SAVING</Text>
+      <Text style={[card.overline, { color: colors.textMuted }]}>YOUR CONFIDENCE · SAVING</Text>
       {rows.map((r, row) => (
         <View key={r.label} style={{ gap: 8 }}>
           <View style={card.headerRow}>
@@ -230,7 +230,7 @@ export function ConfidenceIllustration() {
                   key={i}
                   style={[
                     conf.seg,
-                    { backgroundColor: filled ? r.color : brand.border },
+                    { backgroundColor: filled ? r.color : colors.borderDefault },
                     filled && !reduced && {
                       animationName: GROW,
                       animationDuration: 320,
@@ -263,12 +263,12 @@ export function ConfidenceIllustration() {
             </Animated.View>
           )}
         </Animated.View>
-        <Text style={[path.title, { flex: 1 }, stepDone && { color: brand.success }]}>
+        <Text style={[path.title, { flex: 1 }, stepDone && { color: colors.feedbackSuccess }]}>
           {stepDone ? 'Done! Monthly savings transfer set' : 'Next step: set up a monthly savings transfer'}
         </Text>
         {stepDone && (
           <Animated.View style={[conf.xp, motion.pop]}>
-            <Feather name="zap" size={11} color={brand.xp} />
+            <Feather name="zap" size={11} color={colors.feedbackXp} />
             <Text style={conf.xpText}>+10 XP</Text>
           </Animated.View>
         )}
@@ -283,7 +283,7 @@ const hero = StyleSheet.create({
     position: 'absolute',
     inset: 20,
     borderRadius: 140,
-    backgroundColor: brand.oceanLight,
+    backgroundColor: colors.globeOceanLight,
     opacity: 0.35,
   },
   ring: {
@@ -300,7 +300,7 @@ const hero = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 32,
-    backgroundColor: brand.accent,
+    backgroundColor: colors.brandAccent,
     alignItems: 'center',
     justifyContent: 'center',
     transform: [{ rotate: '-8deg' }],
@@ -315,15 +315,15 @@ const hero = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 14,
   },
-  bubbleLight: { backgroundColor: brand.surface, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)' },
+  bubbleLight: { backgroundColor: colors.bgSurface, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)' },
   bubbleDark: { backgroundColor: 'rgba(255,255,255,0.12)' },
-  bubbleTextDark: { fontSize: 12, fontWeight: '600', color: brand.text },
+  bubbleTextDark: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
   bubbleTextLight: { fontSize: 12, fontWeight: '600', color: '#fff' },
   check: {
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: brand.success,
+    backgroundColor: colors.feedbackSuccess,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -331,15 +331,15 @@ const hero = StyleSheet.create({
 
 const card = StyleSheet.create({
   wrap: {
-    backgroundColor: brand.surface,
-    borderRadius: radius.xl,
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.sheet,
     padding: 20,
     gap: 10,
     boxShadow: '0 6px 20px rgba(0, 46, 60, 0.08)',
   },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  overline: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: brand.xp },
-  meta: { fontSize: 12, fontWeight: '500', color: brand.muted },
+  overline: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: colors.feedbackXp },
+  meta: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
 });
 
 const path = StyleSheet.create({
@@ -348,17 +348,17 @@ const path = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 12,
-    borderRadius: radius.lg,
+    borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: brand.border,
+    borderColor: colors.borderDefault,
   },
-  rowActive: { backgroundColor: brand.accentSoft, borderColor: brand.primary, borderWidth: 2, padding: 11 },
+  rowActive: { backgroundColor: colors.brandAccentSoft, borderColor: colors.brandPrimary, borderWidth: 2, padding: 11 },
   rowLocked: { opacity: 0.55 },
-  title: { fontSize: 13, fontWeight: '600', color: brand.text },
-  meta: { fontSize: 11, color: brand.muted },
-  track: { height: 4, borderRadius: 2, backgroundColor: brand.border, overflow: 'hidden', marginTop: 2 },
-  fill: { height: '100%', backgroundColor: brand.success },
-  status: { fontSize: 12, fontWeight: '700', color: brand.primary },
+  title: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  meta: { fontSize: 11, color: colors.textMuted },
+  track: { height: 4, borderRadius: 2, backgroundColor: colors.borderDefault, overflow: 'hidden', marginTop: 2 },
+  fill: { height: '100%', backgroundColor: colors.feedbackSuccess },
+  status: { fontSize: 12, fontWeight: '700', color: colors.brandPrimary },
 });
 
 const GLOBE_SIZE = 250;
@@ -374,7 +374,7 @@ const globe = StyleSheet.create({
     borderRadius: 143,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: brand.borderStrong,
+    borderColor: colors.borderStrong,
   },
   shadow: {
     position: 'absolute',
@@ -390,58 +390,58 @@ const globe = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
-    backgroundColor: brand.surface,
-    borderRadius: radius.lg,
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.card,
     paddingVertical: 12,
     paddingHorizontal: 14,
     gap: 3,
     boxShadow: '0 8px 24px rgba(0, 46, 60, 0.16)',
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: brand.text },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
   cardButton: {
     marginTop: 6,
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 6,
-    backgroundColor: brand.accent,
-    borderRadius: radius.sm,
+    backgroundColor: colors.brandAccent,
+    borderRadius: radii.button,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
-  cardButtonLocked: { backgroundColor: brand.tint },
+  cardButtonLocked: { backgroundColor: colors.bgTint },
   cityRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  cardButtonText: { fontSize: 13, fontWeight: '700', color: brand.primary },
-  topics: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: spacing.md },
+  cardButtonText: { fontSize: 13, fontWeight: '700', color: colors.brandPrimary },
+  topics: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: spacing.lg },
   topic: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: brand.surface,
+    backgroundColor: colors.bgSurface,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: brand.border,
+    borderColor: colors.borderDefault,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  topicText: { fontSize: 12, fontWeight: '600', color: brand.text },
+  topicText: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
 });
 
 const personal = StyleSheet.create({
-  account: { backgroundColor: brand.primary, borderRadius: radius.lg, padding: spacing.md, gap: 4 },
+  account: { backgroundColor: colors.brandPrimary, borderRadius: radii.card, padding: spacing.lg, gap: 4 },
   accountLabel: { fontSize: 11, color: 'rgba(255,255,255,0.7)' },
   amount: { fontSize: 28, fontWeight: '700', color: '#fff' },
   iban: { fontSize: 11, color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5 },
   pills: { flexDirection: 'row', gap: 8, marginTop: 8 },
   pill: {
     backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: radius.sm,
+    borderRadius: radii.button,
     padding: 8,
     borderWidth: 1.5,
     borderColor: 'transparent',
   },
-  pillOn: { backgroundColor: 'rgba(255,204,0,0.16)', borderColor: brand.accent },
+  pillOn: { backgroundColor: 'rgba(255,204,0,0.16)', borderColor: colors.brandAccent },
   pillLabel: { fontSize: 10, color: 'rgba(255,255,255,0.7)' },
   pillValue: { fontSize: 12, fontWeight: '600', color: '#fff' },
   becomes: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
@@ -450,10 +450,10 @@ const personal = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 12,
-    borderRadius: radius.lg,
-    backgroundColor: brand.accentSoft,
+    borderRadius: radii.card,
+    backgroundColor: colors.brandAccentSoft,
     borderWidth: 1,
-    borderColor: brand.accent,
+    borderColor: colors.brandAccent,
   },
 });
 
@@ -466,27 +466,27 @@ const conf = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: brand.primary,
+    borderColor: colors.brandPrimary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tickDone: { backgroundColor: brand.success, borderColor: brand.success },
+  tickDone: { backgroundColor: colors.feedbackSuccess, borderColor: colors.feedbackSuccess },
   xp: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: brand.surface,
+    backgroundColor: colors.bgSurface,
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  xpText: { fontSize: 11, fontWeight: '700', color: brand.xp },
+  xpText: { fontSize: 11, fontWeight: '700', color: colors.feedbackXp },
   step: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: brand.accentSoft,
-    borderRadius: radius.md,
+    backgroundColor: colors.brandAccentSoft,
+    borderRadius: radii.tile,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },

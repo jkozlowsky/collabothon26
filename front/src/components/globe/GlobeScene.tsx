@@ -4,7 +4,7 @@ import { Asset } from 'expo-asset';
 import { useEffect, useMemo, useRef } from 'react';
 import { useAnimatedReaction, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { LinearFilter, NoColorSpace, TextureLoader, Vector3, type Group } from 'three';
+import { LinearFilter, NoColorSpace, TextureLoader, Vector3, type Group, type Texture } from 'three';
 
 import { colors } from '@/constants/theme';
 
@@ -27,6 +27,20 @@ const LAND_TEXTURE = require('../../../assets/globe/land-2048.png');
 function rgb(hex: string) {
   const n = parseInt(hex.slice(1), 16);
   return new Vector3(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+}
+
+/**
+ * No flip and no mipmaps: rows are read top-down on every GL backend (expo-gl ignores UNPACK_FLIP_Y), and the
+ * atan seam stays invisible. Configures the loaded texture in place: a clone loses the flags r3f's native loader
+ * sets, and expo-gl then cannot upload it.
+ */
+function prepareLand(texture: Texture) {
+  texture.flipY = false;
+  texture.generateMipmaps = false;
+  texture.minFilter = LinearFilter;
+  texture.colorSpace = NoColorSpace;
+  texture.needsUpdate = true;
+  return texture;
 }
 
 const VERTEX = /* glsl */ `
@@ -86,16 +100,10 @@ function Sphere({ yaw, pitch, onFirstFrame }: Pick<Props, 'yaw' | 'pitch'> & { o
   const invalidate = useThree((s) => s.invalidate);
   const loaded = useLoader(TextureLoader, Asset.fromModule(LAND_TEXTURE).uri);
 
-  const uniforms = useMemo(() => {
-    // No flip and no mipmaps: rows are read top-down on every GL backend, and the atan seam stays invisible.
-    const land = loaded.clone();
-    land.flipY = false;
-    land.generateMipmaps = false;
-    land.minFilter = LinearFilter;
-    land.colorSpace = NoColorSpace;
-    land.needsUpdate = true;
-    return { land: { value: land }, oceanLight: { value: rgb(colors.globeOceanLight) }, oceanDeep: { value: rgb(colors.globeOceanDeep) } };
-  }, [loaded]);
+  const uniforms = useMemo(
+    () => ({ land: { value: prepareLand(loaded) }, oceanLight: { value: rgb(colors.globeOceanLight) }, oceanDeep: { value: rgb(colors.globeOceanDeep) } }),
+    [loaded],
+  );
 
   // Render on demand: a new frame only when the orientation changes.
   useAnimatedReaction(

@@ -43,6 +43,10 @@ class JevClientTests {
 		return new JevProperties(URI.create(baseUrl), apiKey, JevConsts.DEFAULT_MODEL);
 	}
 
+	private static JevResult ask(RestClient.Builder builder, String baseUrl, String apiKey) {
+		return new JevClient(builder, JSON, properties(baseUrl, apiKey)).ask(ANSWERS, null, List.of());
+	}
+
 	// Both records go to an external model verbatim; a new component must be a deliberate change here.
 	@Test
 	void onlyKnownFieldsAreSentToJev() {
@@ -56,14 +60,12 @@ class JevClientTests {
 	// Real JDK client, no stub: nothing can leave when the connection is never established.
 	@Test
 	void refusedConnectionIsNotSent() {
-		assertEquals(NOT_SENT,
-				new JevClient(RestClient.builder(), JSON, properties("http://localhost:1", "")).ask(ANSWERS, null, List.of()));
+		assertEquals(NOT_SENT, ask(RestClient.builder(), "http://localhost:1", ""));
 	}
 
 	@Test
 	void unknownHostIsNotSent() {
-		assertEquals(NOT_SENT,
-				new JevClient(RestClient.builder(), JSON, properties("http://jev.invalid", "")).ask(ANSWERS, null, List.of()));
+		assertEquals(NOT_SENT, ask(RestClient.builder(), "http://jev.invalid", ""));
 	}
 
 	@Test
@@ -73,8 +75,7 @@ class JevClientTests {
 		server.expect(requestTo("http://localhost:8000" + JevConsts.SYSTEM_ONE_PATH))
 			.andRespond(withStatus(HttpStatus.OK).header(HttpHeaders.CONTENT_TYPE, "not a type").body("{}"));
 
-		assertEquals(SENT_WITHOUT_ANSWER,
-				new JevClient(builder, JSON, properties("http://localhost:8000", "")).ask(ANSWERS, null, List.of()));
+		assertEquals(SENT_WITHOUT_ANSWER, ask(builder, "http://localhost:8000", ""));
 	}
 
 	@Test
@@ -84,8 +85,7 @@ class JevClientTests {
 		server.expect(requestTo("https://jev.example" + JevConsts.SYSTEM_ONE_PATH))
 			.andRespond(withException(new SSLHandshakeException("certificate rejected")));
 
-		assertEquals(NOT_SENT,
-				new JevClient(builder, JSON, properties("https://jev.example", "")).ask(ANSWERS, null, List.of()));
+		assertEquals(NOT_SENT, ask(builder, "https://jev.example", ""));
 	}
 
 	@Test
@@ -94,7 +94,7 @@ class JevClientTests {
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
 		server.expect(headerDoesNotExist("Authorization")).andRespond(withServerError());
 
-		assertTrue(new JevClient(builder, JSON, properties("http://localhost:8000", " ")).ask(ANSWERS, null, List.of()).sent());
+		assertTrue(ask(builder, "http://localhost:8000", " ").sent());
 		server.verify();
 	}
 

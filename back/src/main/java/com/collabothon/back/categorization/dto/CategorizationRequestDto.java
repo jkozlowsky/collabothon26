@@ -11,8 +11,8 @@ public record CategorizationRequestDto(
 		Boolean consent,
 		@Valid
 		FactsDto facts,
-		// Each answer is validated by CheckQuestionService, so a deployment that cannot call Jev ignores them.
-		List<@NotNull CheckAnswerDto> answers
+		// The answers themselves are validated by CheckQuestionService, so a deployment without a judge ignores them.
+		List<CheckAnswerDto> answers
 ) {
 
 	@AssertTrue(message = "facts are only accepted with consent")

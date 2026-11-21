@@ -17,13 +17,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.collabothon.back.categorization.dto.CheckDto;
 import com.collabothon.back.categorization.dto.ConfidenceGapDto;
 import com.collabothon.back.categorization.dto.FactsDto;
 import com.collabothon.back.categorization.dto.LessonVariantDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
-import com.collabothon.back.categorization.dto.StartLessonDto;
 import com.collabothon.back.categorization.enums.CheckResult;
 import com.collabothon.back.categorization.enums.ConfidenceArea;
 import com.collabothon.back.categorization.enums.Experience;
@@ -113,74 +113,64 @@ final class CategorizationRules {
 		return picked.isEmpty() ? sorted.subList(0, 1) : picked;
 	}
 
-	/** Where what the user said about themselves and what their accounts or their Quick check answers show differ. */
+	/** Where what the user said about themselves and what their accounts or their Quick check show differ. */
 	static List<ConfidenceGapDto> confidenceGaps(OnboardingAnswersDto a, FactsDto f, List<CheckDto> checks) {
 		Experience said = Experience.fromWire(a.experience());
 		if (said == null) {
 			return List.of();
 		}
 		List<ConfidenceGapDto> gaps = new ArrayList<>();
-		if (f != null) {
-			accountGaps(said, f, gaps);
-		}
 		for (ConfidenceArea area : ConfidenceArea.values()) {
-			checkGap(said, area, gaps, checks);
+			Set<CheckResult> results = checks.stream()
+				.filter(c -> c.area() == area.focusArea())
+				.map(CheckDto::result)
+				.collect(Collectors.toCollection(() -> EnumSet.noneOf(CheckResult.class)));
+			boolean understood = results.equals(EnumSet.of(CheckResult.UNDERSTANDS));
+			boolean notYet = results.equals(EnumSet.of(CheckResult.NOT_YET));
+			String cite = understood ? "Your answer about " + area.wire() + " shows you understand it." : "";
+			boolean saysLow = area == ConfidenceArea.SAVING ? SAYS_LITTLE_SAVING.contains(said)
+					: !SAYS_INVESTING.contains(said);
+			Optional<ConfidenceGapDto> fromAccount = f == null ? Optional.empty() : accountGap(said, area, f, cite);
+			if (fromAccount.isPresent()) {
+				gaps.add(fromAccount.get());
+			}
+			else if (saysLow && understood) {
+				gaps.add(gap(area, GapDirection.UNDER, said, cite));
+			}
+			else if (!saysLow && notYet) {
+				gaps.add(gap(area, GapDirection.OVER, said,
+						"Your Quick check points to " + area.wire() + " as a place to learn more."));
+			}
 		}
 		return gaps;
 	}
 
-	private static void accountGaps(Experience said, FactsDto f, List<ConfidenceGapDto> gaps) {
-		if (SAYS_LITTLE_SAVING.contains(said) && f.savesRegularly()) {
-			gaps.add(gap(ConfidenceArea.SAVING, GapDirection.UNDER, said, SAVES_LINE));
-		}
-		else if (!SAYS_LITTLE_SAVING.contains(said) && f.cashBufferMonths().equals(BUFFER_UNDER_1)) {
-			gaps.add(gap(ConfidenceArea.SAVING, GapDirection.OVER, said, bufferLine(f)));
-		}
-		if (!SAYS_INVESTING.contains(said) && f.holdsInvestments()) {
-			gaps.add(gap(ConfidenceArea.INVESTING, GapDirection.UNDER, said, HOLDS_LINE));
-		}
-		else if (SAYS_INVESTING.contains(said) && !f.holdsInvestments()) {
-			gaps.add(gap(ConfidenceArea.INVESTING, GapDirection.OVER, said, NO_HOLDS_LINE));
-		}
-	}
-
-	/** An account gap in the area gets the check cited; otherwise the check alone can raise one, per the rule table. */
-	private static void checkGap(Experience said, ConfidenceArea area, List<ConfidenceGapDto> gaps,
-			List<CheckDto> checks) {
-		FocusArea focusArea = FocusArea.valueOf(area.name());
-		boolean understands = hasCheck(checks, focusArea, CheckResult.UNDERSTANDS);
-		boolean notYet = hasCheck(checks, focusArea, CheckResult.NOT_YET);
-		boolean saysLow = area == ConfidenceArea.SAVING ? SAYS_LITTLE_SAVING.contains(said) : !SAYS_INVESTING.contains(said);
-		String cite = ", and your answer about " + area.wire();
-		for (int i = 0; i < gaps.size(); i++) {
-			ConfidenceGapDto existing = gaps.get(i);
-			if (existing.area() == area) {
-				if (existing.direction() == GapDirection.UNDER && understands) {
-					String because = existing.because();
-					gaps.set(i, new ConfidenceGapDto(area, GapDirection.UNDER,
-							because.substring(0, because.length() - 1) + cite + " shows you understand it."));
-				}
-				return;
+	/** {@code cite} is appended to an UNDER gap only: the check backs up that the person knows more than they say. */
+	private static Optional<ConfidenceGapDto> accountGap(Experience said, ConfidenceArea area, FactsDto f,
+			String cite) {
+		if (area == ConfidenceArea.SAVING) {
+			if (SAYS_LITTLE_SAVING.contains(said) && f.savesRegularly()) {
+				return Optional.of(gap(area, GapDirection.UNDER, said, (SAVES_LINE + " " + cite).strip()));
+			}
+			if (!SAYS_LITTLE_SAVING.contains(said) && f.cashBufferMonths().equals(BUFFER_UNDER_1)) {
+				return Optional.of(gap(area, GapDirection.OVER, said, bufferLine(f)));
 			}
 		}
-		String prefix = "You said: " + said.getLabel();
-		if (saysLow && understands) {
-			gaps.add(new ConfidenceGapDto(area, GapDirection.UNDER, prefix + cite + " shows you understand it."));
+		else {
+			if (!SAYS_INVESTING.contains(said) && f.holdsInvestments()) {
+				return Optional.of(gap(area, GapDirection.UNDER, said, (HOLDS_LINE + " " + cite).strip()));
+			}
+			if (SAYS_INVESTING.contains(said) && !f.holdsInvestments()) {
+				return Optional.of(gap(area, GapDirection.OVER, said, NO_HOLDS_LINE));
+			}
 		}
-		else if (!saysLow && notYet) {
-			gaps.add(new ConfidenceGapDto(area, GapDirection.OVER, prefix + cite + " shows there is more to learn."));
-		}
-	}
-
-	private static boolean hasCheck(List<CheckDto> checks, FocusArea area, CheckResult result) {
-		return checks.stream().anyMatch(c -> c.area() == area && c.result() == result);
+		return Optional.empty();
 	}
 
 	private static ConfidenceGapDto gap(ConfidenceArea area, GapDirection direction, Experience said, String shows) {
 		return new ConfidenceGapDto(area, direction, said.saidLine() + " " + shows);
 	}
 
-	/** Weak spots the answers revealed go first; the areas Jev picked keep their order behind them. */
 	static List<FocusArea> focusWithChecks(List<FocusArea> focus, List<CheckDto> checks) {
 		Set<FocusArea> areas = new LinkedHashSet<>();
 		checks.stream()
@@ -191,28 +181,27 @@ final class CategorizationRules {
 		return List.copyOf(areas);
 	}
 
-	/** The lesson of the weakest check, else the earliest lesson of the first focus area that has one. */
-	static Optional<StartLessonDto> startLesson(List<CheckDto> checks, List<FocusArea> focus,
-			List<CheckQuestionProjection> pool) {
-		Comparator<CheckDto> weakestFirst = Comparator
-			.comparing((CheckDto c) -> c.result() == CheckResult.NOT_YET ? 0 : 1)
-			.thenComparing(c -> focus.contains(c.area()) ? focus.indexOf(c.area()) : focus.size());
-		Optional<Long> lessonId = checks.stream()
+	static Optional<CheckDto> weakestLessonCheck(List<CheckDto> checks, List<FocusArea> focus) {
+		Comparator<CheckDto> weakestFirst = Comparator.comparing((CheckDto c) -> c.result() == CheckResult.PARTLY)
+			.thenComparing(c -> focusRank(c.area(), focus));
+		return checks.stream()
 			.filter(c -> c.lessonId() != null && c.result() != CheckResult.UNDERSTANDS)
-			.min(weakestFirst)
-			.map(CheckDto::lessonId)
-			.or(() -> focus.stream().flatMap(area -> earliestLesson(area, pool).stream()).findFirst());
-		return lessonId.flatMap(id -> pool.stream()
-			.filter(q -> id.equals(q.lessonId()))
-			.findFirst()
-			.map(q -> new StartLessonDto(id, q.lessonTitle())));
+			.min(weakestFirst);
 	}
 
-	private static Optional<Long> earliestLesson(FocusArea area, List<CheckQuestionProjection> pool) {
-		return pool.stream()
-			.filter(q -> q.area() == area && q.lessonId() != null)
-			.map(CheckQuestionProjection::lessonId)
-			.min(Comparator.naturalOrder());
+	private static int focusRank(FocusArea area, List<FocusArea> focus) {
+		int index = focus.indexOf(area);
+		return index < 0 ? focus.size() : index;
+	}
+
+	static Optional<CheckQuestionProjection> earliestLessonQuestion(List<FocusArea> focus,
+			List<CheckQuestionProjection> pool) {
+		return focus.stream()
+			.flatMap(area -> pool.stream()
+				.filter(q -> q.area() == area && q.lessonId() != null)
+				.min(Comparator.comparing(CheckQuestionProjection::lessonId))
+				.stream())
+			.findFirst();
 	}
 
 	static LessonVariantDto lessonVariant(Role role, LifeStage lifeStage) {

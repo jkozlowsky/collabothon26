@@ -4,12 +4,8 @@ import { colors } from '@/constants/theme';
 import { categorization } from '@/test-utils/categorization';
 import { appRoutes } from '@/test-utils/routes';
 
-// No GL under Jest: make the canvas throw, so the globe takes its static-picture fallback.
-jest.mock('@/components/globe/GlobeScene', () => ({
-  GlobeScene: () => {
-    throw new Error('No WebGL in tests');
-  },
-}));
+// The globe is not under test here (Jest has no GL or flights).
+jest.mock('@/components/globe/Globe', () => ({ Globe: () => null }));
 
 // Tappable puts the card's style on the view inside the pressable that carries the testID.
 const card = (id: string) => screen.getByTestId(id).children[0] as ReturnType<typeof screen.getByTestId>;

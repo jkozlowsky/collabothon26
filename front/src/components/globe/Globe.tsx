@@ -44,8 +44,8 @@ import type { Story } from '@/types/stories';
 const GlobeScene = lazy(() => import('@/components/globe/GlobeScene').then((m) => ({ default: m.GlobeScene })));
 
 export type GlobeHandle = {
-  /** Same as tapping the story's pin: fly there and open its callout. */
-  flyTo: (id: string) => void;
+  /** Same as tapping the story's pin: fly there and open its callout. `turnOnly`: never open the story itself (static picture). */
+  flyTo: (id: string, turnOnly?: boolean) => void;
 };
 
 type Props = {
@@ -149,7 +149,7 @@ export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
     arrive();
   };
 
-  const flyTo = (id: string) => {
+  const flyTo = (id: string, turnOnly = false) => {
     if (flying.value) {
       // A tap during a flight skips to its end.
       finishFlight();
@@ -163,7 +163,7 @@ export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
     if (fallback) {
       // Cities hidden or half-faded on the picture can't show a callout: go straight to the story.
       if (visibility(target, FALLBACK_ORIENTATION.yaw, FALLBACK_ORIENTATION.pitch) >= FADE_BAND) arrive();
-      else onOpenStory(id);
+      else if (!turnOnly) onOpenStory(id);
       return;
     }
     cancelAnimation(yaw);

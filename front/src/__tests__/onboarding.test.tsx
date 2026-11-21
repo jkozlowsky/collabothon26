@@ -1,9 +1,11 @@
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
+import { categorization } from '@/test-utils/categorization';
 import { appRoutes as routes } from '@/test-utils/routes';
 
 const PROFILE_URL = /\/api\/users\/demo-user\/profile$/;
 const ONBOARDING_URL = /\/api\/users\/demo-user\/profile\/onboarding$/;
+const CATEGORIZATION_URL = /\/api\/users\/demo-user\/categorization$/;
 let fetchMock: jest.Mock;
 
 const profile = (onboardingCompleted: boolean) => ({
@@ -16,19 +18,29 @@ const profile = (onboardingCompleted: boolean) => ({
   onboardingCompletedAt: null,
 });
 
-/** Backend stub: the user's profile, an empty lesson list, and an onboarding PUT that succeeds. */
+/** Backend stub: the user's profile, no categorisation yet, an empty lesson list, and writes that succeed. */
 function stubBackend({ onboardingCompleted }: { onboardingCompleted: boolean }) {
-  fetchMock = jest.fn((url: string) =>
-    Promise.resolve({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(PROFILE_URL.test(url) ? profile(onboardingCompleted) : []),
-    }),
-  );
+  const bodyFor = (url: string) => {
+    if (PROFILE_URL.test(url)) return profile(onboardingCompleted);
+    return CATEGORIZATION_URL.test(url) ? categorization() : [];
+  };
+  fetchMock = jest.fn((url: string, init?: RequestInit) => {
+    if (CATEGORIZATION_URL.test(url) && !init?.method) {
+      return Promise.resolve({ ok: false, status: 404, statusText: 'Not Found' });
+    }
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(bodyFor(url)) });
+  });
   globalThis.fetch = fetchMock;
 }
 
 beforeEach(() => stubBackend({ onboardingCompleted: false }));
+
+/** A fresh onboarding continues to the consent card, the loading steps (at least 2.4 s), the summary, then Learn. */
+async function passConsent() {
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+  await fireEvent.press(await screen.findByTestId('summary-start', {}, { timeout: 4000 }));
+  await screen.findByTestId('screen-learn');
+}
 
 function savedOnboarding() {
   const call = fetchMock.mock.calls.find(([url, init]) => ONBOARDING_URL.test(url) && init?.method === 'PUT');
@@ -54,6 +66,7 @@ test('app opens on the bank; the first Learn tap runs onboarding, skipping it la
 
   expect(await screen.findByTestId('onboarding-invite')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
+  await passConsent();
 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
   expect(savedOnboarding()).toEqual({ goals: [], skipped: true });
@@ -68,6 +81,7 @@ test('skip on the first screen lands on Learn; close goes back to the bank and s
   // Not saved, so the next Learn tap shows onboarding again.
   await fireEvent.press(screen.getByTestId('nav-learn'));
   await fireEvent.press(await screen.findByTestId('onboarding-skip-intro'));
+  await passConsent();
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
   expect(savedOnboarding()).toEqual({ goals: [], skipped: true });
 });
@@ -106,6 +120,7 @@ test('answers all three questions', async () => {
   expect(screen.getByTestId('onboarding-continue')).toBeDisabled();
   await fireEvent.press(screen.getByTestId('option-not-saving'));
   await fireEvent.press(screen.getByText('Finish'));
+  await passConsent();
 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
   expect(savedOnboarding()).toEqual({

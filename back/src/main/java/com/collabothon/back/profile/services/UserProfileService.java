@@ -1,6 +1,7 @@
 package com.collabothon.back.profile.services;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -33,7 +34,7 @@ public class UserProfileService {
 	public ProfileDto saveOnboarding(String userId, OnboardingRequest req) {
 		UserProfile profile = profiles.findById(userId).orElseGet(() -> new UserProfile(userId));
 		List<String> distinctGoals = req.goals().stream().distinct().toList();
-		profile.completeOnboarding(req.lifeStage(), distinctGoals, req.experience(), req.skipped(), clock.instant());
+		profile.completeOnboarding(req.lifeStage(), distinctGoals, req.experience(), req.skipped(), Instant.now());
 		UserProfile saved = profiles.save(profile);
 		return mapper.toDto(saved);
 	}

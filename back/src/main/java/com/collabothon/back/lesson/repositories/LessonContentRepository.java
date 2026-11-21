@@ -29,8 +29,10 @@ public class LessonContentRepository {
 
 	private final Map<String, ObjectNode> lessons = new LinkedHashMap<>();
 	private final Map<String, LessonContentItem> lessonItems = new LinkedHashMap<>();
+	private final StoryRepository storyRepo;
 
 	public LessonContentRepository(JsonMapper json, GlossaryContentRepository glossaryRepo, StoryRepository storyRepo) throws IOException {
+		this.storyRepo = storyRepo;
 		var resolver = new PathMatchingResourcePatternResolver();
 		Set<String> concepts = glossaryRepo.concepts();
 
@@ -101,6 +103,14 @@ public class LessonContentRepository {
 			return Optional.empty();
 		}
 		return Optional.ofNullable(lessons.get(lessonId));
+	}
+
+	public Optional<ObjectNode> lesson(String id) {
+		return findNodeById(id);
+	}
+
+	public List<JsonNode> stories() {
+		return storyRepo.rawStories();
 	}
 
 	public Map<String, ObjectNode> allLessons() {

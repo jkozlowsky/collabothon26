@@ -61,7 +61,7 @@ If the phone shows "Something went wrong":
 
 - **Frontend:** saving a file reloads the app instantly (Fast Refresh).
 - **Backend:** devtools restarts the app after recompiling. In IntelliJ that's Build → Build Project (`Ctrl+F9`).
-- **Database:** the schema lives only in Flyway migrations (`back/src/main/resources/db/migration/V<n>__description.sql`). Hibernate only validates against it. A new table means a new migration file. Never edit a migration that has already been pushed; add a new one instead. `make db-reset` wipes the local database.
+- **Database:** the schema lives only in Flyway migrations (`back/src/main/resources/db/migration/V<n>__description.sql`). Hibernate only validates against it. A new table means a new migration file. Never edit a migration that has already been pushed; add a new one instead. `make db-reset` wipes the local database. If the backend fails to start with a Flyway checksum or version mismatch after a merge (main rewrote V3, V4 is now `account_and_progress` and categorisation moved to V5), run `make db-reset` once.
 - **API:** put new endpoints under `/api/**`. The app calls them with `api('/api/...')` from `front/src/lib/api.ts`. The backend URL is resolved automatically on web, emulator and phone. Override it with `EXPO_PUBLIC_API_URL` in `front/.env` (see `front/.env.example`).
 
 ### Example in the repo: lessons with a quiz
@@ -87,6 +87,8 @@ front/src/
 ├── app/                  # routes only (file = screen)
 │   ├── _layout.tsx       # root Stack + providers (onboarding, mock bank, toast, transfer sheet)
 │   ├── onboarding.tsx    # intro + optional personalisation questions; opened by the first Learn tap
+│   ├── categorizing.tsx  # after a fresh onboarding: account-data consent card, Quick check questions, loading steps
+│   ├── learning-path.tsx # the summary after categorising: gap, level, focus areas, first lesson
 │   ├── (main)/           # bank + Finance Quest, one floating nav (components/bank/FloatingNav) that morphs between them
 │   │   ├── _layout.tsx
 │   │   ├── (bank)/       # mock banking app, the first screen: index (/) · payments · credits · invest
@@ -94,6 +96,7 @@ front/src/
 │   ├── lesson/[id].tsx   # /lesson/1, pushed over the tabs
 │   └── duel/             # match.tsx · rankings.tsx: full-screen duel flow, pushed over the tabs
 ├── components/           # reusable UI (Screen, Button, AsyncContent)
+│   └── categorizing/     # consent card, Quick check page, path steps and summary of /categorizing and /learning-path
 ├── hooks/                # custom hooks (useXxx.ts)
 ├── lib/                  # non-UI code: api.ts (backend client), bank/ (seeded mock bank data, pure logic), utils
 ├── constants/            # theme.ts (colors, spacing), config

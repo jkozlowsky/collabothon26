@@ -6,6 +6,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,7 +17,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import com.collabothon.back.Race;
 import com.collabothon.back.TestcontainersConfiguration;
 
 @Import(TestcontainersConfiguration.class)
@@ -23,6 +29,9 @@ class GlossaryUserControllerTests {
 
 	@Autowired
 	MockMvc mvc;
+
+	@Autowired
+	TransactionTemplate tx;
 
 	@Test
 	void savingATermTwiceKeepsOneFavouriteAndRemovingItEmptiesTheList() throws Exception {
@@ -81,4 +90,27 @@ class GlossaryUserControllerTests {
 		}
 	}
 
+	@Test
+	void aDoubleTapOnSaveKeepsOneFavouriteAndFailsNothing() throws Exception {
+		String base = "/api/users/" + UUID.randomUUID() + "/glossary/favorites";
+		int second = Race.secondDuringFirst(tx, () -> mvc.perform(put(base + "/etf")).andReturn(),
+				() -> mvc.perform(put(base + "/etf")).andReturn().getResponse().getStatus());
+
+		assertEquals(204, second);
+		mvc.perform(get(base)).andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0]").value("etf"));
+	}
+
+	@Test
+	void aDoubleTapOnThePreferenceKeepsTheLastChoiceAndFailsNothing() throws Exception {
+		String url = "/api/users/" + UUID.randomUUID() + "/glossary/preference";
+		int second = Race.secondDuringFirst(tx, () -> choose(url, "plain"), () -> choose(url, "standard"));
+
+		assertEquals(200, second);
+		mvc.perform(get(url)).andExpect(jsonPath("$.languageLevel").value("standard"));
+	}
+
+	private int choose(String url, String level) throws Exception {
+		return mvc.perform(put(url).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"languageLevel\": \"" + level + "\"}")).andReturn().getResponse().getStatus();
+	}
 }

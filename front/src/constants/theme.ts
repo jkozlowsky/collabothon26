@@ -92,7 +92,10 @@ export const spacing = {
   xxs: 2,
   xs: 4,
   sm: 8,
+  // Half steps that Figma components use (story card, small button, bottom sheet).
+  smPlus: 10,
   md: 12,
+  mdPlus: 14,
   lg: 16,
   xl: 20,
   xxl: 24,

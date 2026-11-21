@@ -12,7 +12,7 @@ type FormatOptions = {
   whole?: boolean;
 };
 
-function groupThousands(n: number): string {
+export function groupThousands(n: number): string {
   return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 

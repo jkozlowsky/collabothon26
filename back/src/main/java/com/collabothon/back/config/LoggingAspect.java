@@ -7,6 +7,7 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
 
+import com.collabothon.back.common.consts.LoggingConsts;
 import com.collabothon.back.exceptions.BusinessException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -17,8 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 class LoggingAspect {
 
-	private static final long SLOW_CALL_MS = 1000;
-
 	@Around("within(com.collabothon.back..*) && @within(org.springframework.stereotype.Service)"
 			+ " && execution(public * *(..))")
 	public Object logCall(ProceedingJoinPoint call) throws Throwable {
@@ -27,7 +26,7 @@ class LoggingAspect {
 		try {
 			Object result = call.proceed();
 			long ms = millisSince(start);
-			if (ms >= SLOW_CALL_MS) {
+			if (ms >= LoggingConsts.SLOW_CALL_MS) {
 				log.info("{} took {} ms", method, ms);
 			}
 			else {

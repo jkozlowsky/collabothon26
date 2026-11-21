@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consent B: Quest hero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="b.css">
+<link rel="stylesheet" href="consent.css">
+<style>
+.sheet { border-radius: 28px 28px 0 0; }
+.hero .over { color: var(--land); letter-spacing: .8px; text-transform: uppercase; }
+.hero .t-display { color: #fff; margin-top: 6px; }
+.promise { display: flex; gap: 10px; align-items: center; margin-top: 16px; padding: 12px 14px; border-radius: 16px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); font: 600 13px/18px Inter; }
+.promise .i { color: var(--land); }
+.fgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fcell { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.fcell .t-label { display: flex; align-items: center; gap: 6px; }
+.fcell .i { width: 16px; height: 16px; color: var(--ocean-light); }
+.fcell b { font: 600 15px/20px Inter; }
+.foot .t-label { text-align: center; }
+/* Loading and error on petrol, as the old artboard 4 */
+.orbit-wrap { padding: 0 20px 40px; }
+.orbit-wrap .t-display { color: #fff; }
+.orbit-wrap .lead { margin-top: 8px; }
+.step.done .i { color: var(--land); }
+.step.now { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); }
+.step .mark.now { width: 16px; height: 16px; border-color: rgba(255,255,255,.24); border-top-color: var(--accent); }
+.step.next { color: rgba(255,255,255,.7); font-weight: 500; }
+.step.next .mark { width: 16px; height: 16px; border-color: rgba(255,255,255,.4); }
+.step.fail { background: rgba(214,69,69,.28); }
+.step.fail .i { color: #fff; }
+.orbit.stopped .ring-o { animation: none; border-style: solid; border-color: rgba(255,255,255,.2); }
+.orbit.stopped .ring-o::after { background: rgba(255,255,255,.4); }
+.orbit.stopped .globe { opacity: .55; }
+.foot.dark { background: transparent; }
+.foot.dark .t-label { color: var(--land); }
+@media (prefers-reduced-motion: reduce) { .step .mark.now { border-color: var(--accent); } }
+</style>
+</head>
+<body>
+<main class="board">
+<header class="dir-head">
+  <h1>B Quest hero</h1>
+  <p>Picked direction B carried on: a petrol hero and a light sheet, so leaving the questions feels like the first quest starting. The privacy promise sits in the hero, where the eye lands first, and the facts are short tiles led by the value. Loading is the old artboard 4 with the new copy and no model name.</p>
+  <p class="motion"><b>Reduced motion:</b> the orbit ring and its dot stand still, the step spinner becomes a closed yellow ring, steps swap without a transition. Without it: the ring turns once every 6 s, the active pill cross-fades in.</p>
+</header>
+
+<!-- 1 Consent with Tom's facts -->
+<figure class="art"><figcaption>1 Consent: Tom's account facts</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="hero">
+    <p class="over">Before your first quest</p>
+    <h2 class="t-display">Let your account pick your first lessons</h2>
+    <p class="promise"><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg>Only these summaries are shared, never your transactions.</p>
+  </div>
+  <div class="sheet"><div class="scroll"><div class="stack">
+    <div><p class="sh">What would be shared</p><p class="sub">From your accounts, last 3 months</p></div>
+    <div class="fgrid">
+      <div class="fcell"><span class="t-label"><svg class="i" aria-hidden="true"><use href="icons.svg#user"/></svg> Age group</span><b>26–34</b></div>
+      <div class="fcell"><span class="t-label"><svg class="i" aria-hidden="true"><use href="icons.svg#wallet"/></svg> Income a month</span><b>€3,500–5,000</b></div>
+      <div class="fcell"><span class="t-label"><svg class="i" aria-hidden="true"><use href="icons.svg#safe"/></svg> Spending covered</span><b>More than 6 months</b></div>
+      <div class="fcell"><span class="t-label"><svg class="i" aria-hidden="true"><use href="icons.svg#percent"/></svg> Kept from income</span><b>20% or more</b></div>
+      <div class="fcell"><span class="t-label"><svg class="i" aria-hidden="true"><use href="icons.svg#card"/></svg> Below zero</span><b>Never</b></div>
+      <div class="fcell"><span class="t-label"><svg class="i" aria-hidden="true"><use href="icons.svg#transfer"/></svg> Savings transfers</span><b>None regular yet</b></div>
+      <div class="fcell"><span class="t-label"><svg class="i" aria-hidden="true"><use href="icons.svg#trend"/></svg> Investments</span><b>None yet</b></div>
+      <div class="fcell"><span class="t-label"><svg class="i" aria-hidden="true"><use href="icons.svg#home"/></svg> Mortgage, life insurance</span><b>None</b></div>
+    </div>
+  </div></div>
+  <div class="foot">
+    <button class="big press">Use my account data</button>
+    <button class="big ghost press">Continue without</button>
+  </div></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 2 Consent without account data -->
+<figure class="art"><figcaption>2 Consent: no account data</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="hero">
+    <p class="over">Before your first quest</p>
+    <h2 class="t-display">No account data to use</h2>
+    <p class="lead">We found no bank accounts for this profile. Your answers are enough to pick your first lessons.</p>
+  </div>
+  <div class="sheet"><div class="scroll"><div class="stack">
+    <div><p class="sh">What we use</p><p class="sub">Your answers from the last few screens</p></div>
+    <div class="fgrid">
+      <div class="fcell"><span class="t-label"><svg class="i" aria-hidden="true"><use href="icons.svg#user"/></svg> Life stage</span><b>Your answer</b></div>
+      <div class="fcell"><span class="t-label"><svg class="i" aria-hidden="true"><use href="icons.svg#pin"/></svg> Goals</span><b>Your picks</b></div>
+      <div class="fcell"><span class="t-label"><svg class="i" aria-hidden="true"><use href="icons.svg#trend"/></svg> Experience</span><b>Your answer</b></div>
+      <div class="fcell"><span class="t-label"><svg class="i" aria-hidden="true"><use href="icons.svg#bolt"/></svg> Confidence</span><b>Your ratings</b></div>
+    </div>
+  </div></div>
+  <div class="foot"><button class="big press">Continue</button></div></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 3 Loading -->
+<figure class="art"><figcaption>3 Loading: step 2 of 3 active</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="orbit-wrap" role="status" aria-live="polite">
+    <div class="orbit" aria-hidden="true"><span class="ring-o"></span><span class="globe"></span></div>
+    <h2 class="t-display">Building your learning path…</h2>
+    <p class="lead">This takes a few seconds.</p>
+    <div class="steps">
+      <span class="step done"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg>Reading your answers</span>
+      <span class="step now" aria-current="step"><span class="mark now"></span>Looking at your accounts</span>
+      <span class="step next"><span class="mark next"></span>Picking your first lessons</span>
+    </div>
+  </div>
+  <span class="home-ind light"></span>
+</div></figure>
+
+<!-- 4 Error -->
+<figure class="art"><figcaption>4 Error: network or server</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="orbit-wrap" role="alert">
+    <div class="orbit stopped" aria-hidden="true"><span class="ring-o"></span><span class="globe"></span></div>
+    <h2 class="t-display">Your path didn't load</h2>
+    <p class="lead">The connection dropped before we finished. Your answers are saved, so trying again takes a few seconds.</p>
+    <div class="steps">
+      <span class="step done"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg>Reading your answers</span>
+      <span class="step done"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg>Looking at your accounts</span>
+      <span class="step fail"><svg class="i sm" aria-hidden="true"><use href="icons.svg#x"/></svg>Picking your first lessons</span>
+    </div>
+  </div>
+  <div class="foot dark">
+    <button class="big press"><svg class="i sm" aria-hidden="true"><use href="icons.svg#rotate"/></svg>Retry</button>
+    <button class="big ghost on-dark press">Skip for now</button>
+    <p class="t-label">You'll start with the general lessons.</p>
+  </div>
+  <span class="home-ind light"></span>
+</div></figure>
+</main>
+</body>
+</html>

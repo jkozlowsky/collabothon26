@@ -6,6 +6,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,8 +17,13 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import com.collabothon.back.Race;
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.entities.lesson.ConceptKnowledgeId;
+import com.collabothon.back.lesson.repositories.ConceptKnowledgeRepository;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -23,6 +32,12 @@ class LessonControllerTests {
 
 	@Autowired
 	MockMvc mvc;
+
+	@Autowired
+	TransactionTemplate tx;
+
+	@Autowired
+	ConceptKnowledgeRepository concepts;
 
 	@Test
 	void listsSeoulLessonsInOrderWithOnlyTheFirstOpen() throws Exception {
@@ -107,4 +122,23 @@ class LessonControllerTests {
 		mvc.perform(get("/api/lessons/nowhere-1")).andExpect(status().isNotFound());
 	}
 
+	@Test
+	void aDoubleTapOnFinishEarnsTheXpOnceAndFailsNothing() throws Exception {
+		String userId = "tap-" + UUID.randomUUID();
+		MvcResult second = Race.secondDuringFirst(tx, () -> finish(userId), () -> finish(userId));
+
+		assertEquals(200, second.getResponse().getStatus());
+		mvc.perform(get("/api/users/{id}/stats", userId).param("today", "2026-11-21"))
+			.andExpect(jsonPath("$.totalXp").value(50))
+			.andExpect(jsonPath("$.lessonsCompleted").value(1))
+			.andExpect(jsonPath("$.currentStreak").value(1));
+		assertEquals(2, concepts.findById(new ConceptKnowledgeId(userId, "volatility")).orElseThrow().getAttempts());
+	}
+
+	private MvcResult finish(String userId) throws Exception {
+		return mvc.perform(post("/api/lessons/seoul-1/result").param("userId", userId)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("{\"steps\": [{\"stepId\": \"q1\", \"correctFirstTry\": true}], \"completedOn\": \"2026-11-21\"}"))
+			.andReturn();
+	}
 }

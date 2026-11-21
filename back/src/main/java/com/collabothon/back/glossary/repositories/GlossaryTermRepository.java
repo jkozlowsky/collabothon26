@@ -20,6 +20,9 @@ public interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, Long
 
 	boolean existsBySlug(String slug);
 
+	@Query("select t.id from GlossaryTerm t where t.slug = :slug")
+	Optional<Long> findIdBySlug(@Param("slug") String slug);
+
 	@Query(nativeQuery = true, value = """
 			SELECT t.* FROM glossary_term t
 			WHERE strpos(lower(t.name), :q) > 0

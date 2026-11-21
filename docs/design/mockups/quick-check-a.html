@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick check A: Segments</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="consent.css">
+<link rel="stylesheet" href="quick-check.css">
+<style>
+/* Progress: four segments, petrol fill, the current one half filled */
+.segs { display: flex; gap: 6px; }
+.segs span { flex: 1; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.segs span.done { background: var(--primary); }
+.segs span.now { background: linear-gradient(90deg, var(--primary) 50%, var(--border) 50%); }
+.src { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.src .i { width: 14px; height: 14px; }
+.role { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.sec-head { display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px; }
+</style>
+</head>
+<body>
+<main class="board">
+<header class="dir-head">
+  <h1>A Segments</h1>
+  <p>The quiet version of "The line": one question per page on the canvas, a four-segment bar under the back button, and account numbers marked inline with one muted line saying they stay on the phone. The summary stacks familiar cards: a petrol gap card, the learner level with its because lines, then the focus areas as list rows. Trade-off: safest to build (reuses the onboarding page and BankCard-style rows), but the least memorable on stage.</p>
+  <p class="motion"><b>Reduced motion:</b> segments fill without a transition and summary cards appear in place. Without it: the current segment fills over 200 ms ease-out on Next, and summary cards rise 8 px with a 50 ms stagger (260 ms). Buttons scale to 0.97 on press. No right/wrong feedback between questions.</p>
+</header>
+
+<!-- 1 Account question, empty -->
+<figure class="art"><figcaption>1 Account question: etf-drop, 1 of 4, empty</figcaption>
+<div class="phone ob">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="body">
+    <div class="qtop">
+      <button class="back press" aria-label="Back"><svg class="i" aria-hidden="true"><use href="icons.svg#chevron-left"/></svg></button>
+      <span class="t-strong count">1 of 4</span>
+    </div>
+    <div class="segs" role="progressbar" aria-label="Quick check" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" aria-valuetext="Question 1 of 4"><span class="now"></span><span></span><span></span><span></span></div>
+    <p class="t-body" style="margin-top:8px">Four quick questions so we know where to start. There are no wrong answers.</p>
+    <label class="t-section" for="a1" style="margin-top:6px">Every month <mark class="acct">€100</mark> goes into <mark class="acct">World Equity ETF</mark>. If the market falls 20% next month, what happens to that money?</label>
+    <p class="t-label src"><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg>Numbers from your account stay on this phone.</p>
+    <div class="field">
+      <textarea id="a1" maxlength="280" rows="5" placeholder="A sentence or two is enough" aria-describedby="a1c"></textarea>
+      <div class="meta"><span class="t-label counter" id="a1c"></span></div>
+    </div>
+  </div>
+  <div class="foot">
+    <button class="big press" data-next>Next</button>
+    <button class="big ghost press">Not sure</button>
+  </div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 2 Generic question, typed -->
+<figure class="art"><figcaption>2 Generic question: too-good-offer, 2 of 4, typed</figcaption>
+<div class="phone ob">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="body">
+    <div class="qtop">
+      <button class="back press" aria-label="Previous question"><svg class="i" aria-hidden="true"><use href="icons.svg#chevron-left"/></svg></button>
+      <span class="t-strong count">2 of 4</span>
+    </div>
+    <div class="segs" role="progressbar" aria-label="Quick check" aria-valuemin="1" aria-valuemax="4" aria-valuenow="2" aria-valuetext="Question 2 of 4"><span class="done"></span><span class="now"></span><span></span><span></span></div>
+    <label class="t-section" for="a2" style="margin-top:14px">Someone online promises 20% a month with no risk. What tells you something is wrong?</label>
+    <div class="field">
+      <textarea id="a2" class="focus" maxlength="280" rows="5" aria-describedby="a2c">Nobody can promise 20% a month without risk. Higher returns always come with more risk, so a guarantee like that sounds like a scam.</textarea>
+      <div class="meta"><span class="t-label counter" id="a2c"></span></div>
+    </div>
+  </div>
+  <div class="foot">
+    <button class="big press" data-next>Next</button>
+    <button class="big ghost press">Not sure</button>
+  </div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 3 Summary with a gap -->
+<figure class="art"><figcaption>3 Summary with a confidence gap (Alex, account data)</figcaption>
+<div class="phone ob long">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="body">
+    <p class="t-over" style="margin-top:8px">Your learning path</p>
+    <section class="gap-hero rise" aria-labelledby="g3">
+      <p class="t-over">Investing</p>
+      <h2 class="t-section" id="g3">You know more than you think</h2>
+      <p class="t-body">You said: I save regularly. Your accounts with us include investment products, and your answer about your ETF plan shows you understand the risk.</p>
+    </section>
+    <section class="card role rise">
+      <h1 class="t-display">You're an intermediate learner</h1>
+      <ul class="because t-body">
+        <li>You said: I save regularly.</li>
+        <li>Money goes to savings or investments every month.</li>
+        <li>Your accounts with us include investment products.</li>
+      </ul>
+    </section>
+    <div class="sec-head rise"><h2 class="t-section">Where to start</h2><span class="t-label">3 areas</span></div>
+    <div class="card rise">
+      <div class="focus-row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#trend"/></svg></span><div><p class="t-card">Investing</p><p class="t-label">You picked investing as a goal.</p></div></div>
+      <div class="focus-row" style="border-top:1px solid var(--border)"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#card"/></svg></span><div><p class="t-card">Borrowing</p><p class="t-label">You are paying off a loan with us.</p></div></div>
+      <div class="focus-row" style="border-top:1px solid var(--border)"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#safe"/></svg></span><div><p class="t-card">Risk</p><p class="t-label">Your accounts with us include investment products.</p></div></div>
+    </div>
+  </div>
+  <div class="foot">
+    <button class="big press">Start learning: Compound interest</button>
+    <button class="big ghost press">See all lessons</button>
+  </div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 4 Summary without a gap -->
+<figure class="art"><figcaption>4 Summary without a gap (Alex, no account data)</figcaption>
+<div class="phone ob long">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="body">
+    <p class="t-over" style="margin-top:8px">Your learning path</p>
+    <section class="card role rise">
+      <h1 class="t-display">You're an intermediate learner</h1>
+      <ul class="because t-body">
+        <li>You said: I save regularly.</li>
+      </ul>
+    </section>
+    <div class="sec-head rise"><h2 class="t-section">Where to start</h2><span class="t-label">2 areas</span></div>
+    <div class="card rise">
+      <div class="focus-row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#trend"/></svg></span><div><p class="t-card">Investing</p><p class="t-label">You picked investing as a goal.</p></div></div>
+      <div class="focus-row" style="border-top:1px solid var(--border)"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#coins"/></svg></span><div><p class="t-card">Saving</p><p class="t-label">You picked saving as a goal.</p></div></div>
+    </div>
+  </div>
+  <div class="foot">
+    <button class="big press">Start learning: Compound interest</button>
+    <button class="big ghost press">See all lessons</button>
+  </div>
+  <span class="home-ind"></span>
+</div></figure>
+</main>
+<script src="quick-check.js"></script>
+</body>
+</html>

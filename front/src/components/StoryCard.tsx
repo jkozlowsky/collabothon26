@@ -1,6 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { StartHereBadge } from '@/components/StartHereBadge';
 import { motion, Tappable } from '@/components/onboarding/ui';
 import { colors, radii, spacing, storyColors, tints, type } from '@/constants/theme';
 import { storyLabel, type StoryState } from '@/lib/stories';
@@ -10,10 +11,12 @@ type Props = {
   story: Story;
   state: StoryState;
   onPress: () => void;
+  /** Set on the story the Quick check picked as the first stop. */
+  startHere?: { why: string };
 };
 
 /** Figma "Story Card": icon tile in the story colour, title, "{city} · {topic}", then progress or status. */
-export function StoryCard({ story, state, onPress }: Props) {
+export function StoryCard({ story, state, onPress, startHere }: Props) {
   const { done, total } = story.progress;
   const locked = state === 'comingSoon';
   const active = state === 'active';
@@ -33,12 +36,18 @@ export function StoryCard({ story, state, onPress }: Props) {
         <Feather name={locked ? 'lock' : story.icon} size={22} color={active ? colors.textOnAccent : color} />
       </View>
       <View style={styles.body}>
+        {startHere && <StartHereBadge testID="story-card-start-here" />}
         <Text style={styles.title} numberOfLines={1}>
           {story.title}
         </Text>
         <Text style={styles.meta} numberOfLines={1}>
           {story.city} · {story.topic}
         </Text>
+        {startHere && (
+          <Text style={styles.why} testID="story-card-why-here">
+            {startHere.why}
+          </Text>
+        )}
         {!locked && (
           <View style={styles.track}>
             <View
@@ -87,6 +96,7 @@ const styles = StyleSheet.create({
   body: { flex: 1, gap: spacing.xs },
   title: type.titleCard,
   meta: { ...type.labelDefault, color: colors.textMuted },
+  why: { ...type.labelDefault, color: colors.textPrimary },
   track: { width: 150, maxWidth: '100%', height: 5, borderRadius: radii.bar, backgroundColor: colors.borderDefault, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: radii.bar, backgroundColor: colors.brandPrimary },
   fillDone: { backgroundColor: colors.feedbackSuccess },

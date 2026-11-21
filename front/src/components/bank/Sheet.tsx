@@ -97,7 +97,11 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
       if (opened.current) slide(offset, 0, reduced ? 0 : OPEN_MS);
       return;
     }
-    if (!opened.current) return;
+    // Closed before its first layout: there is nothing to slide out, and without this it would stay mounted off-screen.
+    if (!opened.current) {
+      setRendered(false);
+      return;
+    }
     slide(offset, sheetHeight || screenHeight, reduced ? 0 : CLOSE_MS, () => {
       opened.current = false;
       setRendered(false);

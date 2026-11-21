@@ -826,8 +826,6 @@ test('a tap on the dock opens "Your map in detail" with both markers and the leg
 
   await press('map-dock');
   expect(await screen.findByText('Your map in detail')).toBeOnTheScreen();
-  // The sheet closes only once it has been laid out; Jest has no layout pass.
-  await fireEvent(get('map-sheet'), 'layout', { nativeEvent: { layout: { height: 300 } } });
   expect(get('area-level-saving')).toHaveTextContent('Building');
   expect(get('area-level-investing')).toHaveTextContent('Just starting');
   expect(screen.getByText('How sure you felt')).toBeOnTheScreen();

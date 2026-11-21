@@ -37,8 +37,19 @@ type StepBase = {
   concepts?: string[];
 };
 
+export type StatTone = 'good' | 'bad' | 'neutral';
+
+/**
+ * A hero number over a text step ("€1,825", "{savingsRate}"). The number in `value` counts up from `from`
+ * (default 0); a value without a number (a missing bank metric's fallback words) just shows.
+ */
+export type Stat = { value: string; label: string; tone?: StatTone; from?: number };
+
 /** Body texts may hold **bold** and [[concept]] / [[concept|shown text]] glossary links. */
-export type TextStep = StepBase & { type: 'text'; kicker?: string; title?: string; body: string };
+/** One row of a "your situation" card: a fact from the user's accounts ({metric} placeholders), never a grade. */
+export type Fact = { label: string; value: string; note?: string };
+
+export type TextStep = StepBase & { type: 'text'; kicker?: string; title?: string; body: string; stat?: Stat; facts?: Fact[] };
 
 /** `me`: sent by the story's character, drawn on the right. */
 export type ChatMessage = { from: string; text: string; me?: boolean };
@@ -98,10 +109,17 @@ export type SliderParam = {
 /** Goal is met when the value (`output` or a param key) lies within [min, max]. */
 export type GoalCondition = { of: string; min?: number; max?: number };
 
+/**
+ * A picture next to the chart. `basket`: what €100 buys, items fading as buying power falls (realValue).
+ * `split`: the value split into money paid in and growth (compoundGrowth, monthlyPlan).
+ */
+export type SliderVisual = 'basket' | 'split';
+
 export type SliderChartStep = StepBase & {
   type: 'slider-chart';
   prompt: string;
   model: SliderModel;
+  visual?: SliderVisual;
   params: Record<string, SliderParam>;
   output: { label: string; unit: string };
   goal: { condition: GoalCondition; hint: string };
@@ -132,6 +150,8 @@ export type ActionStep = StepBase & {
     kind?: 'share' | 'multiple';
     /** Line under the slider; {amount} is the computed amount. Default: "= at most {amount} {appliesToLabel} on one bet". */
     result?: string;
+    /** With `kind: 'multiple'`: an amount (AMOUNTS key) drawn against the rule as months covered, e.g. the savings. */
+    compareTo?: string;
   };
   cta?: string;
 };

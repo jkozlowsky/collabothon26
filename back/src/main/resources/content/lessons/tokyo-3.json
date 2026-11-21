@@ -5,7 +5,7 @@
   "place": "History · Tokyo, 1989",
   "topic": "Big falls take time to recover",
   "minutes": 4,
-  "xp": 60,
+  "xp": 50,
   "concepts": [
     "drawdown",
     "time-horizon",
@@ -18,7 +18,12 @@
       "phase": "learn",
       "kicker": "What happened in Japan",
       "title": "From 1989 to 2024",
-      "body": "Japan's main stock index reached a peak at the end of 1989. The index measures the value of Japan's biggest companies. By 2009, it had fallen by about 80%. It went above the old peak only in 2024, 34 years later. A fall from a previous high is called a [[drawdown]]. The numbers are rounded."
+      "body": "Japan's main stock index reached a peak at the end of 1989. The index measures the value of Japan's biggest companies. By 2009, it had fallen by about 80%. It went above the old peak only in 2024, 34 years later. A fall from a previous high is called a [[drawdown]]. Having much of your money in one place is called [[concentration-risk]]. The numbers are rounded.",
+      "stat": {
+        "value": "34 years",
+        "label": "for Japan's market to beat its 1989 high",
+        "tone": "bad"
+      }
     },
     {
       "type": "slider-chart",
@@ -27,7 +32,7 @@
       "concepts": [
         "drawdown"
       ],
-      "prompt": "After a loss, the price must rise more than it fell to get back to the start. Move the slider to find the loss that needs a rise of 400%.",
+      "prompt": "After a loss, the price must rise more than it fell. Find the loss that needs a rise of 400%.",
       "model": "drawdownRecovery",
       "params": {
         "loss": {
@@ -99,7 +104,7 @@
       "concepts": [
         "time-horizon"
       ],
-      "prompt": "An investment loses 50% of its value. After that, it grows by 7% each year. How many years does it take to get back to the start?",
+      "prompt": "An investment loses 50%. After that, it grows by 7% each year. How many years until it is back at the start?",
       "input": {
         "kind": "slider",
         "min": 0,
@@ -131,7 +136,12 @@
       "phase": "you",
       "kicker": "Your investments",
       "title": "Your biggest investment",
-      "body": "Your investment account holds **{depotTotal}**. Your biggest single investment is **{largestPositionShare}** of it. If that one investment falls, your whole account falls with it. Having a big share of your money in one place is called [[concentration-risk]]."
+      "body": "Your investment account holds **{depotTotal}**. Your biggest single investment is **{largestPositionShare}** of it. If that one investment falls, your whole account falls with it. That is [[concentration-risk]].",
+      "stat": {
+        "value": "{largestPositionShare}",
+        "label": "of your account sits in one investment",
+        "tone": "neutral"
+      }
     },
     {
       "type": "slider-chart",
@@ -140,7 +150,7 @@
       "concepts": [
         "concentration-risk"
       ],
-      "prompt": "Your biggest investment is {largestPositionShare} of your account. Imagine it falls 60% and everything else stays the same. The result shows the change of your whole account. Move the slider to try other shares.",
+      "prompt": "Imagine your biggest investment falls 60% and everything else stays the same. Try other shares.",
       "model": "oneCompanyCrash",
       "params": {
         "share": {

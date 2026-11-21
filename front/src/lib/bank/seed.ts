@@ -202,9 +202,9 @@ export function seedAccount(seed: number = DEFAULT_SEED): BankState {
     holdings,
     depotSeries: depotSeries(rng, depotTotal),
     teasers: {
-      home: { title: 'Continue: Your first share', meta: 'Lesson 3 of 6 · 4 min', progress: 2 / 6, focus: 'frankfurt-first-share' },
-      credits: { title: 'How interest really works', meta: 'Atlas · 4 lessons · 3 min each', progress: 0.25, focus: 'interest' },
-      invest: { title: 'Before your next trade: diversification', meta: 'Atlas · 5 lessons · no advice', progress: 0.2, focus: 'diversification' },
+      home: { title: 'Start: Safe money that shrinks', meta: 'Saving · Mission 1 of 5 · 5 min', progress: 0, focus: 'berlin' },
+      credits: { title: 'The real price of a loan', meta: 'Atlas · Borrowing · 5 missions', progress: 0, focus: 'sao-paulo' },
+      invest: { title: 'Lend it or own it', meta: 'Atlas · Investing · 5 missions · no advice', progress: 0, focus: 'tokyo' },
     },
   };
 }

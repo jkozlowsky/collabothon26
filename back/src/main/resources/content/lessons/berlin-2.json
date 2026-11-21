@@ -1,92 +1,78 @@
 {
   "id": "berlin-2",
   "story": "berlin",
-  "title": "Growth on growth",
-  "place": "Your savings · over many years",
-  "topic": "How money grows over time",
+  "title": "Your safety net",
+  "place": "Your savings · for surprises",
+  "topic": "An emergency fund",
   "minutes": 4,
-  "xp": 60,
+  "xp": 50,
   "concepts": [
-    "compound-interest",
-    "real-return"
+    "emergency-fund",
+    "liquidity"
   ],
   "steps": [
     {
       "type": "text",
       "id": "t1",
       "phase": "learn",
-      "kicker": "How money grows",
-      "title": "Growth on growth",
-      "body": "€10,000 grows by 5% every year. Each year, last year's growth grows too. This is called [[compound-interest]]. After 30 years, there is about €43,000. In the first years, the effect is small. After many years, it becomes large."
+      "kicker": "Safety net",
+      "title": "Money that is ready at once",
+      "body": "Life sends bills without warning. A washing machine breaks. A job ends. An [[emergency-fund]] pays for this. It does not need to grow. It needs to be there at once. Money you can use at once, without selling anything, has high [[liquidity]]. People count the fund in months of costs, often 3 to 6.",
+      "stat": {
+        "value": "3–6",
+        "label": "months of costs, a common size for a safety net",
+        "tone": "neutral"
+      }
     },
     {
       "type": "scenario",
       "id": "sc1",
       "phase": "learn",
       "concepts": [
-        "compound-interest",
-        "real-return"
+        "emergency-fund"
       ],
-      "prompt": "€10,000 must wait 18 years, for example for a child's studies. Choose where it waits, and see what happens.",
-      "unit": "€k",
-      "periodLabel": "18 years",
+      "prompt": "The boiler breaks. The repair costs €1,500 and is due this week. Where does the money come from?",
+      "unit": "€",
+      "periodLabel": "12 months",
       "choices": [
         {
-          "label": "All in a savings account at 1.5%",
+          "label": "From the emergency fund",
           "series": [
-            10,
-            10.2,
-            10.5,
-            10.7,
-            10.9,
-            11.2,
-            11.4,
-            11.7,
-            12,
-            12.2,
-            12.5,
-            12.8,
-            13.1
+            1500,
+            1500,
+            1500,
+            1500,
+            1500,
+            1500,
+            1500
           ],
-          "ending": "After 18 years, you have €13,100. The value never fell. But prices rose too. With prices rising 2% a year, the money buys what about €9,100 buys today."
+          "ending": "The repair costs €1,500, and not a cent more. Over the next months, you fill the fund up again."
         },
         {
-          "label": "Half in a savings account, half in a fund that invests all over the world",
+          "label": "Use the overdraft",
           "series": [
-            10,
-            10.7,
-            11.4,
-            12.1,
-            10.9,
-            11.6,
-            12.8,
-            13.7,
-            14.7,
-            15.8,
-            16.8,
-            17.7,
-            18.6
+            1500,
+            1515,
+            1530,
+            1545,
+            1558,
+            1570,
+            1580
           ],
-          "ending": "After 18 years, you have €18,600. In year six, the value fell to €10,900. That fall was half as deep as with all of the money in the fund."
+          "ending": "The overdraft charges about 11% a year. Paid back over 12 months, the same repair costs about €1,580."
         },
         {
-          "label": "All in a fund that invests all over the world",
+          "label": "Sell investments in a bad month",
           "series": [
-            10,
-            11.2,
-            12.4,
-            13.6,
-            10.8,
-            12.1,
-            14.2,
-            15.8,
-            17.5,
-            19.4,
-            21,
-            22.6,
-            24.1
+            1500,
+            1600,
+            1700,
+            1780,
+            1830,
+            1860,
+            1875
           ],
-          "ending": "After 18 years, you have €24,100. But in year six, the value fell to €10,800. This only works for money that can wait. The next 18 years may look very different."
+          "ending": "The fund is down 20% this month, so you sell at a low price. When prices recover, the shares you sold would be worth about €1,875 again."
         }
       ]
     },
@@ -95,107 +81,108 @@
       "id": "p1",
       "phase": "challenge",
       "concepts": [
-        "compound-interest"
+        "emergency-fund"
       ],
-      "prompt": "€10,000 grows by 5% a year. Each year's growth also grows. How much is there after 18 years?",
+      "prompt": "A household spends €2,800 a month. How big is an emergency fund for 3 months?",
       "input": {
         "kind": "slider",
-        "min": 10000,
-        "max": 40000,
-        "step": 500,
+        "min": 0,
+        "max": 15000,
+        "step": 100,
         "unit": "€"
       },
-      "answer": 24000,
-      "reveal": "About €24,000. It is not €10,000 + 18 × €500 = €19,000. From the second year on, the earlier growth also grows. This is [[compound-interest]]."
+      "answer": 8400,
+      "reveal": "€8,400: three months of costs. That is enough to bridge a gap between jobs without borrowing."
+    },
+    {
+      "type": "sort",
+      "id": "so1",
+      "phase": "challenge",
+      "concepts": [
+        "emergency-fund",
+        "liquidity"
+      ],
+      "prompt": "When is this money needed? Swipe each item to the left or to the right.",
+      "buckets": [
+        "Within a year",
+        "In 10 years or later"
+      ],
+      "items": [
+        {
+          "text": "Next month's rent",
+          "bucket": 0
+        },
+        {
+          "text": "A new washing machine",
+          "bucket": 0
+        },
+        {
+          "text": "Three months of costs if a job ends",
+          "bucket": 0
+        },
+        {
+          "text": "Money for a child at 18",
+          "bucket": 1
+        },
+        {
+          "text": "Your pension",
+          "bucket": 1
+        },
+        {
+          "text": "A car repair",
+          "bucket": 0
+        }
+      ],
+      "explanation": "Money needed within a year belongs in the [[emergency-fund]]: safe and ready at once."
     },
     {
       "type": "quiz",
       "id": "q1",
       "phase": "challenge",
       "concepts": [
-        "compound-interest"
+        "emergency-fund"
       ],
-      "prompt": "True or false: with compound interest, money grows by the same amount every year.",
+      "prompt": "True or false: an emergency fund should grow as fast as possible.",
       "options": [
         "True",
         "False"
       ],
       "correctIndex": 1,
-      "explanation": "False. Each year, the earnings from earlier years earn too. So the amount added each year gets bigger."
-    },
-    {
-      "type": "quiz",
-      "id": "q2",
-      "phase": "challenge",
-      "concepts": [
-        "compound-interest"
-      ],
-      "prompt": "Why does time matter so much for compound interest?",
-      "options": [
-        "Earnings on earlier earnings get bigger every year",
-        "The bank pays a bonus after 10 years",
-        "Prices stop rising after many years"
-      ],
-      "correctIndex": 0,
-      "explanation": "Compound interest is slow at first and fast later. The longer money can wait, the bigger the difference between the paths."
+      "explanation": "False. Its job is to be there at once and keep its value. Fast growth comes with swings, and a surprise does not wait for a good day."
     },
     {
       "type": "text",
       "id": "t2",
       "phase": "you",
       "kicker": "Your savings",
-      "title": "Your interest grows too",
-      "body": "Your savings account holds **{savingsBalance}** and pays **{savingsRate}** a year. The bank adds the interest to your balance. The next year, that interest earns interest too. What your money gains after rising prices is called your [[real-return]]."
+      "title": "How long your savings last",
+      "body": "You spend about **{monthlySpending}** a month. Your savings account holds **{savingsBalance}**. If your income stopped today, that would cover about **{bufferMonths}** months of costs.",
+      "stat": {
+        "value": "{bufferMonths}",
+        "label": "months of costs your savings cover",
+        "tone": "good"
+      }
     },
     {
-      "type": "slider-chart",
-      "id": "s1",
-      "phase": "you",
-      "concepts": [
-        "compound-interest"
-      ],
-      "prompt": "Your savings account holds {savingsBalance} at {savingsRate} a year. Move the sliders to see what it could grow to after some years.",
-      "model": "compoundGrowth",
-      "params": {
-        "years": {
-          "label": "Years",
-          "min": 1,
-          "max": 40,
-          "step": 1,
-          "value": 18,
-          "unit": " years"
-        },
-        "start": {
-          "label": "Starting amount",
-          "min": 0,
-          "max": 50000,
-          "step": 500,
-          "value": 10000,
-          "unit": "€",
-          "fromBank": "savingsBalance"
-        },
-        "rate": {
-          "label": "Interest or return per year",
-          "min": 0,
-          "max": 8,
-          "step": 0.25,
-          "value": 2,
-          "unit": "%",
-          "fromBank": "savingsRate"
-        }
+      "type": "action",
+      "id": "a1",
+      "phase": "decide",
+      "title": "Your decision",
+      "body": "Your savings cover about **{bufferMonths}** months of your costs today. How many months do you want as your safety net? You choose the number.",
+      "bodyNoData": "How many months of your costs do you want to keep as your safety net? You choose the number.",
+      "rule": {
+        "label": "My safety net",
+        "min": 1,
+        "max": 12,
+        "step": 1,
+        "value": 3,
+        "unit": " months",
+        "appliesTo": "monthlySpending",
+        "kind": "multiple",
+        "compareTo": "savingsBalance",
+        "result": "= {amount} ready any day"
       },
-      "output": {
-        "label": "Value after these years",
-        "unit": "€"
-      },
-      "goal": {
-        "condition": {
-          "of": "output",
-          "min": -1000000
-        },
-        "hint": "Move a slider to see the result change."
-      },
-      "note": "The amount and the rate start at your real numbers. This is an example, not a forecast. It does not count rising prices."
+      "cta": "Save my rule"
     }
   ],
   "video": {
@@ -204,63 +191,57 @@
       {
         "type": "scene",
         "id": "v1",
-        "title": "Growth on growth",
-        "desc": "Each year, the earlier growth grows too. After many years, the effect is large.",
+        "title": "Bills without warning",
+        "desc": "An [[emergency-fund]] pays for surprises. It must be ready at once: it needs high [[liquidity]], not fast growth.",
         "duration": 13,
         "camera": "push",
         "setting": {
           "place": "home",
-          "time": "dusk"
+          "time": "night"
         },
         "layers": [
           {
             "kind": "tag",
             "at": 1,
-            "text": "5% a year",
-            "tone": "neutral",
-            "x": 0.28,
-            "y": 0.25
+            "text": "Broken",
+            "tone": "bad",
+            "x": 0.7,
+            "y": 0.3
           },
           {
-            "kind": "chart",
+            "kind": "amount",
             "at": 3.5,
-            "len": 8,
-            "series": [
-              10000,
-              12763,
-              16289,
-              20789,
-              26533,
-              33864,
-              43219
-            ],
-            "unit": "€"
+            "len": 4,
+            "from": 0,
+            "to": 1500,
+            "currency": "EUR",
+            "label": "Repair, due this week"
           },
           {
             "kind": "tag",
-            "at": 10.5,
-            "text": "30 years",
+            "at": 9,
+            "text": "Ready",
             "tone": "good",
-            "x": 0.75,
-            "y": 0.25
+            "x": 0.3,
+            "y": 0.3
           }
         ],
         "captions": [
           {
             "at": 0.5,
-            "text": "€10,000 grows by 5% every year."
+            "text": "Life sends bills without warning. A washing machine breaks."
           },
           {
             "at": 4,
-            "text": "Each year, last year's growth grows too."
+            "text": "An emergency fund pays for this."
           },
           {
             "at": 7,
-            "text": "This is called compound interest."
+            "text": "It does not need to grow. It needs to be there at once."
           },
           {
             "at": 10,
-            "text": "After 30 years, there is about €43,000."
+            "text": "People count the fund in months of costs, often 3 to 6."
           }
         ],
         "transcript": "t1"
@@ -270,10 +251,10 @@
       "v1",
       "sc1",
       "p1",
+      "so1",
       "q1",
-      "q2",
       "t2",
-      "s1"
+      "a1"
     ]
   }
 }

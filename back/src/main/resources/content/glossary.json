@@ -90,5 +90,41 @@
   "pay-yourself-first": {
     "term": "Pay yourself first",
     "definition": "Moving a fixed amount to savings on the day your pay arrives, before you spend anything. You then spend what is left."
+  },
+  "savings-rate": {
+    "term": "Savings rate",
+    "definition": "The share of your income you keep instead of spending. €300 saved from €2,000 is a savings rate of 15%."
+  },
+  "fixed-costs": {
+    "term": "Fixed costs",
+    "definition": "Costs you must pay every month, like rent, insurance or electricity. They are hard to change quickly."
+  },
+  "standing-order": {
+    "term": "Standing order",
+    "definition": "An automatic transfer that repeats on a set date, for example to your savings account on payday."
+  },
+  "liquidity": {
+    "term": "Liquidity",
+    "definition": "How fast you can use money without losing value. A savings account has high liquidity; a house has low liquidity."
+  },
+  "stock": {
+    "term": "Stock",
+    "definition": "A small piece of ownership in a company. Its price goes up and down with the company and the market."
+  },
+  "bond": {
+    "term": "Bond",
+    "definition": "A loan you give to a state or a company. You get interest and, at the end, your money back, unless the borrower cannot pay."
+  },
+  "etf": {
+    "term": "ETF",
+    "definition": "A fund traded on a stock exchange that usually follows an index. One ETF can hold hundreds of companies at once."
+  },
+  "cost-averaging": {
+    "term": "Cost averaging",
+    "definition": "Investing the same amount at regular times. When prices are low, it buys more units; when they are high, fewer."
+  },
+  "fixed-term-deposit": {
+    "term": "Fixed-term deposit",
+    "definition": "Savings locked for a set time, for example 24 months, at an interest rate fixed for the whole term. The money is not available before the end."
   }
 }

@@ -8,6 +8,7 @@ import { GlobeHint } from '@/components/globe/GlobeHint';
 import { LearnHeader } from '@/components/LearnHeader';
 import { StorySheet } from '@/components/StorySheet';
 import { colors, spacing } from '@/constants/theme';
+import { useAccount } from '@/hooks/useAccount';
 import { useApi } from '@/hooks/useApi';
 import { useStartHere } from '@/hooks/useStartHere';
 import { LEARNER, STORIES, withLessons } from '@/lib/stories';
@@ -26,6 +27,9 @@ export default function MapScreen() {
   // Coming back from a lesson moves the story's progress on.
   useFocusEffect(reload);
   const startHere = useStartHere();
+  // Real streak and XP once the stats load; the mock until then.
+  const { stats } = useAccount();
+  const learner = stats ? { ...LEARNER, streak: stats.currentStreak, xp: stats.totalXp } : LEARNER;
   // One "start" cue: the Quick check's story replaces main's default current story.
   const startId = startHere?.storyId;
   // The globe picks its first view at mount, before the startHere story is known.
@@ -43,7 +47,7 @@ export default function MapScreen() {
   return (
     <View style={styles.screen} testID="screen-learn" onLayout={(e) => setHeight(e.nativeEvent.layout.height)}>
       <SafeAreaView edges={['top', 'left', 'right']} onLayout={(e) => setSheetTop(e.nativeEvent.layout.height + spacing.md)}>
-        <LearnHeader learner={LEARNER} />
+        <LearnHeader learner={learner} />
         <Globe
           ref={globe}
           stories={stories}

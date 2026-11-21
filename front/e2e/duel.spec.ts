@@ -49,15 +49,15 @@ async function playMatchQuestions(page: Page) {
     const quizOption = page.getByTestId('duel-option-0');
     const predictSubmit = page.getByTestId('duel-predict-submit');
     const chartSubmit = page.getByTestId('duel-chart-submit');
-    const sortBtn = page.getByTestId('sort-left');
-    const matchTile = page.getByTestId('match-left-0');
+    const sortView = page.getByTestId('duel-sort');
+    const matchView = page.getByTestId('duel-match');
 
     await expect(
       quizOption
         .or(predictSubmit)
         .or(chartSubmit)
-        .or(sortBtn)
-        .or(matchTile)
+        .or(sortView)
+        .or(matchView)
         .first(),
     ).toBeVisible({ timeout: 20_000 });
 
@@ -67,17 +67,21 @@ async function playMatchQuestions(page: Page) {
       await predictSubmit.click();
     } else if (await chartSubmit.isVisible()) {
       await chartSubmit.click();
-    } else if (await sortBtn.isVisible()) {
-      while (await sortBtn.isVisible()) {
-        await sortBtn.click();
+    } else if (await sortView.isVisible()) {
+      // Put every card in the left bucket; correctness does not matter here.
+      const leftArrows = page.locator('[data-testid^="duel-sort-left-"]');
+      while ((await leftArrows.count()) > 0) {
+        await leftArrows.first().click();
       }
-    } else if (await matchTile.isVisible()) {
-      for (let i = 0; i < 4; i++) {
-        const left = page.getByTestId(`match-left-${i}`);
-        const right = page.getByTestId(`match-right-${i}`);
-        if (await left.isVisible()) await left.click();
-        if (await right.isVisible()) await right.click();
+      await page.getByTestId('duel-sort-submit').click();
+    } else if (await matchView.isVisible()) {
+      const lefts = page.locator('[data-testid^="match-left-"]');
+      const count = await lefts.count();
+      for (let i = 0; i < count; i++) {
+        await page.getByTestId(`match-left-${i}`).click();
+        await page.getByTestId(`match-right-${i}`).click();
       }
+      await page.getByTestId('duel-match-submit').click();
     }
 
     // Wait for server feedback and the next question / see results button

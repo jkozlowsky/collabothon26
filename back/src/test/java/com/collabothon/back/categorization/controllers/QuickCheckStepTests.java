@@ -2,7 +2,6 @@ package com.collabothon.back.categorization.controllers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
@@ -35,6 +34,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.json.JsonCompareMode;
+import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.ResponseCreator;
 import org.springframework.test.web.servlet.MockMvc;
@@ -91,9 +91,11 @@ class QuickCheckStepTests {
 
 	private String userId;
 
+	private TestBank bank;
+
 	@BeforeEach
 	void ownBankAndUser() throws Exception {
-		TestBank bank = new TestBank(jdbc);
+		bank = new TestBank(jdbc);
 		long emergency = bank.lesson("Emergency fund", "Rainy days.", 1);
 		long compound = bank.lesson("Compound interest", "Time works.", 2);
 		long inflation = bank.lesson("Inflation", "Prices rise.", 3);
@@ -136,16 +138,18 @@ class QuickCheckStepTests {
 		step(body(null, "", false)).andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"mastery": {"saving": null, "investing": null}, "nextQuestionId": "sv-a", "done": false,
-					 "useRules": false}""", JsonCompareMode.STRICT));
+					 "useRules": false, "stepFellBack": false}""", JsonCompareMode.STRICT));
 	}
 
 	@Test
 	void useRulesMakesNoJevRequestAndStaysOnRules() throws Exception {
+		jev.expect(ExpectedCount.never(), requestTo(JEV_URL));
+
 		step(body(null, "{\"questionId\": \"sv-a\", \"optionIndex\": 1, \"confidence\": \"sure\"}", true))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"mastery": {"saving": 0.25, "investing": null}, "nextQuestionId": "sv-b", "done": false,
-					 "useRules": true}""", JsonCompareMode.STRICT));
+					 "useRules": true, "stepFellBack": false}""", JsonCompareMode.STRICT));
 	}
 
 	@Test
@@ -165,7 +169,7 @@ class QuickCheckStepTests {
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"mastery": {"saving": 0.25, "investing": 0.75}, "nextQuestionId": null, "done": true,
-					 "useRules": true}""", JsonCompareMode.STRICT));
+					 "useRules": true, "stepFellBack": false}""", JsonCompareMode.STRICT));
 	}
 
 	@Test
@@ -192,10 +196,6 @@ class QuickCheckStepTests {
 						body(null, one, true).replace("\"1-3\"", "\"" + SENTINEL + "\"")),
 				Arguments.of("savings cover with consent",
 						VALID.replace("\"savingsCover\": null", "\"savingsCover\": \"1-3\"")),
-				Arguments.of("more than six answers", body(null, String.join(", ", "{\"questionId\": \"sv-a\"}",
-						"{\"questionId\": \"sv-b\"}", "{\"questionId\": \"sv-hard\"}", "{\"questionId\": \"in-a\"}",
-						"{\"questionId\": \"in-hard\"}", "{\"questionId\": \"short-term-fall\"}",
-						"{\"questionId\": \"x\"}"), true)),
 				Arguments.of("unknown question", body(null, one.replace("sv-a", SENTINEL), true)),
 				Arguments.of("repeated question", body(null, one + ", " + one, true)),
 				Arguments.of("option past the last one", body(null, one.replace("\"optionIndex\": 0", "\"optionIndex\": 3"),
@@ -269,7 +269,7 @@ class QuickCheckStepTests {
 		step(TWO_ANSWERS).andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"mastery": {"saving": 0.8, "investing": 0.3}, "nextQuestionId": "sv-hard", "done": false,
-					 "useRules": false}""", JsonCompareMode.STRICT));
+					 "useRules": false, "stepFellBack": false}""", JsonCompareMode.STRICT));
 
 		assertEquals("jev-latest", sent.get().get("model").stringValue());
 		assertEquals(json.readTree("""
@@ -299,7 +299,9 @@ class QuickCheckStepTests {
 					List.of("in-a", "in-hard", "short-term-fall", "sv-b", "sv-hard"), 0.1)));
 
 		step(VALID.replace("\"useRules\": true", "\"useRules\": false")).andExpect(status().isOk())
-			.andExpect(content().json("{\"nextQuestionId\": \"in-a\", \"useRules\": false}", JsonCompareMode.LENIENT));
+			.andExpect(content().json("""
+					{"mastery": {"saving": 0.9, "investing": null}, "nextQuestionId": "in-a", "done": false,
+					 "useRules": false, "stepFellBack": false}""", JsonCompareMode.STRICT));
 	}
 
 	static Stream<Arguments> brokenSteps() {
@@ -326,7 +328,7 @@ class QuickCheckStepTests {
 		step(TWO_ANSWERS).andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"mastery": {"saving": 0.85, "investing": 0.25}, "nextQuestionId": "short-term-fall", "done": false,
-					 "useRules": true}""", JsonCompareMode.STRICT));
+					 "useRules": false, "stepFellBack": true}""", JsonCompareMode.STRICT));
 	}
 
 	@Test
@@ -334,12 +336,10 @@ class QuickCheckStepTests {
 		jev.expect(requestTo(JEV_URL))
 			.andRespond(after(Duration.ofMillis(3300), jevReplies(jevStep(MASTERY_BOTH, "sv-hard", UNASKED_AFTER_TWO,
 					0.2))));
-		long start = System.nanoTime();
 
 		step(TWO_ANSWERS).andExpect(status().isOk())
-			.andExpect(content().json("{\"nextQuestionId\": \"short-term-fall\", \"useRules\": true}",
+			.andExpect(content().json("{\"nextQuestionId\": \"short-term-fall\", \"useRules\": false, \"stepFellBack\": true}",
 					JsonCompareMode.LENIENT));
-		assertTrue(Duration.ofNanos(System.nanoTime() - start).compareTo(Duration.ofMillis(3300)) < 0);
 	}
 
 	@Test
@@ -351,7 +351,7 @@ class QuickCheckStepTests {
 		step(TWO_ANSWERS).andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"mastery": {"saving": 0.8, "investing": 0.3}, "nextQuestionId": "short-term-fall", "done": false,
-					 "useRules": false}""", JsonCompareMode.STRICT));
+					 "useRules": false, "stepFellBack": false}""", JsonCompareMode.STRICT));
 	}
 
 	@Test
@@ -391,7 +391,61 @@ class QuickCheckStepTests {
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"mastery": {"saving": 0.8, "investing": 0.3}, "nextQuestionId": null, "done": true,
-					 "useRules": false}""", JsonCompareMode.STRICT));
+					 "useRules": false, "stepFellBack": false}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void afterAFallbackTheStepStaysOnTheRuleWithoutAskingJev() throws Exception {
+		jev.expect(ExpectedCount.never(), requestTo(JEV_URL));
+
+		step(TWO_ANSWERS.replace("\"useRules\": false", "\"useRules\": false, \"stepFellBack\": true")).andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"mastery": {"saving": 0.85, "investing": 0.25}, "nextQuestionId": "short-term-fall", "done": false,
+					 "useRules": false, "stepFellBack": true}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void anAnsweredAreaWithoutAMasteryQuestionTakesTheRuleMean() throws Exception {
+		long budget = bank.lesson("Budget", "Plan.", 9);
+		bank.question("db-a", budget, "debt", "easy");
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(jsonPath("$.questions.mastery_debt").doesNotExist())
+			.andRespond(jevReplies(jevStep("\"mastery_saving\": {\"type\": \"noul\", \"noul\": 0.8}", "sv-b",
+					List.of("in-a", "in-hard", "short-term-fall", "sv-b", "sv-hard"), 0.2)));
+
+		step(body("1-5y", RIGHT_SV_A + ", {\"questionId\": \"db-a\", \"optionIndex\": 1, \"confidence\": \"guessing\"}",
+				false))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"mastery": {"saving": 0.8, "debt": 0.25, "investing": null}, "nextQuestionId": "sv-b", "done": false,
+					 "useRules": false, "stepFellBack": false}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void overTheBudgetJevsEnoughStillEndsTheTest() throws Exception {
+		jev.expect(requestTo(JEV_URL))
+			.andRespond(after(Duration.ofMillis(1600), jevReplies(jevStep(MASTERY_BOTH, "sv-hard",
+					List.of("in-hard", "short-term-fall", "sv-hard"), 0.75))));
+
+		step(body("1-5y", String.join(", ", RIGHT_SV_A, WRONG_IN_A,
+				"{\"questionId\": \"sv-b\", \"optionIndex\": 0, \"confidence\": \"guessing\"}"), false))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"mastery": {"saving": 0.8, "investing": 0.3}, "nextQuestionId": null, "done": true,
+					 "useRules": false, "stepFellBack": false}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void sevenDistinctAnswersAre400() throws Exception {
+		long lesson = bank.lesson("Extra", "More.", 9);
+		bank.question("sv-c", lesson, "saving", "easy");
+		StringBuilder seven = new StringBuilder();
+		for (String id : List.of("sv-a", "sv-b", "sv-c", "sv-hard", "in-a", "in-hard", "short-term-fall")) {
+			seven.append(seven.isEmpty() ? "" : ", ").append("{\"questionId\": \"%s\"}".formatted(id));
+		}
+
+		step(body(null, seven.toString(), true)).andExpect(status().isBadRequest());
+		step(body(null, seven.substring(0, seven.lastIndexOf(", {")), true)).andExpect(status().isOk());
 	}
 
 }

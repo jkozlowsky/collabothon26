@@ -7,5 +7,6 @@ public record StepResponseDto(
 		Map<String, Double> mastery,
 		String nextQuestionId,
 		boolean done,
-		boolean useRules
+		boolean useRules,
+		boolean stepFellBack
 ) {}

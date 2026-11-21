@@ -19,8 +19,13 @@ public record StepRequestDto(
 		@NotNull
 		@Size(max = CategorizationConsts.MAX_QUESTIONS)
 		List<@NotNull @Valid HistoryEntryDto> history,
-		boolean useRules
+		boolean useRules,
+		Boolean stepFellBack
 ) {
+
+	public StepRequestDto {
+		stepFellBack = Boolean.TRUE.equals(stepFellBack);
+	}
 
 	@AssertTrue(message = "facts are only accepted with consent")
 	boolean isFactsOnlyWithConsent() {

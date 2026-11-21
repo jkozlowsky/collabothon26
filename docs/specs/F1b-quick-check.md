@@ -418,8 +418,8 @@ v1 "To confirm" and both v1 triage rounds: `.planning/reviews/F1b-v1-triage.md` 
 ### Q-F diff review (21.11, one round; Jan: fix only high/critical)
 | # | finding | where | severity | class | reason / action |
 |---|---|---|---|---|---|
-| F-1 | after step calls, Back and a restart whose first step fails, the skip-path POST drops `stepCallsMade`; the stored disclosure says nothing reached the model | front categorizing.tsx:103, useQuickCheck.ts:137-139 | high (GDPR art. 13) | fix | send `stepCallsMade` on the skip path when calls > 0; Contract: kept on every final POST incl. the skip path |
-| F-2 | e2e dock test: focus-before-Escape works by delay, not by the stated reason | e2e/quick-check.spec.ts:322-324 | low | fix (one line, optional) | wait for the dialog role before Escape |
+| F-1 | after step calls, Back and a restart whose first step fails, the skip-path POST drops `stepCallsMade`; the stored disclosure says nothing reached the model | front categorizing.tsx:103, useQuickCheck.ts:137-139 | high (GDPR art. 13) | fix (ec51718) | send `stepCallsMade` on the skip path when calls > 0; Contract: kept on every final POST incl. the skip path |
+| F-2 | e2e dock test: focus-before-Escape works by delay, not by the stated reason | e2e/quick-check.spec.ts:322-324 | low | fix (ec51718) | wait for the dialog role before Escape |
 | F-3 | dock level reads "Starting", spec says "Just starting" | dock | low | defer | copy polish |
 | F-4 | after a reload Solid needs `readyForNext`, and the aligned card counts "Not sure" (no per-area answer counts stored) | summary after reload | medium | defer | reload is off the demo path |
 | F-5 | `_layout.tsx` guard `done \|\| !loaded`, shared `Sheet.tsx` reduced motion | layout, Sheet | — | reject | reviewed: no risk to other screens |

@@ -15,11 +15,10 @@ Kod, komentarze i commity po angielsku, treść aplikacji po angielsku.
 | Ulubione | Backend, per użytkownik (`/api/users/{userId}/glossary/favorites`) | Spójne z profilem, przetrwa przeinstalowanie, baza pod późniejsze fiszki |
 | Karta "On your account" | **Pominięta w v1.** Układ zostawia na nią miejsce | Brak danych bankowych w backendzie; ryzyko dla terminu |
 | Wyszukiwanie | **Na serwerze**, Postgres + `pg_trgm` (tolerancja literówek), `aliases` jako synonimy | Wybór użytkownika; "ładna" historia techniczna dla jury |
-| Treść | Angielski, ~16 haseł, 5 kategorii; część kompletna (obie wersje + grafika + powiązania), część uboższa | Realny koszt contentu |
+| Treść | Angielski, ~16 haseł, 5 kategorii; część kompletna (przykład + grafika + powiązania), część uboższa | Realny koszt contentu |
 | Popup w lekcji | **Poza zakresem.** Parser i komponent definicji pisane tak, żeby dało się go użyć w lekcjach później | Ekran lekcji należy do innej osoby |
 | Grafiki | Rysowane w kodzie (`react-native-svg`) | Ostre, kolory z tokenów, dane z liczb |
 | Zasilanie bazy | **Migracje V15 (schemat) i V16 (dane)**, po zmianie treści lokalnie `make db-reset` | Wybór użytkownika; aplikacja nie jest nigdzie wdrażana, więc baza jest za każdym razem czyszczona. Odstępstwo od reguły README ("nie edytujemy wypchniętej migracji"), zaakceptowane świadomie |
-| Tryb "In plain words / Standard" | Preferencja w **osobnej tabeli** `glossary_preference`, nie w `user_profile`. Domyślnie z profilu (patrz 5.6), pamiętana | Działa bez onboardingu; nie dotykamy cudzego kodu |
 | Puste kategorie | Backend zwraca tylko kategorie, które mają hasła | Nic nie jest puste na demo |
 | Praca w zespole | Gałąź `feature/glossary`, merge przez PR | Zabezpiecza demo przed zepsutym `main` |
 
@@ -32,7 +31,7 @@ Wszystkie ekrany zachowują layout z Figmy. Przed pisaniem UI użyć skilla `fin
 1. **Browse** (`/glossary`): nagłówek, pole wyszukiwania, chipy kategorii (`All`, kategorie, `Saved · N`), lista kategorii. Każda kategoria to **zwijany** nagłówek (okrągła strzałka, licznik haseł) i karta z wierszami haseł. Domyślnie rozwinięta jest pierwsza kategoria, reszta zwinięta. Stan zwinięcia trzymany w pamięci ekranu (nie zapisujemy go).
 2. **Search** (ten sam ekran, po wpisaniu tekstu): zamiast chipów i listy kategorii pokazujemy licznik wyników, karty wyników z **podświetloną frazą** w nazwie hasła oraz sekcję "Mentioned in other definitions" (hasła, w których definicji występuje fraza).
 3. **No results**: gdy brak trafień, tekst "No terms match your search", karta "Did you mean" z najbliższym hasłem (podobieństwo trigramowe) i chipy "Browse by category". Bez propozycji zapytania do asystenta.
-4. **Definition** (`/glossary/[slug]`): przycisk wstecz, pigułka kategorii, gwiazdka ulubionych, okruszki, tytuł i pełna nazwa, przełącznik trybu, karta definicji z klikalnymi linkami, opcjonalna grafika, karta "Example", "Related terms", opcjonalna karta "Practise it" (link do lekcji), stopka "Educational content, not investment advice."
+4. **Definition** (`/glossary/[slug]`): przycisk wstecz, pigułka kategorii, gwiazdka ulubionych, okruszki, tytuł i pełna nazwa, karta definicji z klikalnymi linkami, opcjonalna grafika, karta "Example", "Related terms", opcjonalna karta "Practise it" (link do lekcji), stopka "Educational content, not investment advice."
 5. **Saved** (ten sam ekran Browse z aktywnym chipem `Saved`): zapisane hasła pogrupowane w swoich kategoriach; pusty stan "No saved terms yet. Tap the star on any definition."
 
 Wszystkie stany ładowania i błędu przez istniejący `AsyncContent`.
@@ -62,7 +61,6 @@ CREATE TABLE glossary_term (
     position            INT          NOT NULL,          -- order inside the category
     short_description   VARCHAR(160) NOT NULL,          -- one line shown in lists
     definition_standard TEXT         NOT NULL,          -- markup: see section 4
-    definition_plain    TEXT,                           -- NULL = fall back to standard
     example             TEXT,
     aliases             TEXT[]       NOT NULL DEFAULT '{}',   -- synonyms searched as well
     graphic_key         VARCHAR(40)                     -- which SVG graphic to draw, NULL = none
@@ -81,11 +79,6 @@ CREATE TABLE glossary_favorite (
     term_id    BIGINT      NOT NULL REFERENCES glossary_term (id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (user_id, term_id)
-);
-
-CREATE TABLE glossary_preference (
-    user_id        VARCHAR(64) PRIMARY KEY,
-    language_level VARCHAR(16) NOT NULL CHECK (language_level IN ('plain', 'standard'))
 );
 ```
 
@@ -135,7 +128,7 @@ Pobierane raz na wejście do zakładki. Front buduje z tego też mapę `slug →
 ```json
 { "slug": "etf", "name": "ETF", "fullName": "Exchange-traded fund",
   "category": { "slug": "investing", "name": "Investing" },
-  "definitionStandard": "...[[stock|stocks]]...", "definitionPlain": "... lub null",
+  "definitionStandard": "...[[stock|stocks]]...",
   "example": "... lub null", "graphicKey": "diversification | null",
   "related": [{ "slug": "stock", "name": "Stock" }] }
 ```
@@ -148,7 +141,7 @@ Pobierane raz na wejście do zakładki. Front buduje z tego też mapę `slug →
   "suggestions": [{ "slug": "dividend", "name": "Dividend" }] }
 ```
 - `terms`: nazwa zaczyna się od `q` (priorytet), potem nazwa zawiera `q`, potem alias zawiera `q`. Sortowanie: dopasowanie na początku, potem alfabetycznie. Limit 20.
-- `mentions`: hasła, których definicja (standard lub plain) zawiera `q` jako słowo, a które nie są w `terms`. Snippet to krótki wycinek wokół trafienia (wycinany po stronie serwera, bez znaczników `[[ ]]`). Limit 5.
+- `mentions`: hasła, których definicja zawiera `q` jako słowo, a które nie są w `terms`. Snippet to krótki wycinek wokół trafienia (wycinany po stronie serwera, bez znaczników `[[ ]]`). Limit 5.
 - `suggestions`: wypełniane **tylko gdy `terms` jest puste**; hasła o `similarity(lower(name), lower(q)) > 0.3`, max 3 (to obsługuje literówki, np. "divdend" → Dividend).
 - Znaki specjalne `%`, `_`, `\` w `q` **muszą być zescapowane** przed użyciem w `LIKE`/`ILIKE` (inaczej wpisanie `%` zwróci wszystko).
 - Wyniki zwracamy w jednej odpowiedzi; podświetlenie dopasowania liczy front (`indexOf` bez rozróżniania wielkości liter).
@@ -159,15 +152,6 @@ Pobierane raz na wejście do zakładki. Front buduje z tego też mapę `slug →
 - `DELETE /api/users/{userId}/glossary/favorites/{slug}` → 204, idempotentne
 
 Walidacja `userId` jak w profilu (niepusty, max 64 znaki). Front liczy filtr "Saved" i licznik lokalnie z listy z 5.1 plus tablicy slugów, więc nie potrzeba osobnego endpointu z danymi haseł.
-
-### 5.5 Preferencja trybu
-- `GET /api/users/{userId}/glossary/preference` → `{ "languageLevel": "plain" | "standard" | null }` (null = użytkownik jeszcze nie wybierał)
-- `PUT /api/users/{userId}/glossary/preference` ciało `{ "languageLevel": "plain" }` → 200 z zapisaną wartością
-
-### 5.6 Wartość domyślna trybu (liczona na froncie)
-Gdy preferencja = null: pobieramy poziom doświadczenia z istniejącego profilu (hook `useOnboarding`):
-`not-saving | none | tried` → `plain`; `regular | experienced` → `standard`; brak profilu lub pominięty onboarding → `plain`.
-Pierwsze ręczne przełączenie zapisuje wybór przez PUT; od tego momentu wygrywa zapisany wybór.
 
 Kontrakty (kształt JSON) odzwierciedlamy w `front/src/types/glossary.ts` z komentarzem wskazującym kontroler, jak robi to `types/lessons.ts`. Zgodnie z AGENTS.md: wspólne kontrakty zmieniamy świadomie i informujemy zespół.
 
@@ -185,10 +169,10 @@ front/src/app/(tabs)/glossary/[slug].tsx      Definition
 front/src/types/glossary.ts
 front/src/lib/glossaryMarkup.ts               parser znaczników
 front/src/lib/fuzzy.ts                        tylko jeśli potrzebny po stronie frontu (podświetlanie); domyślnie nie
-front/src/hooks/useGlossary.tsx               kontekst: lista, mapa slug→name, ulubione, tryb
+front/src/hooks/useGlossary.tsx               kontekst: lista, mapa slug→name, ulubione
 front/src/hooks/useGlossarySearch.ts          debounce + zapytanie
 front/src/components/glossary/*               SearchField, CategoryChips, CategorySection, TermRow,
-                                              DefinitionText, LevelToggle, Breadcrumb, FavoriteButton,
+                                              DefinitionText, Breadcrumb, FavoriteButton,
                                               ExampleCard, RelatedChips, PractiseCard, SearchResultCard
 front/src/components/glossary/graphics/*      CompoundGrowthChart, DiversificationBasket, InflationPower
                                               + rejestr graphicKey → komponent
@@ -196,7 +180,7 @@ front/src/components/glossary/graphics/*      CompoundGrowthChart, Diversificati
 Przed napisaniem kodu dotykającego Expo / Expo Router zgodnie z `front/AGENTS.md` sprawdzić wersjonowane dokumentacje (`expo ~58`), bo API zmieniają się między wersjami. Po zmianie trasy na folder zweryfikować, że `(tabs)/_layout.tsx` nadal poprawnie wiąże zakładkę `glossary` (nazwa folderu).
 
 ### 6.2 Dane i stan
-- `GlossaryProvider` (w `_layout.tsx` folderu) pobiera: listę (5.1), ulubione (5.4), preferencję trybu (5.5). Udostępnia: `categories`, `nameBySlug`, `favorites` (Set), `toggleFavorite(slug)`, `languageLevel`, `setLanguageLevel(level)`.
+- `GlossaryProvider` (w `_layout.tsx` folderu) pobiera: listę (5.1) i ulubione (5.4). Udostępnia: `categories`, `nameBySlug`, `favorites` (Set), `toggleFavorite(slug)`.
 - `toggleFavorite` robi **aktualizację optymistyczną** (gwiazdka zmienia się od razu), a przy błędzie sieci cofa zmianę i pokazuje krótki komunikat.
 - Hook `useApi` obsługuje tylko GET. Mutacje wołają `api()` bezpośrednio (`PUT`, `DELETE`).
 - Stała `USER_ID` jak w `useOnboarding` (demo: `demo-user`).
@@ -216,7 +200,7 @@ Przed napisaniem kodu dotykającego Expo / Expo Router zgodnie z `front/AGENTS.m
 - Nieznany slug (404 z backendu): komunikat "This term does not exist" i przycisk powrotu.
 
 ### 6.5 Ekran Definition
-- Treść: `definitionPlain ?? definitionStandard` zależnie od trybu. Jeśli hasło nie ma wersji plain, a tryb to plain, pokazujemy standard i przełącznik **nie znika**, tylko wersja "In plain words" jest wtedy nieaktywna (szary tekst) z krótką informacją "No plain version yet" (żeby użytkownik nie myślał, że przełącznik nie działa).
+- Treść: `definitionStandard`.
 - `DefinitionText`: zagnieżdżone `<Text>` z `onPress` dla linków (podkreślone, kolor `globeOceanLight`, `fonts.semiBold`, `accessibilityRole="link"`). Czytelne też dla czytników ekranu.
 - Grafika: jeśli `graphicKey != null`, renderuje komponent z rejestru; nieznany klucz = brak grafiki (nigdy crash).
 - Karta "Practise it": **nie w v1.** Powiązanie hasła z lekcją (`lesson_id`) usunięte przy merge'u z main: tabela `lesson` z `V2__lessons.sql` zniknęła w V5, lekcje są teraz plikami JSON z id typu `berlin-1`.
@@ -226,7 +210,6 @@ Przed napisaniem kodu dotykającego Expo / Expo Router zgodnie z `front/AGENTS.m
 ### 6.6 Dostępność i zachowanie na różnych platformach
 - Obszary dotyku min. 44 × 44 px (gwiazdka, strzałka w nagłówku kategorii, chipy).
 - Gwiazdka: `accessibilityRole="button"`, `accessibilityLabel` "Save term" / "Remove from saved", `accessibilityState={{ selected }}`.
-- Przełącznik trybu: `accessibilityRole="tab"` lub `radio` z zaznaczonym stanem.
 - Zwijanie kategorii: `accessibilityState={{ expanded }}`.
 - Aplikacja działa też na webie (`react-native-web`): bez API dostępnych tylko natywnie. Haptyka (`expo-haptics`) tylko na urządzeniach (sprawdzić `Platform.OS`).
 
@@ -234,9 +217,9 @@ Przed napisaniem kodu dotykającego Expo / Expo Router zgodnie z `front/AGENTS.m
 
 ## 7. Zakres treści (~16 haseł, 5 kategorii)
 
-Szkic merytoryczny przygotowuje Claude (ze znacznikami linków, obiema wersjami, przykładami). **Zespół weryfikuje fakty** i dba, żeby sformułowania opisywały pojęcia, a nie radziły co kupić (MiFID II).
+Szkic merytoryczny przygotowuje Claude (ze znacznikami linków i przykładami). **Zespół weryfikuje fakty** i dba, żeby sformułowania opisywały pojęcia, a nie radziły co kupić (MiFID II).
 
-| Kategoria | Hasła | Kompletne (obie wersje + grafika + powiązania) |
+| Kategoria | Hasła | Kompletne (przykład + grafika + powiązania) |
 |---|---|---|
 | Basics | Inflation, Interest rate, Compound interest, Budget | Inflation, Compound interest |
 | Investing | Stock, ETF, Dividend, Diversification, Bond, Index | ETF, Diversification |
@@ -244,9 +227,9 @@ Szkic merytoryczny przygotowuje Claude (ze znacznikami linków, obiema wersjami,
 | Credit & debt | APR, Credit score | — |
 | Risk | Volatility, Risk tolerance | — |
 
-- Hasła "kompletne": `definition_plain`, `example`, `related`, `graphic_key`.
+- Hasła "kompletne": `example`, `related`, `graphic_key`.
 - Grafiki: `compound-growth` (słupki "€ 1,000 at 5%": Today / 10 / 20 / 30 yrs), `diversification` (jeden koszyk kontra wiele), `inflation-power` (malejąca siła nabywcza).
-- Pozostałe hasła: `definition_standard` + `short_description` + `related`, bez wersji plain i grafiki.
+- Pozostałe hasła: `definition_standard` + `short_description` + `related`, bez grafiki.
 - Każde hasło ma 0 do 3 aliasów (synonimy do wyszukiwarki, np. Dividend: `payout`; Emergency fund: `rainy day fund`).
 
 ---
@@ -258,8 +241,7 @@ Szkic merytoryczny przygotowuje Claude (ze znacznikami linków, obiema wersjami,
 - szczegóły: 200 dla istniejącego, 404 dla nieistniejącego slugu;
 - wyszukiwanie: prefiks (`div` → Dividend, Diversification), alias, trafienie w definicji (`mentions`), literówka (`divdend` → `suggestions` zawiera Dividend), `q` ze znakiem `%` nie zwraca wszystkiego, `q` pusty lub za długi = 400;
 - ulubione: PUT dwa razy = nadal jedno, DELETE nieistniejącego = 204, nieznany slug = 404;
-- preferencja: domyślnie null, PUT zapisuje, niepoprawna wartość = 400;
-- **test integralności danych**: każdy `[[slug|...]]` w `definition_standard` i `definition_plain` wskazuje istniejące hasło; każde hasło ma kategorię; `graphic_key` należy do znanego zbioru.
+- **test integralności danych**: każdy `[[slug|...]]` w `definition_standard` wskazuje istniejące hasło; każde hasło ma kategorię; `graphic_key` należy do znanego zbioru.
 
 **Frontend** (Jest + Testing Library, wzór: `lessons.test.tsx`, mock `fetch`):
 - `parseDefinition`: zwykły tekst, jeden link, wiele linków, niedomknięty znacznik, pusty slug, `[[slug]]` bez etykiety;
@@ -281,9 +263,8 @@ Każdy etap kończy się czymś, co da się pokazać. Jeśli zabraknie czasu, tn
 3. **Definition:** `GET /terms/{slug}`, parser znaczników, klikalne linki, "Related terms", okruszki i nawigacja wstecz.
 4. **Wyszukiwanie:** endpoint z `pg_trgm`, ekran Search, "No results" z "Did you mean".
 5. **Ulubione:** endpointy, gwiazdka, chip `Saved`.
-6. **Tryb "In plain words / Standard":** wersje plain dla kompletnych haseł, przełącznik, preferencja, wartość domyślna z profilu.
-7. **Grafiki i "Practise it".**
-8. **Dopracowanie i testy:** stany błędów, dostępność, test Jest dla głównych przepływów, przegląd treści pod kątem MiFID II.
+6. **Grafiki i "Practise it".**
+7. **Dopracowanie i testy:** stany błędów, dostępność, test Jest dla głównych przepływów, przegląd treści pod kątem MiFID II.
 
 Etapy 1 do 3 (lista, definicja z linkami i okruszkami) to rdzeń dema "słownik z odnośnikami".
 

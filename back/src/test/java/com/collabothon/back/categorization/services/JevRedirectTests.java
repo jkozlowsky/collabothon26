@@ -1,6 +1,6 @@
 package com.collabothon.back.categorization.services;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -62,9 +62,9 @@ class JevRedirectTests {
 	void redirectIsNotFollowed() {
 		JevResult result = jev.ask(new OnboardingAnswersDto(null, List.of(), "occasional", false), null);
 
-		assertThat(ASKED).hasValue(1);
-		assertThat(REDIRECTED).hasValue(0);
-		assertThat(result).isEqualTo(JevClientTests.SENT_WITHOUT_ANSWER);
+		assertEquals(1, ASKED.get());
+		assertEquals(0, REDIRECTED.get());
+		assertEquals(JevClientTests.SENT_WITHOUT_ANSWER, result);
 	}
 
 	private static HttpServer redirectingServer() {

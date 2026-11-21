@@ -1,6 +1,7 @@
 package com.collabothon.back.categorization.services;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.headerDoesNotExist;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
@@ -45,24 +46,24 @@ class JevClientTests {
 	// Both records go to an external model verbatim; a new component must be a deliberate change here.
 	@Test
 	void onlyKnownFieldsAreSentToJev() {
-		assertThat(Arrays.stream(OnboardingAnswersDto.class.getRecordComponents()).map(RecordComponent::getName))
-			.containsExactly("lifeStage", "goals", "experience", "skipped");
-		assertThat(Arrays.stream(FactsDto.class.getRecordComponents()).map(RecordComponent::getName)).containsExactly(
-				"incomeBand", "cashBufferMonths", "savingsRate", "savesRegularly", "inOverdraft", "holdsInvestments",
-				"hasLoan");
+		assertEquals(List.of("lifeStage", "goals", "experience", "skipped"),
+				Arrays.stream(OnboardingAnswersDto.class.getRecordComponents()).map(RecordComponent::getName).toList());
+		assertEquals(List.of("incomeBand", "cashBufferMonths", "savingsRate", "savesRegularly", "inOverdraft",
+				"holdsInvestments", "hasLoan"),
+				Arrays.stream(FactsDto.class.getRecordComponents()).map(RecordComponent::getName).toList());
 	}
 
 	// Real JDK client, no stub: nothing can leave when the connection is never established.
 	@Test
 	void refusedConnectionIsNotSent() {
-		assertThat(new JevClient(RestClient.builder(), JSON, properties("http://localhost:1", "")).ask(ANSWERS, null))
-			.isEqualTo(NOT_SENT);
+		assertEquals(NOT_SENT,
+				new JevClient(RestClient.builder(), JSON, properties("http://localhost:1", "")).ask(ANSWERS, null));
 	}
 
 	@Test
 	void unknownHostIsNotSent() {
-		assertThat(new JevClient(RestClient.builder(), JSON, properties("http://jev.invalid", "")).ask(ANSWERS, null))
-			.isEqualTo(NOT_SENT);
+		assertEquals(NOT_SENT,
+				new JevClient(RestClient.builder(), JSON, properties("http://jev.invalid", "")).ask(ANSWERS, null));
 	}
 
 	@Test
@@ -72,8 +73,8 @@ class JevClientTests {
 		server.expect(requestTo("http://localhost:8000" + JevConsts.SYSTEM_ONE_PATH))
 			.andRespond(withStatus(HttpStatus.OK).header(HttpHeaders.CONTENT_TYPE, "not a type").body("{}"));
 
-		assertThat(new JevClient(builder, JSON, properties("http://localhost:8000", "")).ask(ANSWERS, null))
-			.isEqualTo(SENT_WITHOUT_ANSWER);
+		assertEquals(SENT_WITHOUT_ANSWER,
+				new JevClient(builder, JSON, properties("http://localhost:8000", "")).ask(ANSWERS, null));
 	}
 
 	@Test
@@ -83,8 +84,8 @@ class JevClientTests {
 		server.expect(requestTo("https://jev.example" + JevConsts.SYSTEM_ONE_PATH))
 			.andRespond(withException(new SSLHandshakeException("certificate rejected")));
 
-		assertThat(new JevClient(builder, JSON, properties("https://jev.example", "")).ask(ANSWERS, null))
-			.isEqualTo(NOT_SENT);
+		assertEquals(NOT_SENT,
+				new JevClient(builder, JSON, properties("https://jev.example", "")).ask(ANSWERS, null));
 	}
 
 	@Test
@@ -93,8 +94,7 @@ class JevClientTests {
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
 		server.expect(headerDoesNotExist("Authorization")).andRespond(withServerError());
 
-		assertThat(new JevClient(builder, JSON, properties("http://localhost:8000", " ")).ask(ANSWERS, null)
-			.sent()).isTrue();
+		assertTrue(new JevClient(builder, JSON, properties("http://localhost:8000", " ")).ask(ANSWERS, null).sent());
 		server.verify();
 	}
 

@@ -1,6 +1,7 @@
 package com.collabothon.back.categorization.controllers;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
@@ -130,11 +131,11 @@ class CategorizationControllerTests {
 		Path dir = Path.of(System.getProperty("user.dir")).toAbsolutePath();
 		while (!Files.exists(dir.resolve(SPEC))) {
 			dir = dir.getParent();
-			assertThat(dir).as("%s above the working directory", SPEC).isNotNull();
+			assertNotNull(dir, SPEC + " above the working directory");
 		}
 		var block = Pattern.compile("<!-- jev-questions[^>]*-->\n```json\n(.*?)\n```", Pattern.DOTALL)
 			.matcher(Files.readString(dir.resolve(SPEC)));
-		assertThat(block.find()).isTrue();
+		assertTrue(block.find());
 		return block.group(1);
 	}
 

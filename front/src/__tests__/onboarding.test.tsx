@@ -1,5 +1,6 @@
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
+import { categorization } from '@/test-utils/categorization';
 import { appRoutes as routes } from '@/test-utils/routes';
 
 const PROFILE_URL = /\/api\/users\/demo-user\/profile$/;
@@ -25,7 +26,10 @@ function stubBackend({ onboardingCompleted }: { onboardingCompleted: boolean }) 
       : Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve(PROFILE_URL.test(url) ? profile(onboardingCompleted) : []),
+          json: () =>
+            Promise.resolve(
+              PROFILE_URL.test(url) ? profile(onboardingCompleted) : CATEGORIZATION_URL.test(url) ? categorization() : [],
+            ),
         }),
   );
   globalThis.fetch = fetchMock;
@@ -33,10 +37,11 @@ function stubBackend({ onboardingCompleted }: { onboardingCompleted: boolean }) 
 
 beforeEach(() => stubBackend({ onboardingCompleted: false }));
 
-/** A fresh onboarding continues to the consent card, then the loading steps (at least 2.4 s), then Learn. */
+/** A fresh onboarding continues to the consent card, then the loading steps (at least 2.4 s), the summary, then Learn. */
 async function passConsent() {
   await fireEvent.press(await screen.findByTestId('consent-decline'));
-  await screen.findByTestId('screen-learn', {}, { timeout: 4000 });
+  await fireEvent.press(await screen.findByTestId('summary-all', {}, { timeout: 4000 }));
+  await screen.findByTestId('screen-learn');
 }
 
 function savedOnboarding() {

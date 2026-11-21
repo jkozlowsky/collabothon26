@@ -6,6 +6,7 @@ import * as Reanimated from 'react-native-reanimated';
 import { ApiError } from '@/lib/api';
 import { seedAccount } from '@/lib/bank/seed';
 import { factLabels, factsFrom, isRetryable } from '@/lib/categorization';
+import { categorization } from '@/test-utils/categorization';
 import { appRoutes as routes } from '@/test-utils/routes';
 import type { BankState } from '@/types/bank';
 import type { Facts } from '@/types/categorization';
@@ -37,7 +38,7 @@ let fetchMock: jest.Mock;
 
 /** A user with a saved profile and no categorisation yet, unless a handler says otherwise. */
 function backend({
-  post = () => ok({}),
+  post = () => ok(categorization()),
   existing = () => fail(404),
   profile = (init?: RequestInit) => (init?.method ? ok({}) : ok(PROFILE)),
 }: Record<string, Handler>) {
@@ -53,6 +54,11 @@ const posts = () => fetchMock.mock.calls.filter(([url, init]) => url.endsWith('/
 const bodies = () => posts().map(([, init]) => JSON.parse(init.body));
 /** Loading holds for at least 2.4 s, longer than findBy's default wait. */
 const learn = () => screen.findByTestId('screen-learn', {}, { timeout: 4000 });
+/** A categorisation made here ends on the summary; its "See all lessons" is the way on to Learn. */
+async function learnViaSummary() {
+  await fireEvent.press(await screen.findByTestId('summary-all', {}, { timeout: 4000 }));
+  return screen.findByTestId('screen-learn');
+}
 /** Opens /categorizing over the bank once the saved profile has loaded, as a finished onboarding does. */
 async function open() {
   await renderRouter(routes, { initialUrl: '/' });
@@ -145,7 +151,7 @@ test('consent with account data runs the three steps once, then lands on Learn',
   await act(() => jest.advanceTimersByTimeAsync(800));
   expect(screen.getByText('7 summaries')).toBeOnTheScreen();
 
-  expect(await learn()).toBeOnTheScreen();
+  expect(await learnViaSummary()).toBeOnTheScreen();
   expect(bodies()).toEqual([{ consent: true, facts: SEED_FACTS }]);
 });
 
@@ -155,7 +161,7 @@ test('Continue without sends no consent and skips the accounts step', async () =
 
   await fireEvent.press(await screen.findByTestId('consent-decline'));
   expect(screen.queryByText('Looking at your accounts')).toBeNull();
-  expect(await learn()).toBeOnTheScreen();
+  expect(await learnViaSummary()).toBeOnTheScreen();
   expect(bodies()).toEqual([{ consent: false }]);
 });
 
@@ -167,7 +173,7 @@ test('the card previews exactly the facts a consent sends', async () => {
   expect(pills.map((p) => p.props.children)).toEqual(factLabels(SEED_FACTS));
   await fireEvent.press(screen.getByTestId('consent-accept'));
 
-  expect(await learn()).toBeOnTheScreen();
+  expect(await learnViaSummary()).toBeOnTheScreen();
   expect(bodies()).toEqual([{ consent: true, facts: SEED_FACTS }]);
 });
 
@@ -224,11 +230,11 @@ test('an existence check that never answers shows a spinner, then times out afte
 
 test('a transient 404 after the profile has settled is retried before it becomes an error', async () => {
   let attempts = 0;
-  backend({ post: () => (++attempts < 3 ? fail(404) : ok({})) });
+  backend({ post: () => (++attempts < 3 ? fail(404) : ok(categorization())) });
   await open();
 
   await fireEvent.press(await screen.findByTestId('consent-accept'));
-  expect(await learn()).toBeOnTheScreen();
+  expect(await learnViaSummary()).toBeOnTheScreen();
   expect(posts()).toHaveLength(3);
 });
 
@@ -243,14 +249,14 @@ test('a lasting 404 ends in an error that still offers Retry', async () => {
 
 test('Retry after a network error keeps the consent the user gave', async () => {
   let attempts = 0;
-  backend({ post: () => (++attempts === 1 ? Promise.reject(new TypeError('Network request failed')) : ok({})) });
+  backend({ post: () => (++attempts === 1 ? Promise.reject(new TypeError('Network request failed')) : ok(categorization())) });
   await open();
 
   await fireEvent.press(await screen.findByTestId('consent-accept'));
   expect(await screen.findByTestId('categorizing-retry', {}, { timeout: 4000 })).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('categorizing-retry'));
 
-  expect(await learn()).toBeOnTheScreen();
+  expect(await learnViaSummary()).toBeOnTheScreen();
   expect(bodies()).toEqual([
     { consent: true, facts: SEED_FACTS },
     { consent: true, facts: SEED_FACTS },
@@ -317,13 +323,13 @@ test('the hardware back button is swallowed during the flow', async () => {
 
 test('Retry after Continue without keeps sending no consent', async () => {
   let attempts = 0;
-  backend({ post: () => (++attempts === 1 ? fail(503) : ok({})) });
+  backend({ post: () => (++attempts === 1 ? fail(503) : ok(categorization())) });
   await open();
 
   await fireEvent.press(await screen.findByTestId('consent-decline'));
   await fireEvent.press(await screen.findByTestId('categorizing-retry', {}, { timeout: 4000 }));
 
-  expect(await learn()).toBeOnTheScreen();
+  expect(await learnViaSummary()).toBeOnTheScreen();
   expect(bodies()).toEqual([{ consent: false }, { consent: false }]);
 });
 

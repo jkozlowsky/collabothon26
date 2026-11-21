@@ -18,7 +18,7 @@ Kod, komentarze i commity po angielsku, treść aplikacji po angielsku.
 | Treść | Angielski, ~16 haseł, 5 kategorii; część kompletna (obie wersje + grafika + powiązania), część uboższa | Realny koszt contentu |
 | Popup w lekcji | **Poza zakresem.** Parser i komponent definicji pisane tak, żeby dało się go użyć w lekcjach później | Ekran lekcji należy do innej osoby |
 | Grafiki | Rysowane w kodzie (`react-native-svg`) | Ostre, kolory z tokenów, dane z liczb |
-| Zasilanie bazy | **Migracje V20 (schemat) i V21 (dane)**, po zmianie treści lokalnie `make db-reset` | Wybór użytkownika; aplikacja nie jest nigdzie wdrażana, więc baza jest za każdym razem czyszczona. Odstępstwo od reguły README ("nie edytujemy wypchniętej migracji"), zaakceptowane świadomie |
+| Zasilanie bazy | **Migracje V6 (schemat) i V7 (dane)**, po zmianie treści lokalnie `make db-reset` | Wybór użytkownika; aplikacja nie jest nigdzie wdrażana, więc baza jest za każdym razem czyszczona. Odstępstwo od reguły README ("nie edytujemy wypchniętej migracji"), zaakceptowane świadomie |
 | Tryb "In plain words / Standard" | Preferencja w **osobnej tabeli** `glossary_preference`, nie w `user_profile`. Domyślnie z profilu (patrz 5.6), pamiętana | Działa bez onboardingu; nie dotykamy cudzego kodu |
 | Puste kategorie | Backend zwraca tylko kategorie, które mają hasła | Nic nie jest puste na demo |
 | Praca w zespole | Gałąź `feature/glossary`, merge przez PR | Zabezpiecza demo przed zepsutym `main` |
@@ -39,9 +39,9 @@ Wszystkie stany ładowania i błędu przez istniejący `AsyncContent`.
 
 ---
 
-## 3. Baza danych: migracja `V20__glossary.sql`
+## 3. Baza danych: migracja `V6__glossary.sql`
 
-Plik: `back/src/main/resources/db/migration/V5__glossary.sql` (schemat i dane; jeśli dane są długie, dane w `V21__glossary_content.sql`). Hibernate działa z `ddl-auto=validate`, więc encje muszą dokładnie pasować do tabel.
+Plik: `back/src/main/resources/db/migration/V5__glossary.sql` (schemat i dane; jeśli dane są długie, dane w `V7__glossary_content.sql`). Hibernate działa z `ddl-auto=validate`, więc encje muszą dokładnie pasować do tabel.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS pg_trgm;          -- fuzzy search; docker-compose user is a superuser
@@ -278,7 +278,7 @@ Przed ogłoszeniem pracy za skończoną: `npx expo lint`, `npx tsc --noEmit`, te
 
 Każdy etap kończy się czymś, co da się pokazać. Jeśli zabraknie czasu, tniemy od końca.
 
-1. **Baza i lista:** `V20`/`V21` z kategoriami i 16 hasłami (tylko standard), `GET /api/glossary`, test integralności danych.
+1. **Baza i lista:** `V6`/`V7` z kategoriami i 16 hasłami (tylko standard), `GET /api/glossary`, test integralności danych.
 2. **Browse:** ekran z kategoriami i zwijaniem, `GlossaryProvider`, stany ładowania i błędu.
 3. **Definition:** `GET /terms/{slug}`, parser znaczników, klikalne linki, "Related terms", okruszki i nawigacja wstecz.
 4. **Wyszukiwanie:** endpoint z `pg_trgm`, ekran Search, "No results" z "Did you mean".
@@ -295,7 +295,7 @@ Etapy 1 do 3 (lista, definicja z linkami i okruszkami) to rdzeń dema "słownik 
 
 - **`pg_trgm`:** `CREATE EXTENSION` wymaga uprawnień. Obraz Postgres 17 z `docker-compose` oraz Testcontainers używają użytkownika z pełnymi uprawnieniami, ale sprawdzić na czystej bazie przed PR. Awaryjnie: samo `ILIKE` bez rozszerzenia (traci się tylko tolerancję literówek).
 - **Migracje edytowane po pushu:** świadomie zaakceptowane (zespół robi `make db-reset` po zmianie treści). Jeśli to kiedyś zacznie przeszkadzać, można przenieść dane do migracji powtarzalnej `R__`.
-- **Konflikt numeru migracji:** sprawdzić `origin/main` przed PR i ewentualnie przenumerować (przenumerowane na V20/V21, bo V5 zajęła gałąź jev-categorization, a V10–V12 duel mode).
+- **Konflikt numeru migracji:** sprawdzić `origin/main` przed PR i ewentualnie przenumerować (przenumerowane na V6/V7: zaraz po V4 z main, z pominięciem V5 zarezerwowanej przez jev-categorization).
 - **Zmiana trasy `glossary` na folder:** upewnić się, że zakładka w dolnym pasku nadal działa i nie pojawiają się dodatkowe zakładki (np. `[slug]`).
 - **API okruszków:** `router.dismiss`/`dismissTo` zweryfikować w dokumentacji Expo Router dla SDK 58 zanim zacznie się kod nawigacji.
 - **Merytoryka i regulacje:** definicje i przykłady musi przejrzeć człowiek z zespołu (MiFID II). Zdania typu "warto kupić" są niedopuszczalne.

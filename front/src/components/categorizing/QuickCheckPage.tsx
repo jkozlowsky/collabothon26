@@ -32,6 +32,9 @@ type Props = {
   onBack: () => void;
 };
 
+// react-native-web takes tabIndex on Text so focus() works; RN's TextProps do not declare it.
+const WEB_FOCUSABLE = { tabIndex: -1 };
+
 export function QuickCheckPage({ view, position, total, status, ready, dock, onAnswer, onBack }: Props) {
   const filled = status ? position : position - 1;
   const profile = view?.kind === 'profile';
@@ -101,7 +104,7 @@ function Question({ view, position, total, off, onAnswer }: QuestionProps) {
       <Text
         ref={promptRef}
         accessibilityLabel={`Question ${position} of up to ${total}. ${view.prompt}`}
-        tabIndex={-1}
+        {...WEB_FOCUSABLE}
         style={styles.prompt}
         accessibilityRole="header"
         testID="quick-check-prompt"

@@ -15,25 +15,24 @@ type Props = {
 function formatDate(iso: string): string {
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+    return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
   } catch {
     return iso;
   }
 }
 
-/** Row in the "Historia" tab (Figma 157:5411). */
+/** Row in the "History" tab (Figma 157:5411). */
 export function MatchRow({ match, onPress }: Props) {
   const isSolo = match.mode === 'SOLO';
-  const rivalName = isSolo ? 'Trening solo' : match.rival?.name ?? 'Rywal';
+  const rivalName = isSolo ? 'Solo practice' : match.rival?.name ?? 'Rival';
   const rivalAvatar = isSolo ? null : match.rival?.avatar;
-  const isPending = match.status === 'PLAYING' || match.status === 'RIVAL_PLAYING';
   const categoriesText = match.categories
     .map((c) => getStoryCategoryMeta(c).name)
     .join(', ');
 
   const scoreText =
     match.status === 'PLAYING'
-      ? 'W toku'
+      ? 'In progress'
       : match.status === 'RIVAL_PLAYING'
         ? `${match.score} : —`
         : isSolo
@@ -44,7 +43,7 @@ export function MatchRow({ match, onPress }: Props) {
     <Tappable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${rivalName}, wynik ${scoreText}`}
+      accessibilityLabel={`${rivalName}, score ${scoreText}`}
       testID={`match-history-row-${match.matchId}`}
       style={styles.row}
     >
@@ -67,11 +66,6 @@ export function MatchRow({ match, onPress }: Props) {
           {match.xpGained > 0 && (
             <View style={styles.xpPill}>
               <Text style={styles.xpText}>+{match.xpGained} XP</Text>
-            </View>
-          )}
-          {isPending && (
-            <View style={styles.pendingPill}>
-              <Text style={styles.pendingText}>W toku</Text>
             </View>
           )}
         </View>
@@ -99,23 +93,21 @@ const styles = StyleSheet.create({
   },
   topLine: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   name: {
     ...type.titleCard,
     color: colors.textPrimary,
-    flex: 1,
   },
   score: {
-    ...type.labelStrong,
+    ...type.titleCard,
     color: colors.brandPrimary,
   },
   bottomLine: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.sm,
+    alignItems: 'center',
   },
   meta: {
     ...type.labelDefault,
@@ -125,21 +117,12 @@ const styles = StyleSheet.create({
   xpPill: {
     backgroundColor: colors.brandAccentSoft,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
+    paddingVertical: 2,
     borderRadius: radii.pill,
   },
   xpText: {
-    ...type.labelStrong,
-    color: colors.textOnAccent,
-  },
-  pendingPill: {
-    backgroundColor: colors.brandPrimarySoft,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    borderRadius: radii.pill,
-  },
-  pendingText: {
-    ...type.labelStrong,
+    ...type.labelTab,
     color: colors.brandPrimary,
+    fontWeight: '700',
   },
 });

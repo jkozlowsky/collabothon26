@@ -13,7 +13,7 @@ import lombok.experimental.Accessors;
 @RequiredArgsConstructor
 public enum XpErrorCode implements ErrorCode {
 
-	INVALID_XP_AMOUNT(HttpStatus.BAD_REQUEST, "Nieprawidłowa liczba punktów XP.");
+	INVALID_XP_AMOUNT(HttpStatus.BAD_REQUEST, "Invalid XP amount.");
 
 	private final HttpStatus status;
 

@@ -1,6 +1,6 @@
 // Contract for Duel Mode v2.
 // Mirrors the backend package com.collabothon.back.duel and
-// .plans/duel-v2-contract.md §3-§4.
+// .plans/duel-v2-contract.md §3-§4 & §8.
 
 import type { SliderModel, SliderParam, Step } from '@/types/lessons';
 
@@ -12,7 +12,7 @@ export type StoryColor = 'rose' | 'violet' | 'orange' | 'teal' | 'slate';
 /** GET /api/duel/categories?userId= — lobby list, stories.json order. */
 export type DuelCategory = {
   story: string;            // "berlin"
-  name: string;             // "Inflacja i oszczędności" (full, never truncated in UI)
+  name: string;             // "Inflation & savings" (full, never truncated in UI)
   icon: string;             // Feather icon name from stories.json
   color: StoryColor;
   xp: number;
@@ -45,7 +45,8 @@ export type ChartStep = {
  * DuelStep (sent before answering) = Step | ChartStep with answer fields removed:
  * quiz.correctIndex, quiz.explanation, predict.answer, predict.reveal, predict.tolerance,
  * chart.answer, chart.tolerance, chart.explanation, *.explanation.
- * sort and match are sent whole (they are graded on the client by mistake count).
+ * sort: items are shuffled strings without bucket.
+ * match: left and right are shuffled arrays of strings.
  * Allowed duel types: quiz, predict, chart, sort, match.
  */
 export type DuelQuizStep = {
@@ -77,14 +78,15 @@ export type DuelSortStep = {
   id: string;
   prompt?: string;
   buckets: [string, string];
-  items: { text: string; bucket: 0 | 1 }[];
+  items: string[];
 };
 
 export type DuelMatchStep = {
   type: 'match';
   id: string;
   prompt?: string;
-  pairs: [string, string][];
+  left: string[];
+  right: string[];
 };
 
 export type DuelStep =
@@ -106,7 +108,8 @@ export type DuelQuestion = {
 export type DuelAnswer =
   | { option: number }      // quiz: index in the options as sent
   | { value: number }       // predict, chart
-  | { mistakes: number };   // sort, match (graded on the client, like lessons)
+  | { buckets: number[] }   // sort: bucket (0/1) for each item in the order it was shown
+  | { pairs: number[] };    // match: for each left[i], the index into right as shown
 
 /** POST /api/duel/matches */
 export type StartMatchRequest = {
@@ -165,12 +168,16 @@ export type MatchState = {
 
 export type MatchOutcome = 'WIN' | 'DRAW' | 'LOSS' | 'SOLO';
 
-export type ReviewStep = Step | ChartStep;
+export type ReviewStep = (Step | ChartStep) & {
+  shownItems?: string[];
+  shownLeft?: string[];
+  shownRight?: string[];
+};
 
 export type ReviewItem = {
   index: number;
   category: string;
-  step: ReviewStep;         // full lesson-format step incl. answer fields
+  step: ReviewStep;         // full lesson-format step incl. answer fields and shown orders
   yourAnswer: DuelAnswer | null;      // null = timed out
   correct: boolean;
   lessonId: string;         // → /lesson/[id]

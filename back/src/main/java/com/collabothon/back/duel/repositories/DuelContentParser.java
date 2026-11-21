@@ -168,6 +168,10 @@ public final class DuelContentParser {
 			throw new IllegalStateException(
 					prefix + "answer " + answer + " outside input range [" + min + ", " + max + "]");
 		}
+		if (Math.abs(answer - min) <= tolerance) {
+			throw new IllegalStateException(
+					prefix + "|answer (" + answer + ") - min (" + min + ")| <= tolerance (" + tolerance + ")");
+		}
 	}
 
 }

@@ -11,8 +11,8 @@ import lombok.experimental.Accessors;
 @RequiredArgsConstructor
 public enum GlossaryErrorCode implements ErrorCode {
 
-	TERM_NOT_FOUND(HttpStatus.NOT_FOUND, "Nie znaleziono hasła w słowniku."),
-	INVALID_QUERY(HttpStatus.BAD_REQUEST, "Zapytanie musi mieć od 1 do 64 znaków.");
+	TERM_NOT_FOUND(HttpStatus.NOT_FOUND, "Glossary term not found."),
+	INVALID_QUERY(HttpStatus.BAD_REQUEST, "Query must be between 1 and 64 characters.");
 
 	private final HttpStatus status;
 	private final String message;

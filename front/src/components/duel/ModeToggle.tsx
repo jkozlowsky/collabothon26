@@ -9,7 +9,7 @@ type Props = {
   onChange: (mode: DuelMode) => void;
 };
 
-/** Navy toggle for Z rywalem | Solo (Figma 153:3758). */
+/** Navy toggle for vs Rival | Solo (Figma 153:3758). */
 export function ModeToggle({ mode, onChange }: Props) {
   const isHuman = mode === 'HUMAN';
 
@@ -20,12 +20,12 @@ export function ModeToggle({ mode, onChange }: Props) {
           onPress={() => onChange('HUMAN')}
           accessibilityRole="radio"
           accessibilityState={{ selected: isHuman }}
-          accessibilityLabel="Z rywalem"
+          accessibilityLabel="vs Rival"
           testID="duel-mode-human"
           containerStyle={styles.item}
           style={[styles.segment, isHuman && styles.selectedSegment]}
         >
-          <Text style={[styles.label, isHuman && styles.selectedLabel]}>Z rywalem</Text>
+          <Text style={[styles.label, isHuman && styles.selectedLabel]}>vs Rival</Text>
         </Tappable>
 
         <Tappable
@@ -42,7 +42,7 @@ export function ModeToggle({ mode, onChange }: Props) {
       </View>
       {!isHuman && (
         <Text style={styles.soloNote} testID="duel-solo-note">
-          Trening · bez XP
+          Practice · no XP
         </Text>
       )}
     </View>
@@ -61,7 +61,6 @@ const styles = StyleSheet.create({
     borderColor: colors.borderDefault,
     padding: spacing.xxs,
   },
-  // Tappable puts `style` on its inner view, so the stretch goes on the Pressable.
   item: {
     flex: 1,
   },
@@ -85,5 +84,6 @@ const styles = StyleSheet.create({
     ...type.labelDefault,
     color: colors.textMuted,
     textAlign: 'center',
+    marginTop: spacing.xxs,
   },
 });

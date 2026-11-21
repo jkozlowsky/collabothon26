@@ -8,15 +8,15 @@
       "step": {
         "type": "quiz",
         "id": "d1",
-        "prompt": "Konto oszczędnościowe oferuje 2% w skali roku, a inflacja wynosi 5%. Co dzieje się z realną wartością tych pieniędzy?",
+        "prompt": "A savings account offers 2% per year, while inflation is 5%. What happens to the real value of this money?",
         "options": [
-          "Spada o około 3% rocznie, mimo że kwota na koncie rośnie",
-          "Rośnie o 2% rocznie, bo bank regularnie dopisuje odsetki",
-          "Spada dokładnie o 5% rocznie, tracąc całą wartość inflacji",
-          "Nie zmienia się, bo oszczędności w banku są chronione"
+          "It falls by about 3% per year, even though the account balance grows",
+          "It grows by 2% per year because the bank regularly adds interest",
+          "It falls by exactly 5% per year, losing all value to inflation",
+          "It does not change because bank savings are protected"
         ],
         "correctIndex": 0,
-        "explanation": "Realna stopa zwrotu to w przybliżeniu oprocentowanie minus inflacja (2% − 5% = −3%). Choć stan konta nominalnie rośnie, siła nabywcza pieniędzy spada o ok. 3% rocznie."
+        "explanation": "The real rate of return is approximately interest minus inflation (2% − 5% = −3%). Although the account balance nominally grows, the purchasing power of the money drops by about 3% per year."
       }
     },
     {
@@ -26,7 +26,7 @@
       "step": {
         "type": "predict",
         "id": "d2",
-        "prompt": "Lena trzyma 25 000 € na koncie o oprocentowaniu 0,5% rocznie przy inflacji 3%. Ile realnie (w dzisiejszej sile nabywczej) będzie warte te oszczędności po 10 latach?",
+        "prompt": "Lena keeps €25,000 in an account with 0.5% annual interest while inflation is 3%. How much will these savings realistically be worth (in today's purchasing power) after 10 years?",
         "input": {
           "kind": "slider",
           "min": 10000,
@@ -36,8 +36,8 @@
         },
         "answer": 19500,
         "tolerance": 1500,
-        "reveal": "Około 19 500 €. Po 10 latach nominalna kwota wyniesie ok. 26 270 €, ale inflacja obniży jej siłę nabywczą o ponad 22%.",
-        "explanation": "Formuła realnej wartości: 25 000 € × ((1 + 0,005) / (1 + 0,03))^10 = 25 000 € × 0,7798 ≈ 19 494 €. Przy kroku 500 € wartość na suwaku to 19 500 €."
+        "reveal": "Around €19,500. After 10 years, the nominal amount will be around €26,270, but inflation will reduce its purchasing power by more than 22%.",
+        "explanation": "Real value formula: €25,000 × ((1 + 0.005) / (1 + 0.03))^10 = €25,000 × 0.7798 ≈ €19,494. With a €500 step, the slider value is €19,500."
       }
     },
     {
@@ -47,15 +47,15 @@
       "step": {
         "type": "quiz",
         "id": "d3",
-        "prompt": "Dlaczego procent składany przynosi największe zyski dopiero po wielu latach?",
+        "prompt": "Why does compound interest generate the largest gains only after many years?",
         "options": [
-          "W kolejnych latach zyski są naliczane także od wcześniej wypracowanych odsetek",
-          "Banki podnoszą stawkę oprocentowania dla długoterminowych klientów",
-          "Wpływ inflacji z czasem całkowicie maleje do zera",
-          "Dopiero po 10 latach inwestycje stają się wolne od podatku"
+          "In subsequent years, returns are also earned on previously accumulated interest",
+          "Banks raise interest rates for long-term clients",
+          "The impact of inflation decreases to zero over time",
+          "Investments become tax-free only after 10 years"
         ],
         "correctIndex": 0,
-        "explanation": "W procencie składanym zyski z poprzednich lat powiększają kapitał i same zaczynają pracować na kolejne zyski. W efekcie wzrost kapitału z roku na rok przyspiesza."
+        "explanation": "With compound interest, gains from previous years increase the principal and start generating returns themselves. As a result, capital growth accelerates year over year."
       }
     },
     {
@@ -65,18 +65,18 @@
       "step": {
         "type": "chart",
         "id": "d4",
-        "prompt": "Wykres pokazuje zmianę siły nabywczej przy zerowym oprocentowaniu i inflacji 3%. Po ilu latach oszczędności stracą około 1/4 (25%) swojej realnej wartości?",
+        "prompt": "The chart shows the change in purchasing power with 0% interest and 3% inflation. After how many years will savings lose about 1/4 (25%) of their real value?",
         "model": "realValue",
         "params": {
           "years": {
-            "label": "Lata",
+            "label": "Years",
             "min": 0,
             "max": 20,
             "step": 1,
             "value": 10
           },
           "interest": {
-            "label": "Oprocentowanie",
+            "label": "Interest",
             "min": 0,
             "max": 5,
             "step": 0.5,
@@ -84,7 +84,7 @@
             "unit": "%"
           },
           "inflation": {
-            "label": "Inflacja",
+            "label": "Inflation",
             "min": 0,
             "max": 8,
             "step": 0.5,
@@ -93,7 +93,7 @@
           }
         },
         "output": {
-          "label": "Zmiana siły nabywczej",
+          "label": "Purchasing power change",
           "unit": "%"
         },
         "input": {
@@ -101,11 +101,11 @@
           "min": 1,
           "max": 20,
           "step": 1,
-          "unit": "lat"
+          "unit": "years"
         },
         "answer": 10,
         "tolerance": 1,
-        "explanation": "Z wykresu wynika, że przy 3% inflacji spadek siły nabywczej osiąga ok. −25% po 10 latach ((1 / 1,03)^10 − 1 = −25,6%)."
+        "explanation": "The chart shows that with 3% inflation, the drop in purchasing power reaches approx. −25% after 10 years ((1 / 1.03)^10 − 1 = −25.6%)."
       }
     },
     {
@@ -115,20 +115,20 @@
       "step": {
         "type": "sort",
         "id": "d5",
-        "prompt": "Przypisz sytuacje do odpowiedniego koszyka finansowego:",
+        "prompt": "Assign each situation to the appropriate financial bucket:",
         "buckets": [
-          "Poduszka finansowa",
-          "Inwestycje długoterminowe"
+          "Emergency fund",
+          "Long-term investments"
         ],
         "items": [
-          { "text": "Awaria pieca grzewczego zimą", "bucket": 0 },
-          { "text": "Budowa kapitału na emeryturę za 20 lat", "bucket": 1 },
-          { "text": "3 miesiące wydatków po utracie pracy", "bucket": 0 },
-          { "text": "Fundusz na start dla rocznego dziecka", "bucket": 1 },
-          { "text": "Pilna naprawa skrzyni biegów w samochodzie", "bucket": 0 },
-          { "text": "Portfel akcji globalnych na 15 lat", "bucket": 1 }
+          { "text": "Heating boiler breakdown in winter", "bucket": 0 },
+          { "text": "Building retirement capital for 20 years away", "bucket": 1 },
+          { "text": "3 months of expenses after job loss", "bucket": 0 },
+          { "text": "Starter fund for a one-year-old child", "bucket": 1 },
+          { "text": "Urgent car gearbox repair", "bucket": 0 },
+          { "text": "Global equity portfolio for 15 years", "bucket": 1 }
         ],
-        "explanation": "Poduszka finansowa (Notgroschen) zabezpiecza nagłe, niespodziewane wydatki i musi być natychmiast dostępna. Pieniądze odkładane na dekady mogą być inwestowane z myślą o wyższym zysku."
+        "explanation": "An emergency fund (Notgroschen) covers sudden, unexpected expenses and must be immediately accessible. Money set aside for decades can be invested for higher returns."
       }
     },
     {
@@ -138,14 +138,14 @@
       "step": {
         "type": "match",
         "id": "d6",
-        "prompt": "Połącz pojęcia finansowe z ich właściwymi definicjami:",
+        "prompt": "Match the financial terms with their correct definitions:",
         "pairs": [
-          ["Poduszka finansowa", "Pieniądze na nagłe wydatki, min. 3 miesiące kosztów życia"],
-          ["Stopa realna", "Oprocentowanie pomniejszone o stopę inflacji"],
-          ["Procent składany", "Naliczanie zysków od kapitału wraz z wcześniejszymi odsetkami"],
-          ["Horyzont czasowy", "Czas, przez jaki pieniądze mogą pozostać zainwestowane"]
+          ["Emergency fund", "Money for unexpected expenses, at least 3 months of living costs"],
+          ["Real rate", "Interest rate minus the inflation rate"],
+          ["Compound interest", "Earning returns on capital along with previously earned interest"],
+          ["Time horizon", "The duration for which money can remain invested"]
         ],
-        "explanation": "Dobre zrozumienie tych 4 filarów pozwala bezpiecznie planować finanse: poduszka daje spokój, horyzont wyznacza strategię, procent składany buduje kapitał, a stopa realna chroni przed inflacją."
+        "explanation": "A good understanding of these 4 pillars enables safe financial planning: an emergency fund provides peace of mind, the time horizon defines strategy, compound interest builds capital, and the real rate protects against inflation."
       }
     }
   ]

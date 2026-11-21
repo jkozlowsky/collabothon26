@@ -84,6 +84,27 @@ class DuelContentParserTests {
 	}
 
 	@Test
+	void rejectsSliderAnswerTooCloseToMinInput() {
+		// answer == min -> |0 - 0| <= 1
+		assertInvalid("""
+				{ "id": "b1", "lessonId": "berlin-1",
+				  "step": { "id": "s1", "type": "predict", "answer": 0, "tolerance": 1, "input": { "min": 0, "max": 10 } } }
+				""", "|answer (0.0) - min (0.0)| <= tolerance (1.0)");
+
+		// |answer - min| == tolerance -> |1 - 0| <= 1
+		assertInvalid("""
+				{ "id": "b1", "lessonId": "berlin-1",
+				  "step": { "id": "s1", "type": "predict", "answer": 1, "tolerance": 1, "input": { "min": 0, "max": 10 } } }
+				""", "|answer (1.0) - min (0.0)| <= tolerance (1.0)");
+
+		// chart step too close to min
+		assertInvalid("""
+				{ "id": "b1", "lessonId": "berlin-1",
+				  "step": { "id": "s1", "type": "chart", "model": "realValue", "answer": 1, "tolerance": 1, "input": { "min": 1, "max": 20 } } }
+				""", "|answer (1.0) - min (1.0)| <= tolerance (1.0)");
+	}
+
+	@Test
 	void rejectsUnknownChartModels() {
 		assertInvalid("""
 				{ "id": "b1", "lessonId": "berlin-1",

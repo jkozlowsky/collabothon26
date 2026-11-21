@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.collabothon.back.config.DuelProperties;
 import com.collabothon.back.dto.converters.duel.DuelAnswerMapper;
 import com.collabothon.back.dto.converters.duel.DuelMatchMapper;
+import com.collabothon.back.dto.converters.duel.DuelQuestionConverter;
 import com.collabothon.back.dto.duel.MatchEndDto;
 import com.collabothon.back.dto.duel.ReviewItemDto;
 import com.collabothon.back.duel.repositories.DuelAnswerRepository;
@@ -45,6 +46,8 @@ public class DuelResultService {
 
 	private final DuelAnswerMapper answerMapper;
 
+	private final DuelQuestionConverter questionConverter;
+
 	private final DuelProperties properties;
 
 	/** Settles the match if it is due and marks it seen; fails with 409 while it is still being played. */
@@ -66,9 +69,12 @@ public class DuelResultService {
 	private List<ReviewItemDto> review(DuelProgress progress) {
 		List<DuelQuestion> questions = content.findMatchQuestions();
 		List<ReviewItemDto> review = new ArrayList<>();
+		long matchId = progress.match().getId();
 		for (DuelAnswer answer : progress.answers()) {
-			DuelQuestion question = questions.get(answer.getPosition());
-			review.add(new ReviewItemDto(answer.getPosition(), question.category(), question.step(),
+			int index = answer.getPosition();
+			DuelQuestion question = questions.get(index);
+			review.add(new ReviewItemDto(index, question.category(),
+					questionConverter.toReviewStep(matchId, index, question.step()),
 					answerMapper.toDto(answer.getChosenAnswer()), answer.isCorrect(), question.lessonId(),
 					lessonTitle(question.lessonId())));
 		}

@@ -27,7 +27,7 @@ export function MatchmakingView({ state, youAvatar, onCancel }: Props) {
       centered
       footer={
         <Button
-          label="Anuluj"
+          label="Cancel"
           variant="secondary"
           onPress={onCancel}
           testID="matchmaking-cancel"
@@ -46,17 +46,17 @@ export function MatchmakingView({ state, youAvatar, onCancel }: Props) {
         </View>
 
         <Text style={styles.title} testID="matchmaking-title">
-          Szukanie rywala…
+          Searching for rival…
         </Text>
 
         <Text style={styles.categories} numberOfLines={2}>
-          Kategorie: {categoriesText}
+          Categories: {categoriesText}
         </Text>
 
         <View style={styles.tipRow}>
           <Feather name="info" size={14} color={colors.onBrandMuted} />
           <Text style={styles.tipText}>
-            6 pytań · bez presji czasu, liczy się poprawność
+            6 questions · no time pressure, accuracy counts
           </Text>
         </View>
       </View>
@@ -81,11 +81,9 @@ const styles = StyleSheet.create({
   },
   vsBadge: {
     backgroundColor: colors.brandAccent,
-    width: 32,
-    height: 32,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   vsText: {
     ...type.labelStrong,
@@ -94,18 +92,16 @@ const styles = StyleSheet.create({
   rivalSearchCircle: {
     width: 64,
     height: 64,
-    borderRadius: radii.pill,
-    backgroundColor: colors.onBrandChip,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: colors.brandAccent,
+    borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.onBrandHairline,
-    borderStyle: 'dashed',
   },
   title: {
     ...type.titleSection,
     color: colors.textOnBrand,
-    textAlign: 'center',
   },
   categories: {
     ...type.bodyDefault,
@@ -116,10 +112,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingTop: spacing.xs,
+    backgroundColor: colors.brandPrimarySoft,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
   },
   tipText: {
-    ...type.labelDefault,
+    ...type.labelTab,
     color: colors.onBrandMuted,
   },
 });

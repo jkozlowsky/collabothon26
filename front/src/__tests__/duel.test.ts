@@ -19,8 +19,8 @@ function makeQuestion(index: number, category = 'berlin'): DuelQuestion {
     step: {
       type: 'quiz',
       id: `q-${index}`,
-      prompt: `Pytanie ${index + 1}?`,
-      options: ['Opcja A', 'Opcja B', 'Opcja C', 'Opcja D'],
+      prompt: `Question ${index + 1}?`,
+      options: ['Option A', 'Option B', 'Option C', 'Option D'],
     },
     deadline: 1_800_000_000_000 + index * 40_000,
     timeLimitMs: 30_000,
@@ -34,15 +34,15 @@ function makeReviewItem(index: number, correct: boolean): ReviewItem {
     step: {
       type: 'quiz',
       id: `rev-${index}`,
-      prompt: `Pytanie ${index + 1}?`,
+      prompt: `Question ${index + 1}?`,
       options: ['A', 'B', 'C', 'D'],
       correctIndex: 1,
-      explanation: `Wyjaśnienie do pytania ${index + 1}`,
+      explanation: `Explanation for question ${index + 1}`,
     },
     yourAnswer: correct ? { option: 1 } : { option: 2 },
     correct,
     lessonId: 'berlin-1',
-    lessonTitle: 'Inflacja i oszczędności',
+    lessonTitle: 'Inflation & savings',
   };
 }
 

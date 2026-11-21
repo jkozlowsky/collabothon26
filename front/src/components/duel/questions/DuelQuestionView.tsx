@@ -4,18 +4,16 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Slider } from '@/components/bank/Slider';
 import { LineChart } from '@/components/lesson/LineChart';
-import { MatchStep } from '@/components/steps/MatchStep';
-import { SortStep } from '@/components/steps/SortStep';
+import { DuelMatchView } from '@/components/duel/questions/DuelMatchView';
+import { DuelSortView } from '@/components/duel/questions/DuelSortView';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import { formatValue, MODELS, sweep } from '@/lib/models';
 import type {
   DuelAnswer,
   DuelChartStep,
-  DuelMatchStep,
   DuelPredictStep,
   DuelQuestion,
   DuelQuizStep,
-  DuelSortStep,
 } from '@/types/duel';
 
 type Props = {
@@ -112,7 +110,8 @@ function DuelPredictView({
   isLocked: boolean;
 }) {
   const { min, max, step: inc, unit } = step.input;
-  const [guess, setGuess] = useState(() => Math.round((min + max) / 2 / inc) * inc);
+  // Sliders start at input.min (Round 4 §8.3)
+  const [guess, setGuess] = useState(min);
 
   const show = (v: number) => formatValue(v, unit, { signed: min < 0 });
 
@@ -120,7 +119,7 @@ function DuelPredictView({
     <View style={styles.container} testID="duel-predict">
       <Text style={styles.prompt}>{step.prompt}</Text>
       <View style={styles.card}>
-        <Text style={styles.cardLabel}>Twoja odpowiedź</Text>
+        <Text style={styles.cardLabel}>Your answer</Text>
         <Text style={styles.displayValue} testID="duel-predict-value">
           {show(guess)}
         </Text>
@@ -131,7 +130,7 @@ function DuelPredictView({
             max={max}
             step={inc}
             onChange={setGuess}
-            accessibilityLabel={`Twoja odpowiedź: ${show(guess)}`}
+            accessibilityLabel={`Your answer: ${show(guess)}`}
             testID="duel-predict-slider"
           />
         </View>
@@ -142,7 +141,7 @@ function DuelPredictView({
       </View>
       <View style={styles.footerButton}>
         <Button
-          label="Zatwierdź"
+          label="Submit"
           variant="primary"
           onPress={() => onSubmit({ value: guess })}
           disabled={isLocked}
@@ -163,7 +162,8 @@ function DuelChartView({
   isLocked: boolean;
 }) {
   const { min, max, step: inc, unit } = step.input;
-  const [guess, setGuess] = useState(() => Math.round((min + max) / 2 / inc) * inc);
+  // Sliders start at input.min (Round 4 §8.3)
+  const [guess, setGuess] = useState(min);
 
   const model = MODELS[step.model];
   const fixedValues = Object.fromEntries(Object.entries(step.params).map(([k, p]) => [k, p.value]));
@@ -193,7 +193,7 @@ function DuelChartView({
         />
 
         <View style={styles.chartInputRow}>
-          <Text style={styles.cardLabel}>Wybierz wartość:</Text>
+          <Text style={styles.cardLabel}>Select value:</Text>
           <Text style={styles.chartInputValue} testID="duel-chart-value">
             {showGuess(guess)}
           </Text>
@@ -206,7 +206,7 @@ function DuelChartView({
             max={max}
             step={inc}
             onChange={setGuess}
-            accessibilityLabel={`Wybierz: ${showGuess(guess)}`}
+            accessibilityLabel={`Select: ${showGuess(guess)}`}
             testID="duel-chart-slider"
           />
         </View>
@@ -217,55 +217,13 @@ function DuelChartView({
       </View>
       <View style={styles.footerButton}>
         <Button
-          label="Zatwierdź"
+          label="Submit"
           variant="primary"
           onPress={() => onSubmit({ value: guess })}
           disabled={isLocked}
           testID="duel-chart-submit"
         />
       </View>
-    </View>
-  );
-}
-
-function DuelSortView({
-  step,
-  onSubmit,
-  isLocked,
-}: {
-  step: DuelSortStep;
-  onSubmit: (ans: DuelAnswer) => void;
-  isLocked: boolean;
-}) {
-  return (
-    <View style={styles.container} testID="duel-sort">
-      <SortStep
-        step={step}
-        duel={true}
-        disabled={isLocked}
-        onDuelDone={(result) => onSubmit({ mistakes: result.mistakes })}
-      />
-    </View>
-  );
-}
-
-function DuelMatchView({
-  step,
-  onSubmit,
-  isLocked,
-}: {
-  step: DuelMatchStep;
-  onSubmit: (ans: DuelAnswer) => void;
-  isLocked: boolean;
-}) {
-  return (
-    <View style={styles.container} testID="duel-match">
-      <MatchStep
-        step={step}
-        duel={true}
-        disabled={isLocked}
-        onDuelDone={(result) => onSubmit({ mistakes: result.mistakes })}
-      />
     </View>
   );
 }

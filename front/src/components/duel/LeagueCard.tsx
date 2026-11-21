@@ -25,14 +25,14 @@ export function LeagueCard({ avatar, me, onOpenRankings }: Props) {
       <View style={styles.top}>
         <PlayerAvatar avatar={avatar} size={54} ring="accent" />
         <View style={styles.copy}>
-          <Text style={styles.overline}>LIGA TYGODNIOWA · {clock.shortLabel.toUpperCase()}</Text>
-          <Text style={styles.title}>{me ? `Jesteś #${me.rank} w tym tygodniu` : 'Dołącz do ligi w tym tygodniu'}</Text>
+          <Text style={styles.overline}>WEEKLY LEAGUE · {clock.shortLabel.toUpperCase()}</Text>
+          <Text style={styles.title}>{me ? `You're #${me.rank} this week` : "Join this week's league"}</Text>
           <Text style={styles.sub}>
             {me
               ? placesToTop10 > 0
-                ? `+${me.weeklyXp} XP · ${placesToTop10} ${placesToTop10 === 1 ? 'miejsce' : placesToTop10 < 5 ? 'miejsca' : 'miejsc'} do top 10`
-                : `+${me.weeklyXp} XP · W top 10 ligi!`
-              : 'Zagraj pojedynek z rywalem, aby zdobyć punkty'}
+                ? `+${me.weeklyXp} XP · ${placesToTop10} ${placesToTop10 === 1 ? 'place' : 'places'} to top 10`
+                : `+${me.weeklyXp} XP · In league top 10!`
+              : 'Play a duel with a rival to earn XP'}
           </Text>
         </View>
       </View>
@@ -40,7 +40,7 @@ export function LeagueCard({ avatar, me, onOpenRankings }: Props) {
       <View style={styles.bottom}>
         <View style={styles.progressCol}>
           <Text style={styles.progressLabel}>
-            {me ? (placesToTop10 > 0 ? `Do top 10 pozostało ${placesToTop10}` : 'Top 10 osiągnięte') : 'Tygodniowy ranking XP'}
+            {me ? (placesToTop10 > 0 ? `${placesToTop10} to top 10` : 'Top 10 reached') : 'Weekly XP ranking'}
           </Text>
           <View style={styles.track}>
             <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
@@ -50,11 +50,11 @@ export function LeagueCard({ avatar, me, onOpenRankings }: Props) {
         <Tappable
           onPress={onOpenRankings}
           accessibilityRole="button"
-          accessibilityLabel="Otwórz ranking"
+          accessibilityLabel="Open rankings"
           testID="duel-open-rankings"
           style={styles.rankingsBtn}
         >
-          <Text style={styles.rankingsLabel}>Ranking</Text>
+          <Text style={styles.rankingsLabel}>Rankings</Text>
           <Feather name="arrow-right" size={14} color={colors.textOnAccent} />
         </Tappable>
       </View>
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandPrimary,
     borderRadius: radii.card,
     padding: spacing.lg,
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   top: {
     flexDirection: 'row',
@@ -87,26 +87,29 @@ const styles = StyleSheet.create({
     color: colors.textOnBrand,
   },
   sub: {
-    ...type.bodyDefault,
+    ...type.labelDefault,
     color: colors.onBrandMuted,
   },
   bottom: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderDefault,
   },
   progressCol: {
     flex: 1,
     gap: spacing.xs,
   },
   progressLabel: {
-    ...type.labelDefault,
+    ...type.labelTab,
     color: colors.onBrandMuted,
   },
   track: {
     height: 6,
     borderRadius: radii.bar,
-    backgroundColor: colors.onBrandChip,
+    backgroundColor: colors.brandPrimarySoft,
     overflow: 'hidden',
   },
   fill: {
@@ -117,10 +120,10 @@ const styles = StyleSheet.create({
   rankingsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 4,
     backgroundColor: colors.brandAccent,
+    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
-    minHeight: 38,
     borderRadius: radii.button,
   },
   rankingsLabel: {

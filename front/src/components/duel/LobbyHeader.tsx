@@ -10,16 +10,16 @@ type Props = {
   xp: number;
 };
 
-/** Polish lobby header with streak and XP chips (Figma 157:3800). */
+/** Lobby header with streak and XP chips (Figma 157:3800). */
 export function LobbyHeader({ firstName, streak, xp }: Props) {
   return (
     <View style={styles.row}>
       <View style={styles.text}>
         <Text style={styles.greeting} numberOfLines={1} testID="duel-greeting">
-          {firstName ? `Cześć ${firstName} · Pojedynki 1v1` : 'Pojedynki wiedzy 1v1'}
+          {firstName ? `Hi ${firstName} · 1v1 Duels` : '1v1 Knowledge Duels'}
         </Text>
         <Text style={type.displayLarge} accessibilityRole="header">
-          Gotowy na pojedynek?
+          Ready for a duel?
         </Text>
       </View>
       <View style={styles.chips}>

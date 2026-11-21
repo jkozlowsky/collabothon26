@@ -202,3 +202,18 @@ Changes to `components/steps/*` must be **additive**: an optional prop, or extra
 - `cd front && npx tsc --noEmit && npx expo lint && npm test` green (B, C).
 - No running app stack, Metro or Playwright: the coordinator runs one shared QA stack at the end.
 - Nothing committed or pushed.
+
+## 8. Round 4 changes (user feedback after the first play-through) — override §2–§6
+
+1. **English only, everywhere.** This reverses spec R1. All UI copy, duel content (`content/duel/*.json`), category names, ErrorCode messages, the arena pin and the nav are in English. Category names in `stories.json` `category`: Seoul "Hype & leverage", Berlin "Inflation & savings", São Paulo "Instalments & debt", Tokyo "Diversification".
+2. **Sort and match are answered as one set and graded on the server.** There is no per-item feedback.
+   - `DuelStep` for **sort**: `{ type:'sort', id, prompt?, buckets:[string,string], items: string[] }`. The items are in a shuffled order and carry no bucket.
+   - `DuelStep` for **match**: `{ type:'match', id, prompt?, left: string[], right: string[] }`. Both columns are shuffled independently.
+   - The shuffle is deterministic per (matchId, question index), so the server can map the order back without storing it.
+   - `DuelAnswer` for **sort**: `{ buckets: number[] }`, the bucket (0/1) for each item in the order it was shown.
+   - `DuelAnswer` for **match**: `{ pairs: number[] }`, for each `left[i]` the index into `right` as shown.
+   - Correct only if **every** item or pair is right. `{ mistakes }` is removed.
+   - `ReviewItem.yourAnswer` echoes the shown-order answer; `ReviewItem.step` carries the full step plus the shown order (`shownItems` / `shownLeft` / `shownRight`), so the review can render "your answer vs right".
+3. **Sliders start at `input.min`.** Content validation (backend at startup, and the content test in the front) fails if `|answer − input.min| ≤ tolerance`, so the start position is never already correct.
+4. **Result screen** shows both players: avatar + name next to the score (`MatchEnd.you` and `MatchEnd.rival` already carry `avatar`; the front must render them).
+5. **"Review lesson" link** opens the **story screen** of the question's category (`/story/[id]`), scrolled to and highlighting that lesson, instead of jumping into the lesson. If that lesson is `locked` for the user, it opens a popup instead: "This lesson is locked — finish the earlier lessons in <story> first." The popup has an "Open story" button and a "Close" button.

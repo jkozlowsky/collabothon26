@@ -26,14 +26,14 @@ export function FeedbackBanner({ outcome, xpGained = 0 }: Props) {
       : colors.feedbackDanger;
 
   const title = isCorrect
-    ? 'Dobrze!'
+    ? 'Correct!'
     : isTimeout
-      ? 'Koniec czasu!'
-      : 'Niepoprawna odpowiedź';
+      ? "Time's up!"
+      : 'Incorrect';
 
   const body = isCorrect
-    ? 'Świetna odpowiedź! Kolejne pytanie za chwilę.'
-    : 'Prawidłową odpowiedź i wyjaśnienie zobaczysz w podsumowaniu.';
+    ? 'Great job! Next question coming up.'
+    : "You'll see the correct answer and explanation in the review.";
 
   return (
     <View style={[styles.banner, { backgroundColor: bgColor }]} testID="feedback-banner">
@@ -65,41 +65,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    borderRadius: radii.card,
     padding: spacing.md,
+    borderRadius: radii.card,
   },
   iconCircle: {
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 32,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   textWrap: {
     flex: 1,
-    gap: spacing.xxs,
+    gap: 2,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: spacing.sm,
   },
   title: {
-    ...type.titleCard,
+    ...type.labelStrong,
   },
   body: {
-    ...type.bodyDefault,
+    ...type.labelDefault,
     color: colors.textPrimary,
   },
   xpPill: {
     backgroundColor: colors.brandAccent,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
+    paddingVertical: 1,
     borderRadius: radii.pill,
   },
   xpText: {
-    ...type.labelStrong,
+    ...type.labelTab,
     color: colors.textOnAccent,
+    fontWeight: '700',
   },
 });

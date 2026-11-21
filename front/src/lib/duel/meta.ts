@@ -13,7 +13,7 @@ export type CategoryMeta = {
 export const STORY_CATEGORIES: Record<string, CategoryMeta> = {
   seoul: {
     story: 'seoul',
-    name: 'Hype i dźwignia',
+    name: 'Hype & leverage',
     icon: 'message-circle',
     color: 'violet',
     accent: storyColors.violet,
@@ -21,7 +21,7 @@ export const STORY_CATEGORIES: Record<string, CategoryMeta> = {
   },
   berlin: {
     story: 'berlin',
-    name: 'Inflacja i oszczędności',
+    name: 'Inflation & savings',
     icon: 'shield',
     color: 'teal',
     accent: storyColors.teal,
@@ -29,7 +29,7 @@ export const STORY_CATEGORIES: Record<string, CategoryMeta> = {
   },
   'sao-paulo': {
     story: 'sao-paulo',
-    name: 'Raty i długi',
+    name: 'Instalments & debt',
     icon: 'credit-card',
     color: 'orange',
     accent: storyColors.orange,
@@ -37,7 +37,7 @@ export const STORY_CATEGORIES: Record<string, CategoryMeta> = {
   },
   tokyo: {
     story: 'tokyo',
-    name: 'Dywersyfikacja',
+    name: 'Diversification',
     icon: 'globe',
     color: 'rose',
     accent: storyColors.rose,
@@ -122,6 +122,6 @@ export function getWeeklyLeagueClock(now: Date = new Date()): {
   const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
   const week = Math.ceil(((utcDate.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
 
-  const shortLabel = days > 0 ? `${days} dni ${hours} godz.` : `${Math.max(1, hours)} godz.`;
+  const shortLabel = days > 0 ? `${days}d ${hours}h left` : `${Math.max(1, hours)}h left`;
   return { week, days, hours, shortLabel };
 }

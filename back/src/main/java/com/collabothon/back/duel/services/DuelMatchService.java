@@ -149,7 +149,7 @@ public class DuelMatchService {
 		if (now.isAfter(deadline)) {
 			return timeout(progress, question, deadline, now);
 		}
-		boolean correct = grader.grade(question, chosen);
+		boolean correct = grader.grade(progress.match().getId(), index, question, chosen);
 		DuelAnswer.DuelAnswerBuilder answer = baseAnswer(progress, question)
 			.chosenAnswer(chosen)
 			.correct(correct)
@@ -223,7 +223,7 @@ public class DuelMatchService {
 		DuelQuestion question = questions().get(index);
 		long timeLimitMs = timer.timeLimitMs(question);
 		long deadline = progress.questionStart(index).toEpochMilli() + timeLimitMs;
-		return questionConverter.toDto(index, question, deadline, timeLimitMs);
+		return questionConverter.toDto(progress.match().getId(), index, question, deadline, timeLimitMs);
 	}
 
 	private List<DuelQuestion> questions() {

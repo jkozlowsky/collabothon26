@@ -25,7 +25,7 @@ type Props = {
 /** Navy scoreboard with both players and dot tracks (Figma 157:5467 / 157:5492). */
 export function ScoreboardCard({
   youAvatar,
-  youName = 'Ty',
+  youName = 'You',
   youLevels,
   rival,
   currentCategory,
@@ -39,7 +39,6 @@ export function ScoreboardCard({
   const catMeta = getStoryCategoryMeta(currentCategory);
   const youLevel = youLevels?.[currentCategory] ?? 1;
   const rivalLevel = rival?.levels?.[currentCategory] ?? 1;
-  const rivalCurrent = rival ? rivalDots.filter((d) => d !== null).length : null;
 
   return (
     <View style={styles.card} testID="duel-scoreboard">
@@ -71,15 +70,19 @@ export function ScoreboardCard({
           </View>
           <DotTrack
             dots={rivalDots}
-            activeIndex={rivalCurrent !== null && rivalCurrent < questionCount ? rivalCurrent : null}
+            activeIndex={null}
             onBrand
             testID="rival-dots"
           />
         </View>
       ) : (
         <View style={[styles.playerCol, styles.playerRight]}>
-          <View style={styles.soloBadge}>
-            <Text style={styles.soloText}>Trening Solo</Text>
+          <View style={styles.soloAvatarWrap}>
+            <Text style={styles.soloAvatarText}>S</Text>
+          </View>
+          <View style={[styles.playerMeta, styles.playerMetaRight]}>
+            <Text style={styles.playerName}>Solo</Text>
+            <Text style={styles.categoryMeta}>{catMeta.name}</Text>
           </View>
         </View>
       )}
@@ -89,12 +92,11 @@ export function ScoreboardCard({
 
 const styles = StyleSheet.create({
   card: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     backgroundColor: colors.brandPrimary,
     borderRadius: radii.card,
     padding: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     gap: spacing.md,
   },
   playerCol: {
@@ -105,7 +107,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   playerMeta: {
-    gap: spacing.xxs,
+    gap: 1,
   },
   playerMetaRight: {
     alignItems: 'flex-end',
@@ -115,16 +117,18 @@ const styles = StyleSheet.create({
     color: colors.textOnBrand,
   },
   categoryMeta: {
-    ...type.labelDefault,
+    ...type.labelTab,
     color: colors.onBrandMuted,
   },
-  soloBadge: {
-    backgroundColor: colors.onBrandChip,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+  soloAvatarWrap: {
+    width: 36,
+    height: 36,
     borderRadius: radii.pill,
+    backgroundColor: colors.brandPrimarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  soloText: {
+  soloAvatarText: {
     ...type.labelStrong,
     color: colors.textOnBrand,
   },

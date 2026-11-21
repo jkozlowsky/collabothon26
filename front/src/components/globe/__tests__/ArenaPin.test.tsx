@@ -33,8 +33,8 @@ describe('ArenaPin and ArenaCallout components', () => {
 
     expect(getByTestId('pin-callout-arena')).toBeTruthy();
     expect(getByText('Arena')).toBeTruthy();
-    expect(getByText('Zmierz się z innymi')).toBeTruthy();
-    expect(getByText('Pojedynki finansowe')).toBeTruthy();
+    expect(getByText('Challenge others')).toBeTruthy();
+    expect(getByText('Financial duels')).toBeTruthy();
 
     const openBtn = getByTestId('pin-callout-arena-open');
     fireEvent.press(openBtn);

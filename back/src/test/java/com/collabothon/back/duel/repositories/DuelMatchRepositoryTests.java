@@ -71,8 +71,8 @@ class DuelMatchRepositoryTests {
 	void categoriesArrayAndChosenAnswerJsonRoundTrip() {
 		DuelMatch match = matches.save(DuelMatch.start(DuelMode.HUMAN, List.of("berlin", "seoul"), "rt", "demo-ola",
 				T0));
-		answers.save(answer(match, 1, new ChosenAnswer(null, 19500.0, null)));
-		answers.save(answer(match, 0, new ChosenAnswer(2, null, null)));
+		answers.save(answer(match, 1, ChosenAnswer.ofValue(19500.0)));
+		answers.save(answer(match, 0, ChosenAnswer.ofOption(2)));
 		answers.save(answer(match, 2, null));
 		entityManager.flush();
 		entityManager.clear();
@@ -81,7 +81,7 @@ class DuelMatchRepositoryTests {
 		List<DuelAnswer> stored = answers.findByMatchIdOrderByPositionAsc(match.getId());
 		assertThat(stored).extracting(DuelAnswer::getPosition).containsExactly(0, 1, 2);
 		assertThat(stored).extracting(DuelAnswer::getChosenAnswer)
-			.containsExactly(new ChosenAnswer(2, null, null), new ChosenAnswer(null, 19500.0, null), null);
+			.containsExactly(ChosenAnswer.ofOption(2), ChosenAnswer.ofValue(19500.0), null);
 		assertThat(answers.findByMatchIdInOrderByPosition(List.of(match.getId()))).hasSize(3);
 	}
 

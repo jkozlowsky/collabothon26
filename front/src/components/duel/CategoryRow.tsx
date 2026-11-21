@@ -22,7 +22,7 @@ export function CategoryRow({ cat, checked, onToggle }: Props) {
       onPress={onToggle}
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
-      accessibilityLabel={`${cat.name}, poziom ${cat.level}`}
+      accessibilityLabel={`${cat.name}, level ${cat.level}`}
       testID={`duel-category-${cat.story}`}
       style={styles.row}
     >
@@ -64,9 +64,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderDefault,
   },
   iconTile: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.button,
+    width: 44,
+    height: 44,
+    borderRadius: radii.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -84,33 +84,33 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   levelLabel: {
-    ...type.labelStrong,
-    color: colors.feedbackXp,
+    ...type.labelDefault,
+    color: colors.textMuted,
   },
   track: {
-    width: 64,
+    flex: 1,
     height: 4,
-    borderRadius: radii.bar,
     backgroundColor: colors.borderDefault,
+    borderRadius: radii.bar,
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
+    backgroundColor: colors.brandPrimary,
     borderRadius: radii.bar,
-    backgroundColor: colors.brandAccent,
   },
   checkbox: {
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.bgSurface,
+    borderColor: colors.borderDefault,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.bgSurface,
   },
   checkboxChecked: {
-    borderColor: colors.brandPrimary,
     backgroundColor: colors.brandPrimary,
+    borderColor: colors.brandPrimary,
   },
 });

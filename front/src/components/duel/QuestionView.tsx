@@ -40,7 +40,7 @@ export function QuestionView({
   const activeIndex = isFeedback ? null : index;
   const currentCategory = question?.category ?? state.categories[0] ?? 'berlin';
 
-  const nextLabel = index + 1 >= total ? 'Zobacz wynik' : 'Dalej';
+  const nextLabel = index + 1 >= total ? 'See results' : 'Next';
 
   return (
     <DuelPage
@@ -48,9 +48,9 @@ export function QuestionView({
       header={
         <FlowHeader
           onClose={onExit}
-          closeLabel="Opuść pojedynek"
+          closeLabel="Leave duel"
           closeTestID="match-close"
-          title={`Pytanie ${Math.min(index + 1, total)} z ${total}`}
+          title={`Question ${Math.min(index + 1, total)} of ${total}`}
           titleTestID="question-counter"
           progress={(index + (isFeedback ? 1 : 0)) / Math.max(1, total)}
           right={
@@ -73,7 +73,7 @@ export function QuestionView({
         ) : (
           <View style={styles.footerTip}>
             <Feather name="info" size={14} color={colors.textMuted} />
-            <Text style={styles.tipText}>Czas nie wpływa na punkty — liczy się poprawność</Text>
+            <Text style={styles.tipText}>Time doesn&apos;t affect points — accuracy counts</Text>
           </View>
         )
       }
@@ -81,7 +81,7 @@ export function QuestionView({
       {/* Dark Scoreboard Card */}
       <ScoreboardCard
         youAvatar={youAvatar}
-        youName={state.you?.name ?? 'Ty'}
+        youName={state.you?.name ?? 'You'}
         youLevels={state.you?.levels}
         rival={state.rival}
         currentCategory={currentCategory}
@@ -96,7 +96,6 @@ export function QuestionView({
       {/* Question rendering */}
       {question && (
         <DuelQuestionView
-          // A new question must start unlocked: remount so the previous answer's state is dropped.
           key={question.index}
           question={question}
           onSubmit={onSubmitAnswer}
@@ -118,8 +117,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   timerText: {
-    ...type.labelStrong,
+    ...type.labelTab,
     color: colors.textOnAccent,
+    fontWeight: '700',
   },
   feedbackFooter: {
     gap: spacing.md,
@@ -129,10 +129,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   tipText: {
-    ...type.labelDefault,
+    ...type.labelTab,
     color: colors.textMuted,
   },
 });

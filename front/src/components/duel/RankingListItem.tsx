@@ -33,10 +33,10 @@ export function RankingListItem({ row, isYou = false, variant = 'default', testI
       <View style={styles.main}>
         <View style={styles.nameRow}>
           <Text style={[styles.name, isYou && styles.youName]} numberOfLines={1}>
-            {row.name} {isYou ? '(Ty)' : ''}
+            {row.name} {isYou ? '(You)' : ''}
           </Text>
         </View>
-        <Text style={styles.level}>Poziom {row.level}</Text>
+        <Text style={styles.level}>Level {row.level}</Text>
       </View>
 
       <View style={styles.scoreWrap}>
@@ -71,15 +71,16 @@ const styles = StyleSheet.create({
   rank: {
     ...type.labelStrong,
     color: colors.textMuted,
-    width: 28,
+    width: 24,
     textAlign: 'center',
   },
   youRank: {
     color: colors.brandPrimary,
+    fontWeight: '700',
   },
   main: {
     flex: 1,
-    gap: spacing.xxs,
+    gap: 2,
   },
   nameRow: {
     flexDirection: 'row',
@@ -92,6 +93,7 @@ const styles = StyleSheet.create({
   },
   youName: {
     color: colors.brandPrimary,
+    fontWeight: '700',
   },
   level: {
     ...type.labelDefault,
@@ -105,6 +107,6 @@ const styles = StyleSheet.create({
     color: colors.brandPrimary,
   },
   youXpValue: {
-    color: colors.brandPrimary,
+    fontWeight: '700',
   },
 });

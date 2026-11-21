@@ -11,7 +11,7 @@ import lombok.experimental.Accessors;
 @RequiredArgsConstructor
 public enum ProfileErrorCode implements ErrorCode {
 
-	ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "Nie znaleziono konta użytkownika.");
+	ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "User account not found.");
 
 	private final HttpStatus status;
 	private final String message;

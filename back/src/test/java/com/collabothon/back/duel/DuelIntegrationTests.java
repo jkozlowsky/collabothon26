@@ -10,6 +10,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +24,7 @@ import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.duel.services.DuelShuffle;
 import com.collabothon.back.entities.xp.XpSource;
 import com.collabothon.back.xp.services.XpService;
 
@@ -60,15 +63,15 @@ class DuelIntegrationTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.length()").value(4))
 			.andExpect(jsonPath("$[0].story").value("seoul"))
-			.andExpect(jsonPath("$[0].name").value("Hype i dźwignia"))
+			.andExpect(jsonPath("$[0].name").value("Hype & leverage"))
 			.andExpect(jsonPath("$[0].color").value("violet"))
 			.andExpect(jsonPath("$[1].story").value("berlin"))
-			.andExpect(jsonPath("$[1].name").value("Inflacja i oszczędności"))
+			.andExpect(jsonPath("$[1].name").value("Inflation & savings"))
 			.andExpect(jsonPath("$[1].color").value("teal"))
 			.andExpect(jsonPath("$[2].story").value("sao-paulo"))
-			.andExpect(jsonPath("$[2].name").value("Raty i długi"))
+			.andExpect(jsonPath("$[2].name").value("Instalments & debt"))
 			.andExpect(jsonPath("$[3].story").value("tokyo"))
-			.andExpect(jsonPath("$[3].name").value("Dywersyfikacja"));
+			.andExpect(jsonPath("$[3].name").value("Diversification"));
 	}
 
 	@Test
@@ -174,19 +177,21 @@ class DuelIntegrationTests {
 			.andExpect(jsonPath("$.timedOut").value(true))
 			.andExpect(jsonPath("$.correct").value(false));
 
-		// Question 4 (sort): 0 mistakes
+		// Question 4 (sort): correct buckets in shown order
 		CLOCK.advance(Duration.ofSeconds(5));
+		List<Integer> sortBuckets = sortBucketsForBerlin(matchId);
 		mvc.perform(post("/api/duel/matches/{id}/answers", matchId)
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"userId\":\"solo-runner\",\"index\":4,\"mistakes\":0}"))
+			.content("{\"userId\":\"solo-runner\",\"index\":4,\"buckets\":" + sortBuckets + "}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.correct").value(true));
 
-		// Question 5 (match): 0 mistakes (final question)
+		// Question 5 (match): correct pairs (final question)
 		CLOCK.advance(Duration.ofSeconds(5));
+		List<Integer> matchPairs = matchPairsForBerlin(matchId);
 		mvc.perform(post("/api/duel/matches/{id}/answers", matchId)
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"userId\":\"solo-runner\",\"index\":5,\"mistakes\":0}"))
+			.content("{\"userId\":\"solo-runner\",\"index\":5,\"pairs\":" + matchPairs + "}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.nextQuestion").doesNotExist())
 			.andExpect(jsonPath("$.yourFinal.score").value(4))
@@ -212,10 +217,21 @@ class DuelIntegrationTests {
 			.andExpect(jsonPath("$.outcome").value("SOLO"))
 			.andExpect(jsonPath("$.score").value(4))
 			.andExpect(jsonPath("$.rivalScore").doesNotExist())
+			.andExpect(jsonPath("$.you.name").exists())
+			.andExpect(jsonPath("$.you.avatar").exists())
 			.andExpect(jsonPath("$.xpGained").value(0))
 			.andExpect(jsonPath("$.review.length()").value(6))
 			.andExpect(jsonPath("$.review[0].lessonTitle").exists())
-			.andExpect(jsonPath("$.review[3].yourAnswer").doesNotExist()); // timed out
+			.andExpect(jsonPath("$.review[3].yourAnswer").doesNotExist()) // timed out
+			.andExpect(jsonPath("$.review[4].category").value("berlin"))
+			.andExpect(jsonPath("$.review[4].lessonId").value("berlin-3"))
+			.andExpect(jsonPath("$.review[4].step.shownItems").isArray())
+			.andExpect(jsonPath("$.review[4].yourAnswer.buckets").isArray())
+			.andExpect(jsonPath("$.review[5].category").value("berlin"))
+			.andExpect(jsonPath("$.review[5].lessonId").value("berlin-3"))
+			.andExpect(jsonPath("$.review[5].step.shownLeft").isArray())
+			.andExpect(jsonPath("$.review[5].step.shownRight").isArray())
+			.andExpect(jsonPath("$.review[5].yourAnswer.pairs").isArray());
 	}
 
 	@Test
@@ -250,15 +266,17 @@ class DuelIntegrationTests {
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("{\"userId\":\"human-player\",\"index\":3,\"value\":10.0}")).andExpect(status().isOk());
 
-		// Q4: sort (mistakes 0)
+		// Q4: sort
+		List<Integer> sortBucketsHuman = sortBucketsForBerlin(matchId);
 		mvc.perform(post("/api/duel/matches/{id}/answers", matchId)
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"userId\":\"human-player\",\"index\":4,\"mistakes\":0}")).andExpect(status().isOk());
+			.content("{\"userId\":\"human-player\",\"index\":4,\"buckets\":" + sortBucketsHuman + "}")).andExpect(status().isOk());
 
-		// Q5: match (mistakes 0)
+		// Q5: match
+		List<Integer> matchPairsHuman = matchPairsForBerlin(matchId);
 		mvc.perform(post("/api/duel/matches/{id}/answers", matchId)
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"userId\":\"human-player\",\"index\":5,\"mistakes\":0}"))
+			.content("{\"userId\":\"human-player\",\"index\":5,\"pairs\":" + matchPairsHuman + "}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.yourFinal.score").value(6))
 			.andExpect(jsonPath("$.yourFinal.xpGained").value(30)); // 6 * 5 = 30 XP
@@ -279,6 +297,10 @@ class DuelIntegrationTests {
 			.andExpect(jsonPath("$.score").value(6))
 			.andExpect(jsonPath("$.rivalScore").value(5)) // rival scored max(6 - 1, 0) = 5
 			.andExpect(jsonPath("$.outcome").value("WIN"))
+			.andExpect(jsonPath("$.you.name").exists())
+			.andExpect(jsonPath("$.you.avatar").exists())
+			.andExpect(jsonPath("$.rival.name").exists())
+			.andExpect(jsonPath("$.rival.avatar").exists())
 			.andExpect(jsonPath("$.xpGained").value(30))
 			.andExpect(jsonPath("$.xpByCategory.berlin").value(30));
 
@@ -383,6 +405,59 @@ class DuelIntegrationTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.totalXp").value(50))
 			.andExpect(jsonPath("$.lessonsCompleted").value(1));
+	}
+
+	@Test
+	void sortAndMatchPartialWrongAreGradedFalse() throws Exception {
+		CLOCK.set(Instant.parse("2026-11-23T22:00:00Z"));
+		String startRes = mvc.perform(post("/api/duel/matches")
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("{\"userId\":\"pw-tester\",\"categories\":[\"berlin\"],\"mode\":\"SOLO\"}"))
+			.andExpect(status().isOk())
+			.andReturn().getResponse().getContentAsString();
+
+		long matchId = json.readTree(startRes).get("matchId").asLong();
+
+		// Answer Q0..Q3
+		for (int i = 0; i < 4; i++) {
+			mvc.perform(post("/api/duel/matches/{id}/answers", matchId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"userId\":\"pw-tester\",\"index\":" + i + ",\"option\":0}"));
+		}
+
+		// Q4: sort with 1 wrong bucket
+		List<Integer> sortBuckets = new ArrayList<>(sortBucketsForBerlin(matchId));
+		sortBuckets.set(0, 1 - sortBuckets.get(0)); // invert one bucket
+		mvc.perform(post("/api/duel/matches/{id}/answers", matchId)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("{\"userId\":\"pw-tester\",\"index\":4,\"buckets\":" + sortBuckets + "}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.correct").value(false));
+
+		// Q5: match with swapped pairs
+		List<Integer> matchPairs = new ArrayList<>(matchPairsForBerlin(matchId));
+		int temp = matchPairs.get(0);
+		matchPairs.set(0, matchPairs.get(1));
+		matchPairs.set(1, temp);
+		mvc.perform(post("/api/duel/matches/{id}/answers", matchId)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("{\"userId\":\"pw-tester\",\"index\":5,\"pairs\":" + matchPairs + "}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.correct").value(false));
+	}
+
+	private static List<Integer> sortBucketsForBerlin(long matchId) {
+		List<Integer> perm = DuelShuffle.sortPermutation(matchId, 4, 6);
+		return perm.stream().map(idx -> (idx % 2 == 0) ? 0 : 1).toList();
+	}
+
+	private static List<Integer> matchPairsForBerlin(long matchId) {
+		DuelShuffle.MatchPermutations perms = DuelShuffle.matchPermutations(matchId, 5, 4);
+		List<Integer> pairs = new ArrayList<>();
+		for (int i = 0; i < 4; i++) {
+			pairs.add(perms.right().indexOf(perms.left().get(i)));
+		}
+		return pairs;
 	}
 
 	static class MutableClock extends Clock {

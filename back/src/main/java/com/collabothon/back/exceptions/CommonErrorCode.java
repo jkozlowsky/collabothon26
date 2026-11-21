@@ -12,8 +12,8 @@ import lombok.experimental.Accessors;
 @RequiredArgsConstructor
 public enum CommonErrorCode implements ErrorCode {
 
-	NOT_FOUND(HttpStatus.NOT_FOUND, "Nie znaleziono zasobu."),
-	BAD_REQUEST(HttpStatus.BAD_REQUEST, "Nieprawidłowe żądanie.");
+	NOT_FOUND(HttpStatus.NOT_FOUND, "Resource not found."),
+	BAD_REQUEST(HttpStatus.BAD_REQUEST, "Invalid request.");
 
 	private final HttpStatus status;
 

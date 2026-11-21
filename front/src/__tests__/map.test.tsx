@@ -72,7 +72,7 @@ test('the Rome Arena pin opens the Arena callout and navigates to duel tab', asy
 
   const callout = await screen.findByTestId('pin-callout-arena');
   expect(callout).toBeOnTheScreen();
-  expect(within(callout).getByText('Zmierz się z innymi')).toBeOnTheScreen();
+  expect(within(callout).getByText('Challenge others')).toBeOnTheScreen();
 
   await fireEvent.press(screen.getByTestId('pin-callout-arena-open'));
   expect(await screen.findByTestId('screen-duel')).toBeOnTheScreen();

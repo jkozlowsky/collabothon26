@@ -9,11 +9,8 @@ import { shuffle } from '@/lib/lessonPlayer';
 import type { MatchStep as MatchStepData, StepOutcome } from '@/types/lessons';
 
 type Props = {
-  step: MatchStepData | { prompt?: string; pairs: [string, string][] };
+  step: MatchStepData;
   onDone?: (outcome: StepOutcome) => void;
-  duel?: boolean;
-  disabled?: boolean;
-  onDuelDone?: (result: { mistakes: number }) => void;
 };
 
 type Side = 'left' | 'right';
@@ -25,7 +22,7 @@ const WRONG_FLASH_MS = 600;
  * Tap a term, then its meaning (or the other way round). Right pairs lock green; a wrong pair flashes red.
  * Terms are shuffled on every try, meanings always; the step counts as right only without a wrong pair.
  */
-export function MatchStep({ step, onDone, duel = false, disabled = false, onDuelDone }: Props) {
+export function MatchStep({ step, onDone }: Props) {
   const n = step.pairs.length;
   const [order] = useState(() => ({ left: shuffle([...Array(n).keys()]), right: shuffle([...Array(n).keys()]) }));
   const [selected, setSelected] = useState<{ side: Side; index: number } | null>(null);
@@ -41,7 +38,7 @@ export function MatchStep({ step, onDone, duel = false, disabled = false, onDuel
   }, [wrong]);
 
   function tap(side: Side, index: number) {
-    if (disabled || matched.includes(index)) return;
+    if (matched.includes(index)) return;
     if (!selected || selected.side === side) {
       setSelected({ side, index });
       haptic('selection');
@@ -54,9 +51,6 @@ export function MatchStep({ step, onDone, duel = false, disabled = false, onDuel
       const nextMatched = [...matched, left];
       setMatched(nextMatched);
       haptic('success');
-      if (duel && nextMatched.length === n) {
-        onDuelDone?.({ mistakes });
-      }
     } else {
       setWrong({ left, right });
       setMistakes((m) => m + 1);
@@ -81,7 +75,7 @@ export function MatchStep({ step, onDone, duel = false, disabled = false, onDuel
             testID={`match-${side}-${index}`}
             accessibilityRole="button"
             accessibilityState={{ selected: state === 'selected', disabled: state === 'matched' }}
-            disabled={state === 'matched' || done || disabled}
+            disabled={state === 'matched' || done}
             onPress={() => tap(side, index)}
             style={[styles.tile, styles[state]]}
           >
@@ -100,13 +94,11 @@ export function MatchStep({ step, onDone, duel = false, disabled = false, onDuel
       prompt={step.prompt ?? 'Match the pairs'}
       footer={
         done ? (
-          duel ? undefined : (
-            <Feedback
-              correct={mistakes === 0}
-              explanation={mistakes === 0 ? 'All pairs right on the first try.' : `All matched, with ${mistakes} wrong ${mistakes === 1 ? 'pair' : 'pairs'} on the way.`}
-              onContinue={() => onDone?.({ correct: mistakes === 0 })}
-            />
-          )
+          <Feedback
+            correct={mistakes === 0}
+            explanation={mistakes === 0 ? 'All pairs right on the first try.' : `All matched, with ${mistakes} wrong ${mistakes === 1 ? 'pair' : 'pairs'} on the way.`}
+            onContinue={() => onDone?.({ correct: mistakes === 0 })}
+          />
         ) : undefined
       }
     >

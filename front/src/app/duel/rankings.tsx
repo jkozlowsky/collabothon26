@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { IconButton } from '@/components/bank/IconButton';
 import { ListCard } from '@/components/bank/ListCard';
 import { RankingListItem } from '@/components/duel/RankingListItem';
-import { colors, radii, spacing, type } from '@/constants/theme';
+import { colors, elevation, spacing, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import { USER_ID } from '@/lib/user';
 import type { Rankings } from '@/types/duel';
@@ -31,12 +31,12 @@ export default function DuelRankingsScreen() {
       {/* Navy Header */}
       <View style={styles.navyHeader}>
         <View style={styles.headerTop}>
-          <IconButton icon="chevron-left" onPress={goBack} label="Wróć" testID="rankings-back" />
+          <IconButton icon="chevron-left" onPress={goBack} label="Back" testID="rankings-back" />
         </View>
         <View style={styles.titleBlock}>
-          <Text style={styles.subtitle}>Ranking tygodniowy · Wiedza finansowa</Text>
+          <Text style={styles.subtitle}>Weekly Ranking · Financial Knowledge</Text>
           <Text style={styles.title} accessibilityRole="header">
-            Tabela ligowa
+            League Table
           </Text>
         </View>
       </View>
@@ -56,8 +56,8 @@ export default function DuelRankingsScreen() {
                   <View style={styles.emptyCard}>
                     <EmptyState
                       icon="trophy"
-                      title="Brak graczy w tym tygodniu"
-                      body="Zagraj pojedynek z rywalem, aby zająć pierwsze miejsce w lidze."
+                      title="No players this week"
+                      body="Play a duel with a rival to take the lead in the league."
                       testID="rankings-empty"
                     />
                   </View>
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   headerTop: {
     flexDirection: 'row',
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...type.labelDefault,
-    color: colors.brandAccent,
+    color: colors.onBrandMuted,
   },
   title: {
     ...type.displayLarge,
@@ -124,23 +124,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xxl,
-    gap: spacing.md,
+    padding: spacing.lg,
+    paddingBottom: 100,
   },
   emptyCard: {
-    backgroundColor: colors.bgSurface,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
+    paddingTop: spacing.xxl,
   },
   pinnedWrap: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.lg,
-    backgroundColor: colors.bgCanvas,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderDefault,
+    position: 'absolute',
+    bottom: spacing.lg,
+    left: spacing.lg,
+    right: spacing.lg,
+    ...elevation.high,
   },
 });

@@ -21,7 +21,7 @@ export function ArenaPin({ active = false, onPress }: Props) {
       haptic="selection"
       pressedScale={0.9}
       accessibilityRole="button"
-      accessibilityLabel="Arena, Zmierz się z innymi"
+      accessibilityLabel="Arena, Challenge others"
       testID="globe-pin-arena"
       style={styles.box}
     >

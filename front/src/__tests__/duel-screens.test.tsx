@@ -27,7 +27,7 @@ function question(index: number, prompt: string) {
 const CATEGORIES: DuelCategory[] = [
   {
     story: 'berlin',
-    name: 'Inflacja i oszczędności',
+    name: 'Inflation & savings',
     icon: 'shield',
     color: 'teal',
     xp: 120,
@@ -37,7 +37,7 @@ const CATEGORIES: DuelCategory[] = [
   },
   {
     story: 'seoul',
-    name: 'Hype i dźwignia',
+    name: 'Hype & leverage',
     icon: 'message-circle',
     color: 'violet',
     xp: 40,
@@ -125,25 +125,25 @@ afterEach(() => {
 test('lobby renders categories with checkboxes, updates CTA count on toggle, and opens rankings', async () => {
   await renderRouter(appRoutes, { initialUrl: '/duel' });
 
-  expect(await screen.findByText('Gotowy na pojedynek?')).toBeOnTheScreen();
-  expect(await screen.findByText('Cześć Alex · Pojedynki 1v1')).toBeOnTheScreen();
+  expect(await screen.findByText('Ready for a duel?')).toBeOnTheScreen();
+  expect(await screen.findByText('Hi Alex · 1v1 Duels')).toBeOnTheScreen();
   expect(screen.getByTestId('duel-streak-chip')).toHaveTextContent(/\b4$/);
   expect(screen.getByTestId('duel-xp-chip')).toHaveTextContent(/1 240 XP$/);
   expect(screen.getByTestId('duel-league-card')).toBeOnTheScreen();
-  expect(await screen.findByText('Inflacja i oszczędności')).toBeOnTheScreen();
-  expect(screen.getByText('Hype i dźwignia')).toBeOnTheScreen();
+  expect(await screen.findByText('Inflation & savings')).toBeOnTheScreen();
+  expect(screen.getByText('Hype & leverage')).toBeOnTheScreen();
 
   // CTA has count 2 categories initially
   const cta = screen.getByTestId('duel-start-cta');
-  expect(cta).toHaveTextContent('Szukaj rywala · 2 kategorie');
+  expect(cta).toHaveTextContent('Find rival · 2 categories');
 
   // Untick one category
   await fireEvent.press(screen.getByTestId('duel-category-seoul'));
-  expect(cta).toHaveTextContent('Szukaj rywala · 1 kategoria');
+  expect(cta).toHaveTextContent('Find rival · 1 category');
 
   // Untick other category -> disabled
   await fireEvent.press(screen.getByTestId('duel-category-berlin'));
-  expect(cta).toHaveTextContent('Wybierz co najmniej 1 kategorię');
+  expect(cta).toHaveTextContent('Select at least 1 category');
 
   // Open rankings
   await fireEvent.press(screen.getByTestId('duel-open-rankings'));
@@ -192,7 +192,7 @@ test('match flow: answers question, sees feedback banner, waiting view, and resu
         yourAnswer: { option: 1 },
         correct: false,
         lessonId: 'berlin-1',
-        lessonTitle: 'Inflacja i oszczędności',
+        lessonTitle: 'Inflation & savings',
       },
       {
         index: 1,
@@ -208,7 +208,7 @@ test('match flow: answers question, sees feedback banner, waiting view, and resu
         yourAnswer: { option: 0 },
         correct: true,
         lessonId: 'berlin-1',
-        lessonTitle: 'Inflacja i oszczędności',
+        lessonTitle: 'Inflation & savings',
       },
     ],
   };
@@ -271,13 +271,13 @@ test('match flow: answers question, sees feedback banner, waiting view, and resu
 
   // Result view with review
   expect(await screen.findByTestId('duel-result')).toBeOnTheScreen();
-  expect(screen.getByTestId('result-heading')).toHaveTextContent('Wygrałeś!');
+  expect(screen.getByTestId('result-heading')).toHaveTextContent('You won!');
   expect(screen.getByTestId('result-score')).toHaveTextContent('5 : 4');
   expect(screen.getByTestId('result-xp')).toHaveTextContent(/25 XP/);
 
   // Review shows mistake first
   expect(screen.getByTestId('review-mistake-0')).toBeOnTheScreen();
-  expect(screen.getByTestId('review-repeat-lesson-0')).toHaveTextContent(/Powtórz lekcję: Inflacja i oszczędności/);
+  expect(screen.getByTestId('review-repeat-lesson-0')).toHaveTextContent(/Review lesson: Inflation & savings/);
 
   // Correct answer toggle
   expect(screen.getByTestId('toggle-correct-review')).toBeOnTheScreen();

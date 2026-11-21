@@ -13,18 +13,18 @@ export function ArenaCallout({ onOpen }: Props) {
   return (
     <View style={styles.card} testID="pin-callout-arena">
       <Text style={styles.overline}>Arena</Text>
-      <Text style={styles.title}>Zmierz się z innymi</Text>
-      <Text style={styles.meta}>Pojedynki finansowe</Text>
+      <Text style={styles.title}>Challenge others</Text>
+      <Text style={styles.meta}>Financial duels</Text>
       <Tappable
         onPress={onOpen}
         haptic="light"
         accessibilityRole="button"
-        accessibilityLabel="Graj w arenie"
+        accessibilityLabel="Play in arena"
         testID="pin-callout-arena-open"
         containerStyle={styles.buttonWrap}
         style={styles.button}
       >
-        <Text style={styles.buttonLabel}>Graj</Text>
+        <Text style={styles.buttonLabel}>Play</Text>
         <Feather name="arrow-right" size={16} color={colors.textOnAccent} />
       </Tappable>
     </View>

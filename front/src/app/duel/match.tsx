@@ -85,9 +85,9 @@ function MatchSession({
   if (state.error && state.phase !== 'result') {
     return (
       <DuelPage testID="duel-error" centered>
-        <EmptyState icon="wifi-off" tone="danger" title="Coś poszło nie tak" body={state.error.message}>
-          <Button label="Spróbuj ponownie" onPress={retry} testID="duel-error-retry" />
-          <Button label="Wróć do areny" variant="secondary" onPress={exitToLobby} testID="duel-error-lobby" />
+        <EmptyState icon="wifi-off" tone="danger" title="Something went wrong" body={state.error.message}>
+          <Button label="Try again" onPress={retry} testID="duel-error-retry" />
+          <Button label="Back to arena" variant="secondary" onPress={exitToLobby} testID="duel-error-lobby" />
         </EmptyState>
       </DuelPage>
     );

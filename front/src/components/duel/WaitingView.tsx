@@ -19,7 +19,7 @@ type Props = {
 export function WaitingView({ state, youAvatar, onBackToLobby }: Props) {
   const total = state.questionCount;
   const rival = state.rival;
-  const rivalName = rival?.name ?? 'Rywal';
+  const rivalName = rival?.name ?? 'Rival';
   const answered = state.rivalAnswered;
   const rivalQuestion = Math.min(answered + 1, total);
   const yourScore = getYourScore(state);
@@ -31,9 +31,9 @@ export function WaitingView({ state, youAvatar, onBackToLobby }: Props) {
       header={
         <FlowHeader
           onClose={onBackToLobby}
-          closeLabel="Wróć do lobby"
+          closeLabel="Back to lobby"
           closeTestID="waiting-close"
-          title="Odpowiedziałeś na wszystkie"
+          title="You've answered all questions"
           progress={1}
         />
       }
@@ -42,21 +42,21 @@ export function WaitingView({ state, youAvatar, onBackToLobby }: Props) {
           <Tappable
             onPress={onBackToLobby}
             accessibilityRole="button"
-            accessibilityLabel="Wróć później do lobby"
+            accessibilityLabel="Back to lobby"
             testID="waiting-back-lobby"
             style={styles.backLink}
           >
-            <Text style={styles.backLinkText}>Wróć później</Text>
+            <Text style={styles.backLinkText}>Back to lobby</Text>
           </Tappable>
-          <Text style={styles.footerNote}>Twój wynik jest zapisany i czeka na rywala</Text>
+          <Text style={styles.footerNote}>Your score is saved and waiting for rival</Text>
         </View>
       }
     >
       {/* Navy score block with XP pill */}
       <View style={styles.navyScoreBlock} testID="waiting-score-block">
-        <Text style={styles.overline}>ŚWIETNIE, SKOŃCZYŁEŚ!</Text>
+        <Text style={styles.overline}>GREAT JOB, YOU&apos;RE DONE!</Text>
         <Text style={styles.scoreText}>
-          {yourScore} / {total} poprawnych
+          {yourScore} / {total} correct
         </Text>
         <View style={styles.xpPill}>
           <Text style={styles.xpPillText}>+{xpGained} XP</Text>
@@ -68,7 +68,7 @@ export function WaitingView({ state, youAvatar, onBackToLobby }: Props) {
         <PlayerAvatar avatar={rival?.avatar} size={48} ring="xp" />
         <View style={styles.rivalContent}>
           <Text style={styles.rivalTitle}>
-            {rivalName} rozwiązuje pytanie {rivalQuestion} z {total}
+            {rivalName} is on question {rivalQuestion} of {total}
           </Text>
           <DotTrack
             dots={state.rivalDots}
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     padding: spacing.xl,
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   overline: {
     ...type.overline,
@@ -95,13 +95,14 @@ const styles = StyleSheet.create({
   },
   scoreText: {
     ...type.displayAmount,
-    color: colors.textOnBrand,
+    color: colors.brandAccent,
   },
   xpPill: {
     backgroundColor: colors.brandAccent,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.pill,
+    marginTop: spacing.xs,
   },
   xpPillText: {
     ...type.labelStrong,
@@ -113,34 +114,33 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     backgroundColor: colors.bgSurface,
     borderRadius: radii.card,
+    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    padding: spacing.lg,
   },
   rivalContent: {
     flex: 1,
     gap: spacing.sm,
   },
   rivalTitle: {
-    ...type.titleCard,
+    ...type.labelStrong,
     color: colors.textPrimary,
   },
   footerWrap: {
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
+    gap: spacing.xs,
   },
   backLink: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
   backLinkText: {
     ...type.labelStrong,
     color: colors.brandPrimary,
-    textDecorationLine: 'underline',
   },
   footerNote: {
-    ...type.labelDefault,
+    ...type.labelTab,
     color: colors.textMuted,
+    textAlign: 'center',
   },
 });

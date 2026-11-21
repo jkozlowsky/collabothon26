@@ -144,7 +144,7 @@ export function useDuelMatch({
       dispatch({
         type: 'error',
         code: 'RESULT_ERROR',
-        message: err instanceof Error ? err.message : 'Nie udało się pobrać wyniku',
+        message: err instanceof Error ? err.message : 'Failed to load result',
       });
     }
   }, []);
@@ -171,7 +171,7 @@ export function useDuelMatch({
           dispatch({
             type: 'error',
             code: is404 ? 'MATCH_NOT_FOUND' : 'RESUME_FAILED',
-            message: is404 ? 'Mecz nie istnieje lub wygasł.' : 'Nie udało się wznowić meczu.',
+            message: is404 ? 'Match not found or expired.' : 'Failed to resume match.',
           });
         }
         return;
@@ -218,7 +218,7 @@ export function useDuelMatch({
         dispatch({
           type: 'error',
           code: 'START_FAILED',
-          message: err instanceof Error ? err.message : 'Nie udało się rozpocząć meczu.',
+          message: err instanceof Error ? err.message : 'Failed to start match.',
         });
       }
     }
@@ -269,7 +269,7 @@ export function useDuelMatch({
         dispatch({
           type: 'error',
           code: 'ANSWER_FAILED',
-          message: err instanceof Error ? err.message : 'Błąd podczas wysyłania odpowiedzi.',
+          message: err instanceof Error ? err.message : 'Failed to submit answer.',
         });
       } finally {
         answeringRef.current = false;

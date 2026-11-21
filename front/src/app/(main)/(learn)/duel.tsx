@@ -25,12 +25,12 @@ const WEEKLY_PATH = `/api/duel/rankings?userId=${encodeURIComponent(USER_ID)}`;
 const MATCHES_PATH = `/api/duel/matches?userId=${encodeURIComponent(USER_ID)}`;
 
 function getCtaText(count: number, mode: DuelMode): string {
-  if (count === 0) return 'Wybierz co najmniej 1 kategorię';
-  const catWord = count === 1 ? '1 kategoria' : count < 5 ? `${count} kategorie` : `${count} kategorii`;
+  if (count === 0) return 'Select at least 1 category';
+  const catWord = count === 1 ? '1 category' : `${count} categories`;
   if (mode === 'SOLO') {
-    return `Rozpocznij solo · ${catWord}`;
+    return `Start solo · ${catWord}`;
   }
-  return `Szukaj rywala · ${catWord}`;
+  return `Find rival · ${catWord}`;
 }
 
 export default function DuelLobbyScreen() {
@@ -106,30 +106,30 @@ export default function DuelLobbyScreen() {
         xp={stats?.totalXp ?? 0}
       />
 
-      {/* Tabs: Graj | Historia */}
+      {/* Tabs: Play | History */}
       <View style={styles.tabBar} accessibilityRole="tablist">
         <Tappable
           onPress={() => setActiveTab('play')}
           accessibilityRole="tab"
           accessibilityState={{ selected: activeTab === 'play' }}
-          accessibilityLabel="Graj"
+          accessibilityLabel="Play"
           testID="duel-tab-play"
           containerStyle={styles.item}
           style={[styles.tab, activeTab === 'play' && styles.activeTab]}
         >
-          <Text style={[styles.tabText, activeTab === 'play' && styles.activeTabText]}>Graj</Text>
+          <Text style={[styles.tabText, activeTab === 'play' && styles.activeTabText]}>Play</Text>
         </Tappable>
 
         <Tappable
           onPress={() => setActiveTab('history')}
           accessibilityRole="tab"
           accessibilityState={{ selected: activeTab === 'history' }}
-          accessibilityLabel="Historia"
+          accessibilityLabel="History"
           testID="duel-tab-history"
           containerStyle={styles.item}
           style={[styles.tab, activeTab === 'history' && styles.activeTab]}
         >
-          <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>Historia</Text>
+          <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>History</Text>
         </Tappable>
       </View>
 
@@ -142,13 +142,13 @@ export default function DuelLobbyScreen() {
             onOpenRankings={() => router.push('/duel/rankings')}
           />
 
-          {/* Mode Toggle: Z rywalem | Solo */}
-          <Section title="Wybierz tryb">
+          {/* Mode Toggle: With rival | Solo */}
+          <Section title="Select mode">
             <ModeToggle mode={mode} onChange={setMode} />
           </Section>
 
           {/* Category List with Checkboxes */}
-          <Section title="Wybierz kategorie pytań">
+          <Section title="Select question categories">
             <AsyncContent loading={catLoading} error={catError} onRetry={reloadCategories}>
               {() => (
                 <ListCard testID="duel-category-list">
@@ -181,7 +181,7 @@ export default function DuelLobbyScreen() {
             {() => (
               <>
                 {unfinishedMatches.length > 0 && (
-                  <Section title="W toku">
+                  <Section title="In progress">
                     <ListCard testID="duel-history-pending">
                       {unfinishedMatches.map((m) => (
                         <MatchRow key={m.matchId} match={m} onPress={() => openMatch(m)} />
@@ -190,7 +190,7 @@ export default function DuelLobbyScreen() {
                   </Section>
                 )}
 
-                <Section title="Zakończone">
+                <Section title="Finished">
                   {finishedMatches.length > 0 ? (
                     <ListCard testID="duel-history-finished">
                       {finishedMatches.map((m) => (
@@ -199,7 +199,7 @@ export default function DuelLobbyScreen() {
                     </ListCard>
                   ) : (
                     <View style={styles.emptyHistory} testID="history-empty">
-                      <Text style={styles.emptyHistoryText}>Brak zakończonych pojedynków</Text>
+                      <Text style={styles.emptyHistoryText}>No finished duels yet</Text>
                     </View>
                   )}
                 </Section>

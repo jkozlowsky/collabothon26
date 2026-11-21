@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
-import { BackHandler } from 'react-native';
+import { AccessibilityInfo, BackHandler, Platform, StyleSheet } from 'react-native';
 
 import { createRng, seedAccount } from '@/lib/bank/seed';
 import { setSummary } from '@/lib/learningPath';
@@ -89,11 +89,11 @@ test('the summary of a user who has not been categorised redirects to the map', 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
 });
 
-test('the consent card says Quick check answers go to the lesson picker as typed, and only the judgement is kept', async () => {
+test('the consent card names the AI service and says the answers are sent once as written and only the judgement is kept', async () => {
   backend();
   await open();
   expect(await screen.findByTestId('consent-quickcheck-note')).toHaveTextContent(
-    /as you type them, so leave out exact amounts\. Only the judgement is stored, never your words\./,
+    /sent once, exactly as you write them, to an AI service that picks your first lesson.*Only the judgement is stored, never your words\./,
   );
 });
 
@@ -416,4 +416,54 @@ test('a 400 without answers still ends in the error screen', async () => {
 
   expect(await screen.findByTestId('categorizing-error', {}, { timeout: 4000 })).toBeOnTheScreen();
   expect(bodies()).toHaveLength(1);
+});
+
+/** WCAG 2.2 relative luminance contrast of two #rrggbb colours. */
+function contrast(a: string, b: string) {
+  const luminance = (hex: string) => {
+    const [r, g, bl] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(bl);
+  };
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+test('the answer field is a 3:1 shape against the page and the card, and keeps the keyboard and autofill out of it', async () => {
+  backend();
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+
+  const field = get('quick-check-input');
+  const { borderColor } = StyleSheet.flatten(field.props.style);
+  expect(contrast(borderColor, '#F5F7F7')).toBeGreaterThanOrEqual(3);
+  expect(contrast(borderColor, '#FFFFFF')).toBeGreaterThanOrEqual(3);
+  expect(field.props).toMatchObject({ autoComplete: 'off', importantForAutofill: 'no', autoCorrect: false });
+});
+
+test('each new question is announced to screen readers: the live region on web, the system announcement on native', async () => {
+  backend();
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+  expect(get('flow-status')).toHaveTextContent('Question 1 of 4');
+  await type('a');
+  await press('quick-check-next');
+  expect(get('flow-status')).toHaveTextContent('Question 2 of 4');
+});
+
+test.each(['ios', 'android'] as const)('on %s the question is announced with the system call', async (os) => {
+  const platform = jest.replaceProperty(Platform, 'OS', os);
+  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+  announce.mockClear();
+  try {
+    backend();
+    await open();
+    await fireEvent.press(await screen.findByTestId('consent-decline'));
+    await type('a');
+    await press('quick-check-next');
+    expect(announce.mock.calls.map(([message]) => message)).toEqual(['Question 1 of 4', 'Question 2 of 4']);
+  } finally {
+    announce.mockRestore();
+    platform.restore();
+  }
 });

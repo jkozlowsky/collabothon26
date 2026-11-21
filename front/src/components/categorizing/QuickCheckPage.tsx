@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { FlowPage } from '@/components/categorizing/FlowPage';
@@ -8,6 +8,12 @@ import { QuestionTrack } from '@/components/categorizing/QuestionTrack';
 import { colors, radii, spacing, type } from '@/constants/theme';
 
 const MAX_LENGTH = 280;
+const TOUCH_TARGET = 44;
+const ICON = 20;
+const MIN_INPUT_HEIGHT = 132;
+const BORDER = 1;
+const BORDER_FOCUSED = 2;
+const COUNT_WORD = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
 
 type Props = {
   index: number;
@@ -28,10 +34,16 @@ export function QuickCheckPage({ index, total, parts, account, value, onChange, 
   const text = value;
   const [focused, setFocused] = useState(false);
   const prompt = parts.map((p) => p.text).join('');
+  const position = `Question ${index + 1} of ${total}`;
+  // Native announces; web reads FlowPage's live region.
+  useEffect(() => {
+    if (Platform.OS !== 'web') AccessibilityInfo.announceForAccessibility(position);
+  }, [position]);
 
   return (
     <FlowPage
       testID="quick-check"
+      status={position}
       footer={
         <>
           <Button label="Next" onPress={() => onNext(text.trim())} disabled={!text.trim()} testID="quick-check-next" />
@@ -48,7 +60,7 @@ export function QuickCheckPage({ index, total, parts, account, value, onChange, 
           style={styles.back}
           testID="quick-check-back"
         >
-          <Feather name="chevron-left" size={20} color={colors.brandPrimary} />
+          <Feather name="chevron-left" size={ICON} color={colors.brandPrimary} />
         </Pressable>
         <Text style={type.labelStrong}>
           {index + 1} of {total}
@@ -57,7 +69,9 @@ export function QuickCheckPage({ index, total, parts, account, value, onChange, 
       <QuestionTrack current={index} total={total} />
       {index === 0 && (
         <>
-          <Text style={styles.muted}>Four quick questions so we know where to start. There are no wrong answers.</Text>
+          <Text style={styles.muted}>
+            {COUNT_WORD[total]} quick questions so we know where to start. There are no wrong answers.
+          </Text>
           <Text style={styles.muted}>
             Your answers are checked by an AI service to pick your first lesson; only the result is kept.
           </Text>
@@ -80,6 +94,9 @@ export function QuickCheckPage({ index, total, parts, account, value, onChange, 
         placeholder="A sentence or two is enough"
         placeholderTextColor={colors.textMuted}
         accessibilityLabel={prompt}
+        autoComplete="off"
+        importantForAutofill="no"
+        autoCorrect={false}
         style={[styles.input, focused && styles.inputFocused]}
         testID="quick-check-input"
       />
@@ -101,21 +118,32 @@ export function QuickCheckPage({ index, total, parts, account, value, onChange, 
 
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  back: { width: 44, height: 44, marginLeft: -spacing.smPlus, alignItems: 'center', justifyContent: 'center' },
+  back: {
+    width: TOUCH_TARGET,
+    height: TOUCH_TARGET,
+    marginLeft: -(TOUCH_TARGET - ICON) / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   muted: { ...type.bodyDefault, color: colors.textMuted },
   prompt: { ...type.titleSection, marginTop: spacing.xs },
   filled: { color: colors.brandPrimary, backgroundColor: colors.brandPrimarySoft },
   input: {
     ...type.bodyDefault,
-    minHeight: 132,
+    minHeight: MIN_INPUT_HEIGHT,
     textAlignVertical: 'top',
     padding: spacing.mdPlus,
     borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderWidth: BORDER,
+    // borderStrong is 1.5:1 on white; a control's edge needs 3:1 (WCAG 2.2 SC 1.4.11).
+    borderColor: colors.textMuted,
     backgroundColor: colors.bgSurface,
   },
-  inputFocused: { borderWidth: 2, borderColor: colors.brandPrimary, padding: spacing.mdPlus - 1 },
+  inputFocused: {
+    borderWidth: BORDER_FOCUSED,
+    borderColor: colors.brandPrimary,
+    padding: spacing.mdPlus - (BORDER_FOCUSED - BORDER),
+  },
   meta: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
   hint: { ...type.labelDefault, color: colors.textMuted },
   slip: {

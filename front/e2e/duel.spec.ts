@@ -2,7 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 
 import { resetOnboarding, skipQuickCheck } from './app';
 
-const CATEGORY_SLUGS = ['instruments', 'risk', 'costs', 'money-basics', 'psychology'] as const;
+const CATEGORY_SLUGS = ['seoul', 'berlin', 'sao-paulo', 'tokyo'] as const;
 
 test.beforeEach(async ({ request }) => {
   await resetOnboarding(request);
@@ -43,13 +43,44 @@ async function openDuelLobby(page: Page) {
 /** Plays all 6 questions in a match without assuming which option is correct. */
 async function playMatchQuestions(page: Page) {
   for (let q = 0; q < 6; q++) {
-    // Wait for the question prompt to be rendered
-    await expect(page.getByTestId('question-prompt')).toBeVisible({ timeout: 20_000 });
+    // Wait for the question view to be rendered
+    await expect(page.getByTestId('duel-question')).toBeVisible({ timeout: 20_000 });
 
-    // Select the first option
-    await page.getByTestId('duel-option-0').click();
+    const quizOption = page.getByTestId('duel-option-0');
+    const predictSubmit = page.getByTestId('duel-predict-submit');
+    const chartSubmit = page.getByTestId('duel-chart-submit');
+    const sortBtn = page.getByTestId('sort-left');
+    const matchTile = page.getByTestId('match-left-0');
 
-    // Wait for server feedback and the next question / continue button
+    await expect(
+      quizOption
+        .or(predictSubmit)
+        .or(chartSubmit)
+        .or(sortBtn)
+        .or(matchTile)
+        .first(),
+    ).toBeVisible({ timeout: 20_000 });
+
+    if (await quizOption.isVisible()) {
+      await quizOption.click();
+    } else if (await predictSubmit.isVisible()) {
+      await predictSubmit.click();
+    } else if (await chartSubmit.isVisible()) {
+      await chartSubmit.click();
+    } else if (await sortBtn.isVisible()) {
+      while (await sortBtn.isVisible()) {
+        await sortBtn.click();
+      }
+    } else if (await matchTile.isVisible()) {
+      for (let i = 0; i < 4; i++) {
+        const left = page.getByTestId(`match-left-${i}`);
+        const right = page.getByTestId(`match-right-${i}`);
+        if (await left.isVisible()) await left.click();
+        if (await right.isVisible()) await right.click();
+      }
+    }
+
+    // Wait for server feedback and the next question / see results button
     const nextBtn = page.getByTestId('duel-next-question');
     await expect(nextBtn).toBeVisible({ timeout: 20_000 });
     await nextBtn.click();
@@ -57,23 +88,42 @@ async function playMatchQuestions(page: Page) {
 }
 
 test.describe('Duel flow', () => {
-  test('duel lobby shows categories, plays solo and bot matches, and switches ranking segments', async ({ page }) => {
+  test('duel lobby shows categories, play and history tabs, human and solo modes, plays a solo match, and views weekly rankings', async ({ page }) => {
     test.setTimeout(300_000);
     await openDuelLobby(page);
 
-    // 1. Lobby checks: verify 5 categories with level, Elo or Calibrating
+    // 1. Lobby checks: verify 4 categories with level (Lv N)
     for (const slug of CATEGORY_SLUGS) {
       const row = page.getByTestId(`duel-category-${slug}`);
       await expect(row).toBeVisible();
       await expect(row).toContainText(/Lv \d+/);
     }
-    await expect(page.getByTestId('duel-category-instruments')).toContainText('Elo');
-    await expect(page.getByTestId('duel-category-costs')).toContainText('Calibrating');
-    await expect(page.getByTestId('duel-category-money-basics')).toContainText('Calibrating');
 
-    // 2. Play a SOLO match to result screen
-    await page.getByTestId('duel-mode-solo').click();
-    await page.getByTestId('duel-category-instruments').click();
+    // 2. Play and History tabs
+    const historyTab = page.getByTestId('duel-tab-history');
+    await expect(historyTab).toBeVisible();
+    await historyTab.click();
+    await expect(
+      page.getByTestId('duel-history-finished').or(page.getByTestId('history-empty')),
+    ).toBeVisible();
+
+    const playTab = page.getByTestId('duel-tab-play');
+    await expect(playTab).toBeVisible();
+    await playTab.click();
+    await expect(page.getByTestId('duel-category-list')).toBeVisible();
+
+    // 3. Modes: Human and Solo, no bot, no Elo
+    const humanMode = page.getByTestId('duel-mode-human');
+    const soloMode = page.getByTestId('duel-mode-solo');
+    await expect(humanMode).toBeVisible();
+    await expect(soloMode).toBeVisible();
+
+    // Switch to Solo mode
+    await soloMode.click();
+    await expect(page.getByTestId('duel-solo-note')).toBeVisible();
+
+    // 4. Play a SOLO match to result screen
+    await page.getByTestId('duel-start-cta').click();
 
     // Answer all 6 questions
     await playMatchQuestions(page);
@@ -88,33 +138,12 @@ test.describe('Duel flow', () => {
     await page.getByTestId('result-back-lobby').click();
     await expect(page.getByTestId('screen-duel')).toBeVisible();
 
-    // 3. Play a BOT match to result screen
-    await page.getByTestId('duel-mode-bot').click();
-    await page.getByTestId('duel-category-psychology').click();
-
-    // Answer all 6 questions
-    await playMatchQuestions(page);
-
-    // The simulated bot answers 8-30 s per question, so the match settles up to ~3 min after it starts.
-    await expect(page.getByTestId('duel-result')).toBeVisible({ timeout: 200_000 });
-    await expect(page.getByTestId('result-review')).toBeVisible();
-
-    // 4. Open Rankings and switch all 4 segments
-    await page.getByTestId('result-see-rankings').click();
+    // 5. Weekly overall ranking only
+    await page.getByTestId('duel-open-rankings').click();
     await expect(page.getByTestId('screen-duel-rankings')).toBeVisible();
-
-    const tabs = [
-      'rankings-tab-weekly',
-      'rankings-tab-category',
-      'rankings-tab-overall',
-      'rankings-tab-friends',
-    ];
-
-    for (const tabId of tabs) {
-      const tab = page.getByTestId(tabId);
-      await tab.click();
-      await expect(tab).toHaveAttribute('aria-selected', 'true');
-    }
+    await expect(
+      page.getByTestId('rankings-list').or(page.getByTestId('rankings-empty')),
+    ).toBeVisible();
 
     // Go back from rankings
     await page.getByTestId('rankings-back').click();

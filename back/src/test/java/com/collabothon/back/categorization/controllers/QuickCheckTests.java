@@ -21,12 +21,15 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.restclient.test.autoconfigure.AutoConfigureMockRestServiceServer;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -49,6 +52,7 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest(properties = "jev.api-key=test-key")
 @AutoConfigureMockMvc
 @AutoConfigureMockRestServiceServer
+@ExtendWith(OutputCaptureExtension.class)
 class QuickCheckTests {
 
 	private static final String JEV_URL = "https://api.typesafe.ai/v1/systemone";
@@ -487,6 +491,56 @@ class QuickCheckTests {
 			.andExpect(jsonPath("$.confidenceGaps[0].direction").value("under"))
 			.andExpect(jsonPath("$.confidenceGaps[0].because").value(
 					"You said: I save now and then, and your answer about saving shows you understand it."));
+	}
+
+	private String sentinelBody() {
+		return body(RUNWAY, SENTINEL, LOAN, SENTINEL + " b", TIME, SENTINEL + " c", SPREAD, SENTINEL + " d");
+	}
+
+	private void assertNoSentinel(String response, CapturedOutput output) {
+		assertFalse(response.contains(SENTINEL), "response");
+		assertFalse(output.getAll().contains(SENTINEL), "logs");
+		jdbc.sql("SELECT data::text FROM categorization")
+			.query(String.class)
+			.list()
+			.forEach(data -> assertFalse(data.contains(SENTINEL), "categorization.data"));
+	}
+
+	@Test
+	void answerTextIsNeverStoredOrLoggedWhenJevJudgesIt(CapturedOutput output) throws Exception {
+		onboard("alex");
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(bodyContains(SENTINEL, true))
+			.andRespond(jevReplies(RUNWAY, "partly", LOAN, "partly", TIME, "partly", SPREAD, "partly"));
+
+		String response = categorize("alex", sentinelBody()).andExpect(status().isOk())
+			.andReturn().getResponse().getContentAsString();
+
+		assertNoSentinel(response, output);
+		assertNoSentinel(mvc.perform(get("/api/users/alex/categorization")).andReturn().getResponse().getContentAsString(),
+				output);
+	}
+
+	@Test
+	void answerTextIsNeverStoredOrLoggedWhenTheRequestIsRejected(CapturedOutput output) throws Exception {
+		onboard("alex");
+
+		String response = categorize("alex", body(RUNWAY, SENTINEL, LOAN, SENTINEL, TIME, SENTINEL))
+			.andExpect(status().isBadRequest())
+			.andReturn().getResponse().getContentAsString();
+
+		assertNoSentinel(response, output);
+	}
+
+	@Test
+	void answerTextIsNeverStoredOrLoggedWhenJevFails(CapturedOutput output) throws Exception {
+		onboard("alex");
+		jev.expect(requestTo(JEV_URL)).andRespond(withServerError());
+
+		String response = categorize("alex", sentinelBody()).andExpect(status().isOk())
+			.andReturn().getResponse().getContentAsString();
+
+		assertNoSentinel(response, output);
 	}
 
 	private long lessonAt(int position) {

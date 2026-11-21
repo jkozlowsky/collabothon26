@@ -100,7 +100,8 @@ export default function CategorizingScreen() {
     facts,
     lifeStageSkipped: !answers.lifeStage,
     onFinish: (result) => void start(consent, result),
-    onSkip: (useRules) => void start(consent, useRules ? { useRules } : undefined),
+    onSkip: (useRules, calls) =>
+      void start(consent, useRules || calls > 0 ? { ...(useRules && { useRules }), ...(calls > 0 && { stepCallsMade: calls }) } : undefined),
   });
 
   useEffect(() => {

@@ -65,8 +65,8 @@ type Props = {
   lifeStageSkipped: boolean;
   /** The test ended (done, or a step failed twice): send the final POST. */
   onFinish: (result: QuickResult) => void;
-  /** The first step failed: the Quick check is skipped and F1 applies; `useRules` after an opt-out. */
-  onSkip: (useRules: boolean) => void;
+  /** The first step failed: the Quick check is skipped and F1 applies; `useRules` after an opt-out, `calls` the model calls made before a restart. */
+  onSkip: (useRules: boolean, calls: number) => void;
 };
 
 /**
@@ -134,7 +134,7 @@ export function useQuickCheck({ pool, bank, consent, facts, lifeStageSkipped, on
       update({ calls });
       if (!first) return finish();
       update({ stage: 'idle' });
-      return onSkip(useRules);
+      return onSkip(useRules, calls);
     }
     update({ mastery: result.mastery, useRules, fellBack, calls, currentId: next?.id ?? latest.current.currentId });
     if (!result.done) return update({ stage: 'knowledge' });

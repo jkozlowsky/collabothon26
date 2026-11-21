@@ -470,6 +470,20 @@ test('after the opt-out a failed first step still sends useRules on the skip pat
   expect(finals()).toEqual([{ consent: true, facts: expect.any(Object), useRules: true }]);
 });
 
+test('a restart whose first step fails still reports the model calls made before Back', async () => {
+  let starts = 0;
+  const step: Handler = (request) => (request.history.length === 0 && ++starts === 2 ? fail(500) : stepper()(request));
+  backend({ step });
+  await toFirstQuestion();
+  await answer(0, 'sure');
+  await question(3);
+  await press('quick-check-back');
+  await fireEvent.press(await screen.findByTestId('know-start'));
+
+  expect(await screen.findByTestId('learning-path', {}, { timeout: 4000 })).toBeOnTheScreen();
+  expect(finals()).toEqual([{ consent: true, facts: expect.any(Object), stepCallsMade: 1 }]);
+});
+
 test('a later step that fails is retried once with stepFellBack, and the test goes on', async () => {
   const step: Handler = (request) => (request.history.length === 1 && !request.stepFellBack ? fail(503) : stepper()(request));
   backend({ step });

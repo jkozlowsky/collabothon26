@@ -319,8 +319,7 @@ test('the dock fills in as answers come: a screen-reader text per area, then the
 
   await tap(page, 'map-dock');
   await expect(page.getByText('Your map in detail')).toBeVisible();
-  // The modal moves focus in on its own a moment after it opens; Escape only reaches it from inside.
-  await page.getByTestId('sheet-close').focus();
+  await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByText('Your map in detail')).toHaveCount(0);
 

@@ -76,7 +76,6 @@ public class CheckQuestionService {
 		return picked;
 	}
 
-	/** The weakest check's lesson, else the earliest lesson of the first focus area that has one. */
 	Optional<CheckQuestionProjection> startLesson(List<CheckDto> checks, List<FocusArea> focus,
 			List<CheckQuestionProjection> picked) {
 		return CategorizationRules.weakestLessonCheck(checks, focus)

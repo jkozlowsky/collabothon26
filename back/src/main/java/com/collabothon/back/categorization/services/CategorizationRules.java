@@ -171,7 +171,6 @@ final class CategorizationRules {
 		return new ConfidenceGapDto(area, direction, said.saidLine() + " " + shows);
 	}
 
-	/** Weak spots the answers revealed go first; the areas Jev picked keep their order behind them. */
 	static List<FocusArea> focusWithChecks(List<FocusArea> focus, List<CheckDto> checks) {
 		Set<FocusArea> areas = new LinkedHashSet<>();
 		checks.stream()
@@ -182,7 +181,6 @@ final class CategorizationRules {
 		return List.copyOf(areas);
 	}
 
-	/** The weakest check that has a lesson: not-yet before partly, then the order of the focus areas. */
 	static Optional<CheckDto> weakestLessonCheck(List<CheckDto> checks, List<FocusArea> focus) {
 		Comparator<CheckDto> weakestFirst = Comparator
 			.comparing((CheckDto c) -> c.result() == CheckResult.NOT_YET ? 0 : 1)
@@ -192,7 +190,6 @@ final class CategorizationRules {
 			.min(weakestFirst);
 	}
 
-	/** The question with the earliest lesson in the first focus area that has one. */
 	static Optional<CheckQuestionProjection> earliestLessonQuestion(List<FocusArea> focus,
 			List<CheckQuestionProjection> pool) {
 		return focus.stream()

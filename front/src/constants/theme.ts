@@ -31,6 +31,12 @@ export const colors = {
   // Not Figma variables: 14% tints of the feedback colours, same recipe as the story icon tiles.
   feedbackSuccessSoft: 'rgba(30, 138, 94, 0.14)',
   feedbackDangerSoft: 'rgba(214, 69, 69, 0.14)',
+  // 14% tints of the story colours: icon tiles of glossary categories (same recipe as the story tiles).
+  storyTealSoft: 'rgba(30, 154, 168, 0.14)',
+  storyVioletSoft: 'rgba(110, 90, 214, 0.14)',
+  storyOrangeSoft: 'rgba(232, 131, 58, 0.14)',
+  storyRoseSoft: 'rgba(217, 87, 122, 0.14)',
+  storySlateSoft: 'rgba(154, 165, 171, 0.14)',
 
   globeOceanLight: '#1B6F82',
   globeOceanDeep: '#002E3C',
@@ -122,6 +128,8 @@ export const type = {
   titleSection: textStyle(fonts.bold, 18, 24),
   titleCard: textStyle(fonts.semiBold, 15, 20),
   bodyDefault: textStyle(fonts.regular, 13, 18),
+  // Not in the Figma scale: reading size for glossary definitions (15/24 is easier to read than 13/18).
+  bodyReading: textStyle(fonts.regular, 15, 24),
   labelStrong: textStyle(fonts.semiBold, 12, 16),
   labelDefault: textStyle(fonts.medium, 12, 16),
   labelTabActive: textStyle(fonts.semiBold, 11, 14),

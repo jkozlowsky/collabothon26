@@ -5,6 +5,7 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.net.http.HttpConnectTimeoutException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -12,6 +13,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -28,8 +36,10 @@ import org.springframework.web.client.RestClientException;
 import com.collabothon.back.categorization.config.JevProperties;
 import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.FactsDto;
+import com.collabothon.back.categorization.dto.JevAnswerDto;
 import com.collabothon.back.categorization.dto.JevRequestDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
+import com.collabothon.back.categorization.dto.ProfileRangesDto;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.Role;
 import com.collabothon.back.categorization.enums.WireNames;
@@ -67,11 +77,29 @@ public class JevClient {
 			}
 			""";
 
+	// Verbatim from docs/specs/F1b-quick-check.md ("Jev step call"); `next.criteria` is filled per request.
+	private static final String STEP_QUESTIONS = """
+			{
+			  "mastery_saving":     {"type": "noul", "instructions": "Do this person's answers about saving, emergency funds and inflation show that they understand these ideas well?"},
+			  "mastery_investing":  {"type": "noul", "instructions": "Do this person's answers about investing, compound interest and market ups and downs show that they understand these ideas well?"},
+			  "next": {"type": "choice",
+			    "instructions": "Which of these questions would show best what this person still needs to learn, given their answers so far, how sure they felt and when they might need their money?",
+			    "criteria": {}},
+			  "enough": {"type": "noul", "instructions": "Do the answers so far show clearly enough what this person already understands and what they should learn first?"}
+			}
+			""";
+
 	private final RestClient rest;
 
 	private final JevProperties properties;
 
 	private final ObjectNode questions;
+
+	private final ObjectNode stepQuestions;
+
+	// ponytail: the 3 s step limit is a Future timeout, not a second request factory: Boot binds MockRestServiceServer
+	// to the one injected builder's factory, so a second factory would send test calls to the real API.
+	private final ExecutorService stepCalls = Executors.newVirtualThreadPerTaskExecutor();
 
 	JevClient(RestClient.Builder builder, JsonMapper json, JevProperties properties) {
 		if (!properties.apiKey().isEmpty()) {
@@ -80,6 +108,105 @@ public class JevClient {
 		this.rest = builder.baseUrl(properties.baseUrl()).build();
 		this.properties = properties;
 		this.questions = (ObjectNode) json.readTree(QUESTIONS);
+		this.stepQuestions = (ObjectNode) json.readTree(STEP_QUESTIONS);
+	}
+
+	/**
+	 * Empty on any failure: a timeout after {@link JevConsts#STEP_READ_TIMEOUT}, an error, or an answer that breaks
+	 * the contract. {@code unasked} maps each unasked question id to its checks sentence.
+	 */
+	public Optional<StepJudgement> step(ProfileRangesDto profile, List<String> goals, FactsDto facts,
+			List<JevAnswerDto> answers, List<FocusArea> answeredAreas, Map<String, String> unasked) {
+		Map<String, Object> state = new LinkedHashMap<>();
+		state.put("profile", profile);
+		state.put("goals", goals);
+		if (facts != null) {
+			state.put("facts", facts);
+		}
+		state.put("answers", answers);
+		ObjectNode asked = stepQuestions.objectNode();
+		answeredAreas.stream()
+			.map(area -> "mastery_" + area.wire())
+			// ponytail: an area gets a mastery question only once its text is in STEP_QUESTIONS (spec: areas without lessons).
+			.filter(stepQuestions::has)
+			.forEach(key -> asked.set(key, stepQuestions.get(key).deepCopy()));
+		if (unasked.size() >= 2) {
+			ObjectNode next = (ObjectNode) stepQuestions.get("next").deepCopy();
+			unasked.forEach(next.putObject("criteria")::put);
+			asked.set("next", next);
+		}
+		asked.set("enough", stepQuestions.get("enough").deepCopy());
+		JevRequestDto body = new JevRequestDto(properties.model(), state, asked);
+		long start = System.nanoTime();
+		Future<JsonNode> call = stepCalls.submit(() -> post(body));
+		try {
+			JsonNode response = call.get(JevConsts.STEP_READ_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+			Optional<StepJudgement> judgement = parseStep(response, asked, unasked.keySet(),
+					Duration.ofNanos(System.nanoTime() - start));
+			if (judgement.isEmpty()) {
+				log.warn("Jev step answer broke the contract, using the rule");
+			}
+			return judgement;
+		}
+		catch (TimeoutException e) {
+			call.cancel(true);
+			log.warn("Jev step call took longer than {}, using the rule", JevConsts.STEP_READ_TIMEOUT);
+			return Optional.empty();
+		}
+		catch (ExecutionException e) {
+			log.warn("Jev step call failed ({}), using the rule",
+					NestedExceptionUtils.getMostSpecificCause(e).getClass().getSimpleName());
+			return Optional.empty();
+		}
+		catch (InterruptedException e) {
+			call.cancel(true);
+			Thread.currentThread().interrupt();
+			return Optional.empty();
+		}
+	}
+
+	private static Optional<StepJudgement> parseStep(JsonNode response, ObjectNode asked, Set<String> unasked,
+			Duration elapsed) {
+		if (response == null) {
+			return Optional.empty();
+		}
+		JsonNode answers = response.path("answers");
+		Map<FocusArea, Double> mastery = new EnumMap<>(FocusArea.class);
+		for (FocusArea area : FocusArea.values()) {
+			String key = "mastery_" + area.wire();
+			if (asked.has(key)) {
+				Double p = probability(answers.path(key).path("noul"));
+				if (p == null) {
+					return Optional.empty();
+				}
+				mastery.put(area, p);
+			}
+		}
+		Double enough = probability(answers.path("enough").path("noul"));
+		String next = null;
+		if (asked.has("next")) {
+			Map<String, String> labels = new LinkedHashMap<>();
+			unasked.forEach(id -> labels.put(id, id));
+			JevChoice<String> choice = choice(answers.path("next"), labels);
+			if (choice == null) {
+				return Optional.empty();
+			}
+			next = choice.value();
+		}
+		return enough == null ? Optional.empty() : Optional.of(new StepJudgement(mastery, next, enough, elapsed));
+	}
+
+	private JsonNode post(JevRequestDto body) {
+		return rest.post()
+			.uri(JevConsts.SYSTEM_ONE_PATH)
+			.contentType(MediaType.APPLICATION_JSON)
+			.body(body)
+			.retrieve()
+			// Redirects are not followed, so a 3xx would otherwise be parsed like a 200.
+			.onStatus(HttpStatusCode::is3xxRedirection, (request, redirect) -> {
+				throw new RestClientException("Jev redirected");
+			})
+			.body(JsonNode.class);
 	}
 
 	public JevResult ask(OnboardingAnswersDto answers, FactsDto facts) {
@@ -92,16 +219,7 @@ public class JevClient {
 			state.put("facts", facts);
 		}
 		try {
-			JsonNode response = rest.post()
-				.uri(JevConsts.SYSTEM_ONE_PATH)
-				.contentType(MediaType.APPLICATION_JSON)
-				.body(new JevRequestDto(properties.model(), state, questions))
-				.retrieve()
-				// Redirects are not followed, so a 3xx would otherwise be parsed like a 200.
-				.onStatus(HttpStatusCode::is3xxRedirection, (request, redirect) -> {
-					throw new RestClientException("Jev redirected");
-				})
-				.body(JsonNode.class);
+			JsonNode response = post(new JevRequestDto(properties.model(), state, questions));
 			Optional<Judgement> judgement = parse(response);
 			if (judgement.isEmpty()) {
 				log.warn("Jev answer broke the contract, using the rules fallback");
@@ -156,6 +274,10 @@ public class JevClient {
 		for (E value : values) {
 			byLabel.put(WireNames.of(value), value);
 		}
+		return choice(answer, byLabel);
+	}
+
+	private static <T> JevChoice<T> choice(JsonNode answer, Map<String, T> byLabel) {
 		JsonNode label = answer.path("choice");
 		JsonNode probabilities = answer.path("probabilities");
 		if (!label.isString() || !byLabel.containsKey(label.stringValue()) || !probabilities.isObject()) {

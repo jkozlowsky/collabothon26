@@ -1,5 +1,6 @@
 package com.collabothon.back.categorization.consts;
 
+import java.time.Duration;
 import java.util.Set;
 
 public final class JevConsts {
@@ -9,6 +10,12 @@ public final class JevConsts {
 	public static final String DEFAULT_MODEL = "jev-latest";
 
 	public static final String SYSTEM_ONE_PATH = "/v1/systemone";
+
+	/** A step call waits this long for Jev; the final call keeps the shared 7 s read timeout. */
+	public static final Duration STEP_READ_TIMEOUT = Duration.ofSeconds(3);
+
+	/** A step answer later than this keeps Jev's mastery but takes the next question from the rule (D9). */
+	public static final Duration STEP_BUDGET = Duration.ofMillis(1500);
 
 	public static final String API_KEY_PATTERN = "[\\x21-\\x7E]*";
 

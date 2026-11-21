@@ -7,33 +7,33 @@ import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 
 /** One knowledge answer checked against the bank; {@code optionIndex} null = "Not sure". */
-record Answer(
+public record Answer(
 		CheckQuestionProjection question,
 		Integer optionIndex,
 		Confidence confidence
 ) {
 
-	FocusArea area() {
+	public FocusArea area() {
 		return question.area();
 	}
 
-	AnswerResult result() {
+	public AnswerResult result() {
 		if (optionIndex == null) {
 			return AnswerResult.NOT_SURE;
 		}
 		return optionIndex == question.correctIndex() ? AnswerResult.CORRECT : AnswerResult.WRONG;
 	}
 
-	String misconception() {
+	public String misconception() {
 		return result() == AnswerResult.WRONG ? question.misconceptions().get(optionIndex) : null;
 	}
 
-	double score() {
+	public double score() {
 		return result() == AnswerResult.CORRECT ? confidence.getCorrectScore() : CategorizationConsts.SCORE_WRONG;
 	}
 
 	/** "Not sure" counts as Guessing. */
-	double chip() {
+	public double chip() {
 		return (confidence == null ? Confidence.GUESSING : confidence).getChip();
 	}
 

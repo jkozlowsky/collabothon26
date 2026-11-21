@@ -184,7 +184,7 @@ export type DepotSeries = Record<ChartRange, { points: number[]; change: number 
 
 export type FqTeaserPlacement = 'home' | 'credits' | 'invest';
 
-/** A Finance Quest card shown inside the bank. `focus` tells the Map what to open. */
+/** A Atlas card shown inside the bank. `focus` tells the Map what to open. */
 export type FqTeaser = {
   title: string;
   meta: string;

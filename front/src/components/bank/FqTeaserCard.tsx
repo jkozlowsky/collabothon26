@@ -9,15 +9,15 @@ import type { FqTeaser } from '@/types/bank';
 /** `streak`: days in a row, shown after the meta line when above 0. */
 type Props = { teaser: FqTeaser; streak?: number; onPress: () => void; testID?: string };
 
-/** The yellow "Finance Quest" card that sits inside the bank: the way into a lesson that fits this tab. */
+/** The yellow "Atlas" card that sits inside the bank: the way into a lesson that fits this tab. */
 export function FqTeaserCard({ teaser, streak = 0, onPress, testID }: Props) {
   return (
-    <Tappable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Finance Quest: ${teaser.title}`} testID={testID} pressedScale={0.98} style={styles.card}>
+    <Tappable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Atlas: ${teaser.title}`} testID={testID} pressedScale={0.98} style={styles.card}>
       <View style={styles.globe}>
         <GlobeSphere size={48} />
       </View>
       <View style={styles.body}>
-        <Text style={styles.overline}>Finance Quest</Text>
+        <Text style={styles.overline}>Atlas</Text>
         <Text style={styles.title} numberOfLines={1}>
           {teaser.title}
         </Text>

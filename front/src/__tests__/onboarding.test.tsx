@@ -47,7 +47,7 @@ function savedOnboarding() {
   return call && JSON.parse(call[1].body);
 }
 
-/** The app opens on the bank; Finance Quest (and its onboarding) starts from the Learn button. */
+/** The app opens on the bank; Atlas (and its onboarding) starts from the Learn button. */
 async function openLearn() {
   await renderRouter(routes, { initialUrl: '/' });
   await fireEvent.press(await screen.findByTestId('nav-learn'));
@@ -60,9 +60,10 @@ test('app opens on the bank; the first Learn tap runs onboarding, skipping it la
 
   await fireEvent.press(screen.getByTestId('nav-learn'));
   expect(await screen.findByTestId('onboarding-welcome')).toBeOnTheScreen();
-  expect(screen.getByText('Finances with confidence — one lesson at a time')).toBeOnTheScreen();
+  expect(screen.getByText('Learn how money works. Challenge your ideas with others.')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-start'));
   await fireEvent.press(screen.getByTestId('onboarding-next'));
+  await fireEvent.press(screen.getByTestId('onboarding-challenge-next'));
 
   expect(await screen.findByTestId('onboarding-invite')).toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
@@ -103,6 +104,7 @@ test('answers all three questions', async () => {
 
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
   await fireEvent.press(screen.getByTestId('onboarding-next'));
+  await fireEvent.press(screen.getByTestId('onboarding-challenge-next'));
   await fireEvent.press(screen.getByTestId('onboarding-personalise'));
 
   // Continue stays disabled until the question is answered.

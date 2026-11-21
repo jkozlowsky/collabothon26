@@ -76,17 +76,14 @@ class QuickCheckStepTests {
 
 	private static final String SAO_PAULO_1_Q1 = "sao-paulo-1/q1";
 
-	/** Right on saving, wrong on debt: sao-paulo-1 has no other question, so the rule moves on in São Paulo. */
+	/** Right on saving, wrong on debt: the rule stays in sao-paulo-1 for its other question. */
 	private static final String TWO_ANSWERS = body("1-5y", history(right(BERLIN_1_Q1), wrong(SAO_PAULO_1_Q1)), false);
 
 	/**
-	 * What Jev chooses among after those two answers: two lessons per area, for investing one of each story.
-	 * sao-paulo-1 has no question left and sao-paulo-2 never had one that stands outside its story.
+	 * What Jev chooses among before the first answer and after one or two of them: two lessons per area, one of each
+	 * story where the area has more than one (Berlin and Buenos Aires for saving, Seoul and Tokyo for investing).
 	 */
-	private static final List<String> CHOICES_AFTER_TWO = List.of("berlin-1", "berlin-2", "sao-paulo-3", "sao-paulo-4",
-			"seoul-1", "tokyo-1");
-
-	private static final List<String> CHOICES_AFTER_ONE = List.of("berlin-1", "berlin-2", "sao-paulo-1", "sao-paulo-3",
+	private static final List<String> CHOICES = List.of("berlin-1", "buenos-aires-1", "sao-paulo-1", "sao-paulo-2",
 			"seoul-1", "tokyo-1");
 
 	private static final String FACTS = """
@@ -183,8 +180,8 @@ class QuickCheckStepTests {
 	void theQuestionIsDrawnFromTheLessonsOpenQuestionsAndIsNeverRepeated() throws Exception {
 		RANDOM.index = 1;
 		next("").andExpect(nextIs(BERLIN_1_Q2));
-		// Only the lesson's other question is open, whatever the draw.
-		next(wrong(BERLIN_1_Q2)).andExpect(nextIs(BERLIN_1_Q1));
+		// Only the lesson's third question is open, whatever the draw.
+		next(history(wrong(BERLIN_1_Q2), wrong(BERLIN_1_Q1))).andExpect(nextIs("berlin-1/q3"));
 		RANDOM.index = 0;
 		next(wrong(BERLIN_1_Q1)).andExpect(nextIs(BERLIN_1_Q2));
 	}
@@ -201,14 +198,14 @@ class QuickCheckStepTests {
 
 	@Test
 	void afterAWrongAnswerWithNoQuestionLeftInTheLessonTheStorysNextLessonFollows() throws Exception {
-		next(history(wrong(BERLIN_1_Q1), notSure(BERLIN_1_Q2))).andExpect(nextIs("berlin-2/q1"));
+		next(history(wrong(BERLIN_1_Q1), notSure(BERLIN_1_Q2), wrong("berlin-1/q3"))).andExpect(nextIs("berlin-2/q1"));
 	}
 
 	@Test
 	void aRightAnswerMovesToTheFirstAreaWithoutAnAnswer() throws Exception {
 		next(right(BERLIN_1_Q1)).andExpect(nextIs(SAO_PAULO_1_Q1));
 		// Seoul is the first investing story in stories.json.
-		next(history(right(BERLIN_1_Q1), right(SAO_PAULO_1_Q1))).andExpect(nextIs("seoul-1/q2"));
+		next(history(right(BERLIN_1_Q1), right(SAO_PAULO_1_Q1))).andExpect(nextIs("seoul-1/q1"));
 	}
 
 	@Test
@@ -222,10 +219,10 @@ class QuickCheckStepTests {
 	void aRunWithoutAMistakeGoesOnPastFourToTwoAnswersInEveryAreaAndEndsAtSix() throws Exception {
 		String four = history(right(BERLIN_1_Q1), right(SAO_PAULO_1_Q1), right("seoul-1/q2"), right("berlin-2/q1"));
 
-		// sao-paulo-2 has no question, so debt's second lesson is sao-paulo-3; seoul-2 has none either.
-		next(four).andExpect(nextIs("sao-paulo-3/q2"));
-		next(history(four, right("sao-paulo-3/q2"))).andExpect(nextIs("seoul-3/q1"));
-		step(body(null, history(four, right("sao-paulo-3/q2"), right("seoul-3/q1")), true)).andExpect(status().isOk())
+		// Each area's second question comes from its next lesson not asked about yet.
+		next(four).andExpect(nextIs("sao-paulo-2/q1"));
+		next(history(four, right("sao-paulo-2/q1"))).andExpect(nextIs("seoul-2/q1"));
+		step(body(null, history(four, right("sao-paulo-2/q1"), right("seoul-2/q1")), true)).andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"mastery": {"saving": 0.85, "debt": 0.85, "investing": 0.85}, "nextQuestionId": null, "done": true,
 					 "useRules": true, "stepFellBack": false}""", JsonCompareMode.STRICT));
@@ -278,8 +275,8 @@ class QuickCheckStepTests {
 				Arguments.of("unknown question", body(null, one.replace("berlin-1/q1", SENTINEL), true)),
 				Arguments.of("a lesson without its step", body(null, one.replace("berlin-1/q1", "berlin-1"), true)),
 				Arguments.of("repeated question", body(null, one + ", " + one, true)),
-				// berlin-1/q1 is true or false: two options.
-				Arguments.of("option past the last one", body(null, one.replace("\"optionIndex\": 0", "\"optionIndex\": 2"),
+				// berlin-1/q1 has three options.
+				Arguments.of("option past the last one", body(null, one.replace("\"optionIndex\": 0", "\"optionIndex\": 3"),
 						true)),
 				Arguments.of("negative option", body(null, one.replace("\"optionIndex\": 0", "\"optionIndex\": -1"),
 						true)));
@@ -349,7 +346,7 @@ class QuickCheckStepTests {
 		AtomicReference<JsonNode> sent = new AtomicReference<>();
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(request -> sent.set(json.readTree(((MockClientHttpRequest) request).getBodyAsString())))
-			.andRespond(jevReplies(jevStep(MASTERY_BOTH, "tokyo-1", CHOICES_AFTER_TWO, 0.2)));
+			.andRespond(jevReplies(jevStep(MASTERY_BOTH, "tokyo-1", CHOICES, 0.2)));
 		// Of Jev's lesson, the second question is drawn.
 		RANDOM.index = 1;
 
@@ -362,8 +359,8 @@ class QuickCheckStepTests {
 		assertEquals(json.readTree("""
 				{"profile": {"ageBand": null, "savingsCover": "1-3", "horizon": "1-5y"}, "goals": ["start-saving"],
 				 "answers": [
-				   {"area": "saving", "lessonId": "berlin-1", "topic": "Inflation and what your money can buy",
-				    "concepts": ["inflation", "real-return"], "result": "correct"},
+				   {"area": "saving", "lessonId": "berlin-1", "topic": "Why safe money can lose value",
+				    "concepts": ["inflation", "real-return", "fixed-term-deposit", "time-horizon"], "result": "correct"},
 				   {"area": "debt", "lessonId": "sao-paulo-1", "topic": "The interest in \\"no interest\\"",
 				    "concepts": ["installments", "hidden-interest"], "result": "wrong"}]}"""),
 				sent.get().get("state"));
@@ -373,15 +370,15 @@ class QuickCheckStepTests {
 		expected.set("mastery_debt", spec.get("mastery_debt"));
 		ObjectNode next = (ObjectNode) spec.get("next").deepCopy();
 		ObjectNode criteria = next.putObject("criteria");
-		CHOICES_AFTER_TWO.forEach(lesson -> criteria.put(label(lesson), TestPool.criterion(lesson)));
+		CHOICES.forEach(lesson -> criteria.put(label(lesson), TestPool.criterion(lesson)));
 		expected.set("next", next);
 		expected.set("enough", spec.get("enough"));
 		assertEquals(expected, sent.get().get("questions"));
 		// One option written out, so the name and the description are pinned as text too.
-		assertEquals("Inflation and what your money can buy. Covers: inflation, real return.",
-				sent.get().at("/questions/next/criteria/inflation_and_what_your_money_can_buy").stringValue());
-		assertEquals("Card debt that rolls over. Covers: revolving credit, compound interest.",
-				sent.get().at("/questions/next/criteria/card_debt_that_rolls_over").stringValue());
+		assertEquals("Why safe money can lose value. Covers: inflation, real return, fixed term deposit, time horizon.",
+				sent.get().at("/questions/next/criteria/why_safe_money_can_lose_value").stringValue());
+		assertEquals("Small payments that add up. Covers: installments, committed income.",
+				sent.get().at("/questions/next/criteria/small_payments_that_add_up").stringValue());
 	}
 
 	@Test
@@ -389,7 +386,7 @@ class QuickCheckStepTests {
 		AtomicReference<JsonNode> sent = new AtomicReference<>();
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(request -> sent.set(json.readTree(((MockClientHttpRequest) request).getBodyAsString())))
-			.andRespond(jevReplies(jevFirst("tokyo-1", CHOICES_AFTER_ONE)));
+			.andRespond(jevReplies(jevFirst("tokyo-1", CHOICES)));
 
 		step(VALID.replaceAll("\"history\": \\[.*?]", "\"history\": []").replace("\"useRules\": true", "\"useRules\": false"))
 			.andExpect(status().isOk())
@@ -403,7 +400,7 @@ class QuickCheckStepTests {
 				 "facts": %s}""".formatted(FACTS)), sent.get().get("state"));
 		ObjectNode first = (ObjectNode) SpecBlocks.read(json, "jev-step-questions").get("first").deepCopy();
 		ObjectNode criteria = first.putObject("criteria");
-		CHOICES_AFTER_ONE.forEach(lesson -> criteria.put(label(lesson), TestPool.criterion(lesson)));
+		CHOICES.forEach(lesson -> criteria.put(label(lesson), TestPool.criterion(lesson)));
 		// The first wording goes out as `next`, the one question of this call: no mastery, no `enough`.
 		assertEquals(json.createObjectNode().set("next", first), sent.get().get("questions"));
 	}
@@ -415,13 +412,13 @@ class QuickCheckStepTests {
 			.andExpect(jsonPath("$.state.answers").doesNotExist())
 			.andExpect(jsonPath("$.state.goals[0]").value("start-saving"))
 			.andExpect(jsonPath("$.state.profile.horizon").value("1-5y"))
-			.andRespond(jevReplies(jevFirst("sao-paulo-3", CHOICES_AFTER_ONE)));
+			.andRespond(jevReplies(jevFirst("sao-paulo-2", CHOICES)));
 
-		step(body("1-5y", "", false)).andExpect(status().isOk()).andExpect(nextIs("sao-paulo-3/q2"));
+		step(body("1-5y", "", false)).andExpect(status().isOk()).andExpect(nextIs("sao-paulo-2/q1"));
 	}
 
 	static Stream<Arguments> brokenFirstSteps() {
-		List<String> withBerlin3 = List.of("berlin-1", "berlin-3", "sao-paulo-1", "sao-paulo-3", "seoul-1", "tokyo-1");
+		List<String> withBerlin3 = List.of("berlin-1", "berlin-3", "sao-paulo-1", "sao-paulo-2", "seoul-1", "tokyo-1");
 		return Stream.of(
 				Arguments.of("500", withServerError()),
 				Arguments.of("read timeout", withException(new SocketTimeoutException())),
@@ -458,29 +455,29 @@ class QuickCheckStepTests {
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(jsonPath("$.state.facts.incomeBand").value("2-3.5k"))
 			.andExpect(jsonPath("$.state.profile.horizon").value("1-5y"))
-			.andRespond(jevReplies(jevStep("\"mastery_saving\": {\"type\": \"noul\", \"noul\": 0.9}", "sao-paulo-3",
-					CHOICES_AFTER_ONE, 0.1)));
+			.andRespond(jevReplies(jevStep("\"mastery_saving\": {\"type\": \"noul\", \"noul\": 0.9}", "sao-paulo-2",
+					CHOICES, 0.1)));
 
 		step(VALID.replace("\"useRules\": true", "\"useRules\": false")).andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"mastery": {"saving": 0.9, "debt": null, "investing": null}, "nextQuestionId": "sao-paulo-3/q2",
+					{"mastery": {"saving": 0.9, "debt": null, "investing": null}, "nextQuestionId": "sao-paulo-2/q1",
 					 "done": false, "useRules": false, "stepFellBack": false}""", JsonCompareMode.STRICT));
 	}
 
 	static Stream<Arguments> brokenSteps() {
 		// Berlin's third lesson is not among the lessons Jev was given: two per area.
-		List<String> withBerlin3 = List.of("berlin-1", "berlin-3", "sao-paulo-3", "sao-paulo-4", "seoul-1", "tokyo-1");
+		List<String> withBerlin3 = List.of("berlin-1", "berlin-3", "sao-paulo-1", "sao-paulo-2", "seoul-1", "tokyo-1");
 		return Stream.of(
 				Arguments.of("500", withServerError()),
 				Arguments.of("read timeout", withException(new SocketTimeoutException())),
 				Arguments.of("a lesson outside the choices",
 						jevReplies(jevStep(MASTERY_BOTH, "berlin-3", withBerlin3, 0.2))),
 				Arguments.of("missing mastery", jevReplies(jevStep(MASTERY_BOTH.replace("mastery_debt", "other"),
-						"tokyo-1", CHOICES_AFTER_TWO, 0.2))),
+						"tokyo-1", CHOICES, 0.2))),
 				Arguments.of("probability above 1",
-						jevReplies(jevStep(MASTERY_BOTH, "tokyo-1", CHOICES_AFTER_TWO, 1.2))),
+						jevReplies(jevStep(MASTERY_BOTH, "tokyo-1", CHOICES, 1.2))),
 				Arguments.of("missing enough",
-						jevReplies(jevStep(MASTERY_BOTH, "tokyo-1", CHOICES_AFTER_TWO, 0.2).replace("enough", "other"))),
+						jevReplies(jevStep(MASTERY_BOTH, "tokyo-1", CHOICES, 0.2).replace("enough", "other"))),
 				Arguments.of("not JSON", withSuccess("not json", MediaType.APPLICATION_JSON)));
 	}
 
@@ -491,30 +488,30 @@ class QuickCheckStepTests {
 
 		step(TWO_ANSWERS).andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"mastery": {"saving": 0.85, "debt": 0.25, "investing": null}, "nextQuestionId": "sao-paulo-3/q2",
+					{"mastery": {"saving": 0.85, "debt": 0.25, "investing": null}, "nextQuestionId": "sao-paulo-1/q2",
 					 "done": false, "useRules": false, "stepFellBack": true}""", JsonCompareMode.STRICT));
 	}
 
 	@Test
 	void jevSlowerThanThreeSecondsIsCutOffAndTheRuleTakesOver() throws Exception {
 		jev.expect(requestTo(JEV_URL))
-			.andRespond(after(Duration.ofMillis(3300), jevReplies(jevStep(MASTERY_BOTH, "tokyo-1", CHOICES_AFTER_TWO,
+			.andRespond(after(Duration.ofMillis(3300), jevReplies(jevStep(MASTERY_BOTH, "tokyo-1", CHOICES,
 					0.2))));
 
 		step(TWO_ANSWERS).andExpect(status().isOk())
-			.andExpect(content().json("{\"nextQuestionId\": \"sao-paulo-3/q2\", \"useRules\": false, \"stepFellBack\": true}",
+			.andExpect(content().json("{\"nextQuestionId\": \"sao-paulo-1/q2\", \"useRules\": false, \"stepFellBack\": true}",
 					JsonCompareMode.LENIENT));
 	}
 
 	@Test
 	void jevOverTheBudgetKeepsItsMasteryButTheRulePicksTheNextLesson() throws Exception {
 		jev.expect(requestTo(JEV_URL))
-			.andRespond(after(Duration.ofMillis(1600), jevReplies(jevStep(MASTERY_BOTH, "tokyo-1", CHOICES_AFTER_TWO,
+			.andRespond(after(Duration.ofMillis(1600), jevReplies(jevStep(MASTERY_BOTH, "tokyo-1", CHOICES,
 					0.2))));
 
 		step(TWO_ANSWERS).andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"mastery": {"saving": 0.8, "debt": 0.3, "investing": null}, "nextQuestionId": "sao-paulo-3/q2",
+					{"mastery": {"saving": 0.8, "debt": 0.3, "investing": null}, "nextQuestionId": "sao-paulo-1/q2",
 					 "done": false, "useRules": false, "stepFellBack": false}""", JsonCompareMode.STRICT));
 	}
 
@@ -535,7 +532,7 @@ class QuickCheckStepTests {
 	void enoughAfterThreeAnswersEndsTheTest() throws Exception {
 		jev.expect(requestTo(JEV_URL))
 			.andRespond(jevReplies(jevStep(MASTERY_BOTH, "tokyo-1",
-					List.of("berlin-2", "berlin-3", "sao-paulo-3", "sao-paulo-4", "seoul-1", "tokyo-1"), 0.75)));
+					CHOICES, 0.75)));
 
 		step(body("1-5y", history(right(BERLIN_1_Q1), wrong(SAO_PAULO_1_Q1), right(BERLIN_1_Q2)), false))
 			.andExpect(status().isOk())
@@ -550,7 +547,7 @@ class QuickCheckStepTests {
 
 		step(TWO_ANSWERS.replace("\"useRules\": false", "\"useRules\": false, \"stepFellBack\": true")).andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"mastery": {"saving": 0.85, "debt": 0.25, "investing": null}, "nextQuestionId": "sao-paulo-3/q2",
+					{"mastery": {"saving": 0.85, "debt": 0.25, "investing": null}, "nextQuestionId": "sao-paulo-1/q2",
 					 "done": false, "useRules": false, "stepFellBack": true}""", JsonCompareMode.STRICT));
 	}
 
@@ -558,7 +555,7 @@ class QuickCheckStepTests {
 	void overTheBudgetJevsEnoughStillEndsTheTest() throws Exception {
 		jev.expect(requestTo(JEV_URL))
 			.andRespond(after(Duration.ofMillis(1600), jevReplies(jevStep(MASTERY_BOTH, "tokyo-1",
-					List.of("berlin-2", "berlin-3", "sao-paulo-3", "sao-paulo-4", "seoul-1", "tokyo-1"), 0.75))));
+					CHOICES, 0.75))));
 
 		step(body("1-5y", history(right(BERLIN_1_Q1), wrong(SAO_PAULO_1_Q1), right(BERLIN_1_Q2)), false))
 			.andExpect(status().isOk())
@@ -569,7 +566,7 @@ class QuickCheckStepTests {
 
 	@Test
 	void sevenDistinctAnswersAre400() throws Exception {
-		List<String> seven = List.of(BERLIN_1_Q1, BERLIN_1_Q2, "berlin-2/q1", "berlin-2/q2", SAO_PAULO_1_Q1,
+		List<String> seven = List.of(BERLIN_1_Q1, BERLIN_1_Q2, "berlin-2/q1", "berlin-1/q3", SAO_PAULO_1_Q1,
 				"seoul-1/q2", "seoul-3/q1");
 
 		step(body(null, history(seven.stream().map(TestPool::notSure).toArray(String[]::new)), true))

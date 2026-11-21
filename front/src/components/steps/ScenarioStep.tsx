@@ -12,6 +12,18 @@ import type { ScenarioStep as ScenarioStepData, StepOutcome } from '@/types/less
 
 type Props = { step: ScenarioStepData; onDone: (outcome: StepOutcome) => void };
 
+/**
+ * Y range of the chart. Paths that stay far from zero (€10,000 ± a few hundred) get a range around their values,
+ * so the difference between choices shows; paths that reach zero or below keep zero in view.
+ */
+function yDomain(values: number[]): [number, number] {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (min <= 0 || (max - min) / max > 0.5) return [Math.min(0, min), max];
+  const pad = (max - min) * 0.25 || max * 0.02;
+  return [min - pad, max + pad];
+}
+
 /** Time per drawn point of the chosen path. */
 const DRAW_MS = 70;
 
@@ -65,7 +77,7 @@ export function ScenarioStep({ step, onDone }: Props) {
               ...step.choices.filter((c) => c !== chosen).map((c) => ({ points: toPoints(c.series), tone: 'muted' as const })),
               { points: toPoints(chosen.series.slice(0, Math.max(1, visible))), tone: 'primary' as const },
             ]}
-            domain={{ x: [0, maxLength - 1], y: [Math.min(0, ...allValues), Math.max(...allValues)] }}
+            domain={{ x: [0, maxLength - 1], y: yDomain(allValues) }}
             formatY={(y) => formatValue(y, step.unit)}
             accessibilityLabel={`After ${step.periodLabel}: ${formatValue(final, step.unit)}`}
             testID="scenario-chart"

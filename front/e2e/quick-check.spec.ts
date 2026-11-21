@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
 import { answerSurvey, expectDisabled, openApp, resetOnboarding, tap, type Survey } from './app';
 import { categorization } from '../src/test-utils/categorization';
@@ -98,8 +98,8 @@ test('three questions with the right answer shown after each, the summary, then 
   await tap(page, `quick-check-option-${CORRECT[0]}`);
   await expect(page.getByTestId(`quick-check-option-${CORRECT[0]}-correct`)).toBeVisible();
   await expect(page.getByTestId('quick-check-feedback')).toContainText('Right');
-  // The lesson's explanation, its [[real-return]] marker shown as plain words.
-  await expect(page.getByTestId('quick-check-feedback')).toContainText('price rise is the real return.');
+  // The lesson's explanation, its [[inflation]] marker shown as plain words.
+  await expect(page.getByTestId('quick-check-feedback')).toContainText('inflation is an average over a basket.');
   await expect(page.getByTestId('quick-check-feedback')).not.toContainText('[[');
   await expect(page.getByTestId('quick-check-feedback')).toBeInViewport();
   await expectDisabled(page, `quick-check-option-${CORRECT[0]}`);
@@ -119,7 +119,7 @@ test('three questions with the right answer shown after each, the summary, then 
   await expect(page.getByTestId(`quick-check-option-${wrong}-wrong`)).toBeVisible();
   await expect(page.getByTestId(`quick-check-option-${CORRECT[2]}-correct`)).toBeVisible();
   await expect(page.getByTestId('quick-check-feedback')).toContainText('Not quite');
-  await expect(page.getByTestId('quick-check-feedback')).toContainText(byId(ORDER[2]).explanation);
+  await expect(page.getByTestId('quick-check-feedback')).toContainText('The real return is the interest minus inflation');
   await expect(page.getByTestId('quick-check-feedback')).toBeInViewport();
   await tap(page, 'quick-check-continue');
 

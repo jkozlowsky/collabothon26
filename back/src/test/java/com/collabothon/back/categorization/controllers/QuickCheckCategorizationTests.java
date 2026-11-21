@@ -219,7 +219,8 @@ class QuickCheckCategorizationTests {
 					    "because": "Your account shows you move money to savings every month. Your Saving answers leave a few things open to explore."}],
 					 "startLesson": {"lessonId": "tokyo-1", "title": "%2$s", "area": "investing", "storyId": "tokyo",
 					                 "storyCity": "Tokyo"},
-					 "readyForNext": false, "pathStoryIds": ["tokyo", "berlin", "seoul", "sao-paulo"],
+					 "readyForNext": false,
+					 "pathStoryIds": ["tokyo", "berlin", "buenos-aires", "nairobi", "seoul", "mumbai", "sao-paulo"],
 					 "startHere": {"lessonId": "tokyo-1", "title": "%2$s", "area": "investing", "storyId": "tokyo",
 					               "storyCity": "Tokyo"},
 					 "sharedWithModel": {"facts": %4$s, "answers": %3$s, "profile": %1$s, "answerCount": 4, "stepCallsMade": 3}}"""
@@ -234,8 +235,8 @@ class QuickCheckCategorizationTests {
 					jevAnswer("investing", "seoul-1", "correct"), jevAnswer("investing", "tokyo-1", "not-sure")))),
 				sent.get().get("state"));
 		assertEquals(json.readTree("""
-				{"area": "saving", "lessonId": "berlin-2", "topic": "How money grows over time",
-				 "concepts": ["compound-interest", "real-return"], "result": "wrong"}"""),
+				{"area": "saving", "lessonId": "berlin-2", "topic": "An emergency fund",
+				 "concepts": ["emergency-fund", "liquidity"], "result": "wrong"}"""),
 				sent.get().at("/state/checkAnswers/1"));
 		JsonNode block = SpecBlocks.read(json, "jev-final-questions");
 		ObjectNode expected = (ObjectNode) SpecBlocks.read(json, SpecBlocks.F1, "jev-questions").deepCopy();
@@ -248,8 +249,8 @@ class QuickCheckCategorizationTests {
 		}
 		expected.set("first_lesson", firstLesson);
 		assertEquals(expected, sent.get().get("questions"));
-		assertEquals("Saving and investing. Covers: time horizon, emergency fund.",
-				sent.get().at("/questions/first_lesson/criteria/saving_and_investing").stringValue());
+		assertEquals("Saving, bonds, stocks and funds. Covers: stock, bond, etf, time horizon.",
+				sent.get().at("/questions/first_lesson/criteria/saving_bonds_stocks_and_funds").stringValue());
 	}
 
 	@Test
@@ -287,7 +288,7 @@ class QuickCheckCategorizationTests {
 	void aJevGapLabelTheRuleDoesNotBackReadsAsAligned() throws Exception {
 		jev.expect(requestTo(JEV_URL))
 			.andRespond(withSuccess(jevFinal(gap("saving", "habit_ahead") + gap("investing", "knowledge_ahead")
-					+ firstLesson("berlin-1", "berlin-1", "berlin-2", "seoul-1", "tokyo-1")), MediaType.APPLICATION_JSON));
+					+ firstLesson("berlin-1", "berlin-1", "buenos-aires-1", "seoul-1", "tokyo-1")), MediaType.APPLICATION_JSON));
 		// Right on saving and on investing, with both habits in the account: the rule finds no gap.
 		String history = "[" + history(right("berlin-1/q1"), right("seoul-1/q2")) + "]";
 
@@ -378,8 +379,9 @@ class QuickCheckCategorizationTests {
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		// Saving is weakest, then investing's two stories, then debt, which has no answer.
-		assertEquals(json.readTree("[\"berlin\", \"seoul\", \"tokyo\", \"sao-paulo\"]"),
+		// Saving's three stories (it is weakest), then investing's three, then debt, which has no answer.
+		assertEquals(json.readTree(
+				"[\"berlin\", \"buenos-aires\", \"nairobi\", \"seoul\", \"tokyo\", \"mumbai\", \"sao-paulo\"]"),
 				json.readTree(path).get("pathStoryIds"));
 		stored().andExpect(jsonPath("$.startHere.lessonId").value("berlin-1"));
 
@@ -389,7 +391,7 @@ class QuickCheckCategorizationTests {
 				               "storyCity": "Berlin"}}""".formatted(title("berlin-2")), JsonCompareMode.LENIENT));
 
 		completeStory("berlin");
-		stored().andExpect(content().json("{\"startHere\": {\"lessonId\": \"seoul-1\", \"area\": \"investing\"}}",
+		stored().andExpect(content().json("{\"startHere\": {\"lessonId\": \"buenos-aires-1\", \"area\": \"saving\"}}",
 				JsonCompareMode.LENIENT));
 
 		ObjectNode data = (ObjectNode) json.readTree(categorizations.findData(userId).orElseThrow());
@@ -406,7 +408,7 @@ class QuickCheckCategorizationTests {
 		categorize(onRules(QUICK_CHECK)).andExpect(status().isOk())
 			.andExpect(jsonPath("$.startLesson.lessonId").value("berlin-2"))
 			.andExpect(jsonPath("$.startLesson.storyId").value("berlin"))
-			.andExpect(jsonPath("$.pathStoryIds.length()").value(3));
+			.andExpect(jsonPath("$.pathStoryIds.length()").value(6));
 	}
 
 	@Test
@@ -414,7 +416,7 @@ class QuickCheckCategorizationTests {
 		String body = QUICK_CHECK.replace(HISTORY, ONE_RIGHT);
 		for (int i = 0; i < 2; i++) {
 			jev.expect(requestTo(JEV_URL))
-				.andRespond(withSuccess(jevFinal(firstLesson("berlin-1", "berlin-1", "berlin-2")),
+				.andRespond(withSuccess(jevFinal(firstLesson("berlin-1", "berlin-1", "buenos-aires-1")),
 						MediaType.APPLICATION_JSON));
 		}
 
@@ -535,6 +537,7 @@ class QuickCheckCategorizationTests {
 
 		// Of the investing lessons only seoul-5 is left to do.
 		completeStory("tokyo");
+		completeStory("mumbai");
 		complete("seoul-1", "seoul-2", "seoul-3", "seoul-4");
 
 		categorize(QUICK_CHECK.replace(HISTORY, "[" + right("seoul-1/q2") + "]")
@@ -592,7 +595,7 @@ class QuickCheckCategorizationTests {
 			"intermediate, 0.4, intermediate" })
 	void withoutAnAreaAtLeastBuildingTheRoleIsNovice(String jevRole, String saving, String role) throws Exception {
 		jev.expect(requestTo(JEV_URL))
-			.andRespond(withSuccess(jevFinal(firstLesson("berlin-1", "berlin-1", "berlin-2"))
+			.andRespond(withSuccess(jevFinal(firstLesson("berlin-1", "berlin-1", "buenos-aires-1"))
 				.replace("""
 						"role": {"type": "choice", "choice": "intermediate", "confidence": 0.8,
 						         "probabilities": {"novice": 0.1, "intermediate": 0.8, "advanced": 0.1}}""",
@@ -626,7 +629,7 @@ class QuickCheckCategorizationTests {
 
 	@Test
 	void sevenDistinctAnswersAre400() throws Exception {
-		List<String> seven = List.of("berlin-1/q1", "berlin-1/q2", "berlin-2/q1", "berlin-2/q2", "seoul-1/q2",
+		List<String> seven = List.of("berlin-1/q1", "berlin-1/q2", "berlin-2/q1", "berlin-1/q3", "seoul-1/q2",
 				"seoul-3/q1", "tokyo-1/q1");
 
 		categorize(onRules(QUICK_CHECK.replace(HISTORY,

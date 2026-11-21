@@ -61,7 +61,7 @@ class DuelIntegrationTests {
 	void categoriesReturnsStoriesInOrderWithFullNamesAndLevels() throws Exception {
 		mvc.perform(get("/api/duel/categories").param("userId", "demo-user"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.length()").value(4))
+			.andExpect(jsonPath("$.length()").value(7))
 			.andExpect(jsonPath("$[0].story").value("seoul"))
 			.andExpect(jsonPath("$[0].name").value("Hype & leverage"))
 			.andExpect(jsonPath("$[0].color").value("violet"))
@@ -71,7 +71,9 @@ class DuelIntegrationTests {
 			.andExpect(jsonPath("$[2].story").value("sao-paulo"))
 			.andExpect(jsonPath("$[2].name").value("Instalments & debt"))
 			.andExpect(jsonPath("$[3].story").value("tokyo"))
-			.andExpect(jsonPath("$[3].name").value("Diversification"));
+			.andExpect(jsonPath("$[3].name").value("Diversification"))
+			.andExpect(jsonPath("$[6].story").value("mumbai"))
+			.andExpect(jsonPath("$[6].name").value("Gold"));
 	}
 
 	@Test
@@ -375,7 +377,7 @@ class DuelIntegrationTests {
 		// GET /api/xp/{userId}/categories
 		mvc.perform(get("/api/xp/rank-user/categories"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.length()").value(4))
+			.andExpect(jsonPath("$.length()").value(7))
 			.andExpect(jsonPath("$[1].category").value("berlin"))
 			.andExpect(jsonPath("$[1].xp").value(50))
 			.andExpect(jsonPath("$[1].weeklyXp").value(50));
@@ -385,14 +387,14 @@ class DuelIntegrationTests {
 	void lessonCompletionWritesXpEventAndUpdatesTotalXp() throws Exception {
 		CLOCK.set(Instant.parse("2026-11-23T20:00:00Z"));
 
-		// Complete lesson berlin-1
+		// Complete lesson berlin-1 (mission 1, 60 XP)
 		mvc.perform(post("/api/lessons/berlin-1/result").param("userId", "lesson-tester")
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("{\"steps\":[],\"completedOn\":\"2026-11-23\",\"mode\":\"classic\"}"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.xpAwarded").value(50))
+			.andExpect(jsonPath("$.xpAwarded").value(60))
 			.andExpect(jsonPath("$.firstCompletion").value(true))
-			.andExpect(jsonPath("$.totalXp").value(50));
+			.andExpect(jsonPath("$.totalXp").value(60));
 
 		// Verify xp_event row was written
 		int count = jdbc.sql("SELECT COUNT(*) FROM xp_event WHERE user_id = 'lesson-tester' AND source = 'LESSON' AND category = 'berlin'")
@@ -403,7 +405,7 @@ class DuelIntegrationTests {
 		// AccountController stats returns totalXp from xp_event
 		mvc.perform(get("/api/users/lesson-tester/stats").param("today", "2026-11-23"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.totalXp").value(50))
+			.andExpect(jsonPath("$.totalXp").value(60))
 			.andExpect(jsonPath("$.lessonsCompleted").value(1));
 	}
 

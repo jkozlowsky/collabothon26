@@ -57,6 +57,15 @@ trap cleanup EXIT
 docker compose up -d --wait
 
 if curl -sf 127.0.0.1:8080/actuator/health >/dev/null; then
+  # `make dev` resets the database first; a backend started before that never migrated the new one and
+  # answers 500 ("relation ... does not exist"). Only reuse a backend that can actually read its tables.
+  status="$(curl -s -o /dev/null -w '%{http_code}' '127.0.0.1:8080/api/stories?userId=dev-check' || true)"
+  if [ "$status" != "200" ]; then
+    echo "✖ A backend is already running on 127.0.0.1:8080, but it cannot use the database (HTTP $status)."
+    echo "  It was started before the database was reset, so it has no tables. Stop it and run this again:"
+    echo "    pkill -f BackApplication   (or stop it in your IDE)"
+    exit 1
+  fi
   echo "▶ Backend already running on 127.0.0.1:8080, using it."
 else
   mkdir -p logs

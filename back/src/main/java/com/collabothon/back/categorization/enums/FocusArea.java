@@ -39,9 +39,10 @@ public enum FocusArea {
 	/** The area a story teaches: the one place the {@code area} names of stories.json are read. */
 	public static FocusArea ofStoryArea(String storyArea) {
 		return switch (storyArea) {
-			case "Saving" -> SAVING;
-			case "Credit & loans" -> DEBT;
-			case "Investing" -> INVESTING;
+			case "Saving", "Money basics" -> SAVING;
+			case "Borrowing" -> DEBT;
+			// The "Risk" path is about investing risk (hype, leverage, spreading), so the test rates it with investing.
+			case "Investing", "Risk" -> INVESTING;
 			default -> throw new IllegalStateException("No focus area for the story area " + storyArea);
 		};
 	}

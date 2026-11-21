@@ -10,18 +10,17 @@ import { CategoryPill } from '@/components/glossary/CategoryPill';
 import { DefinitionText } from '@/components/glossary/DefinitionText';
 import { FavoriteButton } from '@/components/glossary/FavoriteButton';
 import { TermGraphic } from '@/components/glossary/graphics';
-import { LevelToggle } from '@/components/glossary/LevelToggle';
 import { RelatedTerms } from '@/components/glossary/RelatedTerms';
 import { colors, elevation, nav, radii, spacing, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import { useGlossary } from '@/hooks/useGlossary';
 import { parseDefinition } from '@/lib/glossaryMarkup';
-import type { LanguageLevel, TermDetail } from '@/types/glossary';
+import type { TermDetail } from '@/types/glossary';
 
 /** `trail` is the comma-separated slugs of the terms visited before this one (Expo Router has no history API). */
 export default function DefinitionScreen() {
   const { slug, trail } = useLocalSearchParams<{ slug: string; trail?: string }>();
-  const { nameBySlug, favorites, toggleFavorite, favoriteError, languageLevel, setLanguageLevel } = useGlossary();
+  const { nameBySlug, favorites, toggleFavorite, favoriteError } = useGlossary();
   const { data, loading, error, reload } = useApi<TermDetail>(`/api/glossary/terms/${encodeURIComponent(slug)}`);
 
   const previous = trail ? trail.split(',').filter(Boolean) : [];
@@ -73,7 +72,7 @@ export default function DefinitionScreen() {
           </View>
         ) : (
           <AsyncContent loading={loading} error={error} onRetry={reload}>
-            {() => data && <Definition term={data} level={languageLevel} onLevelChange={setLanguageLevel} onOpenTerm={openTerm} />}
+            {() => data && <Definition term={data} onOpenTerm={openTerm} />}
           </AsyncContent>
         )}
       </ScrollView>
@@ -83,15 +82,11 @@ export default function DefinitionScreen() {
 
 type DefinitionProps = {
   term: TermDetail;
-  level: LanguageLevel;
-  onLevelChange: (level: LanguageLevel) => void;
   onOpenTerm: (slug: string) => void;
 };
 
-function Definition({ term, level, onLevelChange, onOpenTerm }: DefinitionProps) {
-  // Not every term has a plain version yet; then the standard text is shown and we say so.
-  const plainMissing = level === 'plain' && !term.definitionPlain;
-  const text = level === 'plain' && term.definitionPlain ? term.definitionPlain : term.definitionStandard;
+function Definition({ term, onOpenTerm }: DefinitionProps) {
+  const text = term.definitionStandard;
   // The hint only makes sense when this text actually has a link to tap.
   const hasLinks = parseDefinition(text).some((segment) => segment.type === 'link');
   return (
@@ -103,16 +98,9 @@ function Definition({ term, level, onLevelChange, onOpenTerm }: DefinitionProps)
         {term.fullName && <Text style={styles.fullName}>{term.fullName}</Text>}
       </View>
 
-      <LevelToggle value={level} onChange={onLevelChange} />
-
       <View style={styles.card}>
         <Text style={type.overline}>Definition</Text>
         <DefinitionText text={text} onOpenTerm={onOpenTerm} />
-        {plainMissing && (
-          <Text style={styles.hintText} testID="plain-missing">
-            No plain-words version yet, showing the standard definition.
-          </Text>
-        )}
         {hasLinks && (
           <View style={styles.hint} testID="link-hint">
             <Feather name="info" size={14} color={colors.globeOceanLight} />

@@ -1,8 +1,7 @@
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import { appRoutes } from '@/test-utils/routes';
-import { defaultLanguageLevel } from '@/hooks/useGlossary';
-import type { LanguageLevel, SearchResponse } from '@/types/glossary';
+import type { SearchResponse } from '@/types/glossary';
 
 const categories = [
   {
@@ -27,7 +26,6 @@ function detail(slug: string, extra: Record<string, unknown> = {}) {
     fullName: null,
     category: { slug: 'basics', name: 'Basics' },
     definitionStandard: `Standard text of ${slug}.`,
-    definitionPlain: null,
     example: null,
     graphicKey: null,
     related: [],
@@ -36,12 +34,12 @@ function detail(slug: string, extra: Record<string, unknown> = {}) {
 }
 
 const details: Record<string, unknown> = {
-  inflation: detail('inflation', { definitionPlain: 'Plain words about prices.' }),
+  inflation: detail('inflation'),
   etf: detail('etf'),
   dividend: detail('dividend'),
   growth: detail('growth', { graphicKey: 'compound-growth' }),
   mystery: detail('mystery', { graphicKey: 'no-such-graphic' }),
-  linked: detail('linked', { definitionStandard: 'Many [[etf|ETFs]] pay one.', definitionPlain: 'No links here.' }),
+  linked: detail('linked', { definitionStandard: 'Many [[etf|ETFs]] pay one.' }),
 };
 
 const hit = (slug: string, name: string) => ({
@@ -63,7 +61,7 @@ const searches: Record<string, SearchResponse> = {
 type Calls = { url: string; method: string; body?: string }[];
 let calls: Calls;
 
-function mockApi(opts: { favorites?: string[]; level?: LanguageLevel | null; failFavoriteSave?: boolean } = {}) {
+function mockApi(opts: { favorites?: string[]; failFavoriteSave?: boolean } = {}) {
   calls = [];
   const respond = (body: unknown, status = 200) =>
     Promise.resolve({ ok: status < 400, status, statusText: '', json: () => Promise.resolve(body) });
@@ -74,9 +72,6 @@ function mockApi(opts: { favorites?: string[]; level?: LanguageLevel | null; fai
     if (url.endsWith('/api/glossary')) return respond(categories);
     if (url.includes('/glossary/favorites/')) return opts.failFavoriteSave ? respond(null, 500) : respond(null, 204);
     if (url.endsWith('/glossary/favorites')) return respond(opts.favorites ?? []);
-    if (url.endsWith('/glossary/preference')) {
-      return method === 'PUT' ? respond(JSON.parse(init?.body as string)) : respond({ languageLevel: opts.level ?? null });
-    }
     if (url.includes('/api/glossary/search?q=')) return respond(searches[decodeURIComponent(url.split('q=')[1])] ?? empty);
     if (url.includes('/api/glossary/terms/')) return respond(details[url.split('/terms/')[1]]);
     return respond([]);
@@ -186,39 +181,13 @@ describe('favourites', () => {
   });
 });
 
-describe('language level', () => {
-  test('starts in plain words, switches to standard and remembers the choice on the backend', async () => {
+describe('definition', () => {
+  test('shows the standard definition with no language switch', async () => {
     mockApi();
     await openGlossary('/glossary/inflation');
-    expect(await screen.findByTestId('definition-text')).toHaveTextContent('Plain words about prices.');
-
-    await fireEvent.press(screen.getByTestId('level-standard'));
-    expect(screen.getByTestId('definition-text')).toHaveTextContent('Standard text of inflation.');
-    expect(calls).toContainEqual(
-      expect.objectContaining({ method: 'PUT', url: expect.stringMatching(/preference$/), body: '{"languageLevel":"standard"}' }),
-    );
-  });
-
-  test('a saved choice wins over the default', async () => {
-    mockApi({ level: 'standard' });
-    await openGlossary('/glossary/inflation');
-    await screen.findByTestId('definition-title');
-    expect(await screen.findByText('Standard text of inflation.')).toBeOnTheScreen();
-  });
-
-  test('a term without a plain version shows the standard text and says so', async () => {
-    mockApi();
-    await openGlossary('/glossary/etf');
-    expect(await screen.findByTestId('plain-missing')).toBeOnTheScreen();
-    expect(screen.getByTestId('definition-text')).toHaveTextContent('Standard text of etf.');
-  });
-
-  test('the default depends on experience: beginners plain, experienced standard', () => {
-    expect(defaultLanguageLevel(undefined)).toBe('plain');
-    expect(defaultLanguageLevel('none')).toBe('plain');
-    expect(defaultLanguageLevel('tried')).toBe('plain');
-    expect(defaultLanguageLevel('regular')).toBe('standard');
-    expect(defaultLanguageLevel('experienced')).toBe('standard');
+    expect(await screen.findByTestId('definition-text')).toHaveTextContent('Standard text of inflation.');
+    expect(screen.queryByText('In plain words')).not.toBeOnTheScreen();
+    expect(calls).not.toContainEqual(expect.objectContaining({ url: expect.stringMatching(/preference$/) }));
   });
 });
 
@@ -238,13 +207,16 @@ describe('graphics', () => {
 });
 
 describe('link hint', () => {
-  test('shows only when the visible definition has a link', async () => {
-    mockApi({ level: 'standard' });
+  test('shows when the definition has a link', async () => {
+    mockApi();
     await openGlossary('/glossary/linked');
     expect(await screen.findByTestId('link-hint')).toBeOnTheScreen();
+  });
 
-    fireEvent.press(screen.getByText('In plain words'));
-    expect(await screen.findByText('No links here.')).toBeOnTheScreen();
+  test('stays hidden when the definition has no link', async () => {
+    mockApi();
+    await openGlossary('/glossary/etf');
+    expect(await screen.findByTestId('definition-text')).toBeOnTheScreen();
     expect(screen.queryByTestId('link-hint')).not.toBeOnTheScreen();
   });
 });

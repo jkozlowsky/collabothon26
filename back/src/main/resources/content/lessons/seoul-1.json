@@ -1,8 +1,8 @@
 {
   "id": "seoul-1",
   "story": "seoul",
-  "title": "The chat that always knows",
-  "place": "Yeouido · office chat",
+  "title": "When a price only goes up",
+  "place": "Mission 1 · Swings",
   "topic": "Hype and drawdowns",
   "minutes": 4,
   "xp": 50,
@@ -12,62 +12,24 @@
   ],
   "steps": [
     {
-      "type": "chat",
-      "id": "c1",
-      "title": "Team chat · 4 people",
-      "messages": [
-        {
-          "from": "Min-jun",
-          "text": "Did you see? XYZ is up 40% this week"
-        },
-        {
-          "from": "Soo-ah",
-          "text": "My cousin's leading room says it doubles by June"
-        },
-        {
-          "from": "Min-jun",
-          "text": "I'm putting my whole bonus in"
-        },
-        {
-          "from": "Ji-woo",
-          "me": true,
-          "text": "I have ₩10M saved… should I?"
-        },
-        {
-          "from": "Soo-ah",
-          "text": "What's there to lose? It only goes up"
-        }
-      ]
-    },
-    {
       "type": "text",
       "id": "t1",
-      "kicker": "Meet Ji-woo",
-      "title": "27 · office worker in Seoul",
-      "body": "Ji-woo saved ₩10 million in three years. That is about €6,800. Her team chat says one stock only goes up. Before she decides: what does a big [[volatility|swing]] do to money?"
-    },
-    {
-      "type": "predict",
-      "id": "p1",
-      "concepts": [
-        "volatility"
-      ],
-      "prompt": "XYZ rose 40% in one week. The next week it fell 40%. Where is Ji-woo's money compared with the start?",
-      "input": {
-        "kind": "slider",
-        "min": -50,
-        "max": 50,
-        "step": 1,
-        "unit": "%"
-      },
-      "answer": -16,
-      "reveal": "₩10M → ₩14M → ₩8.4M. The 40% drop is taken from a bigger amount than the 40% rise was, so the same percent up and down never lands back at zero."
+      "kicker": "Hype",
+      "title": "Up 40% in a week",
+      "body": "A share jumps 40% in a week and everyone talks about it. It feels like it can only go up. But prices that rise fast usually fall fast too. These big swings are called [[volatility]].",
+      "stat": {
+        "value": "€8,400",
+        "from": 10000,
+        "label": "€10,000 after +40% one week and −40% the next",
+        "tone": "bad"
+      }
     },
     {
       "type": "text",
-      "id": "t1b",
-      "title": "Two weeks",
-      "body": "Week one: up 40%. ₩10M becomes ₩14M. Week two: down 40%, taken from ₩14M. She ends at ₩8.4M. Down 16%."
+      "id": "t2",
+      "kicker": "Why",
+      "title": "The fall is taken from more",
+      "body": "€10,000 rises 40% to €14,000. Then it falls 40%, and 40% of €14,000 is €5,600. You end at €8,400: down 16%, although the rise and the fall were the same size."
     },
     {
       "type": "slider-chart",
@@ -102,9 +64,10 @@
     },
     {
       "type": "text",
-      "id": "t2",
+      "id": "t3",
+      "kicker": "The rule",
       "title": "Losses weigh more than gains",
-      "body": "Lose 10%, and you need 11% to get back. Lose half, and you need to double. The deeper the fall, the harder the climb. That is the maths of a [[drawdown]]."
+      "body": "Lose 10%, and you need 11% to get back. Lose half, and you need to double. The deeper the fall, the harder the climb. A fall from a previous high is a [[drawdown]]."
     },
     {
       "type": "quiz",
@@ -112,14 +75,14 @@
       "concepts": [
         "volatility"
       ],
-      "prompt": "Why doesn't +40% followed by −40% bring Ji-woo back to zero?",
+      "prompt": "Why doesn't +40% followed by −40% bring you back to the start?",
       "options": [
         "The −40% is taken from a bigger amount than the +40% was",
         "The bank charges a fee in between",
         "Prices always fall faster than they rise"
       ],
       "correctIndex": 0,
-      "explanation": "₩10M × 1.4 × 0.6 = ₩8.4M. The second percent applies to the new, larger amount, so the same-sized drop removes more won."
+      "explanation": "The second percent applies to the new, larger amount, so the same-sized fall removes more money."
     },
     {
       "type": "quiz",
@@ -127,314 +90,23 @@
       "concepts": [
         "drawdown"
       ],
-      "prompt": "XYZ fell 50%. What rise does it need to get back to its old price?",
+      "prompt": "A share fell 50%. What rise does it need to get back to its old price?",
       "options": [
         "+50%",
         "+100%",
         "+25%"
       ],
       "correctIndex": 1,
-      "explanation": "Half the money has to double to be whole again: ₩5M × 2 = ₩10M."
+      "explanation": "Half the money has to double to be whole again."
     },
     {
       "type": "text",
-      "id": "t3",
+      "id": "t4",
       "kicker": "Your numbers",
       "title": "Your savings account",
-      "body": "This is your savings account today: **{savingsBalance}**. A 50% fall would need +100% to get back."
+      "body": "Your savings account holds **{savingsBalance}**. It does not swing at all. Money in a single share can fall 50% in a bad year, and then needs +100% to get back."
     }
   ],
-  "video": {
-    "minutes": 5,
-    "scenes": [
-      {
-        "type": "scene",
-        "id": "v1",
-        "title": "The chat",
-        "desc": "Ji-woo has saved ₩10M. Her team chat is full of winners.",
-        "duration": 12,
-        "camera": "push",
-        "setting": {
-          "place": "office",
-          "time": "dusk"
-        },
-        "layers": [
-          {
-            "kind": "character",
-            "pose": "sit",
-            "x": 0.26,
-            "name": "Ji-woo"
-          },
-          {
-            "kind": "phone",
-            "x": 0.72,
-            "messages": [
-              {
-                "from": "Min-jun",
-                "text": "XYZ is up 40% this week",
-                "at": 1.5
-              },
-              {
-                "from": "Soo-ah",
-                "text": "It doubles by June",
-                "at": 3.5
-              },
-              {
-                "from": "Min-jun",
-                "text": "I'm putting my whole bonus in",
-                "at": 5.5
-              }
-            ]
-          },
-          {
-            "kind": "amount",
-            "at": 8,
-            "len": 2,
-            "to": 10000000,
-            "currency": "KRW",
-            "label": "Ji-woo's savings"
-          }
-        ],
-        "captions": [
-          {
-            "at": 0.5,
-            "text": "Ji-woo saved ₩10 million in three years."
-          },
-          {
-            "at": 4,
-            "text": "Her team chat says one stock only goes up."
-          },
-          {
-            "at": 8,
-            "text": "Before she decides: what does a big swing do to money?"
-          }
-        ],
-        "transcript": "t1"
-      },
-      {
-        "type": "scene",
-        "id": "v2",
-        "title": "Two weeks",
-        "desc": "Watch what +40% and then −40% do to ₩10M. Big price swings are called [[volatility]].",
-        "duration": 12,
-        "camera": "drift",
-        "setting": {
-          "place": "office",
-          "time": "night"
-        },
-        "layers": [
-          {
-            "kind": "character",
-            "pose": "phone",
-            "x": 0.2
-          },
-          {
-            "kind": "chart",
-            "at": 1,
-            "len": 7,
-            "series": [
-              10,
-              14,
-              8.4
-            ],
-            "labels": [
-              "Start",
-              "Week 1",
-              "Week 2"
-            ],
-            "unit": "₩M"
-          },
-          {
-            "kind": "amount",
-            "at": 1,
-            "len": 3,
-            "from": 10000000,
-            "to": 14000000,
-            "currency": "KRW",
-            "label": "Ji-woo's shares"
-          },
-          {
-            "kind": "tag",
-            "at": 3.5,
-            "text": "+40%",
-            "tone": "good",
-            "x": 0.55,
-            "y": 0.42
-          },
-          {
-            "kind": "amount",
-            "at": 6,
-            "len": 3,
-            "from": 14000000,
-            "to": 8400000,
-            "currency": "KRW",
-            "label": "Ji-woo's shares"
-          },
-          {
-            "kind": "tag",
-            "at": 8,
-            "text": "−40%",
-            "tone": "bad",
-            "x": 0.8,
-            "y": 0.62
-          }
-        ],
-        "captions": [
-          {
-            "at": 0.5,
-            "text": "Week one: up 40%. ₩10M becomes ₩14M."
-          },
-          {
-            "at": 5.5,
-            "text": "Week two: down 40%, taken from ₩14M."
-          },
-          {
-            "at": 9,
-            "text": "She ends at ₩8.4M. Down 16%."
-          }
-        ],
-        "transcript": "t1b"
-      },
-      {
-        "type": "scene",
-        "id": "v3",
-        "title": "The climb back",
-        "desc": "A fall from a previous high is called a [[drawdown]]. After a 50% fall, the price must rise 100% to get back.",
-        "duration": 10,
-        "camera": "pull",
-        "setting": {
-          "place": "street",
-          "time": "night"
-        },
-        "layers": [
-          {
-            "kind": "character",
-            "pose": "stand",
-            "x": 0.16
-          },
-          {
-            "kind": "chart",
-            "at": 0.5,
-            "len": 6,
-            "series": [
-              10,
-              5,
-              10
-            ],
-            "labels": [
-              "Start",
-              "After the fall",
-              "Back"
-            ],
-            "unit": "₩M"
-          },
-          {
-            "kind": "tag",
-            "at": 2.5,
-            "text": "−50%",
-            "tone": "bad",
-            "x": 0.5,
-            "y": 0.66
-          },
-          {
-            "kind": "tag",
-            "at": 5.5,
-            "text": "+100%",
-            "tone": "good",
-            "x": 0.78,
-            "y": 0.42
-          }
-        ],
-        "captions": [
-          {
-            "at": 0.5,
-            "text": "Lose 10%, and you need 11% to get back."
-          },
-          {
-            "at": 4,
-            "text": "Lose half, and you need to double."
-          },
-          {
-            "at": 7,
-            "text": "The deeper the fall, the harder the climb."
-          }
-        ],
-        "transcript": "t2"
-      },
-      {
-        "type": "scene",
-        "id": "v4",
-        "title": "Your numbers",
-        "desc": "The same maths holds for any amount: a 50% fall needs +100% to get back.",
-        "duration": 8,
-        "camera": "push",
-        "setting": {
-          "place": "home",
-          "time": "night"
-        },
-        "layers": [
-          {
-            "kind": "character",
-            "pose": "sit",
-            "x": 0.2
-          },
-          {
-            "kind": "amount",
-            "at": 0.5,
-            "len": 2.5,
-            "metric": "savingsBalance",
-            "label": "Your savings account",
-            "fallback": {
-              "to": 10000000,
-              "currency": "KRW",
-              "label": "Ji-woo's savings"
-            }
-          },
-          {
-            "kind": "tag",
-            "at": 4.5,
-            "text": "−50%→+100%",
-            "tone": "neutral",
-            "x": 0.62,
-            "y": 0.6
-          }
-        ],
-        "captions": [
-          {
-            "at": 0.5,
-            "text": "This is your savings account today."
-          },
-          {
-            "at": 4.5,
-            "text": "A 50% fall would need +100% to get back."
-          }
-        ],
-        "noData": {
-          "captions": [
-            {
-              "at": 0.5,
-              "text": "Ji-woo's savings today."
-            },
-            {
-              "at": 4.5,
-              "text": "A 50% fall would need +100% to get back."
-            }
-          ]
-        },
-        "transcript": "t3"
-      }
-    ],
-    "beats": [
-      "v1",
-      "p1",
-      "v2",
-      "s1",
-      "v3",
-      "q1",
-      "q2",
-      "v4"
-    ]
-  },
   "variants": {
     "level:beginner": {
       "s1": {

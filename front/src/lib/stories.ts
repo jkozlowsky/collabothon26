@@ -2,38 +2,40 @@ import type { LessonSummary } from '@/types/lessons';
 import type { Learner, Story } from '@/types/stories';
 
 // ponytail: local mock, replaced by `GET /api/stories` (f4-f5-lessons-spec.md §6) once the backend has it.
-// Cities are spread out so pins never overlap (globe-home-spec.md §9); Seoul, Berlin, São Paulo and Tokyo have content.
+// One path per learning area (FocusArea): Saving (Berlin), Investing (Tokyo), Borrowing (São Paulo), Risk (Seoul),
+// Retirement (Cape Town, coming soon). Buenos Aires, Nairobi and Mumbai add a first extra lesson to their area.
+// Cities are spread out so pins never overlap (globe-home-spec.md §9).
 export const STORIES: Story[] = [
-  {
-    id: 'seoul',
-    city: 'Seoul',
-    title: 'Investing',
-    topic: 'Hype and borrowed money',
-    status: 'available',
-    pin: { lat: 37.57, lng: 126.98 },
-    icon: 'message-circle',
-    color: 'violet',
-    progress: { done: 0, total: 5 },
-    nextLesson: { id: 'seoul-1', title: 'The chat that always knows', minutes: 4 },
-    current: true,
-  },
   {
     id: 'berlin',
     city: 'Berlin',
     title: 'Saving',
-    topic: 'Why safe savings lose value',
+    topic: 'A safety net that keeps its value',
     status: 'available',
     pin: { lat: 52.52, lng: 13.4 },
     icon: 'shield',
     color: 'teal',
     progress: { done: 0, total: 5 },
-    nextLesson: { id: 'berlin-1', title: 'Safe, but not free', minutes: 4 },
+    nextLesson: { id: 'berlin-1', title: 'Pay yourself first', minutes: 3 },
+    current: true,
+  },
+  {
+    id: 'tokyo',
+    city: 'Tokyo',
+    title: 'Investing',
+    topic: 'Make money work for years',
+    status: 'available',
+    pin: { lat: 35.68, lng: 139.69 },
+    icon: 'trending-up',
+    color: 'rose',
+    progress: { done: 0, total: 5 },
+    nextLesson: { id: 'tokyo-1', title: 'Lend it or own it', minutes: 4 },
     current: false,
   },
   {
     id: 'sao-paulo',
     city: 'São Paulo',
-    title: 'Credit & loans',
+    title: 'Borrowing',
     topic: 'The real cost of instalments',
     status: 'available',
     pin: { lat: -23.55, lng: -46.63 },
@@ -44,16 +46,16 @@ export const STORIES: Story[] = [
     current: false,
   },
   {
-    id: 'tokyo',
-    city: 'Tokyo',
-    title: 'Investing',
-    topic: 'Spreading your investments',
+    id: 'seoul',
+    city: 'Seoul',
+    title: 'Risk',
+    topic: 'Hype, scams and borrowed money',
     status: 'available',
-    pin: { lat: 35.68, lng: 139.69 },
-    icon: 'globe',
-    color: 'rose',
+    pin: { lat: 37.57, lng: 126.98 },
+    icon: 'message-circle',
+    color: 'violet',
     progress: { done: 0, total: 5 },
-    nextLesson: { id: 'tokyo-1', title: 'Buy what you know', minutes: 3 },
+    nextLesson: { id: 'seoul-1', title: 'The chat that always knows', minutes: 4 },
     current: false,
   },
   {
@@ -61,12 +63,12 @@ export const STORIES: Story[] = [
     city: 'Buenos Aires',
     title: 'Money basics',
     topic: 'When prices run away',
-    status: 'coming-soon',
+    status: 'available',
     pin: { lat: -34.6, lng: -58.38 },
     icon: 'tag',
     color: 'orange',
-    progress: { done: 0, total: 0 },
-    nextLesson: null,
+    progress: { done: 0, total: 1 },
+    nextLesson: { id: 'buenos-aires-1', title: 'How fast prices double', minutes: 4 },
     current: false,
   },
   {
@@ -74,12 +76,12 @@ export const STORIES: Story[] = [
     city: 'Nairobi',
     title: 'Saving',
     topic: 'Saving on the go',
-    status: 'coming-soon',
+    status: 'available',
     pin: { lat: -1.29, lng: 36.82 },
     icon: 'smartphone',
     color: 'violet',
-    progress: { done: 0, total: 0 },
-    nextLesson: null,
+    progress: { done: 0, total: 1 },
+    nextLesson: { id: 'nairobi-1', title: 'Small amounts add up', minutes: 4 },
     current: false,
   },
   {
@@ -87,10 +89,23 @@ export const STORIES: Story[] = [
     city: 'Mumbai',
     title: 'Investing',
     topic: 'Why gold glitters',
-    status: 'coming-soon',
+    status: 'available',
     pin: { lat: 19.08, lng: 72.88 },
     icon: 'database',
     color: 'orange',
+    progress: { done: 0, total: 1 },
+    nextLesson: { id: 'mumbai-1', title: 'Why gold glitters', minutes: 4 },
+    current: false,
+  },
+  {
+    id: 'cape-town',
+    city: 'Cape Town',
+    title: 'Retirement',
+    topic: 'Money for the years after work',
+    status: 'coming-soon',
+    pin: { lat: -33.92, lng: 18.42 },
+    icon: 'sunset',
+    color: 'slate',
     progress: { done: 0, total: 0 },
     nextLesson: null,
     current: false,
@@ -146,4 +161,19 @@ export function withLessons(stories: Story[], lessons: LessonSummary[] | undefin
       nextLesson: next ? { id: next.id, title: next.title, minutes: next.minutes } : null,
     };
   });
+}
+
+/**
+ * Marks one story as current: the Quick check's "Start here" story, else the default story while it is not done,
+ * else the first story in progress, else the first not started. None when every story is done.
+ */
+export function withCurrent(stories: Story[], startId?: string): Story[] {
+  const pick =
+    startId ??
+    (
+      stories.find((s) => s.current && !isDone(s) && s.status === 'available') ??
+      stories.find((s) => calloutState(s) === 'inProgress') ??
+      stories.find((s) => calloutState(s) === 'notStarted')
+    )?.id;
+  return stories.map((s) => ({ ...s, current: s.id === pick }));
 }

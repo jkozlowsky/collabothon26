@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Slider } from '@/components/bank/Slider';
+import { MonthsMeter } from '@/components/lesson/MonthsMeter';
 import { RichText } from '@/components/lesson/RichText';
 import { StepLayout } from '@/components/lesson/StepLayout';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
@@ -23,6 +24,9 @@ export function ActionStep({ step, onDone }: Props) {
   const [ruleValue, setRuleValue] = useState(rule?.value ?? 0);
   const amount = rule?.appliesTo ? AMOUNTS[rule.appliesTo]?.(state) : undefined;
   const ruleAmount = amount === undefined ? undefined : rule?.kind === 'multiple' ? amount * ruleValue : (amount * ruleValue) / 100;
+  // Months the compared amount covers (savings ÷ monthly spending), for the months meter.
+  const compared = rule?.kind === 'multiple' && rule.compareTo ? AMOUNTS[rule.compareTo]?.(state) : undefined;
+  const haveMonths = compared !== undefined && amount ? compared / amount : undefined;
   const result = rule?.result ?? `= at most {amount} ${rule?.appliesToLabel ?? ''} on one bet`;
 
   return (
@@ -56,6 +60,13 @@ export function ActionStep({ step, onDone }: Props) {
             <Text style={styles.amount} testID="rule-amount">
               {result.replace('{amount}', money(Math.round(ruleAmount), { whole: true }))}
             </Text>
+          )}
+          {haveMonths !== undefined && ruleAmount !== undefined && compared !== undefined && (
+            <MonthsMeter
+              target={ruleValue}
+              have={haveMonths}
+              shortBy={money(Math.max(0, Math.round(ruleAmount - compared)), { whole: true })}
+            />
           )}
         </View>
       )}

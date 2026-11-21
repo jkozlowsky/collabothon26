@@ -94,9 +94,8 @@ class CategorizationWithoutKeyTests {
 	@Test
 	void theQuestionsAreServedWithoutAKey() throws Exception {
 		mvc.perform(get("/api/check-questions")).andExpect(status().isOk())
-			.andExpect(jsonPath("$.length()").value(25))
-			// seoul-1/q1 names the story's character, so the list starts at the lesson's other question.
-			.andExpect(jsonPath("$[0].id").value("seoul-1/q2"));
+			.andExpect(jsonPath("$.length()").value(41))
+			.andExpect(jsonPath("$[0].id").value("seoul-1/q1"));
 	}
 
 	@Test
@@ -131,7 +130,7 @@ class CategorizationWithoutKeyTests {
 			.andExpect(jsonPath("$.startLesson.lessonId").value("seoul-1"))
 			.andExpect(jsonPath("$.gaps").isEmpty());
 
-		assertEquals(List.of("berlin-1/q1", "sao-paulo-1/q1", "seoul-1/q2", "berlin-2/q1", "sao-paulo-3/q2", "seoul-3/q1"),
+		assertEquals(List.of("berlin-1/q1", "sao-paulo-1/q1", "seoul-1/q1", "berlin-2/q1", "sao-paulo-2/q1", "seoul-2/q1"),
 				asked);
 	}
 
@@ -142,7 +141,7 @@ class CategorizationWithoutKeyTests {
 		play(asked, true, true, true, false).andExpect(jsonPath("$.role").value("intermediate"))
 			.andExpect(jsonPath("$.mastery.saving").value(0.55));
 
-		assertEquals(List.of("berlin-1/q1", "sao-paulo-1/q1", "seoul-1/q2", "berlin-2/q1"), asked);
+		assertEquals(List.of("berlin-1/q1", "sao-paulo-1/q1", "seoul-1/q1", "berlin-2/q1"), asked);
 	}
 
 	@Test
@@ -165,9 +164,9 @@ class CategorizationWithoutKeyTests {
 						JsonCompareMode.LENIENT))
 				.andExpect(jsonPath("$.gaps.length()").value(1));
 
-			// Both berlin-1 questions come, in the drawn order.
-			assertEquals(draw == 0 ? List.of("berlin-1/q1", "berlin-1/q2", "sao-paulo-1/q1", "seoul-1/q2")
-					: List.of("berlin-1/q2", "berlin-1/q1", "sao-paulo-1/q1", "seoul-1/q2"), asked);
+			// Two of berlin-1's three questions come, as drawn.
+			assertEquals(draw == 0 ? List.of("berlin-1/q1", "berlin-1/q2", "sao-paulo-1/q1", "seoul-1/q1")
+					: List.of("berlin-1/q2", "berlin-1/q3", "sao-paulo-1/q2", "seoul-1/q2"), asked);
 		}
 	}
 
@@ -197,7 +196,7 @@ class CategorizationWithoutKeyTests {
 			.andExpect(jsonPath("$.mastery.saving").value(0.25))
 			.andExpect(jsonPath("$.mastery.debt").isEmpty());
 
-		assertEquals(List.of("berlin-1/q1", "berlin-1/q2", "berlin-2/q1", "berlin-2/q2"), asked);
+		assertEquals(List.of("berlin-1/q1", "berlin-1/q2", "berlin-1/q3", "berlin-2/q1"), asked);
 	}
 
 	private ResultActions play(List<String> asked, boolean... right) throws Exception {

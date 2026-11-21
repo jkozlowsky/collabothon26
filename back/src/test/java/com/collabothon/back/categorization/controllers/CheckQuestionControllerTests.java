@@ -30,12 +30,10 @@ import tools.jackson.databind.json.JsonMapper;
 @AutoConfigureMockMvc
 class CheckQuestionControllerTests {
 
-	/** Quiz steps that name their story's character (Ji-woo in Seoul, Rafa in São Paulo): never asked outside it. */
-	private static final Set<String> NAMING_THE_CHARACTER = Set.of("seoul-1/q1", "seoul-2/q1", "seoul-2/q2", "seoul-5/q2",
-			"sao-paulo-1/q2", "sao-paulo-2/q1", "sao-paulo-3/q1", "sao-paulo-4/q1", "sao-paulo-5/q1");
-
+	/** Seoul's story area is "Risk" and Buenos Aires's "Money basics": the test rates them with investing and saving. */
 	private static final Map<String, String> AREA_OF_STORY = Map.of("seoul", "investing", "berlin", "saving",
-			"sao-paulo", "debt", "tokyo", "investing");
+			"sao-paulo", "debt", "tokyo", "investing", "buenos-aires", "saving", "nairobi", "saving", "mumbai",
+			"investing");
 
 	@Autowired
 	MockMvc mvc;
@@ -66,16 +64,17 @@ class CheckQuestionControllerTests {
 			.findFirst()
 			.orElseThrow();
 
-		// The whole object: these seven fields are the contract.
+		// The whole object: these seven fields are the contract. The lesson's "Checkpoint 1 of 3 · " is cut off.
+		assertEquals("Checkpoint 1 of 3 · What does an inflation rate of 3% mean?", step.get("prompt").stringValue());
 		assertEquals(json.readTree("""
-				{"id": "berlin-1/q1", "lessonId": "berlin-1", "area": "saving", "prompt": %s, "options": %s,
-				 "correctIndex": %d, "explanation": %s}"""
-			.formatted(step.get("prompt"), step.get("options"), step.get("correctIndex").intValue(),
-					step.get("explanation"))), question);
+				{"id": "berlin-1/q1", "lessonId": "berlin-1", "area": "saving",
+				 "prompt": "What does an inflation rate of 3%% mean?", "options": %s, "correctIndex": %d,
+				 "explanation": %s}"""
+			.formatted(step.get("options"), step.get("correctIndex").intValue(), step.get("explanation"))), question);
 	}
 
 	@Test
-	void thePoolHasTheQuizStepsThatStandOutsideTheirStoryInStoryOrderWithAResolvableLesson() throws Exception {
+	void thePoolHasTheQuizStepsWithoutAChartInStoryOrderWithAResolvableLesson() throws Exception {
 		List<String> expected = new ArrayList<>();
 		for (JsonNode story : lessonContent.stories()) {
 			for (String lessonId : lessonContent.lessonIdsOf(story)) {
@@ -83,15 +82,14 @@ class CheckQuestionControllerTests {
 				lesson.path("steps").valueStream()
 					.filter(s -> s.path("type").asString().equals("quiz") && !s.has("chart"))
 					.map(s -> lessonId + "/" + s.path("id").asString())
-					.filter(id -> !NAMING_THE_CHARACTER.contains(id))
 					.forEach(expected::add);
 			}
 		}
 		JsonNode pool = pool();
 
 		assertEquals(expected, pool.valueStream().map(q -> q.get("id").stringValue()).toList());
-		// 37 quiz steps: three are about a chart the test cannot show, nine name their story's character.
-		assertEquals(25, pool.size());
+		// 46 quiz steps: five are about a chart the test cannot show.
+		assertEquals(41, pool.size());
 		for (JsonNode q : pool) {
 			String id = q.get("id").stringValue();
 			String lessonId = q.get("lessonId").stringValue();
@@ -101,21 +99,8 @@ class CheckQuestionControllerTests {
 			assertTrue(q.get("options").size() >= 2, id);
 			assertTrue(q.get("correctIndex").intValue() < q.get("options").size(), id);
 			assertFalse(q.get("prompt").stringValue().isBlank(), id);
+			assertFalse(q.get("prompt").stringValue().startsWith("Checkpoint"), id);
 			assertFalse(q.get("explanation").stringValue().isBlank(), id);
-		}
-	}
-
-	@Test
-	void noQuestionTextNamesAStoryCharacter() throws Exception {
-		List<String> names = lessonContent.stories().stream()
-			.map(story -> story.path("character").path("name").asString(""))
-			.filter(name -> !name.isEmpty())
-			.toList();
-
-		assertEquals(List.of("Ji-woo", "Rafa"), names);
-		for (JsonNode q : pool()) {
-			String text = q.get("prompt") + " " + q.get("options") + " " + q.get("explanation");
-			names.forEach(name -> assertFalse(text.contains(name), q.get("id").stringValue()));
 		}
 	}
 
@@ -124,11 +109,9 @@ class CheckQuestionControllerTests {
 		Set<String> tested = new HashSet<>();
 		pool().forEach(q -> tested.add(q.get("lessonId").stringValue()));
 
-		// seoul-4 has no quiz step; the only quiz steps of seoul-2 and sao-paulo-2 name the character.
+		// seoul-4 has no quiz step; the other 22 lessons have one without a chart.
 		assertFalse(tested.contains("seoul-4"));
-		assertFalse(tested.contains("seoul-2"));
-		assertFalse(tested.contains("sao-paulo-2"));
-		assertEquals(17, tested.size());
+		assertEquals(22, tested.size());
 	}
 
 }

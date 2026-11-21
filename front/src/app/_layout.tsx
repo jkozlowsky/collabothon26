@@ -14,6 +14,7 @@ import { colors, elevation, fonts } from '@/constants/theme';
 import { AccountProvider } from '@/hooks/useAccount';
 import { BankProvider } from '@/hooks/useBank';
 import { OnboardingProvider, useOnboarding } from '@/hooks/useOnboarding';
+import { SpotlightProvider } from '@/hooks/useSpotlight';
 import { ToastProvider } from '@/hooks/useToast';
 import { TransferSheetProvider } from '@/hooks/useTransferSheet';
 
@@ -40,7 +41,9 @@ export default function RootLayout() {
           <BankProvider>
             <ToastProvider>
               <TransferSheetProvider>
-                <RootStack />
+                <SpotlightProvider>
+                  <RootStack />
+                </SpotlightProvider>
               </TransferSheetProvider>
             </ToastProvider>
           </BankProvider>
@@ -93,6 +96,7 @@ function RootStack() {
             headerTitleStyle: { fontFamily: fonts.semiBold, color: colors.textPrimary },
           }}
         />
+        <Stack.Screen name="offers/[id]" options={{ animation: 'slide_from_right' }} />
       </Stack.Protected>
       {/* Full-screen duel flow over the tabs. Not behind the onboarding guard, so a reload mid-match can resume. */}
       <Stack.Screen name="duel/match" />

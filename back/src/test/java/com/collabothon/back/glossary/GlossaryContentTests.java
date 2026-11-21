@@ -37,19 +37,15 @@ class GlossaryContentTests {
 	void everyInlineLinkPointsToAnExistingTerm() {
 		Set<String> slugs = terms.findAll().stream().map(GlossaryTerm::getSlug).collect(Collectors.toSet());
 		for (GlossaryTerm t : terms.findAll()) {
-			for (String text : new String[] { t.getDefinitionStandard(), t.getDefinitionPlain() }) {
-				if (text == null) {
-					continue;
-				}
-				Matcher m = LINK.matcher(text);
-				while (m.find()) {
-					assertThat(slugs).as("link [[%s]] in '%s'", m.group(1), t.getSlug()).contains(m.group(1));
-					assertThat(m.group(1)).as("term must not link to itself: %s", t.getSlug()).isNotEqualTo(t.getSlug());
-				}
-				assertThat(text.replaceAll(LINK.pattern(), "")).as("stray brackets in '%s'", t.getSlug())
-					.doesNotContain("[[")
-					.doesNotContain("]]");
+			String text = t.getDefinitionStandard();
+			Matcher m = LINK.matcher(text);
+			while (m.find()) {
+				assertThat(slugs).as("link [[%s]] in '%s'", m.group(1), t.getSlug()).contains(m.group(1));
+				assertThat(m.group(1)).as("term must not link to itself: %s", t.getSlug()).isNotEqualTo(t.getSlug());
 			}
+			assertThat(text.replaceAll(LINK.pattern(), "")).as("stray brackets in '%s'", t.getSlug())
+				.doesNotContain("[[")
+				.doesNotContain("]]");
 		}
 	}
 

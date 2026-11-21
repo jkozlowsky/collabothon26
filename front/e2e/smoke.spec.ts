@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 import { answerFromConsent, emptyQuestionBank, goToConsent, gotoBank, resetOnboarding } from './app';
 

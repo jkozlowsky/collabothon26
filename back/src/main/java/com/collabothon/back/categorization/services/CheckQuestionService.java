@@ -24,6 +24,9 @@ public class CheckQuestionService {
 
 	private static final String QUIZ = "quiz";
 
+	// A lesson counts its own quiz steps in the prompt ("Checkpoint 1 of 3 · "), which means nothing in the test.
+	private static final String CHECKPOINT = "^Checkpoint \\d+ of \\d+ · ";
+
 	private final List<CheckQuestion> pool;
 
 	private final CheckQuestionMapper mapper;
@@ -33,16 +36,15 @@ public class CheckQuestionService {
 		List<CheckQuestion> questions = new ArrayList<>();
 		for (JsonNode story : content.stories()) {
 			FocusArea area = FocusArea.ofStoryArea(story.path("area").asString());
-			String character = story.path("character").path("name").asString("").split(" ")[0];
 			for (String lessonId : content.lessonIdsOf(story)) {
 				JsonNode lesson = content.lesson(lessonId).orElseThrow();
 				List<String> concepts = strings(lesson.path("concepts"));
 				for (JsonNode step : lesson.path("steps")) {
-					// Left out: a step that asks about its chart (the test shows none) or that names its story's character.
-					if (QUIZ.equals(step.path("type").asString()) && !step.has("chart") && !mentions(step, character)) {
+					// Left out: a step that asks about its chart, since the test shows none.
+					if (QUIZ.equals(step.path("type").asString()) && !step.has("chart")) {
 						questions.add(new CheckQuestion(lessonId + "/" + step.path("id").asString(), lessonId,
 								story.path("id").asString(), area, lesson.path("topic").asString(), concepts,
-								step.path("prompt").asString(), strings(step.path("options")),
+								step.path("prompt").asString().replaceFirst(CHECKPOINT, ""), strings(step.path("options")),
 								step.path("correctIndex").asInt(), step.path("explanation").asString()));
 					}
 				}
@@ -55,13 +57,6 @@ public class CheckQuestionService {
 		if (labels.stream().distinct().count() != labels.size()) {
 			throw new IllegalStateException("Two lessons with a quiz share a topic");
 		}
-	}
-
-	/** A step that names the story's character only makes sense inside that story. */
-	private static boolean mentions(JsonNode step, String character) {
-		String text = String.join(" ", step.path("prompt").asString(), step.path("explanation").asString(),
-				String.join(" ", strings(step.path("options"))));
-		return !character.isEmpty() && text.contains(character);
 	}
 
 	private static List<String> strings(JsonNode array) {

@@ -125,7 +125,8 @@ test('video: a scene plays full screen, Skip swaps it for the step, a missed qui
   await answer(0);
 
   expect(await screen.findByText('Lesson complete!')).toBeOnTheScreen();
-  expect(await screen.findByText('+50 XP')).toBeOnTheScreen();
+  // The XP counts up on the end screen.
+  expect(await screen.findByText('+50 XP', {}, { timeout: 4000 })).toBeOnTheScreen();
 
   // Watch again plays the last scene full screen; Skip returns to the end screen.
   await fireEvent.press(screen.getByTestId('lesson-watch-again'));

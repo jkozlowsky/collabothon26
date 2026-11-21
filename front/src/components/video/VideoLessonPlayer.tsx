@@ -28,13 +28,15 @@ type Props = {
   onClose: () => void;
   onNext: (lessonId: string) => void;
   onOpenGlossary: () => void;
+  /** Set on the story's last lesson: what the bank offers in the story's area. */
+  onOffers?: () => void;
 };
 
 /**
  * Video form of a lesson: a scene plays full screen; a step or the end screen takes the whole screen, as in the
  * classic form, with no player above it.
  */
-export function VideoLessonPlayer({ lesson, session, onClose, onNext, onOpenGlossary }: Props) {
+export function VideoLessonPlayer({ lesson, session, onClose, onNext, onOpenGlossary, onOffers }: Props) {
   const { progress, xp, complete, switchTo } = session;
   const { beats, scenes } = lesson.video;
   const { state: bank } = useBank();
@@ -126,10 +128,12 @@ export function VideoLessonPlayer({ lesson, session, onClose, onNext, onOpenGlos
             ) : (
               <LessonEnd
                 title={lesson.title}
+                stop={{ position: lesson.position, total: lesson.total, city: lesson.city }}
                 xp={xp}
                 concepts={lesson.concepts.map((key) => ({ key, term: lesson.glossary[key]?.term ?? key, weak: weak.has(key) }))}
                 onConcept={setConcept}
                 onNext={lesson.next ? () => onNext(lesson.next!) : undefined}
+                onOffers={onOffers}
                 onClose={onClose}
                 onWatchAgain={
                   lastScene

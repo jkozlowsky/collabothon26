@@ -18,7 +18,7 @@ import type {
   StartMatchRequest,
 } from '@/types/duel';
 
-const FEEDBACK_AUTO_ADVANCE_MS = 1200;
+const FEEDBACK_AUTO_ADVANCE_MS = 3000;
 const COUNTDOWN_TICK_MS = 250;
 const POLL_INTERVAL_MS = 1000;
 const FINDING_RIVAL_MS = 1500;

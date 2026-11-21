@@ -1,5 +1,5 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,12 +11,15 @@ import { localDate, useAccount } from '@/hooks/useAccount';
 import { useApi } from '@/hooks/useApi';
 import { useLessonSession } from '@/hooks/useLessonSession';
 import { api } from '@/lib/api';
+import { offersFor } from '@/lib/offers';
+import { preloadSfx } from '@/lib/sfx';
 import { USER_ID } from '@/lib/user';
 import type { Lesson, LessonMode, LessonResultRequest, LessonResultResponse } from '@/types/lessons';
 
 const user = encodeURIComponent(USER_ID);
 
 export default function LessonScreen() {
+  useEffect(preloadSfx, []);
   const { id } = useLocalSearchParams<{ id: string }>();
   // Loaded once: both orders (classic steps, video beats) come in one response, so switching needs no reload.
   const { data: lesson, loading, error, reload } = useApi<Lesson>(`/api/lessons/${id}?userId=${user}`);
@@ -53,11 +56,19 @@ function LessonRun({ lesson }: { lesson: Lesson }) {
   }, []);
   const session = useLessonSession(lesson, { saveResult, rememberMode });
 
-  const close = () => (router.canGoBack() ? router.back() : router.replace('/map'));
+  // The last lesson of a city, finished for the first time: the map plays the "city done" flight.
+  const pathDone =
+    lesson.next === null && lesson.position === lesson.total && typeof session.xp === 'number' && session.xp > 0 ? { city: lesson.city } : undefined;
+  const close = () => {
+    if (pathDone) router.dismissTo({ pathname: '/map', params: { celebrate: lesson.story } });
+    else if (router.canGoBack()) router.back();
+    else router.replace('/map');
+  };
   const nav = {
     onClose: close,
     onNext: (next: string) => router.replace({ pathname: '/lesson/[id]', params: { id: next } }),
     onOpenGlossary: () => router.navigate('/glossary'),
+    onOffers: !lesson.next && offersFor(lesson.story) ? () => router.replace({ pathname: '/offers/[id]', params: { id: lesson.story } }) : undefined,
   };
   const video = session.progress.mode === 'video' && lesson.video ? { ...lesson, video: lesson.video } : null;
 

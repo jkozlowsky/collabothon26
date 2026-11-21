@@ -7,7 +7,7 @@ export const POOL: CheckQuestion[] = [
     lessonId: 'seoul-1',
     area: 'investing',
     prompt:
-      'Why doesn\'t +40% followed by −40% bring Ji-woo back to zero?',
+      'Why doesn\'t +40% followed by −40% bring you back to the start?',
     options: [
       'The −40% is taken from a bigger amount than the +40% was',
       'The bank charges a fee in between',
@@ -15,14 +15,14 @@ export const POOL: CheckQuestion[] = [
     ],
     correctIndex: 0,
     explanation:
-      '₩10M × 1.4 × 0.6 = ₩8.4M. The second percent applies to the new, larger amount, so the same-sized drop removes more won.',
+      'The second percent applies to the new, larger amount, so the same-sized fall removes more money.',
   },
   {
     id: 'seoul-1/q2',
     lessonId: 'seoul-1',
     area: 'investing',
     prompt:
-      'XYZ fell 50%. What rise does it need to get back to its old price?',
+      'A share fell 50%. What rise does it need to get back to its old price?',
     options: [
       '+50%',
       '+100%',
@@ -30,60 +30,61 @@ export const POOL: CheckQuestion[] = [
     ],
     correctIndex: 1,
     explanation:
-      'Half the money has to double to be whole again: ₩5M × 2 = ₩10M.',
+      'Half the money has to double to be whole again.',
   },
   {
     id: 'berlin-1/q1',
     lessonId: 'berlin-1',
     area: 'saving',
     prompt:
-      'True or false: money in a savings account cannot lose value.',
+      'What does an inflation rate of 3% mean?',
     options: [
-      'True',
-      'False',
+      'On average, the basket of goods costs 3% more than a year ago',
+      'Every price rose by exactly 3%',
+      'The bank takes 3% of your balance',
     ],
-    correctIndex: 1,
+    correctIndex: 0,
     explanation:
-      'False. The balance does not fall, but prices rise. If the interest is lower than the price rise, the money buys less each year. The difference between interest and price rise is the [[real-return]].',
+      '[[inflation]] is an average over a basket. Some prices rise much more, some less, some even fall.',
   },
   {
     id: 'berlin-1/q2',
     lessonId: 'berlin-1',
     area: 'saving',
     prompt:
-      'An account pays 1% a year. Prices rise by 3% a year. What happens to the money?',
+      'Savings earn 2%. Prices rise 3%. What happens to what the money can buy?',
     options: [
-      'The balance grows, but it buys about 2% less each year',
-      'Nothing, because the balance never falls',
-      'The balance falls by 3% each year',
+      'It shrinks by about 1% a year',
+      'It grows by 2% a year',
+      'It stays the same, the balance never falls',
     ],
     correctIndex: 0,
     explanation:
-      'The balance rises by 1%. Prices rise by 3%. So the money buys about 2% less each year, even though the number on the screen goes up.',
+      'The [[real-return]] is the interest minus inflation: 2% − 3% ≈ −1%. The balance grows, the buying power shrinks.',
   },
   {
     id: 'berlin-2/q1',
     lessonId: 'berlin-2',
     area: 'saving',
     prompt:
-      'True or false: with compound interest, money grows by the same amount every year.',
+      'True or false: an emergency fund should grow as fast as possible.',
     options: [
       'True',
       'False',
     ],
     correctIndex: 1,
     explanation:
-      'False. Each year, the earnings from earlier years earn too. So the amount added each year gets bigger.',
+      'False. Its job is to be there at once and keep its value. Fast growth comes with swings, and a surprise does not wait for a good day.',
   },
   {
     id: 'sao-paulo-1/q1',
     lessonId: 'sao-paulo-1',
     area: 'debt',
     prompt:
-      'When is "12x sem juros" really without interest?',
+      'When is “0% interest” really without interest?',
     options: [
       'When paying at once gets no discount at all',
-      'Whenever the store says so',
+      'Whenever the shop says so',
       'When the payments are small',
     ],
     correctIndex: 0,

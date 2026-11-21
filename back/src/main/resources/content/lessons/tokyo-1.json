@@ -1,23 +1,123 @@
 {
   "id": "tokyo-1",
   "story": "tokyo",
-  "title": "Where your money sits",
+  "title": "Lend it or own it",
   "place": "Your accounts · today",
-  "topic": "Saving and investing",
+  "topic": "Saving, bonds, stocks and funds",
   "minutes": 4,
   "xp": 50,
   "concepts": [
-    "time-horizon",
-    "emergency-fund"
+    "stock",
+    "bond",
+    "etf",
+    "time-horizon"
   ],
   "steps": [
     {
       "type": "text",
       "id": "t1",
       "phase": "learn",
-      "kicker": "The basics",
-      "title": "Saving and investing do different jobs",
-      "body": "Saving and investing do different jobs. Savings pay for plans and surprises in the next months, like a broken washing machine. This money is your [[emergency-fund]]. Investments are for money you won't need for years. Their value goes up and down, so time matters. The time until you need the money is your [[time-horizon]]."
+      "kicker": "Investing",
+      "title": "Lend it or own it",
+      "body": "Saving keeps money safe and ready. Investing puts it to work for years. There are two main ways. With a [[bond]], you lend money and get interest back. With a [[stock]], you own a small piece of a company. Its value goes up and down with the company. A fund such as an [[etf]] holds hundreds of them at once. More ups and downs usually come with more expected growth. They need time, so your [[time-horizon]] matters.",
+      "stat": {
+        "value": "2",
+        "label": "main ways to invest: lend your money, or own a piece",
+        "tone": "neutral"
+      }
+    },
+    {
+      "type": "match",
+      "id": "m1",
+      "phase": "learn",
+      "concepts": [
+        "stock",
+        "bond",
+        "etf"
+      ],
+      "prompt": "Match each place for money with what it is.",
+      "pairs": [
+        [
+          "Savings account",
+          "Safe and ready any day"
+        ],
+        [
+          "Bond",
+          "A loan that pays interest"
+        ],
+        [
+          "Stock",
+          "A small piece of one company"
+        ],
+        [
+          "ETF",
+          "One fund holding hundreds of companies"
+        ]
+      ]
+    },
+    {
+      "type": "scenario",
+      "id": "sc1",
+      "phase": "learn",
+      "concepts": [
+        "time-horizon"
+      ],
+      "prompt": "€10,000 can wait 20 years. Pick where it waits, then watch the 20 years go by.",
+      "unit": "€k",
+      "periodLabel": "20 years",
+      "choices": [
+        {
+          "label": "Savings account",
+          "series": [
+            10,
+            10.3,
+            10.6,
+            10.9,
+            11.3,
+            11.6,
+            12,
+            12.3,
+            12.7,
+            13.1,
+            13.5
+          ],
+          "ending": "€13,500. It never fell, not even for a day. But at 1.5% a year, it barely kept up with rising prices."
+        },
+        {
+          "label": "A fund of bonds",
+          "series": [
+            10,
+            10.6,
+            11.3,
+            11.2,
+            12.4,
+            13.3,
+            14,
+            14.6,
+            15.7,
+            16.8,
+            18.1
+          ],
+          "ending": "€18,100. Small dips along the way, and steadier growth than savings."
+        },
+        {
+          "label": "A world fund of stocks",
+          "series": [
+            10,
+            11.8,
+            13.9,
+            15.5,
+            11.2,
+            14.8,
+            18.9,
+            22.4,
+            25.1,
+            31.6,
+            38.7
+          ],
+          "ending": "€38,700, the most growth. But in year 8 it fell by almost a third. Only someone who could wait got the rest of the line."
+        }
+      ]
     },
     {
       "type": "sort",
@@ -53,29 +153,30 @@
           "bucket": 1
         }
       ],
-      "explanation": "If you need money soon, it has no time to recover after prices fall. Money you need in 10 years or later has a long [[time-horizon]]."
+      "explanation": "Money with a long [[time-horizon]] can sit out the ups and downs. Money for the next months cannot."
     },
     {
       "type": "quiz",
       "id": "q1",
       "phase": "challenge",
       "concepts": [
-        "time-horizon"
+        "stock"
       ],
-      "prompt": "True or false: the money for next month's rent can wait out a fall in prices.",
+      "prompt": "Which of these usually swings the most in value from year to year?",
       "options": [
-        "True",
-        "False"
+        "A fund of stocks",
+        "A savings account",
+        "A fund of government bonds"
       ],
-      "correctIndex": 1,
-      "explanation": "False. Prices can stay low for years, but the rent is due next month. Only money that can wait for years can sit through a fall. That is money with a long [[time-horizon]]."
+      "correctIndex": 0,
+      "explanation": "A [[stock]] moves with the company and the market. A savings account does not swing at all, and bonds usually swing less than stocks."
     },
     {
       "type": "quiz",
       "id": "q2",
       "phase": "challenge",
       "concepts": [
-        "emergency-fund"
+        "time-horizon"
       ],
       "prompt": "Your investments are down 20% this month. Then your car breaks down. What happens if the money for the repair is in your investments?",
       "options": [
@@ -84,35 +185,37 @@
         "Nothing, because losses only count at the end of the year"
       ],
       "correctIndex": 0,
-      "explanation": "When you sell, you get today's price. Money for repairs is the job of an [[emergency-fund]] in your savings account. Then your investments can wait until prices recover."
+      "explanation": "You would sell at a low price and make the fall a real loss. That is why money for the next months stays out of investments."
     },
     {
       "type": "text",
       "id": "t2",
       "phase": "you",
-      "kicker": "Your money today",
-      "title": "How long your savings last",
-      "body": "You have **{savingsBalance}** in your savings account and **{depotTotal}** in your investment account. Each month, **{monthlyInvesting}** goes into a savings plan. You spend about **{monthlySpending}** a month. Your savings could pay for about **{bufferMonths}** months of costs."
+      "kicker": "Your money",
+      "title": "Where your money works",
+      "body": "You have **{savingsBalance}** in savings and **{depotTotal}** in your investment account. Each month, **{monthlyInvesting}** goes into a savings plan. The savings are ready any day. The investments are for later.",
+      "stat": {
+        "value": "{depotTotal}",
+        "label": "invested · {monthlyInvesting} more each month",
+        "tone": "good"
+      }
     },
     {
       "type": "action",
       "id": "a1",
       "phase": "decide",
       "title": "Your decision",
-      "body": "Your savings could pay for about **{bufferMonths}** months of costs today. How many months of costs do you want to always keep in your savings account? You choose the number.",
-      "bodyNoData": "How many months of costs do you want to always keep in your savings account? You choose the number.",
+      "body": "Your investment account holds **{depotTotal}**. How many years can this money wait before you need it? You choose. The answer shapes how much up and down you can sit out.",
+      "bodyNoData": "How many years could invested money wait before you need it? You choose. The answer shapes how much up and down you can sit out.",
       "rule": {
-        "label": "Months of costs to keep in savings",
+        "label": "Years my invested money can wait",
         "min": 1,
-        "max": 12,
+        "max": 40,
         "step": 1,
-        "value": 3,
-        "unit": " months",
-        "kind": "multiple",
-        "appliesTo": "monthlySpending",
-        "result": "= {amount} in your savings account"
+        "value": 10,
+        "unit": " years"
       },
-      "cta": "Save my rule"
+      "cta": "Save my answer"
     }
   ],
   "video": {
@@ -121,78 +224,62 @@
       {
         "type": "scene",
         "id": "v1",
-        "title": "Saving and investing",
-        "desc": "Savings are for the next few months. Investments are for money that can wait for years.",
-        "duration": 12,
+        "title": "Lend it or own it",
+        "desc": "With a [[bond]] you lend money. With a [[stock]] you own a piece of a company. An [[etf]] holds many at once. Ups and downs need a long [[time-horizon]].",
+        "duration": 14,
         "camera": "push",
         "setting": {
-          "place": "home",
+          "place": "office",
           "time": "day"
         },
         "layers": [
           {
             "kind": "tag",
-            "at": 1,
-            "text": "Savings",
+            "at": 3.5,
+            "text": "Bond",
             "tone": "neutral",
             "x": 0.25,
-            "y": 0.25
-          },
-          {
-            "kind": "tag",
-            "at": 1.5,
-            "text": "Months",
-            "tone": "neutral",
-            "x": 0.25,
-            "y": 0.4
-          },
-          {
-            "kind": "chart",
-            "at": 5,
-            "len": 6,
-            "series": [
-              100,
-              112,
-              94,
-              118,
-              103,
-              126
-            ],
-            "unit": "€"
+            "y": 0.3
           },
           {
             "kind": "tag",
             "at": 6.5,
-            "text": "Investing",
+            "text": "Stock",
             "tone": "good",
             "x": 0.72,
-            "y": 0.25
+            "y": 0.3
           },
           {
-            "kind": "tag",
-            "at": 7,
-            "text": "Years",
-            "tone": "good",
-            "x": 0.72,
-            "y": 0.4
+            "kind": "chart",
+            "at": 9.5,
+            "len": 4,
+            "series": [
+              10,
+              13.9,
+              11.2,
+              18.9,
+              25.1,
+              38.7
+            ],
+            "unit": "€k"
           }
         ],
         "captions": [
           {
             "at": 0.5,
-            "text": "Saving and investing do different jobs."
+            "text": "Saving keeps money safe and ready."
           },
           {
-            "at": 3.5,
-            "text": "Savings pay for plans and surprises in the next months."
+            "at": 4,
+            "text": "With a bond, you lend money and get interest back."
           },
           {
-            "at": 6.5,
-            "text": "Investments are for money you won't need for years."
+            "at": 7.5,
+            "text": "With a stock, you own a small piece of a company."
           },
           {
-            "at": 9.5,
-            "text": "Their value goes up and down, so time matters."
+            "at": 11,
+            "text": "More ups and downs usually come with more expected growth."
           }
         ],
         "transcript": "t1"
@@ -200,6 +287,8 @@
     ],
     "beats": [
       "v1",
+      "m1",
+      "sc1",
       "so1",
       "q1",
       "q2",

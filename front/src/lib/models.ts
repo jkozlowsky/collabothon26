@@ -74,17 +74,20 @@ export function countryMixChange(homeSharePct: number, homeMovePct: number, worl
 
 type Values = Record<string, number>;
 
-/** Each model plots its output against one of its params (`x`) and computes the output from all params. */
-export const MODELS: Record<SliderModel, { x: string; y: (v: Values) => number }> = {
+/**
+ * Each model plots its output against one of its params (`x`) and computes the output from all params.
+ * Money models also say how much of the output is money paid in (`paidIn`), for the `split` visual.
+ */
+export const MODELS: Record<SliderModel, { x: string; y: (v: Values) => number; paidIn?: (v: Values) => number }> = {
   drawdownRecovery: { x: 'loss', y: (v) => requiredGainToRecover(v.loss) },
   leverage: { x: 'move', y: (v) => leveragedReturn(v.move, v.borrowed) },
   oneCompanyCrash: { x: 'share', y: (v) => concentratedChange(v.share, -60) },
   realValue: { x: 'years', y: (v) => realValueChange(v.years, v.interest, v.inflation) },
   installmentCost: { x: 'discount', y: (v) => hiddenYearlyRate(v.discount, v.months) },
   countryMix: { x: 'homeShare', y: (v) => countryMixChange(v.homeShare, v.homeMove, v.worldMove) },
-  monthlyPlan: { x: 'years', y: (v) => monthlyPlanValue(v.monthly, v.years, v.rate) },
+  monthlyPlan: { x: 'years', y: (v) => monthlyPlanValue(v.monthly, v.years, v.rate), paidIn: (v) => Math.round(v.monthly * 12 * v.years) },
   currencyMove: { x: 'euroMove', y: (v) => currencyMoveChange(v.foreignShare, v.euroMove) },
-  compoundGrowth: { x: 'years', y: (v) => compoundGrowth(v.start, v.years, v.rate) },
+  compoundGrowth: { x: 'years', y: (v) => compoundGrowth(v.start, v.years, v.rate), paidIn: (v) => v.start },
 };
 
 /** Output over the whole range of the model's x param, the other params held at their current values. */

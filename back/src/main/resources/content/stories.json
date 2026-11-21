@@ -1,75 +1,207 @@
 [
   {
     "id": "seoul",
-    "area": "Investing",
+    "area": "Risk",
     "category": "Hype & leverage",
     "city": "Seoul",
-    "topic": "Hype and borrowed money",
+    "topic": "Hype, scams and borrowed money",
     "status": "available",
-    "pin": { "lat": 37.57, "lng": 126.98 },
+    "pin": {
+      "lat": 37.57,
+      "lng": 126.98
+    },
     "icon": "message-circle",
     "color": "violet",
-    "landmark": { "kind": "tower", "at": 0.69 },
-    "character": { "name": "Ji-woo", "age": 27, "role": "Office worker", "place": "Yeouido", "savings": "₩10,000,000" },
-    "intro": "Ji-woo's work chat is buzzing. A stock is up 40% this week, and a paid tip room says it will double. What could happen if she puts in her savings or borrows more?",
-    "words": [
-      { "native": "리딩방", "meaning": "leading room" },
-      { "native": "영끌", "meaning": "yeongkkeul" }
+    "landmark": {
+      "kind": "tower",
+      "at": 0.69
+    },
+    "intro": "Five short missions about risk. See why big swings hurt more than they help, what borrowing to invest does, how to spot a scam, why one basket is risky, and set your own limit.",
+    "currency": {
+      "code": "EUR",
+      "perEur": 1
+    },
+    "lessonIds": [
+      "seoul-1",
+      "seoul-2",
+      "seoul-3",
+      "seoul-4",
+      "seoul-5"
     ],
-    "currency": { "code": "KRW", "perEur": 1470 },
-    "lessonIds": ["seoul-1", "seoul-2", "seoul-3", "seoul-4", "seoul-5"]
+    "personal": true
   },
   {
     "id": "berlin",
     "area": "Saving",
     "category": "Inflation & savings",
     "city": "Berlin",
-    "topic": "Why safe savings lose value",
+    "topic": "A safety net that keeps its value",
     "status": "available",
-    "pin": { "lat": 52.52, "lng": 13.4 },
+    "pin": {
+      "lat": 52.52,
+      "lng": 13.4
+    },
     "icon": "shield",
     "color": "teal",
-    "landmark": { "kind": "gate", "at": 0.62 },
-    "intro": "Five short lessons about your own savings. You learn why safe money can lose value, how money grows over many years, how much to keep for emergencies, what to do in a bad year, and how to split your savings.",
-    "currency": { "code": "EUR", "perEur": 1 },
-    "lessonIds": ["berlin-1", "berlin-2", "berlin-3", "berlin-4", "berlin-5"],
+    "landmark": {
+      "kind": "gate",
+      "at": 0.62
+    },
+    "intro": "Five short missions on your own savings. See why safe money shrinks, build a safety net, save first on payday, let time grow your money, and set up a plan that runs by itself.",
+    "currency": {
+      "code": "EUR",
+      "perEur": 1
+    },
+    "lessonIds": [
+      "berlin-1",
+      "berlin-2",
+      "berlin-3",
+      "berlin-4",
+      "berlin-5"
+    ],
     "personal": true
   },
   {
     "id": "sao-paulo",
-    "area": "Credit & loans",
+    "area": "Borrowing",
     "category": "Instalments & debt",
     "city": "São Paulo",
     "topic": "The real cost of instalments",
     "status": "available",
-    "pin": { "lat": -23.55, "lng": -46.63 },
+    "pin": {
+      "lat": -23.55,
+      "lng": -46.63
+    },
     "icon": "credit-card",
     "color": "orange",
-    "landmark": { "kind": "raised", "at": 0.6 },
-    "character": { "name": "Rafa", "age": 22, "role": "Junior designer, first job", "place": "República", "savings": "R$2,800 a month" },
-    "intro": "Rafa just got his first salary and his first flat. Everything comes in 12 easy payments, sem juros. Then the payments start to stack, and the card offers to roll over the rest.",
-    "words": [
-      { "native": "parcelado sem juros", "meaning": "split, no interest" },
-      { "native": "rotativo", "meaning": "rolled-over card debt" },
-      { "native": "CET", "meaning": "total effective cost" }
+    "landmark": {
+      "kind": "raised",
+      "at": 0.6
+    },
+    "intro": "Five short missions about borrowing. Find the interest hidden in “0% interest”, see how small instalments stack up, what the minimum card payment costs, how to compare loans, and set your own limit.",
+    "currency": {
+      "code": "EUR",
+      "perEur": 1
+    },
+    "lessonIds": [
+      "sao-paulo-1",
+      "sao-paulo-2",
+      "sao-paulo-3",
+      "sao-paulo-4",
+      "sao-paulo-5"
     ],
-    "currency": { "code": "BRL", "perEur": 6.3 },
-    "lessonIds": ["sao-paulo-1", "sao-paulo-2", "sao-paulo-3", "sao-paulo-4", "sao-paulo-5"]
+    "personal": true
   },
   {
     "id": "tokyo",
     "area": "Investing",
     "category": "Diversification",
     "city": "Tokyo",
-    "topic": "Spreading your investments",
+    "topic": "Make money work for years",
     "status": "available",
-    "pin": { "lat": 35.68, "lng": 139.69 },
-    "icon": "globe",
+    "pin": {
+      "lat": 35.68,
+      "lng": 139.69
+    },
+    "icon": "trending-up",
     "color": "rose",
-    "landmark": { "kind": "lattice", "at": 0.66 },
-    "intro": "Five short lessons about your own money. You learn what saving and investing are for, how much depends on one country, how long big falls take to recover, how exchange rates change your investments, and how a monthly plan grows.",
-    "currency": { "code": "EUR", "perEur": 1 },
-    "lessonIds": ["tokyo-1", "tokyo-2", "tokyo-3", "tokyo-4", "tokyo-5"],
+    "landmark": {
+      "kind": "lattice",
+      "at": 0.66
+    },
+    "intro": "Five short missions through your own investments. Lend or own, sit out a scary first year, learn from Tokyo's 34-year wait, spread your money across the world, and watch a monthly plan grow.",
+    "currency": {
+      "code": "EUR",
+      "perEur": 1
+    },
+    "lessonIds": [
+      "tokyo-1",
+      "tokyo-2",
+      "tokyo-3",
+      "tokyo-4",
+      "tokyo-5"
+    ],
+    "personal": true
+  },
+  {
+    "id": "buenos-aires",
+    "area": "Money basics",
+    "category": "Fast inflation",
+    "city": "Buenos Aires",
+    "topic": "When prices run away",
+    "status": "available",
+    "pin": {
+      "lat": -34.6,
+      "lng": -58.38
+    },
+    "icon": "tag",
+    "color": "orange",
+    "landmark": {
+      "kind": "tower",
+      "at": 0.64
+    },
+    "intro": "A short lesson about prices that rise fast. You learn how fast prices can double and what this means for money that pays little interest.",
+    "currency": {
+      "code": "EUR",
+      "perEur": 1
+    },
+    "lessonIds": [
+      "buenos-aires-1"
+    ],
+    "personal": true
+  },
+  {
+    "id": "nairobi",
+    "area": "Saving",
+    "category": "Small savings",
+    "city": "Nairobi",
+    "topic": "Saving on the go",
+    "status": "available",
+    "pin": {
+      "lat": -1.29,
+      "lng": 36.82
+    },
+    "icon": "smartphone",
+    "color": "violet",
+    "landmark": {
+      "kind": "raised",
+      "at": 0.6
+    },
+    "intro": "A short lesson about saving small amounts often. You learn why small amounts add up and how to save before you spend.",
+    "currency": {
+      "code": "EUR",
+      "perEur": 1
+    },
+    "lessonIds": [
+      "nairobi-1"
+    ],
+    "personal": true
+  },
+  {
+    "id": "mumbai",
+    "area": "Investing",
+    "category": "Gold",
+    "city": "Mumbai",
+    "topic": "Why gold glitters",
+    "status": "available",
+    "pin": {
+      "lat": 19.08,
+      "lng": 72.88
+    },
+    "icon": "database",
+    "color": "orange",
+    "landmark": {
+      "kind": "gate",
+      "at": 0.62
+    },
+    "intro": "A short lesson about gold. You learn why many people trust gold, how much its price can move, and how it fits next to other money.",
+    "currency": {
+      "code": "EUR",
+      "perEur": 1
+    },
+    "lessonIds": [
+      "mumbai-1"
+    ],
     "personal": true
   }
 ]

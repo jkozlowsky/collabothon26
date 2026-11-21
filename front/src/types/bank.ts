@@ -184,12 +184,16 @@ export type DepotSeries = Record<ChartRange, { points: number[]; change: number 
 
 export type FqTeaserPlacement = 'home' | 'credits' | 'invest';
 
-/** A Atlas card shown inside the bank. `focus` tells the Map what to open. */
+/** An Atlas card shown inside the bank, built from a real story (lib/bank/teasers.ts). */
 export type FqTeaser = {
+  storyId: string;
+  /** The lesson the card leads to; absent when the story is done. */
+  lessonId?: string;
   title: string;
   meta: string;
   progress: number;
-  focus: string;
+  /** Built from the user's bank data for someone who has not tried Atlas yet; shows a hook instead of progress. */
+  personal?: boolean;
 };
 
 export type BankState = {
@@ -206,7 +210,6 @@ export type BankState = {
   savings: SavingsAccount;
   holdings: Holding[];
   depotSeries: DepotSeries;
-  teasers: Record<FqTeaserPlacement, FqTeaser>;
 };
 
 export type TransferRecipient = { contactId: string } | { name: string; iban: string };

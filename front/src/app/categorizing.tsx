@@ -15,12 +15,14 @@ import { useBank } from '@/hooks/useBank';
 import { continueToLearn } from '@/hooks/useOpenLearn';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useQuickCheck } from '@/hooks/useQuickCheck';
+import { isE2E } from '@/lib/e2e';
 import { categorize, checkBackend, factLabels, factsFrom, isRetryable, withTimeout } from '@/lib/categorization';
 import { setSummary } from '@/lib/learningPath';
 import { answerCounts, fetchCheckQuestions, savingForLine } from '@/lib/quickCheck';
 import type { CheckQuestion, ProfileRanges, QuickResult } from '@/types/quickCheck';
 
 const STEP_MS = 800;
+// The path screen stays up at least this long, so people can read its steps; e2e skips the wait.
 const MIN_MS = 2400;
 
 const STEPS = {
@@ -80,7 +82,7 @@ export default function CategorizingScreen() {
     setStep(0);
     setPhase('loading');
     const judged = withTimeout(outer, (signal) => categorize(consent ? facts : null, signal, quickResult));
-    const [result] = await Promise.allSettled([judged, new Promise((r) => setTimeout(r, MIN_MS))]);
+    const [result] = await Promise.allSettled([judged, new Promise((r) => setTimeout(r, isE2E() ? 0 : MIN_MS))]);
     if (outer.aborted) return;
     if (result.status === 'fulfilled') {
       const history = quickResult?.history;

@@ -52,9 +52,6 @@ public class GlossaryTerm {
 	@Column(name = "definition_standard", nullable = false, columnDefinition = "TEXT")
 	private String definitionStandard;
 
-	@Column(name = "definition_plain", columnDefinition = "TEXT")
-	private String definitionPlain;
-
 	@Column(name = "example", columnDefinition = "TEXT")
 	private String example;
 
@@ -73,7 +70,7 @@ public class GlossaryTerm {
 
 	@Builder
 	public GlossaryTerm(Long id, String slug, String name, String fullName, GlossaryCategory category,
-			int position, String shortDescription, String definitionStandard, String definitionPlain,
+			int position, String shortDescription, String definitionStandard,
 			String example, List<String> aliases, String graphicKey, List<GlossaryTerm> related) {
 		this.id = id;
 		this.slug = slug;
@@ -83,7 +80,6 @@ public class GlossaryTerm {
 		this.position = position;
 		this.shortDescription = shortDescription;
 		this.definitionStandard = definitionStandard;
-		this.definitionPlain = definitionPlain;
 		this.example = example;
 		this.aliases = aliases;
 		this.graphicKey = graphicKey;

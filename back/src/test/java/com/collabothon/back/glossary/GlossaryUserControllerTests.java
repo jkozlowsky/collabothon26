@@ -15,7 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -69,28 +68,6 @@ class GlossaryUserControllerTests {
 	}
 
 	@Test
-	void preferenceIsNullUntilChosenThenSticks() throws Exception {
-		String url = "/api/users/pref-user-1/glossary/preference";
-		mvc.perform(get(url)).andExpect(status().isOk()).andExpect(jsonPath("$.languageLevel").isEmpty());
-
-		mvc.perform(put(url).contentType(MediaType.APPLICATION_JSON).content("{\"languageLevel\":\"plain\"}"))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.languageLevel").value("plain"));
-		mvc.perform(put(url).contentType(MediaType.APPLICATION_JSON).content("{\"languageLevel\":\"standard\"}"))
-			.andExpect(status().isOk());
-		mvc.perform(get(url)).andExpect(jsonPath("$.languageLevel").value("standard"));
-	}
-
-	@Test
-	void preferenceRejectsUnknownValues() throws Exception {
-		String url = "/api/users/pref-user-2/glossary/preference";
-		for (String body : new String[] { "{\"languageLevel\":\"expert\"}", "{}", "{\"languageLevel\":null}" }) {
-			mvc.perform(put(url).contentType(MediaType.APPLICATION_JSON).content(body))
-				.andExpect(status().isBadRequest());
-		}
-	}
-
-	@Test
 	void aDoubleTapOnSaveKeepsOneFavouriteAndFailsNothing() throws Exception {
 		String base = "/api/users/" + UUID.randomUUID() + "/glossary/favorites";
 		int second = Race.secondDuringFirst(tx, () -> mvc.perform(put(base + "/etf")).andReturn(),
@@ -98,19 +75,5 @@ class GlossaryUserControllerTests {
 
 		assertEquals(204, second);
 		mvc.perform(get(base)).andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0]").value("etf"));
-	}
-
-	@Test
-	void aDoubleTapOnThePreferenceKeepsTheLastChoiceAndFailsNothing() throws Exception {
-		String url = "/api/users/" + UUID.randomUUID() + "/glossary/preference";
-		int second = Race.secondDuringFirst(tx, () -> choose(url, "plain"), () -> choose(url, "standard"));
-
-		assertEquals(200, second);
-		mvc.perform(get(url)).andExpect(jsonPath("$.languageLevel").value("standard"));
-	}
-
-	private int choose(String url, String level) throws Exception {
-		return mvc.perform(put(url).contentType(MediaType.APPLICATION_JSON)
-			.content("{\"languageLevel\": \"" + level + "\"}")).andReturn().getResponse().getStatus();
 	}
 }

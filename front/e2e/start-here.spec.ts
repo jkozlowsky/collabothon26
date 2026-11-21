@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
-import { finishOnboarding, openApp, resetOnboarding, tap } from './app';
+import { expectOnLearn, openApp, resetOnboarding, skipOnboarding, tap } from './app';
 import { categorization } from '../src/test-utils/categorization';
 
 const CATEGORIZATION_URL = '**/api/users/demo-user/categorization';
@@ -14,22 +14,21 @@ const row = (storyId: string | null, patch: object = {}) =>
   });
 
 test.beforeEach(async ({ request }) => {
-  await resetOnboarding(request);
+  await skipOnboarding(request);
 });
 
 test.afterAll(async ({ request }) => {
   await resetOnboarding(request);
 });
 
-/** The POST of onboarding's categorisation answers `stored`; reads answer through `current`. */
+/** Onboarding is already skipped (beforeEach); the stored categorisation is read through `current`. */
 async function toMap(page: Page, current: { get: () => { status: number; json?: object } }) {
-  await openApp(page);
   await page.route(CATEGORIZATION_URL, (route) => {
-    if (route.request().method() === 'POST') return route.fulfill({ json: row(null) });
     const { status, json } = current.get();
     return route.fulfill({ status, json });
   });
-  await finishOnboarding(page);
+  await openApp(page);
+  await expectOnLearn(page);
 }
 
 test('the badge and its why line show on the startHere story card only', async ({ page }) => {

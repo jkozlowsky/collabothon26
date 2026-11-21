@@ -35,6 +35,7 @@ module.exports = {
   useSharedValue: (initial) => useState(() => sharedValue(initial))[0],
   // Computed once per render, so tests still see the projected positions.
   useAnimatedStyle: (updater) => updater(),
+  useAnimatedProps: (updater) => updater(),
   useAnimatedReaction: () => {},
   withTiming: (to) => to,
   withSpring: (to) => to,
@@ -48,5 +49,6 @@ module.exports = {
   FadeIn: builder,
   FadeInDown: builder,
   FadeOut: builder,
+  ZoomIn: builder,
   LinearTransition: builder,
 };

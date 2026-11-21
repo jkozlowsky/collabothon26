@@ -7,6 +7,7 @@ import { DetailSheet } from '@/components/bank/DetailSheet';
 import { IconButton } from '@/components/bank/IconButton';
 import { ListCard } from '@/components/bank/ListCard';
 import { ListRow } from '@/components/bank/ListRow';
+import { ProductSection } from '@/components/bank/ProductSection';
 import { QuickAction } from '@/components/bank/QuickAction';
 import { Section } from '@/components/bank/Section';
 import { spacing } from '@/constants/theme';
@@ -40,6 +41,8 @@ export default function PaymentsScreen() {
         <QuickAction icon="scan" label="Scan & pay" onPress={demoOnly} />
         <QuickAction icon="phone" label="Top up phone" onPress={demoOnly} />
       </View>
+
+      <ProductSection title="Set up" tab="payments" />
 
       <Section title="Standing orders" action={{ label: 'Add', onPress: demoOnly }}>
         <ListCard>

@@ -59,9 +59,10 @@ test('levels: no answer, under 0.4, up to 0.75, and above 0.75 only with two ans
 test('the feedback is right, wrong or not sure, each with the question\'s explanation', () => {
   const q = POOL.find((item) => item.id === 'berlin-1/q2')!;
   const wrong = q.correctIndex + 1;
-  expect(feedbackFor(q.correctIndex, q)).toEqual({ tone: 'right', title: 'Right', body: q.explanation });
-  expect(feedbackFor(wrong, q)).toEqual({ tone: 'wrong', title: 'Not quite', body: q.explanation });
-  expect(feedbackFor(null, q)).toEqual({ tone: 'unsure', title: 'Good to know', body: q.explanation });
+  const body = plainText(q.explanation);
+  expect(feedbackFor(q.correctIndex, q)).toEqual({ tone: 'right', title: 'Right', body });
+  expect(feedbackFor(wrong, q)).toEqual({ tone: 'wrong', title: 'Not quite', body });
+  expect(feedbackFor(null, q)).toEqual({ tone: 'unsure', title: 'Good to know', body });
   expect(Object.keys(FEEDBACK)).toEqual(['right', 'wrong', 'unsure']);
 });
 
@@ -72,7 +73,7 @@ test('glossary markup in an explanation reads as plain words', () => {
   );
   expect(plainText('No markup, and [[Not A Marker]] stays.')).toBe('No markup, and [[Not A Marker]] stays.');
   const marked = POOL.find((item) => item.id === 'berlin-1/q1')!;
-  expect(feedbackFor(null, marked).body).toMatch(/price rise is the real return\.$/);
+  expect(feedbackFor(null, marked).body).toMatch(/^inflation is an average over a basket\./);
   for (const q of POOL) expect(feedbackFor(null, q).body).not.toContain('[[');
 });
 

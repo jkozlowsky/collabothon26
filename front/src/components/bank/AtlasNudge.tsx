@@ -15,7 +15,7 @@ import type { FqTeaser } from '@/types/bank';
 /** Pause after the tab opens, so the user sees the bank before Atlas speaks. */
 const DELAY_MS = 1200;
 /** How long the popup stays when nobody touches it; the timer bar runs down over this time. */
-const VISIBLE_MS = 8000;
+const VISIBLE_MS = 5000;
 /** Off-screen start: above the top edge, shadow included. */
 const HIDDEN_Y = -200;
 const OPEN_MS = 420;

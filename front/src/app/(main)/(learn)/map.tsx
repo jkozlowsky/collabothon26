@@ -11,6 +11,7 @@ import { StorySheet } from '@/components/StorySheet';
 import { colors, spacing } from '@/constants/theme';
 import { useAccount } from '@/hooks/useAccount';
 import { useApi } from '@/hooks/useApi';
+import { takeArrival } from '@/hooks/useOpenLearn';
 import { useStartHere } from '@/hooks/useStartHere';
 import { calloutState, isDone, LEARNER, sortStories, STORIES, withCurrent, withLessons } from '@/lib/stories';
 import { USER_ID } from '@/lib/user';
@@ -38,7 +39,10 @@ export default function MapScreen() {
   const startId = startHere?.storyId;
   // The globe picks its first view at mount, before the startHere story is known.
   useEffect(() => {
-    if (startId) globe.current?.flyTo(startId, true);
+    if (!startId) return;
+    // Straight after onboarding the plane flies in to the first destination; later it only turns.
+    if (takeArrival()) globe.current?.flyIn(startId);
+    else globe.current?.flyTo(startId, true);
   }, [startId]);
   // The highlight moves on once a story is done, also without a Quick check result.
   const stories = useMemo(() => withCurrent(withLessons(STORIES, lessons), startId), [lessons, startId]);

@@ -378,11 +378,68 @@
           }
         ],
         "transcript": "t1"
+      },
+      {
+        "type": "scene",
+        "id": "v2",
+        "title": "A basket of 650 things",
+        "desc": "[[inflation]] is measured on a basket of about 650 goods and services. The European Central Bank aims for about 2% a year. What money earns after that is its [[real-return]].",
+        "duration": 15,
+        "camera": "drift",
+        "setting": {
+          "place": "street",
+          "time": "day"
+        },
+        "layers": [
+          {
+            "kind": "tag",
+            "at": 1,
+            "text": "650 prices",
+            "tone": "neutral",
+            "x": 0.27,
+            "y": 0.3
+          },
+          {
+            "kind": "tag",
+            "at": 7.5,
+            "text": "Energy",
+            "tone": "bad",
+            "x": 0.72,
+            "y": 0.25
+          },
+          {
+            "kind": "tag",
+            "at": 11,
+            "text": "ECB: 2%",
+            "tone": "neutral",
+            "x": 0.5,
+            "y": 0.45
+          }
+        ],
+        "captions": [
+          {
+            "at": 0.5,
+            "text": "Statisticians follow the prices of about 650 kinds of goods."
+          },
+          {
+            "at": 4,
+            "text": "Inflation is how much more this basket costs than a year earlier."
+          },
+          {
+            "at": 7.5,
+            "text": "In 2022, energy rose far faster than clothes."
+          },
+          {
+            "at": 11,
+            "text": "The European Central Bank aims for about 2% a year."
+          }
+        ],
+        "transcript": "t2"
       }
     ],
     "beats": [
       "v1",
-      "t2",
+      "v2",
       "s1",
       "so1",
       "sc1",

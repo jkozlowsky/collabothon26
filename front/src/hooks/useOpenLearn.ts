@@ -5,6 +5,15 @@ import { useOnboarding } from '@/hooks/useOnboarding';
 
 /** Where to go once onboarding finishes. Module state is fine: one app, one onboarding at a time. */
 let pendingTarget: Href | null = null;
+/** Set when onboarding hands over to the Map: the globe plays the arrival flight once. */
+let arrivalPending = false;
+
+/** True once after onboarding finished; the Map reads it to fly the plane in. */
+export function takeArrival() {
+  const pending = arrivalPending;
+  arrivalPending = false;
+  return pending;
+}
 
 /**
  * Opens the Atlas module from the bank. The first time (onboarding not done yet) the
@@ -50,5 +59,6 @@ export function useResumeLearnAfterOnboarding() {
 export function continueToLearn() {
   const target = pendingTarget ?? '/map';
   pendingTarget = null;
+  arrivalPending = true;
   closeAndGo(target);
 }

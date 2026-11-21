@@ -20,20 +20,20 @@ export function pickHomeStory(stories: Story[]): Story {
   return open.find((s) => calloutState(s) === 'inProgress') ?? open[0] ?? stories[0];
 }
 
-/** The card text for one story, from its real progress and next lesson. */
+/** The card text for one story, from its real progress and next lesson. No city: the popup talks about the lesson, not the map. */
 export function teaserFor(story: Story): FqTeaser {
   const { done, total } = story.progress;
   const next = story.nextLesson;
   const progress = total > 0 ? Math.min(done / total, 1) : 0;
   if (!next || isDone(story)) {
-    return { storyId: story.id, title: `Review: ${story.topic}`, meta: `${story.city} · all ${total} lessons done`, progress: 1 };
+    return { storyId: story.id, title: `Review: ${story.topic}`, meta: `All ${total} lessons done`, progress: 1 };
   }
   const verb = calloutState(story) === 'inProgress' ? 'Continue' : 'Start';
   return {
     storyId: story.id,
     lessonId: next.id,
     title: `${verb}: ${next.title}`,
-    meta: `${story.city} · Lesson ${done + 1} of ${total} · ${next.minutes} min`,
+    meta: `Lesson ${done + 1} of ${total} · ${next.minutes} min`,
     progress,
   };
 }
@@ -56,7 +56,7 @@ export function newcomerTeaser(placement: FqTeaserPlacement, story: Story, state
   return {
     ...teaserFor(story),
     title,
-    meta: `${story.city} · ${story.title}${minutes ? ` · ${minutes} min` : ''}`,
+    meta: `${story.title}${minutes ? ` · ${minutes} min` : ''}`,
     personal: true,
   };
 }

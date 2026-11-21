@@ -8,6 +8,7 @@ import { FqTeaserCard } from '@/components/bank/FqTeaserCard';
 import { IconButton } from '@/components/bank/IconButton';
 import { ListCard } from '@/components/bank/ListCard';
 import { ListRow } from '@/components/bank/ListRow';
+import { ProductSection } from '@/components/bank/ProductSection';
 import { Section } from '@/components/bank/Section';
 import { TradeSheet } from '@/components/bank/TradeSheet';
 import { useBank } from '@/hooks/useBank';
@@ -43,6 +44,8 @@ export default function InvestScreen() {
       <DepotCard />
       <AllocationCard />
       <FqTeaserCard teaser={teaser} onPress={() => openLearnFocus(teaser.focus)} testID="fq-teaser-invest" />
+
+      <ProductSection title="Start investing" tab="invest" />
 
       <Section title="Holdings" action={{ label: 'Sort', onPress: demoOnly }}>
         <ListCard testID="holdings">

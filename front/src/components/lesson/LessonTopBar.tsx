@@ -10,13 +10,15 @@ type Props = {
   /** Switches to the video form; set only when the lesson has a video track and is not finished. */
   onWatch?: () => void;
   onClose: () => void;
+  /** Screen reader label of the close button. */
+  closeLabel?: string;
 };
 
 /** Close · progress · "Watch" (the video form of the same lesson, when it has one). */
-export function LessonTopBar({ progress, onWatch, onClose }: Props) {
+export function LessonTopBar({ progress, onWatch, onClose, closeLabel = 'Close lesson' }: Props) {
   return (
     <View style={styles.bar}>
-      <Tappable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close lesson" testID="lesson-close" style={styles.icon}>
+      <Tappable onPress={onClose} accessibilityRole="button" accessibilityLabel={closeLabel} testID="lesson-close" style={styles.icon}>
         <Icon name="close" size={22} color={colors.brandPrimary} />
       </Tappable>
       <View

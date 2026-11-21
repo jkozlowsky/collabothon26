@@ -66,6 +66,8 @@ export const colors = {
   cardChipGold: '#E9D49A',
   cardChipOnAccent: 'rgba(0, 46, 60, 0.18)',
   scrim: 'rgba(0, 31, 41, 0.4)',
+  /** Darker dim behind a spotlight, so the one lit feature stands out. */
+  spotlightScrim: 'rgba(0, 31, 41, 0.72)',
 } as const;
 
 /** Story colours at 14% opacity: icon tiles and avatar backgrounds (Figma recipe). */

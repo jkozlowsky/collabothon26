@@ -8,7 +8,9 @@ import { IconButton } from '@/components/bank/IconButton';
 import { ListCard } from '@/components/bank/ListCard';
 import { ListRow } from '@/components/bank/ListRow';
 import { LoanCalculatorSheet } from '@/components/bank/LoanCalculatorSheet';
+import { ProductSection } from '@/components/bank/ProductSection';
 import { Section } from '@/components/bank/Section';
+import { SpotTarget } from '@/components/spotlight/SpotTarget';
 import { useBank } from '@/hooks/useBank';
 import { useOpenLearnFocus } from '@/hooks/useOpenLearn';
 import { useToast } from '@/hooks/useToast';
@@ -56,10 +58,13 @@ export default function CreditsScreen() {
         </ListCard>
       </Section>
 
+      <ProductSection title="Apply" tab="credits" />
+
       <Section title="Explore">
         <ListCard>
-          <ListRow icon="pie" title="Loan calculator" meta="See the monthly cost first" value="From 4.9%" valueNote="APR" onPress={() => setCalculator(true)} testID="open-loan-calculator" />
-          <ListRow icon="transfer" title="Refinance a loan" meta="Compare your current terms" onPress={demoOnly} />
+          <SpotTarget id="loan-calculator">
+            <ListRow icon="pie" title="Loan calculator" meta="See the monthly cost first" value="From 4.9%" valueNote="APR" onPress={() => setCalculator(true)} testID="open-loan-calculator" />
+          </SpotTarget>
         </ListCard>
       </Section>
 

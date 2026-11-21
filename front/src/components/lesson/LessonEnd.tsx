@@ -11,13 +11,15 @@ type Props = {
   concepts: { key: string; term: string; weak: boolean }[];
   onConcept: (key: string) => void;
   onNext?: () => void;
+  /** The story's last lesson: on to what the bank offers in the story's area. */
+  onOffers?: () => void;
   onClose: () => void;
   /** Video mode: replays the last scene. */
   onWatchAgain?: () => void;
 };
 
 /** End of a lesson: XP, the concepts it covered (missed ones marked for review), next lesson. */
-export function LessonEnd({ title, xp, concepts, onConcept, onNext, onClose, onWatchAgain }: Props) {
+export function LessonEnd({ title, xp, concepts, onConcept, onNext, onOffers, onClose, onWatchAgain }: Props) {
   return (
     <View style={styles.wrap} testID="lesson-end">
       <View style={styles.badge}>
@@ -57,8 +59,9 @@ export function LessonEnd({ title, xp, concepts, onConcept, onNext, onClose, onW
       </View>
 
       <View style={styles.actions}>
+        {onOffers && <Button label="Next step: what the bank offers" onPress={onOffers} testID="lesson-offers" />}
         {onNext && <Button label="Next lesson" onPress={onNext} testID="lesson-next" />}
-        <Button label="Back to Learn" variant={onNext ? 'ghost' : 'primary'} onPress={onClose} testID="back-to-list" />
+        <Button label="Back to Learn" variant={onNext || onOffers ? 'ghost' : 'primary'} onPress={onClose} testID="back-to-list" />
         {onWatchAgain && <Button label="Watch again" variant="ghost" onPress={onWatchAgain} testID="lesson-watch-again" />}
       </View>
     </View>

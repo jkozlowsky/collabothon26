@@ -3,6 +3,7 @@ package com.collabothon.back.categorization.services;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -13,8 +14,10 @@ import org.springframework.stereotype.Service;
 import com.collabothon.back.categorization.config.JevProperties;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 import com.collabothon.back.categorization.dto.CheckAnswerDto;
+import com.collabothon.back.categorization.dto.CheckDto;
 import com.collabothon.back.categorization.dto.CheckQuestionDto;
 import com.collabothon.back.categorization.enums.CheckCategory;
+import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.mappers.CheckQuestionMapper;
 import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
 import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
@@ -51,12 +54,13 @@ public class CheckQuestionService {
 	}
 
 	/** The questions behind the answers, in answer order; the messages never repeat what was sent. */
-	List<CheckQuestionProjection> pick(List<CheckAnswerDto> answers, List<CheckQuestionProjection> pool) {
+	List<CheckQuestionProjection> pick(List<CheckAnswerDto> answers) {
 		if (answers.stream().anyMatch(answer -> answer == null || !validator.validate(answer).isEmpty())) {
 			throw new BadRequestException("Each answer needs a question id and text of 1 to "
 					+ CategorizationConsts.MAX_ANSWER_LENGTH + " characters, or null for Not sure");
 		}
-		Map<String, CheckQuestionProjection> byId = pool.stream()
+		Map<String, CheckQuestionProjection> byId = questions.findPool()
+			.stream()
 			.collect(Collectors.toMap(CheckQuestionProjection::id, Function.identity()));
 		List<CheckQuestionProjection> picked = answers.stream().map(answer -> byId.get(answer.questionId())).toList();
 		if (picked.contains(null) || picked.stream().distinct().count() != picked.size()) {
@@ -69,6 +73,14 @@ public class CheckQuestionService {
 					+ " finance and " + CategorizationConsts.CHECKS_PER_CATEGORY + " investing questions");
 		}
 		return picked;
+	}
+
+	/** The weakest check's lesson, else the earliest lesson of the first focus area that has one. */
+	Optional<CheckQuestionProjection> startLesson(List<CheckDto> checks, List<FocusArea> focus,
+			List<CheckQuestionProjection> picked) {
+		return CategorizationRules.weakestLessonCheck(checks, focus)
+			.flatMap(weakest -> picked.stream().filter(q -> q.id().equals(weakest.questionId())).findFirst())
+			.or(() -> CategorizationRules.earliestLessonQuestion(focus, questions.findPool()));
 	}
 
 }

@@ -24,7 +24,6 @@ import com.collabothon.back.categorization.dto.ConfidenceGapDto;
 import com.collabothon.back.categorization.dto.FactsDto;
 import com.collabothon.back.categorization.dto.LessonVariantDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
-import com.collabothon.back.categorization.dto.StartLessonDto;
 import com.collabothon.back.categorization.enums.CheckResult;
 import com.collabothon.back.categorization.enums.ConfidenceArea;
 import com.collabothon.back.categorization.enums.Experience;
@@ -183,28 +182,25 @@ final class CategorizationRules {
 		return List.copyOf(areas);
 	}
 
-	/** The lesson of the weakest check, else the earliest lesson of the first focus area that has one. */
-	static Optional<StartLessonDto> startLesson(List<CheckDto> checks, List<FocusArea> focus,
-			List<CheckQuestionProjection> pool) {
+	/** The weakest check that has a lesson: not-yet before partly, then the order of the focus areas. */
+	static Optional<CheckDto> weakestLessonCheck(List<CheckDto> checks, List<FocusArea> focus) {
 		Comparator<CheckDto> weakestFirst = Comparator
 			.comparing((CheckDto c) -> c.result() == CheckResult.NOT_YET ? 0 : 1)
 			.thenComparing(c -> focus.contains(c.area()) ? focus.indexOf(c.area()) : focus.size());
-		Optional<Long> lessonId = checks.stream()
+		return checks.stream()
 			.filter(c -> c.lessonId() != null && c.result() != CheckResult.UNDERSTANDS)
-			.min(weakestFirst)
-			.map(CheckDto::lessonId)
-			.or(() -> focus.stream().flatMap(area -> earliestLesson(area, pool).stream()).findFirst());
-		return lessonId.flatMap(id -> pool.stream()
-			.filter(q -> id.equals(q.lessonId()))
-			.findFirst()
-			.map(q -> new StartLessonDto(id, q.lessonTitle())));
+			.min(weakestFirst);
 	}
 
-	private static Optional<Long> earliestLesson(FocusArea area, List<CheckQuestionProjection> pool) {
-		return pool.stream()
-			.filter(q -> q.area() == area && q.lessonId() != null)
-			.map(CheckQuestionProjection::lessonId)
-			.min(Comparator.naturalOrder());
+	/** The question with the earliest lesson in the first focus area that has one. */
+	static Optional<CheckQuestionProjection> earliestLessonQuestion(List<FocusArea> focus,
+			List<CheckQuestionProjection> pool) {
+		return focus.stream()
+			.flatMap(area -> pool.stream()
+				.filter(q -> q.area() == area && q.lessonId() != null)
+				.min(Comparator.comparing(CheckQuestionProjection::lessonId))
+				.stream())
+			.findFirst();
 	}
 
 	static LessonVariantDto lessonVariant(Role role, LifeStage lifeStage) {

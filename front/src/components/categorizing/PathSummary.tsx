@@ -3,30 +3,47 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { RouteStation } from '@/components/categorizing/RouteStation';
 import { colors, radii, spacing, type } from '@/constants/theme';
-import { AREA_LABEL, areaWhy, SUMMARY_AREAS } from '@/lib/learningPath';
-import type { Categorization, Role } from '@/types/categorization';
+import type { Categorization, FocusArea, Role } from '@/types/categorization';
 
+const SUMMARY_AREAS = 3;
+const BULLET = 6;
+/** Centres the bullet on the first line of the 18 px body text. */
+const BULLET_TOP = 6;
+
+const AREA_LABEL: Record<FocusArea, string> = {
+  saving: 'Saving',
+  debt: 'Borrowing',
+  investing: 'Investing',
+  risk: 'Risk',
+  retirement: 'Retirement',
+};
 const ROLE: Record<Role, string> = { novice: 'a beginner', intermediate: 'an intermediate', advanced: 'an advanced' };
 const GAP_TITLE = { under: 'You know more than you think', over: 'There is more to explore here' };
 
 type Props = {
   categorization: Categorization;
-  /** Answers were sent to be judged; with a fallback result that means the judge was out of reach. */
+  /** Some answer was sent to be judged, so a fallback result means the judge was out of reach. */
   answersSent: boolean;
 };
 
-/** The learning path as one route: what we saw, who you are, where to start, ending at the first lesson. */
 export function PathSummary({ categorization: c, answersSent }: Props) {
   const gap = c.confidenceGaps[0];
   const areas = c.focusAreas.slice(0, SUMMARY_AREAS);
   const start = c.startLesson;
-  const startArea = c.checks.find((k) => k.lessonId === start?.lessonId)?.area;
+  const startArea = start && c.checks.find((check) => check.lessonId === start.lessonId)?.area;
+  const roleLines = c.explanation.find((e) => e.output === 'role')?.because ?? [];
+  const judgeFailed = answersSent && c.source === 'fallback';
+
+  const why = (area: FocusArea) =>
+    c.checks.some((check) => check.area === area)
+      ? `Your answer helped place ${AREA_LABEL[area]} on your path.`
+      : 'It fits the answers you gave.';
   const icon = (name: 'eye' | 'user' | 'play') => <Feather name={name} size={16} color={colors.brandPrimary} />;
 
   return (
     <>
       <Text style={styles.overline}>Your learning path</Text>
-      {answersSent && c.source === 'fallback' && (
+      {judgeFailed && (
         <Text style={styles.muted} testID="summary-unchecked">
           We couldn&apos;t check your answers this time
         </Text>
@@ -47,14 +64,12 @@ export function PathSummary({ categorization: c, answersSent }: Props) {
           <Text style={type.displayLarge} accessibilityRole="header">
             You&apos;re {ROLE[c.role]} learner
           </Text>
-          {c.explanation
-            .find((e) => e.output === 'role')
-            ?.because.map((line) => (
-              <View key={line} style={styles.bullet}>
-                <View style={styles.dot} />
-                <Text style={styles.because}>{line}</Text>
-              </View>
-            ))}
+          {roleLines.map((line) => (
+            <View key={line} style={styles.bullet}>
+              <View style={styles.dot} />
+              <Text style={styles.because}>{line}</Text>
+            </View>
+          ))}
         </RouteStation>
         {areas.map((area, i) => (
           <RouteStation
@@ -65,7 +80,7 @@ export function PathSummary({ categorization: c, answersSent }: Props) {
           >
             <View style={styles.card}>
               <Text style={type.titleCard}>{AREA_LABEL[area]}</Text>
-              <Text style={styles.muted}>{areaWhy(area, c)}</Text>
+              <Text style={styles.muted}>{why(area)}</Text>
             </View>
           </RouteStation>
         ))}
@@ -88,7 +103,7 @@ const styles = StyleSheet.create({
   gapTitle: { ...type.titleSection, color: colors.textOnBrand },
   gapBody: { ...type.bodyDefault, color: colors.textOnBrand },
   bullet: { flexDirection: 'row', gap: spacing.smPlus, alignItems: 'flex-start', marginTop: spacing.sm },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.brandPrimary, marginTop: spacing.sm - 2 },
+  dot: { width: BULLET, height: BULLET, borderRadius: BULLET / 2, backgroundColor: colors.brandPrimary, marginTop: BULLET_TOP },
   because: { ...type.bodyDefault, color: colors.textMuted, flex: 1 },
   card: {
     paddingVertical: spacing.md,

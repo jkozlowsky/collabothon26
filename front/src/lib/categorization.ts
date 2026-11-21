@@ -43,12 +43,12 @@ function profileSaved(signal: AbortSignal) {
 }
 
 /**
- * The categorisation this user already has, or null. A failed check throws: the caller may retry or skip, but never
- * POST, because a POST could overwrite a stored consent.
+ * Proves the backend answers once the profile is saved. A stored categorisation changes nothing: every onboarding
+ * recategorises (spec Q20). A failed check throws, and the caller may retry or skip.
  */
-export async function existingCategorization(signal: AbortSignal): Promise<Categorization | null> {
+export async function checkBackend(signal: AbortSignal): Promise<void> {
   await profileSaved(signal);
-  return api<Categorization>(CATEGORIZATION_PATH, { signal }).catch(nullOn404);
+  await api<Categorization>(CATEGORIZATION_PATH, { signal }).catch(nullOn404);
 }
 
 /** `facts` only with consent: the backend refuses account data the user did not agree to share. */

@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, BackHandler, Platform } from 'react-native';
 
@@ -12,8 +12,8 @@ import { Button } from '@/components/Button';
 import { colors } from '@/constants/theme';
 import { useBank } from '@/hooks/useBank';
 import { continueToLearn } from '@/hooks/useOpenLearn';
-import { categorize, existingCategorization, factLabels, factsFrom, isRetryable, withTimeout } from '@/lib/categorization';
-import { openSummary, unseen } from '@/lib/learningPath';
+import { categorize, checkBackend, factLabels, factsFrom, isRetryable, withTimeout } from '@/lib/categorization';
+import { setSummary } from '@/lib/learningPath';
 import { drawQuestions, fetchCheckQuestions, promptParts, quizRng, toPayload, type Drawn } from '@/lib/quickCheck';
 import type { CheckAnswer, CheckQuestion } from '@/types/quickCheck';
 
@@ -64,16 +64,13 @@ export default function CategorizingScreen() {
   useEffect(() => {
     const ctrl = new AbortController();
     withTimeout(ctrl.signal, async (signal) => {
-      const existing = await existingCategorization(signal);
-      return { existing, pool: existing ? [] : await fetchCheckQuestions(signal) };
+      await checkBackend(signal);
+      return fetchCheckQuestions(signal);
     }).then(
-      ({ existing, pool }) => {
+      (questions) => {
         if (ctrl.signal.aborted) return;
-        if (!existing) {
-          setPool(pool);
-          setCheck('ask');
-        } else if (unseen(existing)) openSummary(existing, false);
-        else continueToLearn();
+        setPool(questions);
+        setCheck('ask');
       },
       (e: unknown) => {
         if (ctrl.signal.aborted) return;
@@ -125,7 +122,10 @@ export default function CategorizingScreen() {
       new Promise((r) => setTimeout(r, MIN_MS)),
     ]);
     if (outer.aborted) return;
-    if (result.status === 'fulfilled') return openSummary(result.value, checkAnswers.length > 0);
+    if (result.status === 'fulfilled') {
+      setSummary({ categorization: result.value, answersSent: checkAnswers.some((a) => a.text !== null) });
+      return router.replace('/learning-path');
+    }
     inFlight.current = false;
     setRetryable(isRetryable(result.reason));
     setPhase('error');

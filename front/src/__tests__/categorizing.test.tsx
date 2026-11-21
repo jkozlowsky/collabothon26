@@ -177,13 +177,13 @@ test('the card previews exactly the facts a consent sends', async () => {
   expect(bodies()).toEqual([{ consent: true, facts: SEED_FACTS }]);
 });
 
-test('an existing categorisation goes straight to Learn without asking again', async () => {
-  backend({ existing: () => ok({ userId: 'demo-user' }) });
+test('a stored categorisation does not skip the card: every onboarding recategorises', async () => {
+  backend({ existing: () => ok(categorization()) });
   await open();
 
-  expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
-  expect(screen.queryByTestId('categorizing-consent')).toBeNull();
-  expect(posts()).toHaveLength(0);
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+  expect(await learnViaSummary()).toBeOnTheScreen();
+  expect(bodies()).toEqual([{ consent: false }]);
 });
 
 test('a failed existence check offers Retry and Skip but never a POST that could overwrite a stored consent', async () => {

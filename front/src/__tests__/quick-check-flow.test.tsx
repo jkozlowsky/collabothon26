@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { BackHandler } from 'react-native';
+
+import { setSummary } from '@/lib/learningPath';
 
 import { categorization } from '@/test-utils/categorization';
 import { POOL } from '@/test-utils/checkPool';
 import { appRoutes as routes } from '@/test-utils/routes';
-import type { Categorization } from '@/types/categorization';
 
 const ok = (body: unknown) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 const fail = (status: number) => Promise.resolve({ ok: false, status, statusText: 'Error' });
@@ -49,6 +51,8 @@ const answerAll = async (texts: (string | null)[]) => {
 // A draw of 0s takes the first area and question of each category, by id: card-minimum, rate-vs-inflation, etf-drop,
 // one-etf-vs-one-stock. (Mocking Math.random itself would make the router's generated keys collide.)
 jest.mock('@/lib/quickCheck', () => ({ ...jest.requireActual('@/lib/quickCheck'), quizRng: () => () => 0 }));
+
+beforeEach(() => setSummary(null));
 
 test('the summary of a user who has not been categorised redirects to the map', async () => {
   backend();
@@ -157,12 +161,12 @@ test('the summary leads with the gap, then the level and why, then up to three a
   expect(screen.getByTestId('summary-gap')).toHaveTextContent(/your answer about investing shows you understand it\.$/);
   expect(screen.getByText("You're an intermediate learner")).toBeOnTheScreen();
   expect(screen.getByText('Money goes to savings or investments every month.')).toBeOnTheScreen();
-  expect(screen.getByTestId('summary-area-investing')).toHaveTextContent(/Your answer about investing shows you know it well\./);
-  expect(screen.getByTestId('summary-area-debt')).toHaveTextContent(/Your answer about borrowing shows where to start\./);
-  expect(screen.getByTestId('summary-area-risk')).toHaveTextContent(/Your answer about risk covered part of it\./);
+  for (const [area, label] of [['investing', 'Investing'], ['debt', 'Borrowing'], ['risk', 'Risk']])
+    expect(screen.getByTestId(`summary-area-${area}`)).toHaveTextContent(new RegExp(`${label}Your answer helped place ${label} on your path\\.$`));
+  expect(screen.getByText('Compound interest')).toBeOnTheScreen();
   expect(screen.queryByTestId('summary-area-saving')).toBeNull();
   expect(screen.queryByText("We couldn't check your answers this time")).toBeNull();
-  expect(screen.getByTestId('summary-start')).toHaveTextContent('Start learning: Compound interest');
+  expect(screen.getByTestId('summary-start')).toHaveTextContent('Start learning');
 });
 
 test('Start learning opens the first lesson of the weakest area', async () => {
@@ -185,8 +189,8 @@ test('See all lessons opens the map; Start learning without a start lesson does 
 
   await screen.findByTestId('learning-path', {}, { timeout: 4000 });
   expect(screen.queryByTestId('summary-gap')).toBeNull();
-  expect(screen.getByTestId('summary-area-investing')).toHaveTextContent(/You picked investing as a goal\./);
-  expect(screen.getByTestId('summary-area-retirement')).toHaveTextContent(/It fits the answers you gave\./);
+  expect(screen.getByTestId('summary-area-investing')).toHaveTextContent(/It fits the answers you gave\.$/);
+  expect(screen.getByTestId('summary-area-retirement')).toHaveTextContent(/It fits the answers you gave\.$/);
   expect(screen.getByTestId('summary-start')).toHaveTextContent('Start learning');
   await press('summary-start');
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
@@ -230,20 +234,6 @@ test('a retry after a failed POST resends the same answers', async () => {
   expect(first.answers.map((a: { text: string | null }) => a.text)).toEqual(['a', null, 'c', 'd']);
 });
 
-test('a categorisation found when the screen opens is shown once, then Learn', async () => {
-  const stored: Categorization = categorization();
-  backend({ existing: () => ok(stored) });
-  await open();
-
-  expect(await screen.findByTestId('learning-path')).toBeOnTheScreen();
-  await press('summary-all');
-  expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
-
-  await act(async () => router.push('/categorizing'));
-  expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
-  expect(screen.queryByTestId('learning-path')).toBeNull();
-});
-
 test('a categorisation without checks or a start lesson (a backend without the Quick check) still shows the summary', async () => {
   const { checks, startLesson, ...old } = categorization();
   backend({ pool: () => ok([]), post: () => ok(old) });
@@ -252,4 +242,57 @@ test('a categorisation without checks or a start lesson (a backend without the Q
 
   expect(await screen.findByTestId('learning-path', {}, { timeout: 4000 })).toBeOnTheScreen();
   expect(screen.getByTestId('summary-start')).toHaveTextContent('Start learning');
+});
+
+test('an over-confidence gap gets its own title, never "You know more than you think"', async () => {
+  const gap = { area: 'investing' as const, direction: 'over' as const, because: 'You said: I save and invest. No investment products in your accounts with us.' };
+  backend({ pool: () => ok([]), post: () => ok(categorization({ confidenceGaps: [gap] })) });
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+
+  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
+  expect(screen.getByText('There is more to explore here')).toBeOnTheScreen();
+  expect(screen.queryByText('You know more than you think')).toBeNull();
+});
+
+test('four "Not sure" answers followed by a Jev failure do not claim the answers were checked', async () => {
+  backend({ post: () => ok(categorization({ source: 'fallback', checks: [], confidenceGaps: [] })) });
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+  await answerAll([null, null, null, null]);
+
+  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
+  expect(screen.queryByText("We couldn't check your answers this time")).toBeNull();
+});
+
+test('hardware back on the summary does the hand-off Start learning would: on to Learn', async () => {
+  const add = jest.spyOn(BackHandler, 'addEventListener');
+  backend({ pool: () => ok([]) });
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
+
+  const ours = add.mock.calls.filter(([event]) => event === 'hardwareBackPress').at(-1)?.[1] as () => boolean;
+  let handled = false;
+  await act(async () => {
+    handled = ours();
+  });
+  expect(handled).toBe(true);
+  expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
+  add.mockRestore();
+});
+
+test('a double tap on Start learning opens the lesson once', async () => {
+  backend({ pool: () => ok([]) });
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+  const { onClick } = (await screen.findByTestId('summary-start', {}, { timeout: 4000 })).props;
+  const push = jest.spyOn(router, 'push');
+
+  await act(async () => {
+    onClick({ nativeEvent: {} });
+    onClick({ nativeEvent: {} });
+  });
+  expect(push.mock.calls.filter(([href]) => typeof href === 'object')).toHaveLength(1);
+  push.mockRestore();
 });

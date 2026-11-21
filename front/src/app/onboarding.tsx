@@ -109,6 +109,11 @@ export default function OnboardingScreen() {
             Atlas<Text style={styles.wordmarkDot}>.</Text>
           </Text>
         </Rise>
+        <Rise delay={420}>
+          <Text style={styles.motto} testID="atlas-motto">
+            Atlas lets your financial decisions land safely.
+          </Text>
+        </Rise>
         <Rise delay={480}>
           <Text style={styles.welcomeTitle}>Learn how money works. Challenge your ideas with others.</Text>
         </Rise>
@@ -203,8 +208,7 @@ export default function OnboardingScreen() {
         </Rise>
         <Rise delay={500}>
           <Text style={styles.welcomeBody}>
-            Go head-to-head with friends or other learners: same questions, same clock. Climb the weekly league and see
-            whose ideas hold up.
+            Same questions, same clock. See whose ideas hold up.
           </Text>
         </Rise>
         <Rise delay={620} style={styles.pillars}>
@@ -428,6 +432,7 @@ const styles = StyleSheet.create({
   welcomeOverline: { ...text.overline, color: colors.brandAccent, letterSpacing: 3 },
   wordmark: { ...text.displayHero, color: colors.textOnBrand },
   wordmarkDot: { color: colors.brandAccent },
+  motto: { ...text.titleSection, color: colors.brandAccent, marginTop: -spacing.xs },
   welcomeTitle: { ...text.displayLarge, color: colors.textOnBrand },
   welcomeBody: { ...type.body, color: colors.onBrandMuted },
   pillars: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },

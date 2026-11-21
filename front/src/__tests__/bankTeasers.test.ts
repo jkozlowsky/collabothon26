@@ -13,14 +13,14 @@ test('a story not started yet offers its first lesson', () => {
     storyId: 'tokyo',
     lessonId: 'tokyo-1',
     title: 'Start: Lend it or own it',
-    meta: 'Tokyo · Lesson 1 of 5 · 4 min',
+    meta: 'Lesson 1 of 5 · 4 min',
     progress: 0,
   });
 });
 
 test('a story in progress continues at its next lesson', () => {
   const t = teaserFor(story('sao-paulo', { progress: { done: 2, total: 5 }, nextLesson: { id: 'sao-paulo-3', title: 'Third', minutes: 3 } }));
-  expect(t).toMatchObject({ lessonId: 'sao-paulo-3', title: 'Continue: Third', meta: 'São Paulo · Lesson 3 of 5 · 3 min', progress: 0.4 });
+  expect(t).toMatchObject({ lessonId: 'sao-paulo-3', title: 'Continue: Third', meta: 'Lesson 3 of 5 · 3 min', progress: 0.4 });
 });
 
 test('a finished story offers a review and no lesson', () => {

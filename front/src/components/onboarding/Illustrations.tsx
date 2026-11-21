@@ -1,8 +1,8 @@
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { useReducedMotion, type CSSAnimationKeyframes, type CSSAnimationProperties } from 'react-native-reanimated';
+import Animated, { useReducedMotion, type CSSAnimationKeyframes, type CSSAnimationProperties, type CSSStyle } from 'react-native-reanimated';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 import { PlayerAvatar } from '@/components/duel/PlayerAvatar';
@@ -14,7 +14,6 @@ const FLOAT = { from: { transform: [{ translateY: 0 }] }, to: { transform: [{ tr
 const PULSE = { from: { opacity: 0.25, transform: [{ scale: 0.96 }] }, to: { opacity: 0.45, transform: [{ scale: 1.06 }] } };
 const SPIN = { from: { transform: [{ rotate: '0deg' }] }, to: { transform: [{ rotate: '360deg' }] } };
 const BEAT = { from: { transform: [{ scale: 1 }] }, to: { transform: [{ scale: 1.1 }] } };
-const DRAIN = { from: { width: '100%' }, to: { width: '8%' } };
 const ENTER_POP = {
   from: { opacity: 0, transform: [{ scale: 0.8 }] },
   '65%': { opacity: 1, transform: [{ scale: 1.06 }] },
@@ -154,9 +153,66 @@ function HeroGlow() {
   );
 }
 
-/** Duel intro: you and a rival face off over the same question, the clock running. Illustration only. */
+/** The two rounds the duel illustration plays in turn; `right` is the answer that lights up green. */
+const DUEL_ROUNDS = [
+  {
+    label: 'ROUND 6 OF 7 · INVESTING',
+    question: 'Which one usually spreads the risk more?',
+    options: ['A fund of 500 companies', "One company's shares"],
+    right: 0,
+    score: [2, 3],
+  },
+  {
+    label: 'ROUND 7 OF 7 · INFLATION',
+    question: 'Prices rise 5% a year. What happens to €100 kept in cash?',
+    options: ['It keeps its value', 'It buys less every year'],
+    right: 1,
+    score: [3, 3],
+  },
+] as const;
+/** Seconds on the round clock. */
+const DUEL_CLOCK = 10;
+/** The answer is picked when the clock shows this many seconds. */
+const DUEL_PICK_AT = 5;
+/** The loop moves in half seconds: 10 for the countdown, 4 holding the answer, 1 fading to the next round. */
+const DUEL_BEAT_MS = 500;
+const DUEL_COUNT = (DUEL_CLOCK - DUEL_PICK_AT) * 2;
+const DUEL_HOLD = 4;
+const DUEL_BEATS = DUEL_COUNT + DUEL_HOLD + 1;
+const DUEL_FADE_MS = 350;
+const ROUND_FADE = { transitionProperty: 'opacity', transitionDuration: DUEL_FADE_MS, transitionTimingFunction: EASE_IN_OUT } satisfies CSSStyle;
+
+/**
+ * One round of the duel at a time: the clock counts down, an answer is picked and turns green, the score moves,
+ * then the card fades over to the other round. Everything follows from one beat counter, so the loop never drifts.
+ * With reduced motion it holds the last round, answered.
+ */
+function useDuelLoop(enabled: boolean) {
+  const [beat, setBeat] = useState(0);
+  useEffect(() => {
+    if (!enabled) return;
+    const id = setInterval(() => setBeat((b) => b + 1), DUEL_BEAT_MS);
+    return () => clearInterval(id);
+  }, [enabled]);
+
+  if (!enabled) return { round: DUEL_ROUNDS[DUEL_ROUNDS.length - 1], sec: DUEL_PICK_AT, picked: true, shown: true, fresh: false };
+  const t = beat % DUEL_BEATS;
+  const round = DUEL_ROUNDS[Math.floor(beat / DUEL_BEATS) % DUEL_ROUNDS.length];
+  return {
+    round,
+    sec: Math.max(DUEL_PICK_AT, DUEL_CLOCK - Math.floor(t / 2)),
+    picked: t >= DUEL_COUNT,
+    shown: t < DUEL_BEATS - 1,
+    fresh: t === 0,
+  };
+}
+
+/** Duel intro: you and a rival face off over the same questions, the clock running. Illustration only. */
 export function DuelIllustration() {
   const reduced = useReducedMotion();
+  const { round, sec, picked, shown, fresh } = useDuelLoop(!reduced);
+  // You score when your answer is in; the rival's score stays.
+  const you = round.score[0] + (picked ? 1 : 0);
   return (
     <View style={duel.stage} accessible={false} importantForAccessibility="no-hide-descendants">
       <Animated.View style={[duel.glow, !reduced && loop(PULSE, 2600)]}>
@@ -166,7 +222,9 @@ export function DuelIllustration() {
         <Animated.View style={[duel.player, reduced ? motion.fade : slideIn(-40, 100)]}>
           <PlayerAvatar avatar="f1" size={84} ring="accent" />
           <Text style={duel.name}>You</Text>
-          <Text style={duel.score}>4</Text>
+          <Animated.Text key={you} style={[duel.score, !reduced && once(POP_IN, 260, 0)]}>
+            {you}
+          </Animated.Text>
         </Animated.View>
         <Animated.View style={[reduced ? motion.fade : enter(450)]}>
           <Animated.View style={[duel.vs, !reduced && loop(BEAT, 900, 900)]}>
@@ -176,25 +234,37 @@ export function DuelIllustration() {
         <Animated.View style={[duel.player, reduced ? motion.fade : slideIn(40, 100)]}>
           <PlayerAvatar avatar="m2" size={84} ring="xp" />
           <Text style={duel.name}>Alex</Text>
-          <Text style={[duel.score, duel.scoreRival]}>3</Text>
+          <Text style={[duel.score, duel.scoreRival]}>{round.score[1]}</Text>
         </Animated.View>
       </View>
       <Animated.View style={[duel.card, reduced ? motion.fade : enter(650)]}>
-        <View style={duel.cardHead}>
-          <Text style={card.overline}>ROUND 7 OF 7 · INFLATION</Text>
-          <View style={duel.timer}>
-            <Feather name="clock" size={11} color={colors.feedbackStreak} />
-            <Text style={duel.timerText}>0:08</Text>
+        <Animated.View style={[duel.round, ROUND_FADE, { opacity: shown ? 1 : 0 }]}>
+          <View style={duel.cardHead}>
+            <Text style={card.overline}>{round.label}</Text>
+            <View style={duel.timer}>
+              <Feather name="clock" size={11} color={colors.feedbackStreak} />
+              <Text style={duel.timerText}>0:{String(sec).padStart(2, '0')}</Text>
+            </View>
           </View>
-        </View>
-        <Text style={duel.question}>Prices rise 5% a year. What happens to €100 kept in cash?</Text>
-        <View style={duel.track}>
-          <Animated.View style={[duel.trackFill, !reduced && { animationName: DRAIN, animationDuration: 6000, animationIterationCount: 'infinite', animationTimingFunction: 'linear' }]} />
-        </View>
-        <View style={duel.answer}>
-          <View style={hero.check}><Feather name="check" size={11} color="#fff" /></View>
-          <Text style={duel.answerText}>It buys less every year</Text>
-        </View>
+          <Text style={duel.question} numberOfLines={2}>
+            {round.question}
+          </Text>
+          <View style={duel.track}>
+            {/* Refills at once while the card is faded out; drains second by second after that. */}
+            <Animated.View style={[duel.trackFill, { width: `${(sec / DUEL_CLOCK) * 100}%`, transitionDuration: fresh ? 0 : DUEL_BEAT_MS * 2 }]} />
+          </View>
+          {round.options.map((option, i) => {
+            const right = picked && i === round.right;
+            return (
+              <Animated.View key={option} style={[duel.answer, right && duel.answerRight]}>
+                <Animated.View style={[hero.check, duel.checkSlot, { opacity: right ? 1 : 0 }]}>
+                  <Feather name="check" size={11} color="#fff" />
+                </Animated.View>
+                <Text style={[duel.answerText, right && duel.answerTextRight]}>{option}</Text>
+              </Animated.View>
+            );
+          })}
+        </Animated.View>
       </Animated.View>
     </View>
   );
@@ -354,7 +424,8 @@ const check = StyleSheet.create({
 
 const duel = StyleSheet.create({
   stage: { alignSelf: 'stretch', paddingTop: spacing.lg, gap: spacing.xxl },
-  glow: { position: 'absolute', left: -40, right: -40, top: -60, height: 300 },
+  // Starts below the stage's top edge: higher up the scroll view clipped its top.
+  glow: { position: 'absolute', left: -40, right: -40, top: 0, height: 220 },
   players: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xl },
   player: { alignItems: 'center', gap: spacing.xs },
   name: { ...type.labelStrong, color: colors.onBrandStrong, marginTop: spacing.xs },
@@ -374,15 +445,16 @@ const duel = StyleSheet.create({
     backgroundColor: colors.bgSurface,
     borderRadius: radii.card,
     padding: spacing.lg,
-    gap: spacing.smPlus,
     ...elevation.high,
   },
+  round: { gap: spacing.smPlus },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   timer: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  timerText: { ...type.labelStrong, color: colors.feedbackStreak },
-  question: { ...type.titleCard, color: colors.textPrimary },
+  timerText: { ...type.labelStrong, color: colors.feedbackStreak, fontVariant: ['tabular-nums'] },
+  // Two lines kept for both questions, so the card does not change height between rounds.
+  question: { ...type.titleCard, color: colors.textPrimary, minHeight: (type.titleCard.lineHeight ?? 22) * 2 },
   track: { height: 6, borderRadius: radii.bar, backgroundColor: colors.brandPrimarySoft, overflow: 'hidden' },
-  trackFill: { height: 6, width: '40%', borderRadius: radii.bar, backgroundColor: colors.feedbackStreak },
+  trackFill: { height: 6, borderRadius: radii.bar, backgroundColor: colors.feedbackStreak, transitionProperty: 'width', transitionTimingFunction: 'linear' },
   answer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -390,10 +462,15 @@ const duel = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radii.button,
     borderWidth: 1.5,
-    borderColor: colors.feedbackSuccess,
-    backgroundColor: colors.feedbackSuccessSoft,
+    borderColor: colors.borderDefault,
+    backgroundColor: colors.bgSurface,
+    transitionProperty: ['backgroundColor', 'borderColor'],
+    transitionDuration: 250,
   },
-  answerText: { ...type.titleCard, color: colors.feedbackSuccess },
+  answerRight: { borderColor: colors.feedbackSuccess, backgroundColor: colors.feedbackSuccessSoft },
+  checkSlot: { transitionProperty: 'opacity', transitionDuration: 250 },
+  answerText: { ...type.titleCard, color: colors.textPrimary },
+  answerTextRight: { color: colors.feedbackSuccess },
 });
 
 const card = StyleSheet.create({

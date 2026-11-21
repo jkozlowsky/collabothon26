@@ -1,5 +1,5 @@
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,18 +45,27 @@ export default function StoryScreen() {
   const targetLesson = story?.lessons.find((l) => l.id === targetLessonId);
   const lockedPopupVisible = !dismissedLocked && Boolean(targetLesson && targetLesson.status === 'locked');
 
-  // Opening a path lands on where the user is: the linked lesson, else the next one. Offsets add up from the
-  // route's position in the content and the content's position in the scroll view.
+  // Opening a path lands on where the user is: the linked lesson, else the next one. Coming back from a finished
+  // lesson (the screen stays mounted) moves on to the new next mission. Offsets add up from the route's position in
+  // the content and the content's position in the scroll view.
   const scrollRef = useRef<ScrollViewInstance>(null);
   const offsets = useRef({ content: 0, route: 0 });
-  const scrolled = useRef(false);
+  const stopY = useRef<Record<string, number>>({});
+  const scrolledTo = useRef<string>(undefined);
   const focusId = targetLesson ? targetLesson.id : nextId;
-  const scrollToStop = (y: number) => {
-    if (scrolled.current) return;
-    scrolled.current = true;
+  // The first lesson needs no scroll: the path's name and intro stay in view above it.
+  const focusIndex = story?.lessons.findIndex((l) => l.id === focusId) ?? -1;
+  const scrollToFocus = () => {
+    const y = focusId ? stopY.current[focusId] : undefined;
+    if (!focusId || y === undefined || scrolledTo.current === focusId) return;
+    scrolledTo.current = focusId;
+    if (focusIndex <= 0) return;
     const top = offsets.current.content + offsets.current.route + y;
     scrollRef.current?.scrollTo({ y: Math.max(0, top - 140), animated: true });
   };
+  // The stops are already laid out when the next mission changes after a lesson: their onLayout does not fire again.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(scrollToFocus, [focusId]);
 
   return (
     <>
@@ -116,7 +125,10 @@ export default function StoryScreen() {
                           last={index === story.lessons.length - 1}
                           highlighted={lesson.id === targetLessonId}
                           accent={accent}
-                          onLayout={lesson.id === focusId ? (e) => scrollToStop(e.nativeEvent.layout.y) : undefined}
+                          onLayout={(e) => {
+                            stopY.current[lesson.id] = e.nativeEvent.layout.y;
+                            if (lesson.id === focusId) scrollToFocus();
+                          }}
                         />
                       ))}
                     </View>

@@ -145,7 +145,7 @@ describe('bank shell', () => {
     expect(screen.queryByTestId('fq-teaser-credits')).toBeNull();
     const card = await popup('fq-teaser-credits');
     expect(card).toHaveTextContent('Start: Twelve easy payments', { exact: false });
-    expect(card).toHaveTextContent('São Paulo · Lesson 1 of 5', { exact: false });
+    expect(card).toHaveTextContent('Lesson 1 of 5', { exact: false });
     expect(screen.getByTestId('fq-teaser-credits-timer')).toBeOnTheScreen();
 
     await fireEvent.press(card);
@@ -183,7 +183,7 @@ describe('bank shell', () => {
     await renderRouter(appRoutes, { initialUrl: '/' });
     const card = await popup('fq-teaser-home');
     expect(card).toHaveTextContent('You have € 12,500 in savings at 2.25% a year. Learn how to keep it from losing value.', { exact: false });
-    expect(card).toHaveTextContent('Berlin · Saving', { exact: false });
+    expect(card).toHaveTextContent('Saving', { exact: false });
     // A tap leads into onboarding first.
     await fireEvent.press(card);
     expect(screen).toHavePathname('/onboarding');

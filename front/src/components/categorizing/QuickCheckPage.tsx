@@ -1,6 +1,15 @@
 import Feather from '@expo/vector-icons/Feather';
-import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
+import {
+  AccessibilityInfo,
+  findNodeHandle,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { Button } from '@/components/Button';
 import { FlowPage } from '@/components/categorizing/FlowPage';
@@ -35,16 +44,18 @@ export function QuickCheckPage({ index, total, parts, account, ready, value, onC
   const text = value;
   const [focused, setFocused] = useState(false);
   const prompt = parts.map((p) => p.text).join('');
-  const position = `Question ${index + 1} of ${total}`;
-  // Native announces; web reads FlowPage's live region.
+  const promptRef = useRef<ComponentRef<typeof Text>>(null);
+  // A new question moves focus to its prompt (WCAG 2.2 SC 2.4.3); the screen's live region announces the position.
   useEffect(() => {
-    if (Platform.OS !== 'web') AccessibilityInfo.announceForAccessibility(position);
-  }, [position]);
+    const prompt = promptRef.current;
+    if (!prompt) return;
+    if (Platform.OS === 'web') (prompt as unknown as HTMLElement).focus();
+    else AccessibilityInfo.setAccessibilityFocus(findNodeHandle(prompt) ?? 0);
+  }, [index]);
 
   return (
     <FlowPage
       testID="quick-check"
-      status={position}
       footer={
         <>
           <Button label="Next" onPress={() => onNext(text.trim())} disabled={!ready || !text.trim()} testID="quick-check-next" />
@@ -78,7 +89,7 @@ export function QuickCheckPage({ index, total, parts, account, ready, value, onC
           </Text>
         </>
       )}
-      <Text style={styles.prompt} accessibilityRole="header" testID="quick-check-prompt">
+      <Text ref={promptRef} tabIndex={-1} style={styles.prompt} accessibilityRole="header" testID="quick-check-prompt">
         {parts.map((p, i) => (
           <Text key={i} style={p.filled && styles.filled}>
             {p.text}

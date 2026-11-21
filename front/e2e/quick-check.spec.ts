@@ -50,6 +50,7 @@ test('consent, four questions, the summary, then the first lesson', async ({ pag
   await tap(page, 'quick-check-next');
 
   await expect(page.getByTestId('quick-check').getByText('2 of 4', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('quick-check-prompt')).toBeFocused();
   await tap(page, 'quick-check-back');
   await expect(page.getByTestId('quick-check-input')).toHaveValue('Interest keeps growing.');
   await tap(page, 'quick-check-next');

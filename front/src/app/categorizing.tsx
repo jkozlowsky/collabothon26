@@ -1,10 +1,11 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, ActivityIndicator, BackHandler, Platform } from 'react-native';
 
 import { ConsentCard } from '@/components/categorizing/ConsentCard';
 import { FlowMessage } from '@/components/categorizing/FlowMessage';
 import { FlowPage } from '@/components/categorizing/FlowPage';
+import { LiveRegions } from '@/components/categorizing/LiveRegions';
 import { LockedLessons } from '@/components/categorizing/LockedLessons';
 import { PathSteps, type Step } from '@/components/categorizing/PathSteps';
 import { QuickCheckPage } from '@/components/categorizing/QuickCheckPage';
@@ -107,9 +108,10 @@ export default function CategorizingScreen() {
     return () => clearInterval(id);
   }, [phase, ids.length]);
 
-  const status = phase === 'loading' ? STEPS[ids[step]] : undefined;
+  const questionStatus = quick.view ? `Question ${quick.view.index + 1} of ${quick.view.total}` : undefined;
+  const status = phase === 'loading' ? STEPS[ids[step]] : phase === 'quick' ? questionStatus : undefined;
   const alert = phase === 'error' ? ERROR_TITLE : check === 'failed' ? CHECK_ERROR_TITLE : undefined;
-  // Native announces; web reads FlowPage's live regions (aria-live on a Text is web-only).
+  // Native announces; web reads the live regions (aria-live on a Text is web-only).
   useEffect(() => {
     const message = status ?? alert;
     if (Platform.OS !== 'web' && message) AccessibilityInfo.announceForAccessibility(message);
@@ -148,127 +150,134 @@ export default function CategorizingScreen() {
     if (!quick.begin(withConsent)) return void start(withConsent, []);
     setPhase('quick');
   };
-  if (phase === 'quick' && quick.view) {
-    const { index, total, account, parts, draft, ready } = quick.view;
-    return (
-      <QuickCheckPage
-        index={index}
-        total={total}
-        parts={parts}
-        account={account}
-        value={draft}
-        ready={ready}
-        onChange={quick.setDraft}
-        onNext={(text) => submit(quick.answer(text))}
-        onUnsure={() => submit(quick.answer(null))}
-        onBack={goBack}
-      />
-    );
-  }
+  const screen = (): ReactNode => {
+    if (phase === 'quick' && quick.view) {
+      const { index, total, account, parts, draft, ready } = quick.view;
+      return (
+        <QuickCheckPage
+          index={index}
+          total={total}
+          parts={parts}
+          account={account}
+          value={draft}
+          ready={ready}
+          onChange={quick.setDraft}
+          onNext={(text) => submit(quick.answer(text))}
+          onUnsure={() => submit(quick.answer(null))}
+          onBack={goBack}
+        />
+      );
+    }
 
-  if (phase === 'consent') {
-    if (check === 'failed') {
+    if (phase === 'consent') {
+      if (check === 'failed') {
+        return (
+          <FlowPage
+            testID="categorizing-check-error"
+            center
+              note="You'll start with the general lessons."
+            footer={
+              <>
+                {retryable && <Button label="Retry" onPress={recheck} testID="categorizing-check-retry" />}
+                <Button
+                  label="Skip for now"
+                  variant={retryable ? 'ghost' : 'primary'}
+                  onPress={() => continueToLearn()}
+                  testID="categorizing-check-skip"
+                />
+              </>
+            }
+          >
+            <FlowMessage
+              title={CHECK_ERROR_TITLE}
+              body={retryable ? 'Try again in a moment.' : "We couldn't open your learning path this time."}
+            />
+          </FlowPage>
+        );
+      }
+      if (check === 'pending') {
+        return (
+          <FlowPage testID="categorizing-checking" center>
+            <ActivityIndicator color={colors.brandPrimary} accessibilityLabel="Checking your learning path" />
+          </FlowPage>
+        );
+      }
       return (
         <FlowPage
-          testID="categorizing-check-error"
-          center
-          alert={alert}
-          note="You'll start with the general lessons."
+          testID="categorizing-consent"
           footer={
             <>
-              {retryable && <Button label="Retry" onPress={recheck} testID="categorizing-check-retry" />}
+              <Button label="Use my account data" onPress={() => decide(true)} testID="consent-accept" />
               <Button
-                label="Skip for now"
-                variant={retryable ? 'ghost' : 'primary'}
-                onPress={() => continueToLearn()}
-                testID="categorizing-check-skip"
+                label="Continue without"
+                variant="secondary"
+                onPress={() => decide(false)}
+                testID="consent-decline"
               />
             </>
           }
         >
-          <FlowMessage
-            title={CHECK_ERROR_TITLE}
-            body={retryable ? 'Try again in a moment.' : "We couldn't open your learning path this time."}
-          />
+          <ConsentCard facts={labels} quickCheck={pool.length > 0} />
         </FlowPage>
       );
     }
-    if (check === 'pending') {
+
+    const steps: Step[] = ids.map((id, i) => {
+      const label = STEPS[id];
+      if (i < step) return { id, label, state: 'done', detail: 'Done' };
+      if (i > step) return { id, label, state: 'next', detail: phase === 'error' ? 'Not started' : 'Next' };
+      if (phase === 'error') return { id, label, state: 'fail', detail: 'Not finished' };
+      return { id, label, state: 'now', detail: id === 'accounts' ? `${labels.length} summaries` : 'In progress' };
+    });
+
+    if (phase === 'loading') {
       return (
-        <FlowPage testID="categorizing-checking" center>
-          <ActivityIndicator color={colors.brandPrimary} accessibilityLabel="Checking your learning path" />
+        <FlowPage testID="categorizing-loading" center>
+          <FlowMessage title="Building your learning path…" body="This takes a few seconds.">
+            <PathSteps steps={steps} />
+            <LockedLessons />
+          </FlowMessage>
         </FlowPage>
       );
     }
+
     return (
       <FlowPage
-        testID="categorizing-consent"
+        testID="categorizing-error"
+        center
+          note="You'll start with the general lessons."
         footer={
           <>
-            <Button label="Use my account data" onPress={() => decide(true)} testID="consent-accept" />
+            {retryable && (
+              <Button label="Retry" onPress={() => void start(consent, sent.current)} testID="categorizing-retry" />
+            )}
             <Button
-              label="Continue without"
-              variant="secondary"
-              onPress={() => decide(false)}
-              testID="consent-decline"
+              label="Skip for now"
+              variant={retryable ? 'ghost' : 'primary'}
+              onPress={() => continueToLearn()}
+              testID="categorizing-skip"
             />
           </>
         }
       >
-        <ConsentCard facts={labels} quickCheck={pool.length > 0} />
-      </FlowPage>
-    );
-  }
-
-  const steps: Step[] = ids.map((id, i) => {
-    const label = STEPS[id];
-    if (i < step) return { id, label, state: 'done', detail: 'Done' };
-    if (i > step) return { id, label, state: 'next', detail: phase === 'error' ? 'Not started' : 'Next' };
-    if (phase === 'error') return { id, label, state: 'fail', detail: 'Not finished' };
-    return { id, label, state: 'now', detail: id === 'accounts' ? `${labels.length} summaries` : 'In progress' };
-  });
-
-  if (phase === 'loading') {
-    return (
-      <FlowPage testID="categorizing-loading" center status={status}>
-        <FlowMessage title="Building your learning path…" body="This takes a few seconds.">
+        <FlowMessage
+          title={ERROR_TITLE}
+          body={
+            retryable
+              ? "We couldn't finish building your path. Trying again takes a few seconds."
+              : "We couldn't pick lessons for this profile this time."
+          }
+        >
           <PathSteps steps={steps} />
-          <LockedLessons />
         </FlowMessage>
       </FlowPage>
     );
-  }
+  };
 
   return (
-    <FlowPage
-      testID="categorizing-error"
-      center
-      alert={alert}
-      note="You'll start with the general lessons."
-      footer={
-        <>
-          {retryable && (
-            <Button label="Retry" onPress={() => void start(consent, sent.current)} testID="categorizing-retry" />
-          )}
-          <Button
-            label="Skip for now"
-            variant={retryable ? 'ghost' : 'primary'}
-            onPress={() => continueToLearn()}
-            testID="categorizing-skip"
-          />
-        </>
-      }
-    >
-      <FlowMessage
-        title={ERROR_TITLE}
-        body={
-          retryable
-            ? "We couldn't finish building your path. Trying again takes a few seconds."
-            : "We couldn't pick lessons for this profile this time."
-        }
-      >
-        <PathSteps steps={steps} />
-      </FlowMessage>
-    </FlowPage>
+    <>
+      <LiveRegions status={status} alert={alert} />
+      {screen()}
+    </>
   );
 }

@@ -516,3 +516,32 @@ test.each(['ios', 'android'] as const)('on %s the question is announced with the
     platform.restore();
   }
 });
+
+test('the live regions persist from the consent card on, so the first question is announced like the rest', async () => {
+  backend();
+  await open();
+  const status = await screen.findByTestId('flow-status');
+  expect(status).toHaveTextContent('');
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+
+  expect(screen.getByTestId('flow-status')).toBe(status);
+  expect(status).toHaveTextContent('Question 1 of 4');
+});
+
+test.each(['ios', 'android'] as const)('on %s focus moves to the prompt of each new question', async (os) => {
+  const platform = jest.replaceProperty(Platform, 'OS', os);
+  const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+  focus.mockClear();
+  try {
+    backend();
+    await open();
+    await fireEvent.press(await screen.findByTestId('consent-decline'));
+    expect(focus).toHaveBeenCalledTimes(1);
+    await type('a');
+    await next();
+    expect(focus).toHaveBeenCalledTimes(2);
+  } finally {
+    focus.mockRestore();
+    platform.restore();
+  }
+});

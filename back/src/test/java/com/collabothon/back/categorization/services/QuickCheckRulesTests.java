@@ -39,7 +39,7 @@ class QuickCheckRulesTests {
 
 	private static final CheckQuestionProjection I_EASY = q("i-easy", 2, INVESTING, QuestionLevel.EASY);
 
-	private static final CheckQuestionProjection SHORT_FALL = q(CategorizationConsts.SHORT_HORIZON_QUESTION_ID, 2,
+	private static final CheckQuestionProjection SHORT_FALL = q(CategorizationConsts.LONG_HORIZON_QUESTION_ID, 2,
 			INVESTING, QuestionLevel.EASY);
 
 	private static final CheckQuestionProjection I_HARD = q("i-hard", 4, INVESTING, QuestionLevel.HARD);
@@ -167,11 +167,21 @@ class QuickCheckRulesTests {
 	}
 
 	@Test
-	void aShortHorizonServesTheShortTermFallForInvesting() {
-		assertEquals(Optional.of(SHORT_FALL.id()),
-				next(CategorizationConsts.HORIZON_WITHIN_1Y, right(S_EASY_1, Confidence.SURE)));
-		assertEquals(Optional.of("i-easy"), next(CategorizationConsts.HORIZON_WITHIN_1Y,
-				right(S_EASY_1, Confidence.SURE), wrong(SHORT_FALL, Confidence.SURE)));
+	void aShortHorizonServesTheFallBeforeYouNeedItForSavingAndNeverTheShortTermFall() {
+		String within1y = CategorizationConsts.HORIZON_WITHIN_1Y;
+		CheckQuestionProjection aSaving = q("a-saving", 1, SAVING, QuestionLevel.EASY);
+		CheckQuestionProjection fallBefore = q(CategorizationConsts.SHORT_HORIZON_QUESTION_ID, 1, SAVING,
+				QuestionLevel.EASY);
+		List<CheckQuestionProjection> bank = List.of(aSaving, fallBefore, I_EASY, SHORT_FALL);
+		List<CheckQuestionProjection> shortBank = QuickCheckRules.forHorizon(bank, within1y);
+
+		assertEquals(List.of(aSaving, fallBefore, I_EASY), shortBank);
+		assertEquals(bank, QuickCheckRules.forHorizon(bank, "5y+"));
+		assertEquals(Optional.of(fallBefore), QuickCheckRules.next(ORDER, shortBank, List.of(), within1y));
+		assertEquals(Optional.of(aSaving), QuickCheckRules.next(ORDER, bank, List.of(), "5y+"));
+		// No easy investing question is left once i-easy is wrong, so saving comes back instead of the short-term fall.
+		assertEquals(Optional.of(aSaving), QuickCheckRules.next(ORDER, shortBank,
+				List.of(right(fallBefore, Confidence.SURE), wrong(I_EASY, Confidence.SURE)), within1y));
 	}
 
 	@Test

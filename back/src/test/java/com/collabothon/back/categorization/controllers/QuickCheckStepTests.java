@@ -93,10 +93,12 @@ class QuickCheckStepTests {
 
 	private TestBank bank;
 
+	private long emergency;
+
 	@BeforeEach
 	void ownBankAndUser() throws Exception {
 		bank = new TestBank(jdbc);
-		long emergency = bank.lesson("Emergency fund", "Rainy days.", 1);
+		emergency = bank.lesson("Emergency fund", "Rainy days.", 1);
 		long compound = bank.lesson("Compound interest", "Time works.", 2);
 		long inflation = bank.lesson("Inflation", "Prices rise.", 3);
 		bank.question("sv-a", emergency, "saving", "easy");
@@ -153,10 +155,15 @@ class QuickCheckStepTests {
 	}
 
 	@Test
-	void aShortHorizonGetsTheShortTermFallOnTheRulePath() throws Exception {
-		step(body("within-1y", "{\"questionId\": \"sv-a\", \"optionIndex\": 0, \"confidence\": \"sure\"}", true))
-			.andExpect(status().isOk())
-			.andExpect(content().json("{\"nextQuestionId\": \"short-term-fall\"}", JsonCompareMode.LENIENT));
+	void aShortHorizonGetsTheFallBeforeYouNeedItAndNeverTheShortTermFallOnTheRulePath() throws Exception {
+		bank.question("fall-before-you-need-it", emergency, "saving", "easy");
+
+		step(body("within-1y", "", true)).andExpect(status().isOk())
+			.andExpect(content().json("{\"nextQuestionId\": \"fall-before-you-need-it\"}", JsonCompareMode.LENIENT));
+		// Wrong on in-a: a 1-5y user would get the short-term fall, a within-1y user the hard investing question.
+		String history = RIGHT_SV_A + ", " + WRONG_IN_A;
+		step(body("1-5y", history, true)).andExpect(content().json("{\"nextQuestionId\": \"short-term-fall\"}", JsonCompareMode.LENIENT));
+		step(body("within-1y", history, true)).andExpect(content().json("{\"nextQuestionId\": \"in-hard\"}", JsonCompareMode.LENIENT));
 	}
 
 	@Test
@@ -371,13 +378,15 @@ class QuickCheckStepTests {
 	}
 
 	@Test
-	void aShortHorizonReplacesJevsInvestingPickWithTheShortTermFall() throws Exception {
+	void aShortHorizonReplacesJevsSavingPickAndHidesTheShortTermFallFromJev() throws Exception {
+		bank.question("fall-before-you-need-it", emergency, "saving", "easy");
 		jev.expect(requestTo(JEV_URL))
-			.andRespond(jevReplies(jevStep("\"mastery_saving\": {\"type\": \"noul\", \"noul\": 0.9}", "in-hard",
-					List.of("in-a", "in-hard", "short-term-fall", "sv-b", "sv-hard"), 0.1)));
+			.andExpect(jsonPath("$.questions.next.criteria.short-term-fall").doesNotExist())
+			.andRespond(jevReplies(jevStep("\"mastery_saving\": {\"type\": \"noul\", \"noul\": 0.9}", "sv-b",
+					List.of("fall-before-you-need-it", "in-a", "in-hard", "sv-b", "sv-hard"), 0.1)));
 
 		step(body("within-1y", RIGHT_SV_A, false)).andExpect(status().isOk())
-			.andExpect(content().json("{\"nextQuestionId\": \"short-term-fall\"}", JsonCompareMode.LENIENT));
+			.andExpect(content().json("{\"nextQuestionId\": \"fall-before-you-need-it\"}", JsonCompareMode.LENIENT));
 	}
 
 	@Test

@@ -51,7 +51,11 @@ public final class CategorizationConsts {
 
 	public static final int MAX_GAP_CARDS = 2;
 
-	public static final String SHORT_HORIZON_QUESTION_ID = "short-term-fall";
+	/** Served for saving with money needed within a year (D8). */
+	public static final String SHORT_HORIZON_QUESTION_ID = "fall-before-you-need-it";
+
+	/** Twenty years of compounding: never served with money needed within a year (D8). */
+	public static final String LONG_HORIZON_QUESTION_ID = "short-term-fall";
 
 	public static final double CHIP_GUESSING = 0.25;
 

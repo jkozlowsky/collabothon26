@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.HashSet;
@@ -25,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.categorization.consts.CategorizationConsts;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -117,6 +119,16 @@ class CheckQuestionControllerTests {
 			}
 			assertEquals(declared, used, id);
 		}
+	}
+
+	@Test
+	void theSeededBankHoldsBothHorizonQuestions() throws Exception {
+		mvc.perform(get("/api/check-questions"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[?(@.id == '%s')].area".formatted(CategorizationConsts.SHORT_HORIZON_QUESTION_ID))
+				.value("saving"))
+			.andExpect(jsonPath("$[?(@.id == '%s')].area".formatted(CategorizationConsts.LONG_HORIZON_QUESTION_ID))
+				.value("investing"));
 	}
 
 }

@@ -35,9 +35,10 @@ public class QuickCheckService {
 
 	public StepResponseDto step(String userId, StepRequestDto request) {
 		OnboardingAnswersDto onboarding = categorization.onboarding(userId);
-		List<CheckQuestionProjection> bank = checkQuestions.bank();
-		List<Answer> answers = checkQuestions.resolve(request.history(), bank);
+		List<CheckQuestionProjection> fullBank = checkQuestions.bank();
+		List<Answer> answers = checkQuestions.resolve(request.history(), fullBank);
 		String horizon = request.profile() == null ? null : request.profile().horizon();
+		List<CheckQuestionProjection> bank = QuickCheckRules.forHorizon(fullBank, horizon);
 		List<FocusArea> order = QuickCheckRules.areaOrder(onboarding.goals(), horizon, bank);
 		Map<FocusArea, Double> ruleMastery = QuickCheckRules.mastery(order, answers);
 		boolean useRules = request.useRules() || !jevProperties.callsJev();

@@ -3,6 +3,7 @@ package com.collabothon.back.categorization.services;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.ENOUGH_THRESHOLD;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.HORIZON_WITHIN_1Y;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.JUST_STARTING_BELOW;
+import static com.collabothon.back.categorization.consts.CategorizationConsts.LONG_HORIZON_QUESTION_ID;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.MAX_GAP_CARDS;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.MAX_QUESTIONS;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.MIN_QUESTIONS;
@@ -114,10 +115,16 @@ final class QuickCheckRules {
 		return unasked.stream().filter(q -> q.area() == area).min(EASY_FIRST);
 	}
 
-	/** With money needed within a year, the investing question is the one about short-term risk (D8). */
+	static List<CheckQuestionProjection> forHorizon(List<CheckQuestionProjection> bank, String horizon) {
+		return HORIZON_WITHIN_1Y.equals(horizon)
+				? bank.stream().filter(q -> !q.id().equals(LONG_HORIZON_QUESTION_ID)).toList()
+				: bank;
+	}
+
+	/** With money needed within a year, the saving question is the one about a fall before it is needed (D8). */
 	static CheckQuestionProjection shortHorizon(CheckQuestionProjection next, List<CheckQuestionProjection> unasked,
 			String horizon) {
-		if (!HORIZON_WITHIN_1Y.equals(horizon) || next.area() != FocusArea.INVESTING) {
+		if (!HORIZON_WITHIN_1Y.equals(horizon) || next.area() != FocusArea.SAVING) {
 			return next;
 		}
 		return unasked.stream().filter(q -> q.id().equals(SHORT_HORIZON_QUESTION_ID)).findFirst().orElse(next);

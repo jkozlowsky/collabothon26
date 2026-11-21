@@ -112,6 +112,8 @@ public class StoryRepository {
 			lessonIds.add(lid.asString(""));
 		}
 
-		return new Story(id, category, city, topic, status, pin, icon, color, landmark, character, intro, words, currency, lessonIds, s);
+		String duelFallback = s.hasNonNull("duelFallback") ? s.path("duelFallback").asString(null) : null;
+
+		return new Story(id, category, city, topic, status, pin, icon, color, landmark, character, intro, words, currency, lessonIds, duelFallback, s);
 	}
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 
 import { api, ApiError } from '@/lib/api';
+import { haptic, playSound } from '@/lib/duel/feedback';
 import {
   createInitialDuelState,
   duelReducer,
@@ -251,6 +252,15 @@ export function useDuelMatch({
           method: 'POST',
           body: JSON.stringify(payload),
         });
+
+        if (result.correct) {
+          playSound('correct');
+          haptic('success');
+        } else {
+          playSound('wrong');
+          haptic('error');
+        }
+
         dispatch({
           type: 'answer.result',
           index: result.index,

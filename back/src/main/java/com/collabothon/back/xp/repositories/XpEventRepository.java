@@ -3,6 +3,7 @@ package com.collabothon.back.xp.repositories;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.entities.xp.XpEvent;
+import com.collabothon.back.entities.xp.XpSource;
 
 @Repository
 @Transactional(propagation = Propagation.MANDATORY)
@@ -62,16 +64,21 @@ public interface XpEventRepository extends JpaRepository<XpEvent, Long> {
 			""")
 	long sumXpByUserIdBetween(String userId, Instant from, Instant to);
 
-	/** How many users rank above one with {@code xp} in [from, to), using the same order as {@link #rankUsersBetween}. */
+	/** How many other users rank above one with {@code xp} in [from, to), using the same order as {@link #rankUsersBetween}. */
 	@Query("""
 			SELECT COUNT(*) FROM (
 			    SELECT e.userId AS userId, SUM(e.xp) AS total FROM XpEvent e
-			    WHERE e.createdAt >= :from AND e.createdAt < :to
+			    WHERE e.createdAt >= :from AND e.createdAt < :to AND e.userId != :userId
 			    GROUP BY e.userId
 			) t
 			WHERE t.total > :xp OR (t.total = :xp AND t.userId < :userId)
 			""")
 	long countUsersRankedAbove(String userId, long xp, Instant from, Instant to);
+
+	Optional<XpEvent> findTopByUserIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByIdDesc(String userId,
+			Instant from, Instant to);
+
+	List<XpEvent> findByUserIdAndSourceAndSourceRefOrderByIdDesc(String userId, XpSource source, String sourceRef);
 
 	boolean existsByUserIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(String userId, Instant from, Instant to);
 

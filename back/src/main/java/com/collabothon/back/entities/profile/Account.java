@@ -39,4 +39,16 @@ public class Account {
 	public void changeAvatar(String avatar) {
 		this.avatar = avatar;
 	}
+
+	public String getFullName() {
+		String first = firstName != null ? firstName.trim() : "";
+		String last = lastName != null ? lastName.trim() : "";
+		if (last.isEmpty()) {
+			return first;
+		}
+		if (first.isEmpty()) {
+			return last;
+		}
+		return first + " " + last;
+	}
 }

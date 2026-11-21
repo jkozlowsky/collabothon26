@@ -36,5 +36,13 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bgCanvas },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.lg },
   centered: { flexGrow: 1, justifyContent: 'center' },
-  footer: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.lg, gap: spacing.sm },
+  footer: {
+    backgroundColor: colors.bgCanvas,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderDefault,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxl,
+    gap: spacing.sm,
+  },
 });

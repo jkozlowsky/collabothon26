@@ -1,0 +1,297 @@
+{
+  "story": "seoul",
+  "questions": [
+    {
+      "id": "seoul-d01",
+      "lessonId": "seoul-1",
+      "sourceStepId": "p1",
+      "concepts": [
+        "volatility"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d01",
+        "prompt": "Min-seo buys shares in a tech firm that jump 30% in June but plummet 30% in July. What is her total percentage return over the two months?",
+        "input": {
+          "kind": "slider",
+          "min": -40,
+          "max": 20,
+          "step": 1,
+          "unit": "%"
+        },
+        "answer": -9,
+        "tolerance": 2,
+        "reveal": "−9%. A 30% rise followed by a 30% fall leaves you with 91% of your starting money.",
+        "explanation": "Returns chain multiplicatively: (1 + 0.30) × (1 − 0.30) = 1.30 × 0.70 = 0.91, which represents a net loss of 9%."
+      }
+    },
+    {
+      "id": "seoul-d02",
+      "lessonId": "seoul-1",
+      "sourceStepId": "q2",
+      "concepts": [
+        "drawdown"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d02",
+        "prompt": "After an aggressive market correction, a popular crypto token plunges 60% below its record peak. What percentage gain is needed to recover to that peak?",
+        "options": [
+          "+150% gain",
+          "+60% gain",
+          "+120% gain",
+          "+100% gain"
+        ],
+        "correctIndex": 0,
+        "explanation": "After falling 60% (from 100 to 40), getting back to 100 requires gaining 60 on 40: 60 / 40 = +150%."
+      }
+    },
+    {
+      "id": "seoul-d03",
+      "lessonId": "seoul-2",
+      "sourceStepId": "s1",
+      "concepts": [
+        "leverage"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "chart",
+        "id": "d03",
+        "prompt": "Jin-woo takes a leveraged trade where he borrows 100% on top of his capital (2x leverage). If the asset price falls 25%, what percentage of his own capital is lost?",
+        "model": "leverage",
+        "params": {
+          "move": {
+            "label": "Price change",
+            "min": -50,
+            "max": 50,
+            "step": 5,
+            "value": -25,
+            "unit": "%"
+          },
+          "borrowed": {
+            "label": "Borrowed %",
+            "min": 0,
+            "max": 200,
+            "step": 50,
+            "value": 100,
+            "unit": "%"
+          }
+        },
+        "output": {
+          "label": "Return on own capital",
+          "unit": "%"
+        },
+        "input": {
+          "kind": "slider",
+          "min": -100,
+          "max": 0,
+          "step": 5,
+          "unit": "%"
+        },
+        "answer": -50,
+        "tolerance": 5,
+        "explanation": "With 100% borrowed funds (2x leverage), any percentage asset drop is doubled on personal capital: −25% × 2 = −50%."
+      }
+    },
+    {
+      "id": "seoul-d04",
+      "lessonId": "seoul-2",
+      "sourceStepId": "q1",
+      "concepts": [
+        "leverage",
+        "risk-capacity"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d04",
+        "prompt": "Sora puts €5,000 of her savings into a margin trading account and borrows €10,000 to buy €15,000 worth of shares. If the share price drops by 20%, how is her initial capital affected?",
+        "options": [
+          "She loses €3,000, wiping out 60% of her initial savings",
+          "She loses €1,000, which is 20% of her initial savings",
+          "Her capital is completely wiped out with a 100% loss",
+          "She breaks even because the broker absorbs margin losses"
+        ],
+        "correctIndex": 0,
+        "explanation": "Total position = €15,000. A 20% loss equals €3,000, all deducted from her €5,000 equity: €3,000 / €5,000 = 60% loss."
+      }
+    },
+    {
+      "id": "seoul-d05",
+      "lessonId": "seoul-3",
+      "sourceStepId": "so1",
+      "concepts": [
+        "leading-room"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "sort",
+        "id": "d05",
+        "prompt": "Sort each investment group chat message into Red flag or Legitimate information:",
+        "buckets": [
+          "Red flag",
+          "Legitimate info"
+        ],
+        "items": [
+          {
+            "text": "Guaranteed 50% monthly profit with zero risk",
+            "bucket": 0
+          },
+          {
+            "text": "Quarterly earnings report showed net revenue grew 8%",
+            "bucket": 1
+          },
+          {
+            "text": "Secret VIP signal: buy at 10:00 AM sharp before the blast",
+            "bucket": 0
+          },
+          {
+            "text": "Semiconductor sector ETF holds 45 global chip manufacturers",
+            "bucket": 1
+          },
+          {
+            "text": "Only 2 VIP slots left today, transfer funds now",
+            "bucket": 0
+          },
+          {
+            "text": "Central bank announced a 25 basis point benchmark rate cut",
+            "bucket": 1
+          }
+        ],
+        "explanation": "Guaranteed profits, urgent deadlines, and pump instructions are classic signs of chat room manipulation."
+      }
+    },
+    {
+      "id": "seoul-d06",
+      "lessonId": "seoul-3",
+      "sourceStepId": "q2",
+      "concepts": [
+        "pump-and-dump"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d06",
+        "prompt": "In a stock tip chat room, why do organizers instruct all members to buy simultaneously at a set minute?",
+        "options": [
+          "The buying surge spikes the price so organizers can sell at a profit",
+          "Simultaneous group orders qualify for institutional commission rates",
+          "Stock market regulations require retail community orders to be pooled",
+          "Buying at the exact same minute guarantees equal dividend allocations"
+        ],
+        "correctIndex": 0,
+        "explanation": "Coordinated buying creates temporary artificial demand, letting insiders sell their shares into the price spike."
+      }
+    },
+    {
+      "id": "seoul-d07",
+      "lessonId": "seoul-4",
+      "sourceStepId": "p1",
+      "concepts": [
+        "diversification"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d07",
+        "prompt": "Elena builds an equally weighted equity portfolio holding 25 different companies. If sudden fraud causes two of the companies to collapse to zero, how much of her total portfolio is lost?",
+        "input": {
+          "kind": "slider",
+          "min": -30,
+          "max": 0,
+          "step": 1,
+          "unit": "%"
+        },
+        "answer": -8,
+        "tolerance": 1,
+        "reveal": "−8%. Each company was 4% of the portfolio, so two bankruptcies cost 8%.",
+        "explanation": "Each company represents 1 / 25 = 4% of the portfolio. Two bankruptcies cause a loss of 2 × 4% = 8%."
+      }
+    },
+    {
+      "id": "seoul-d08",
+      "lessonId": "seoul-4",
+      "sourceStepId": "s1",
+      "concepts": [
+        "concentration-risk"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "chart",
+        "id": "d08",
+        "prompt": "A single stock makes up 30% of a portfolio. If that company crashes by 60%, how much does the entire portfolio lose?",
+        "model": "oneCompanyCrash",
+        "params": {
+          "share": {
+            "label": "Company share",
+            "min": 0,
+            "max": 100,
+            "step": 5,
+            "value": 30,
+            "unit": "%"
+          }
+        },
+        "output": {
+          "label": "Portfolio impact",
+          "unit": "%"
+        },
+        "input": {
+          "kind": "slider",
+          "min": -50,
+          "max": 0,
+          "step": 1,
+          "unit": "%"
+        },
+        "answer": -18,
+        "tolerance": 2,
+        "explanation": "Concentrated loss = 30% allocation × −60% decline = −18% total portfolio impact."
+      }
+    },
+    {
+      "id": "seoul-d09",
+      "lessonId": "seoul-5",
+      "sourceStepId": "q1",
+      "concepts": [
+        "risk-capacity"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d09",
+        "prompt": "Why is it vital to decide risk limits and maximum position sizes before entering a volatile trade?",
+        "options": [
+          "Emotions like FOMO and fear impair objective judgement during volatility",
+          "Brokers freeze trading accounts that do not register limits in advance",
+          "Setting predefined rules legally shields trades from market downturns",
+          "Automated stock exchanges reject positions without predetermined caps"
+        ],
+        "correctIndex": 0,
+        "explanation": "Pre-established rules protect investors from emotional decisions driven by excitement or panic in volatile markets."
+      }
+    },
+    {
+      "id": "seoul-d10",
+      "lessonId": "seoul-5",
+      "sourceStepId": "q2",
+      "concepts": [
+        "concentration-risk"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d10",
+        "prompt": "Min-ho enforces strict risk management by limiting any speculative trade to at most 5% of his liquid portfolio. If one high-risk token goes completely to zero, what happens to his total savings?",
+        "options": [
+          "His overall portfolio declines by 5%, preserving 95% of his wealth",
+          "He is completely wiped out because of contagion risk across assets",
+          "His other holdings automatically double to offset the loss",
+          "He loses 50% of his wealth due to mandatory exchange liquidation fees"
+        ],
+        "correctIndex": 0,
+        "explanation": "Capping any single position at 5% ensures that a total wipeout is contained to a survivable 5% portfolio loss."
+      }
+    }
+  ]
+}

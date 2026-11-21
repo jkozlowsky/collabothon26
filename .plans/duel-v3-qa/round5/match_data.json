@@ -1,0 +1,178 @@
+{
+  "pairTargets": [
+    {
+      "l": 0,
+      "r": 2
+    },
+    {
+      "l": 1,
+      "r": 0
+    },
+    {
+      "l": 2,
+      "r": 1
+    },
+    {
+      "l": 3,
+      "r": 3
+    }
+  ],
+  "svgRect": {
+    "x": 20,
+    "y": 232,
+    "width": 350,
+    "height": 610,
+    "top": 232,
+    "right": 370,
+    "bottom": 842,
+    "left": 20
+  },
+  "lines": [
+    {
+      "x1": 153,
+      "y1": 54,
+      "x2": 197,
+      "y2": 319,
+      "stroke": "#1E9AA8"
+    },
+    {
+      "x1": 153,
+      "y1": 118,
+      "x2": 197,
+      "y2": 76,
+      "stroke": "#6E5AD6"
+    },
+    {
+      "x1": 153,
+      "y1": 186,
+      "x2": 197,
+      "y2": 193,
+      "stroke": "#E8833A"
+    },
+    {
+      "x1": 153,
+      "y1": 258,
+      "x2": 197,
+      "y2": 436,
+      "stroke": "#D9577A"
+    }
+  ],
+  "circles": [
+    {
+      "cx": 153,
+      "cy": 54,
+      "r": 3.5,
+      "fill": "#1E9AA8"
+    },
+    {
+      "cx": 197,
+      "cy": 319,
+      "r": 3.5,
+      "fill": "#1E9AA8"
+    },
+    {
+      "cx": 153,
+      "cy": 118,
+      "r": 3.5,
+      "fill": "#6E5AD6"
+    },
+    {
+      "cx": 197,
+      "cy": 76,
+      "r": 3.5,
+      "fill": "#6E5AD6"
+    },
+    {
+      "cx": 153,
+      "cy": 186,
+      "r": 3.5,
+      "fill": "#E8833A"
+    },
+    {
+      "cx": 197,
+      "cy": 193,
+      "r": 3.5,
+      "fill": "#E8833A"
+    },
+    {
+      "cx": 153,
+      "cy": 258,
+      "r": 3.5,
+      "fill": "#D9577A"
+    },
+    {
+      "cx": 197,
+      "cy": 436,
+      "r": 3.5,
+      "fill": "#D9577A"
+    }
+  ],
+  "leftTiles": [
+    {
+      "idx": 0,
+      "text": "1\nCredit insurance",
+      "x": 20,
+      "y": 258,
+      "width": 153,
+      "height": 56
+    },
+    {
+      "idx": 1,
+      "text": "2\nOrigination fee",
+      "x": 20,
+      "y": 322,
+      "width": 153,
+      "height": 56
+    },
+    {
+      "idx": 2,
+      "text": "3\nNominal interest rate",
+      "x": 20,
+      "y": 386,
+      "width": 153,
+      "height": 64
+    },
+    {
+      "idx": 3,
+      "text": "4\nTotal effective cost (CET)",
+      "x": 20,
+      "y": 458,
+      "width": 153,
+      "height": 64
+    }
+  ],
+  "rightTiles": [
+    {
+      "idx": 0,
+      "text": "2\nAn upfront administrative surcharge added to the loan",
+      "x": 217,
+      "y": 258,
+      "width": 153,
+      "height": 100
+    },
+    {
+      "idx": 1,
+      "text": "3\nThe headline percentage charged strictly on borrowed balance",
+      "x": 217,
+      "y": 366,
+      "width": 153,
+      "height": 118
+    },
+    {
+      "idx": 2,
+      "text": "1\nAn added policy protecting the lender if borrower defaults",
+      "x": 217,
+      "y": 492,
+      "width": 153,
+      "height": 118
+    },
+    {
+      "idx": 3,
+      "text": "4\nThe all-inclusive percentage covering interest and all fees",
+      "x": 217,
+      "y": 618,
+      "width": 153,
+      "height": 100
+    }
+  ]
+}

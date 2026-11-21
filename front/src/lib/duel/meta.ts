@@ -149,3 +149,18 @@ export function getWeeklyLeagueClock(now: Date = new Date()): {
   const shortLabel = days > 0 ? `${days}d ${hours}h left` : `${Math.max(1, hours)}h left`;
   return { week, days, hours, shortLabel };
 }
+
+/**
+ * Format a full name into "First L." (first name + first letter of the last name with a dot).
+ * If there is only one word / no last name, returns just the first name.
+ * Handles extra whitespace and multi-part last names.
+ */
+export function formatPlayerName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0];
+  const first = parts[0];
+  const lastInitial = parts[1].charAt(0).toUpperCase();
+  return `${first} ${lastInitial}.`;
+}
+

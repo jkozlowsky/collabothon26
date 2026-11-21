@@ -1,0 +1,300 @@
+{
+  "story": "tokyo",
+  "questions": [
+    {
+      "id": "tokyo-d01",
+      "lessonId": "tokyo-1",
+      "sourceStepId": "so1",
+      "concepts": [
+        "time-horizon"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "sort",
+        "id": "d01",
+        "prompt": "Sort each financial goal into Short-term savings or Long-term growth based on time horizon:",
+        "buckets": [
+          "Short-term savings",
+          "Long-term growth"
+        ],
+        "items": [
+          {
+            "text": "Security deposit for an apartment rental next year",
+            "bucket": 0
+          },
+          {
+            "text": "Retirement portfolio for retirement in 30 years",
+            "bucket": 1
+          },
+          {
+            "text": "Annual automobile insurance renewal due in 6 months",
+            "bucket": 0
+          },
+          {
+            "text": "Wealth fund targeted for a child turning 18 in 15 years",
+            "bucket": 1
+          },
+          {
+            "text": "Replacing a failing domestic heat pump this winter",
+            "bucket": 0
+          },
+          {
+            "text": "Global equity accumulation fund held for two decades",
+            "bucket": 1
+          }
+        ],
+        "explanation": "Short-term needs cannot afford market drops and need capital stability; long-term money can ride out volatility for growth."
+      }
+    },
+    {
+      "id": "tokyo-d02",
+      "lessonId": "tokyo-1",
+      "sourceStepId": "q1",
+      "concepts": [
+        "time-horizon"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d02",
+        "prompt": "Why should money needed for immediate living costs (such as next month's rent) never be invested in stocks?",
+        "options": [
+          "A short-term market drop could force selling at a loss to pay bills",
+          "Stock exchanges legally restrict withdrawals requested under sixty days",
+          "Short-term investment profits are taxed at a punitive 90% rate",
+          "Rental payment processing banks refuse funds originating from equities"
+        ],
+        "correctIndex": 0,
+        "explanation": "Equities are volatile in the short term; if prices drop when rent is due, you are forced to lock in losses."
+      }
+    },
+    {
+      "id": "tokyo-d03",
+      "lessonId": "tokyo-2",
+      "sourceStepId": "s1",
+      "concepts": [
+        "diversification"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "chart",
+        "id": "d03",
+        "prompt": "Aoi divides her portfolio between 60% domestic equities and 40% global equities. If domestic shares fall 30% while global shares gain 10%, what is her total return?",
+        "model": "countryMix",
+        "params": {
+          "homeShare": {
+            "label": "Domestic share",
+            "min": 0,
+            "max": 100,
+            "step": 5,
+            "value": 60,
+            "unit": "%"
+          },
+          "homeMove": {
+            "label": "Domestic return",
+            "min": -50,
+            "max": 50,
+            "step": 5,
+            "value": -30,
+            "unit": "%"
+          },
+          "worldMove": {
+            "label": "Global return",
+            "min": -30,
+            "max": 30,
+            "step": 5,
+            "value": 10,
+            "unit": "%"
+          }
+        },
+        "output": {
+          "label": "Portfolio return",
+          "unit": "%"
+        },
+        "input": {
+          "kind": "slider",
+          "min": -40,
+          "max": 20,
+          "step": 1,
+          "unit": "%"
+        },
+        "answer": -14,
+        "tolerance": 2,
+        "explanation": "Net return = (0.60 × −30%) + (0.40 × 10%) = −18% + 4% = −14%."
+      }
+    },
+    {
+      "id": "tokyo-d04",
+      "lessonId": "tokyo-2",
+      "sourceStepId": "q2",
+      "concepts": [
+        "diversification"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d04",
+        "prompt": "Which statement accurately describes what broad global diversification achieves for an investor?",
+        "options": [
+          "It reduces single-company and single-country risks, but not market drops",
+          "It guarantees positive investment returns every single calendar year",
+          "It maximizes returns by concentrating on top global performing companies",
+          "It eliminates all forms of portfolio volatility during global downturns"
+        ],
+        "correctIndex": 0,
+        "explanation": "Global diversification eliminates idiosyncratic country or company risk, but whole-market downturns can still cause temporary losses."
+      }
+    },
+    {
+      "id": "tokyo-d05",
+      "lessonId": "tokyo-3",
+      "sourceStepId": "p1",
+      "concepts": [
+        "time-horizon",
+        "drawdown"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d05",
+        "prompt": "Kenji's index fund drops 40% during a severe recession. If the market then rebounds with a steady 8% annual return, how many years will it take for his balance to fully break even?",
+        "input": {
+          "kind": "slider",
+          "min": 0,
+          "max": 20,
+          "step": 1,
+          "unit": " years"
+        },
+        "answer": 7,
+        "tolerance": 1,
+        "reveal": "About 7 years. 0.60 × (1.08)^7 ≈ 1.028, restoring the original balance.",
+        "explanation": "Recovering from 60 to 100 at 8% annual growth takes ln(100/60) / ln(1.08) ≈ 6.64 years (7 years)."
+      }
+    },
+    {
+      "id": "tokyo-d06",
+      "lessonId": "tokyo-3",
+      "sourceStepId": "q2",
+      "concepts": [
+        "drawdown"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d06",
+        "prompt": "Hiroshi invests €10,000 into a fund that drops 40% to €6,000 during a crash. The fund then rebounds with a 40% gain in the next period. What is his fund worth now?",
+        "options": [
+          "€8,400, leaving a net loss of €1,600",
+          "€10,000, fully returning to the start",
+          "€9,600, leaving a minor €400 loss",
+          "€7,200, gaining only half of the fall"
+        ],
+        "correctIndex": 0,
+        "explanation": "€6,000 × 1.40 = €8,400. Because the 40% gain applies to the smaller post-drop balance, it does not undo the €4,000 loss."
+      }
+    },
+    {
+      "id": "tokyo-d07",
+      "lessonId": "tokyo-4",
+      "sourceStepId": "p1",
+      "concepts": [
+        "currency-risk"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d07",
+        "prompt": "Yuki converts €2,000 to $2,000 to buy shares of a US firm. With the share price unchanged at $2,000, the euro strengthens from $1.00 to $1.20. What is her return in euros?",
+        "input": {
+          "kind": "slider",
+          "min": -50,
+          "max": 50,
+          "step": 1,
+          "unit": "%"
+        },
+        "answer": -17,
+        "tolerance": 2,
+        "reveal": "−16.7% (approx −17%). The $2,000 investment converts back to only €1,667 due to euro strength.",
+        "explanation": "The $2,000 shares are now worth $2,000 / 1.20 = €1,666.67, representing a return of −16.7% (approx −17%)."
+      }
+    },
+    {
+      "id": "tokyo-d08",
+      "lessonId": "tokyo-4",
+      "sourceStepId": "m1",
+      "concepts": [
+        "currency-risk",
+        "diversification"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "match",
+        "id": "d08",
+        "prompt": "Match each global investing concept with its corresponding financial description:",
+        "pairs": [
+          [
+            "Home bias",
+            "Disproportionately holding domestic assets despite global alternatives"
+          ],
+          [
+            "Currency risk",
+            "Exchange rate movements changing returns measured in home currency"
+          ],
+          [
+            "Drawdown",
+            "The peak-to-trough percentage decline in an asset valuation"
+          ],
+          [
+            "Global diversification",
+            "Allocating capital across multiple countries and economic sectors"
+          ]
+        ],
+        "explanation": "Awareness of these concepts prevents common errors such as currency surprises or over-investing in domestic companies."
+      }
+    },
+    {
+      "id": "tokyo-d09",
+      "lessonId": "tokyo-5",
+      "sourceStepId": "q1",
+      "concepts": [
+        "compound-interest"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d09",
+        "prompt": "In a regular monthly investment plan, why does the portfolio growth curve become much steeper after 20 years?",
+        "options": [
+          "Compound returns on past capital begin to exceed new monthly contributions",
+          "Trading commissions charged by brokerages drop to zero after ten years",
+          "Stock markets are legally required to produce higher returns over time",
+          "Central banks pay subsidies on mature private investment savings plans"
+        ],
+        "correctIndex": 0,
+        "explanation": "As accumulated capital grows large, the returns earned on prior gains dramatically outpace each new monthly deposit."
+      }
+    },
+    {
+      "id": "tokyo-d10",
+      "lessonId": "tokyo-5",
+      "sourceStepId": "q2",
+      "concepts": [
+        "time-horizon"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d10",
+        "prompt": "Does investing via a regular monthly savings plan guarantee a profit in every market scenario?",
+        "options": [
+          "No, investments fluctuate and can still experience net losses",
+          "Yes, recurring monthly purchases mathematically eliminate all risk",
+          "Yes, dollar-cost averaging guarantees a fixed 5% annual return",
+          "No, but profits are guaranteed after at least twelve payments"
+        ],
+        "correctIndex": 0,
+        "explanation": "Dollar-cost averaging reduces timing risk by averaging purchase prices, but cannot prevent losses if market prices decline."
+      }
+    }
+  ]
+}

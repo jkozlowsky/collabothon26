@@ -1,0 +1,98 @@
+[
+  {
+    "source": "top3",
+    "text": "1 | Tomasz N. | Lv 15 | 310 XP",
+    "rect": {
+      "y": 166,
+      "height": 72
+    }
+  },
+  {
+    "source": "top3",
+    "text": "2 | Ola W. | Lv 14 | 265 XP",
+    "rect": {
+      "y": 246,
+      "height": 72
+    }
+  },
+  {
+    "source": "top3",
+    "text": "3 | Marta K. | Lv 12 | 220 XP",
+    "rect": {
+      "y": 326,
+      "height": 72
+    }
+  },
+  {
+    "source": "list",
+    "text": "4 | Jonas B. | Lv 11 | 180 XP",
+    "rect": {
+      "y": 415,
+      "height": 63
+    }
+  },
+  {
+    "source": "list",
+    "text": "5 | Alex K. | You · Lv 9 | 150 XP",
+    "rect": {
+      "y": 479,
+      "height": 63
+    }
+  },
+  {
+    "source": "list",
+    "text": "6 | Kasia L. | Lv 9 | 128 XP",
+    "rect": {
+      "y": 543,
+      "height": 63
+    }
+  },
+  {
+    "source": "list",
+    "text": "7 | Piotr M. | Lv 7 | 90 XP",
+    "rect": {
+      "y": 607,
+      "height": 63
+    }
+  },
+  {
+    "source": "list",
+    "text": "8 | Sofia R. | Lv 5 | 60 XP",
+    "rect": {
+      "y": 671,
+      "height": 63
+    }
+  },
+  {
+    "source": "list",
+    "text": "9 | Marek Z. | Lv 4 | 40 XP",
+    "rect": {
+      "y": 735,
+      "height": 63
+    }
+  },
+  {
+    "source": "list",
+    "text": "10 | Lukas S. | Lv 3 | 30 XP",
+    "rect": {
+      "y": 799,
+      "height": 63
+    }
+  },
+  {
+    "source": "list",
+    "text": "11 | Nina V. | Lv 3 | 20 XP",
+    "rect": {
+      "y": 863,
+      "height": 63
+    }
+  },
+  {
+    "source": "list",
+    "text": "12 | Ewa D. | Lv 2 | 10 XP",
+    "rect": {
+      "y": 927,
+      "height": 63
+    }
+  }
+]

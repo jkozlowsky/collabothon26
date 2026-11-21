@@ -184,11 +184,22 @@ export type ReviewItem = {
   lessonTitle: string;
 };
 
+export type CategoryMatchEnd = {
+  story: string;
+  xpGained: number;
+  xpBefore: number;
+  xpAfter: number;
+  levelBefore: number;
+  levelAfter: number;
+  xpIntoLevelAfter: number;
+  xpForLevelAfter: number;
+};
+
 /** GET /api/duel/matches/{id}?userId= */
 export type MatchEnd = {
   matchId: number;
   mode: DuelMode;
-  categories: string[];
+  categories: CategoryMatchEnd[] | string[];
   outcome: MatchOutcome;
   score: number;
   rivalScore: number | null;
@@ -222,6 +233,8 @@ export type RankingRow = {
   avatar: PlayerCard['avatar'];
   level: number;
   weeklyXp: number;
+  previousRank?: number | null;
+  lastXpEventId?: number | null;
 };
 
 export type Rankings = {

@@ -25,6 +25,10 @@ public record DuelProperties(
 		@PositiveOrZero @DefaultValue("4000") long botMaxDelayMs,
 		@DefaultValue("true") boolean seedDemoXp) {
 
+	public DuelProperties() {
+		this(6, 10000, 60000, 4.0, 12000, 20000, 25000, 20000, 25000, 1000, 4000, false);
+	}
+
 	@AssertTrue(message = "app.duel.bot-max-delay-ms must not be below app.duel.bot-min-delay-ms")
 	public boolean isBotDelayRangeValid() {
 		return botMaxDelayMs >= botMinDelayMs;

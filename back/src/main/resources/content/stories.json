@@ -86,6 +86,7 @@
     "intro": "A short lesson about prices that rise fast. You learn how fast prices can double and what this means for money that pays little interest.",
     "currency": { "code": "EUR", "perEur": 1 },
     "lessonIds": ["buenos-aires-1"],
+    "duelFallback": "berlin",
     "personal": true
   },
   {
@@ -102,6 +103,7 @@
     "intro": "A short lesson about saving small amounts often. You learn why small amounts add up and how to save before you spend.",
     "currency": { "code": "EUR", "perEur": 1 },
     "lessonIds": ["nairobi-1"],
+    "duelFallback": "berlin",
     "personal": true
   },
   {
@@ -118,6 +120,7 @@
     "intro": "A short lesson about gold. You learn why many people trust gold, how much its price can move, and how it fits next to other money.",
     "currency": { "code": "EUR", "perEur": 1 },
     "lessonIds": ["mumbai-1"],
+    "duelFallback": "tokyo",
     "personal": true
   }
 ]

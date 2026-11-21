@@ -19,7 +19,7 @@ import com.collabothon.back.xp.services.XpService;
 
 import lombok.RequiredArgsConstructor;
 
-/** Builds the player cards shown in a duel: first name and avatar from the account, level per story from XP. */
+/** Builds the player cards shown in a duel: full name and avatar from the account, level per story from XP. */
 @Service
 @RequiredArgsConstructor
 public class DuelPlayerCardService {
@@ -42,7 +42,7 @@ public class DuelPlayerCardService {
 			levels.put(story.id(), levelCurve.fromXp(xpPerCategory.getOrDefault(story.id(), 0)).level());
 		}
 		Optional<Account> account = accounts.findById(userId);
-		String name = account.map(Account::getFirstName).orElse(userId);
+		String name = account.map(Account::getFullName).filter(n -> !n.isBlank()).orElse(userId);
 		String avatar = account.map(Account::getAvatar).orElse(DEFAULT_AVATAR);
 		return new PlayerCardDto(name, avatar, levels);
 	}

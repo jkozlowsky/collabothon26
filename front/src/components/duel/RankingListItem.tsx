@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PlayerAvatar } from '@/components/duel/PlayerAvatar';
-import { colors, radii, spacing, type } from '@/constants/theme';
+import { colors, fonts, radii, spacing, type } from '@/constants/theme';
+import { formatPlayerName } from '@/lib/duel/meta';
 import type { RankingRow } from '@/types/duel';
 
 type Props = {
@@ -11,9 +12,11 @@ type Props = {
   testID?: string;
 };
 
-/** Weekly ranking list row (Figma 153:3824). Weekly XP only, no Elo. */
+/** Weekly ranking list row (Figma 153:3824 / Duel v3 Frame 04-06). Weekly XP only, no Elo. */
 export function RankingListItem({ row, isYou = false, variant = 'default', testID }: Props) {
   const isPinned = variant === 'pinned';
+  const formattedName = formatPlayerName(row.name);
+  const metaText = isYou ? `You · Lv ${row.level}` : `Lv ${row.level}`;
 
   return (
     <View
@@ -33,10 +36,10 @@ export function RankingListItem({ row, isYou = false, variant = 'default', testI
       <View style={styles.main}>
         <View style={styles.nameRow}>
           <Text style={[styles.name, isYou && styles.youName]} numberOfLines={1}>
-            {row.name} {isYou ? '(You)' : ''}
+            {formattedName}
           </Text>
         </View>
-        <Text style={styles.level}>Level {row.level}</Text>
+        <Text style={styles.level}>{metaText}</Text>
       </View>
 
       <View style={styles.scoreWrap}>
@@ -63,10 +66,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandAccentSoft,
   },
   pinnedRow: {
-    backgroundColor: colors.bgSurface,
+    backgroundColor: colors.brandAccentSoft,
     borderRadius: radii.card,
     borderWidth: 2,
-    borderColor: colors.brandAccent,
+    borderColor: colors.brandPrimary,
   },
   rank: {
     ...type.labelStrong,
@@ -76,7 +79,7 @@ const styles = StyleSheet.create({
   },
   youRank: {
     color: colors.brandPrimary,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   main: {
     flex: 1,
@@ -93,7 +96,7 @@ const styles = StyleSheet.create({
   },
   youName: {
     color: colors.brandPrimary,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   level: {
     ...type.labelDefault,
@@ -107,6 +110,6 @@ const styles = StyleSheet.create({
     color: colors.brandPrimary,
   },
   youXpValue: {
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
 });

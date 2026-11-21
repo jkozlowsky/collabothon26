@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick check v2 C Two markers on a dock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Shared by a.html, b.html, c.html: kit tokens, phone frame, artboard labels.
+   Tokens: docs/design/finance-quest-kit.md */
+:root {
+  --primary: #002E3C; --primary-pressed: #001F29; --primary-soft: #E6EEF0;
+  --accent: #FFCC00; --accent-soft: #FFF4CC;
+  --canvas: #F5F7F7; --surface: #FFFFFF; --tint: #E3EDEF;
+  --border: #E1E6E8; --border-strong: #C9D2D6;
+  --text: #0F1E24; --muted: #5F6F76; --on-brand: #FFFFFF; --on-accent: #002E3C;
+  --success: #1E8A5E; --danger: #D64545;
+  --land: #CFE5DD; --land-edge: #9CC3B6; --ocean-light: #1B6F82;
+  --rose: #D9577A; --violet: #6E5AD6; --teal: #1E9AA8; --slate: #9AA5AB;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Inter, system-ui, sans-serif; background: #DCE3E5; color: var(--text);
+  -webkit-font-smoothing: antialiased; font-size: 13px; line-height: 18px; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-align: left; }
+button:focus-visible, label:focus-within { outline: 3px solid var(--ocean-light); outline-offset: 2px; }
+.i { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; }
+.i.sm { width: 16px; height: 16px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Canvas: artboards wrap on wide screens, stack in the index iframes */
+.board { display: flex; flex-wrap: wrap; justify-content: center; gap: 32px 40px; padding: 24px 20px 48px; }
+.dir-head { width: 100%; max-width: 1250px; height: 96px; }
+.dir-head h1 { font: 700 26px/32px Inter, sans-serif; letter-spacing: -0.02em; }
+.dir-head p { font: 400 15px/20px Inter, sans-serif; color: var(--muted); margin-top: 4px; max-width: 60ch; }
+.art { width: 390px; }
+.art figcaption { height: 28px; font: 600 12px/16px Inter, sans-serif; color: var(--text); }
+
+/* Phone: 390x844, status bar 44, home indicator in the bottom 34px safe area */
+.phone { width: 390px; height: 844px; border-radius: 44px; overflow: hidden; position: relative;
+  display: flex; flex-direction: column; background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border-strong), 0 16px 40px rgba(0, 46, 60, .14); }
+.status { height: 44px; flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px; font: 600 15px/20px Inter, sans-serif; }
+.status .batt { width: 26px; height: 12px; border: 1.5px solid currentColor; border-radius: 3px; position: relative; }
+.status .batt::after { content: ""; position: absolute; inset: 1.5px 6px 1.5px 1.5px; background: currentColor; border-radius: 1px; }
+.scroll { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; }
+.home-ind { position: absolute; bottom: 8px; left: 50%; width: 134px; height: 5px; margin-left: -67px;
+  border-radius: 3px; background: var(--text); pointer-events: none; }
+.home-ind.light { background: #FFFFFF; }
+.press { transition: transform 120ms var(--ease-out); }
+.press:active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) { .press:active { transform: none; } * { animation: none !important; } }
+.display, .h, .big, .dir-head p { text-wrap: balance; }
+/* Consent card + loading screen (F1, M1): shared by consent-a/b/c.html, on top of base.css.
+   Mirrors the onboarding components in front/src/components/onboarding/ui.tsx, adjusted to the
+   finance-quest-ui skill (type scale only, 20px sides, one yellow focal point per view). */
+:root { --xp: #B58B00; --success-soft: rgba(30, 138, 94, .14); --danger-soft: rgba(214, 69, 69, .14); }
+.dir-head { max-width: 1680px; height: auto; margin-bottom: 8px; }
+.dir-head .motion { font-size: 13px; line-height: 18px; margin-top: 10px; }
+.dir-head .motion b { color: var(--text); }
+
+/* Page, as the onboarding's <Page>: canvas, scrolling body, footer with the buttons */
+.phone.ob { background: var(--canvas); }
+.ob .body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 20px 16px; display: flex; flex-direction: column; gap: 10px; }
+.ob .grow { flex-grow: 1; }
+.ob .foot { flex: none; padding: 8px 20px 34px; display: flex; flex-direction: column; gap: 8px; }
+
+/* Text styles from the kit scale */
+.t-display { font: 700 26px/32px Inter; letter-spacing: -1px; color: var(--text); text-wrap: balance; }
+.t-section { font: 700 18px/24px Inter; }
+.t-card { font: 600 15px/20px Inter; }
+.t-body { font: 400 13px/18px Inter; color: var(--muted); }
+.t-label { font: 500 12px/16px Inter; color: var(--muted); }
+.t-strong { font: 600 12px/16px Inter; }
+.t-over { font: 700 10px/12px Inter; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); }
+
+/* BigButton: 52 high, radius 16, yellow with petrol label; ghost = muted label */
+.big { height: 52px; width: 100%; border-radius: 16px; background: var(--accent); color: var(--on-accent);
+  font: 600 15px/20px Inter; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.big.ghost { background: transparent; color: var(--muted); }
+.big.ghost.on-dark { color: rgba(255, 255, 255, .8); }
+.big.soft { background: var(--primary-soft); color: var(--primary); }
+
+/* IconTile: radius 12, petrol icon on tint (yellow is kept for the button) */
+.tile { width: 44px; height: 44px; border-radius: 12px; background: var(--tint); color: var(--primary); display: grid; place-items: center; flex: none; }
+.tile .i { width: 22px; height: 22px; }
+.tile.lg { width: 64px; height: 64px; }
+.tile.lg .i { width: 32px; height: 32px; }
+.tile.sm { width: 32px; height: 32px; border-radius: 10px; }
+.tile.sm .i { width: 16px; height: 16px; }
+.tile.danger { background: var(--danger-soft); color: var(--danger); }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.note { display: flex; gap: 10px; align-items: flex-start; background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; }
+.note .i { color: var(--primary); width: 18px; height: 18px; margin-top: 1px; }
+
+/* Step states shared by every loading screen */
+.mark { width: 24px; height: 24px; border-radius: 12px; flex: none; display: grid; place-items: center; }
+.mark.done { background: var(--success-soft); color: var(--success); }
+.mark.now { border: 2.5px solid var(--border); border-top-color: var(--primary); animation: spin 900ms linear infinite; }
+.mark.next { border: 2px solid var(--border-strong); }
+.mark.fail { background: var(--danger-soft); color: var(--danger); }
+@keyframes spin { to { transform: rotate(360deg); } }
+/* Reduced motion: the spinner becomes a still, closed petrol ring */
+@media (prefers-reduced-motion: reduce) { .mark.now { border-color: var(--primary); } }
+/* Quick check + learning path summary (F1b, Q-M): shared by quick-check-a/b/c.html,
+   on top of base.css and consent.css (consent direction C "The line"). */
+
+/* Top bar: back (44 px target) and the "1 of 4" count */
+.qtop { display: flex; align-items: center; gap: 8px; height: 44px; margin: 0 -10px 4px; }
+.back { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; color: var(--primary); flex: none; }
+.qtop .count { margin-left: auto; padding-right: 10px; }
+
+/* The answer field. Its 1 px border is --muted, not --border-strong: an input boundary needs 3:1 (WCAG 1.4.11) */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field textarea { width: 100%; min-height: 132px; resize: none; border-radius: 16px; padding: 14px 16px;
+  border: 1px solid var(--muted); background: var(--surface); color: var(--text);
+  font: 400 15px/20px Inter, sans-serif; }
+.field textarea::placeholder { color: var(--muted); }
+.field textarea:focus, .field textarea.focus { outline: none; border: 2px solid var(--primary); padding: 13px 15px; }
+.field .meta { display: flex; justify-content: space-between; gap: 12px; }
+.field .meta .counter { font-variant-numeric: tabular-nums; margin-left: auto; }
+
+/* Inline account numbers: computed on the phone, marked so "it knows me" reads at a glance */
+mark.acct { background: var(--primary-soft); color: var(--primary); border-radius: 4px; box-shadow: 0 0 0 3px var(--primary-soft);
+  box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+
+/* Disabled Next: still legible (muted on tint is 5:1), clearly not the yellow focal point */
+.big:disabled, .big[aria-disabled="true"] { background: var(--tint); color: var(--muted); cursor: not-allowed; }
+.big:disabled:active { transform: none; }
+
+/* Summary building blocks */
+.because { display: flex; flex-direction: column; gap: 6px; list-style: none; }
+.because li { display: flex; gap: 10px; align-items: flex-start; }
+.because li::before { content: ""; width: 6px; height: 6px; border-radius: 3px; background: var(--primary); flex: none; margin-top: 6px; }
+.focus-row { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; }
+.focus-row .tile { width: 40px; height: 40px; }
+.focus-row .tile .i { width: 20px; height: 20px; }
+.focus-row p + p { margin-top: 2px; }
+
+/* Dark hero card: petrol carries the gap, so yellow stays for "Start learning" */
+.gap-hero { background: var(--primary); color: var(--on-brand); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.gap-hero .t-over { color: rgba(255, 255, 255, .8); }
+.gap-hero .t-body { color: rgba(255, 255, 255, .88); }
+
+/* Summary artboards are shown at full length; in the app the body scrolls above the fixed footer */
+.phone.long { height: auto; min-height: 844px; }
+.phone.long .body { overflow: visible; }
+
+/* Entry of summary blocks: short stagger, transform + opacity only */
+.rise { animation: rise 260ms var(--ease-out) both; }
+.rise:nth-child(2) { animation-delay: 50ms; } .rise:nth-child(3) { animation-delay: 100ms; }
+.rise:nth-child(4) { animation-delay: 150ms; } .rise:nth-child(5) { animation-delay: 200ms; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+/* Reduced motion: blocks appear in place (base.css stops all keyframes) */
+/* ---- Quick check v2 shared ---- */
+@property --p { syntax: '<number>'; inherits: false; initial-value: 0; }
+@property --c { syntax: '<number>'; inherits: false; initial-value: 0; }
+.dir-head { padding: 0 4px; }
+.dir-head p { max-width: 90ch; }
+.stage { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.jump { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: 390px; }
+.jump button { height: 32px; padding: 0 12px; border-radius: 999px; background: var(--surface); color: var(--primary);
+  font: 600 12px/16px Inter; box-shadow: 0 0 0 1px var(--border-strong); }
+.head-row { display: flex; align-items: center; gap: 10px; }
+.screen-in { animation: rise 260ms var(--ease-out) both; }
+.qhead { flex: none; padding: 4px 20px 10px; display: flex; flex-direction: column; gap: 8px; }
+.qrow { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.segs { display: flex; gap: 4px; }
+.seg { flex: 1; height: 8px; border-radius: 4px; border: 1.5px dashed var(--border-strong); transition: background-color 240ms; }
+.seg.done { background: var(--primary); border: 1.5px solid var(--primary); }
+.seg.cur { background: var(--accent); border: 1.5px solid var(--primary); }
+.ob .body.q { padding-bottom: 34px; }
+.why { display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;
+  background: var(--primary-soft); color: var(--primary); font: 500 12px/16px Inter; }
+.why .i { width: 14px; height: 14px; }
+.opts { display: flex; flex-direction: column; gap: 8px; }
+.opt { width: 100%; min-height: 48px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px;
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--muted); font: 400 13px/18px Inter; color: var(--text); }
+.opt .r { width: 22px; height: 22px; border-radius: 11px; flex: none; display: grid; place-items: center;
+  box-shadow: inset 0 0 0 2px var(--muted); color: transparent; }
+.opt .r .i { width: 14px; height: 14px; stroke-width: 3; }
+.optwrap.ns .opt { background: transparent; box-shadow: inset 0 0 0 1.5px var(--muted); }
+.optwrap.ns .opt .txt { color: var(--muted); font-weight: 500; }
+.optwrap.sel .opt { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--primary); }
+.optwrap.sel .opt .r { background: var(--primary); box-shadow: none; color: var(--on-brand); }
+.src { margin-top: 2px; }
+/* Confidence chips: three steps, bars show the level so colour is never the only cue */
+.conf { display: flex; flex-direction: column; gap: 8px; }
+.chips { display: flex; gap: 8px; }
+.chip { flex: 1; min-height: 52px; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--muted);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font: 600 12px/16px Inter; text-align: center; color: var(--primary); }
+.bars { display: flex; align-items: flex-end; gap: 2px; height: 12px; }
+.bars i { width: 4px; border-radius: 1px; background: var(--border-strong); }
+.bars i:nth-child(1) { height: 5px; } .bars i:nth-child(2) { height: 8px; } .bars i:nth-child(3) { height: 12px; }
+.bars.b1 i:nth-child(-n+1), .bars.b2 i:nth-child(-n+2), .bars.b3 i { background: var(--primary); }
+/* Thinking: a sentence and quiet placeholder lines, no spinner */
+.think { display: flex; flex-direction: column; gap: 10px; }
+.skel { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.skel i { display: block; height: 14px; border-radius: 7px; background: linear-gradient(90deg, var(--tint) 30%, var(--primary-soft) 50%, var(--tint) 70%); background-size: 300% 100%; animation: shim 1.2s linear infinite; }
+.skel.tiles i { height: 48px; border-radius: 14px; }
+@keyframes shim { from { background-position: 100% 0; } to { background-position: 0 0; } }
+/* Summary */
+.lesson { padding: 14px; background: var(--accent-soft); border: 2px solid var(--primary); border-radius: 16px; display: flex; gap: 12px; align-items: center; }
+.lesson .tile { background: var(--accent); color: var(--on-accent); }
+.gap-hero + .gap-hero { margin-top: 0; }
+.lvl-tag { font: 600 11px/14px Inter; color: var(--primary); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dia { width: 10px; height: 10px; background: var(--surface); border: 2px solid var(--primary); transform: rotate(45deg); flex: none; }
+.demo-end { align-items: center; text-align: center; justify-content: center; }
+@media (max-width: 430px) {
+  .board { padding: 0 0 24px; gap: 12px; }
+  .dir-head { padding: 12px 16px 0; }
+  .art, .stage { width: 100%; }
+  .phone { width: 100%; max-width: 100vw; border-radius: 0; height: 844px; }
+}
+.i.up { transform: rotate(90deg); }
+.ob .body > * { flex-shrink: 0; }
+.conf-slot .conf { margin-top: 8px; }
+
+/* C: dock + sheet, two markers */
+.foot.dockwrap { padding: 4px 20px 30px; }
+.dock { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 6px rgba(0, 31, 41, .08); }
+.dock .hd { display: flex; justify-content: space-between; align-items: center; min-height: 28px; }
+.dock .hd .i { width: 16px; height: 16px; color: var(--primary); }
+.dock .cols { display: flex; }
+.dcol { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 14px; }
+.vb { position: relative; width: 20px; height: 44px; border-radius: 10px; background: var(--tint); }
+.vb.none { background: transparent; box-shadow: inset 0 0 0 2px var(--border-strong); }
+.vb i { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--p) * 100%); border-radius: 10px; background: var(--primary); transition: --p 700ms var(--ease-out) 350ms; }
+.vb .dia, .trk .dia { position: absolute; transition: --c 350ms var(--ease-out); }
+.vb .dia { left: 50%; bottom: calc(var(--c) * 100% - 5px); margin-left: -5px; }
+.dia.none { opacity: 0; }
+.dcol .nm { font: 600 11px/14px Inter; color: var(--text); }
+.dcol .tag { position: absolute; top: 0; font: 700 10px/12px Inter; letter-spacing: .8px; text-transform: uppercase; color: var(--on-accent); background: var(--accent); padding: 1px 6px; border-radius: 6px; display: none; }
+.dcol.next .tag { display: block; }
+.dcol.next .vb { box-shadow: 0 0 0 3px var(--accent); }
+.dcol.hit .vb { animation: ping 900ms var(--ease-out); }
+@keyframes ping { from { box-shadow: 0 0 0 0 rgba(255, 204, 0, .9); } to { box-shadow: 0 0 0 10px rgba(255, 204, 0, 0); } }
+.scrim { position: absolute; inset: 0; background: rgba(0, 31, 41, .45); opacity: 0; pointer-events: none; transition: opacity 240ms; z-index: 5; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-radius: 28px 28px 0 0; padding: 12px 20px 34px;
+  transform: translateY(105%); transition: transform 320ms var(--ease-out); display: flex; flex-direction: column; gap: 12px; visibility: hidden; }
+.open .scrim { opacity: 1; pointer-events: auto; }
+.open .sheet { transform: none; visibility: visible; }
+.sheet .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--border-strong); align-self: center; }
+.sheet .hd { display: flex; justify-content: space-between; align-items: center; }
+.xbtn { width: 44px; height: 44px; margin: -8px -10px -8px 0; display: grid; place-items: center; border-radius: 12px; color: var(--primary); }
+.drow { display: flex; gap: 12px; align-items: center; }
+.drow .col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.drow .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.trk { position: relative; height: 10px; border-radius: 5px; background: var(--tint); }
+.trk i { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--p) * 100%); border-radius: 5px; background: var(--primary); transition: --p 700ms var(--ease-out); }
+.trk .dia { top: 50%; left: calc(var(--c) * 100%); margin: -5px 0 0 -5px; }
+/* C tile: the box is the tile, so the confidence chips grow inside it */
+.optwrap { border-radius: 14px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--muted); }
+.optwrap.ns { background: transparent; box-shadow: inset 0 0 0 1.5px var(--muted); }
+.optwrap.sel { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--primary); }
+.optwrap .opt, .optwrap.sel .opt, .optwrap.ns .opt { background: transparent; box-shadow: none; }
+.optwrap .conf-slot:not(:empty) { padding: 0 12px 12px; }
+.optwrap .chip { background: var(--surface); }
+.sumdual { display: flex; flex-direction: column; gap: 12px; }
+
+</style>
+</head>
+<body>
+<div style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg">
+
+<symbol id="chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+<symbol id="chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+<symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+<symbol id="lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+<symbol id="globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"/></symbol>
+<symbol id="book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+<symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+<symbol id="rotate" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+<symbol id="trend" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+<symbol id="coins" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.1 10.4A6 6 0 1 1 10.3 18"/><path d="M7 6h1v4"/></symbol>
+<symbol id="wallet" viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></symbol>
+<symbol id="sprout" viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M12 20v-8"/><path d="M12 12C12 8 9 6 5 6c0 4 3 6 7 6z"/><path d="M12 12c0-3 2.5-5 6-5 0 3-2.5 5-6 5z"/></symbol>
+<symbol id="safe" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="4"/><path d="M12 8v1M12 15v1M8 12h1M15 12h1"/></symbol>
+<symbol id="briefcase" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></symbol>
+<symbol id="cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L22 7H6"/></symbol>
+<symbol id="percent" viewBox="0 0 24 24"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
+<symbol id="bolt" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></symbol>
+<symbol id="eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h14V9"/><path d="M10 21v-6h4v6"/></symbol>
+<symbol id="flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+<symbol id="play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></symbol>
+<symbol id="pin" viewBox="0 0 24 24"><path d="M12 22s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+<symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+<symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+<symbol id="transfer" viewBox="0 0 24 24"><path d="m17 3 4 4-4 4"/><path d="M3 7h18"/><path d="m7 21-4-4 4-4"/><path d="M21 17H3"/></symbol>
+<symbol id="card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></symbol>
+<symbol id="alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></symbol>
+</svg>
+</div>
+<main class="board">
+<header class="dir-head">
+  <h1>C Two markers on a dock</h1>
+  <p>Quick check v2: no typing. An adaptive test with 3 to 6 single-choice questions, one confidence step per answer, and a live map of five areas. The map is a dock of five thermometer bars at the foot of the screen; tap it to open a sheet with labelled rows. The confidence chips grow inside the tapped tile. When you pick a chip, a hollow diamond for how sure you felt lands on the area first, then the filled bar for what your answers show rises. The gap between the two is the summary's story, built live. Trade-off: it sets up the confidence gap better than A or B, but it asks the user to read two markers, so the legend sits one tap away.</p>
+  <p class="motion"><b>Reduced motion:</b> Without reduced motion: the diamond moves in 350 ms, the bar rises over 700 ms, the sheet slides in 320 ms. With it: both jump and the sheet appears in place.</p>
+</header>
+<div class="stage">
+  <div class="jump"><button data-jump="consent">1 Consent</button><button data-jump="question">2 Questions</button><button data-jump="summary">3 Summary (demo answers)</button></div>
+  <div class="phone ob" id="phone"></div>
+</div>
+</main>
+<script>
+const dia = (a) => `<span class="dia ${confAvg(a) == null ? 'none' : ''}" data-mark="${a}" style="--c:${confAvg(a) ?? 0}"></span>`;
+const dock = () => `<div class="foot dockwrap" id="dockwrap"><button class="dock press" id="dockbtn" aria-haspopup="dialog" aria-expanded="false" data-testid="map-dock">
+  <span class="hd"><span class="t-strong">Your map so far</span><span class="t-label" style="display:inline-flex;align-items:center;gap:4px">Details ${ico('chevron-left').replace('class="i ', 'class="i up ')}</span></span>
+  <span class="cols">${AREAS.map((a) => `<span class="dcol" data-st="${a.id}" data-area="${a.id}"><span class="tag">Next</span><span class="vb ${st.p[a.id] == null ? 'none' : ''}" data-none="${a.id}"><i data-fill="${a.id}" style="--p:${mv(a.id, true)}"></i>${dia(a.id)}</span><span class="nm">${a.name}</span>${sr(a.id)}</span>`).join('')}</span></button></div>
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-label="Your map in detail"><span class="grab"></span>
+    <div class="hd"><h2 class="t-section">Your map in detail</h2><button class="xbtn press" id="sheetx" aria-label="Close">${ico('x')}</button></div>
+    ${dual()}</div>`;
+const dual = () => `<div class="sumdual">${AREAS.map((a) => `<div class="drow" data-st="${a.id}"><span class="tile sm">${ico(a.icon)}</span>
+  <div class="col"><div class="top"><span class="t-card">${a.name}</span><span class="lvl-tag" data-lvl="${a.id}">${lvl(st.p[a.id])}</span></div>
+  <div class="trk" aria-hidden="true"><i data-fill="${a.id}" style="--p:${mv(a.id, true)}"></i>${dia(a.id)}</div></div></div>`).join('')}
+  <div class="legend t-label"><span><i class="dia" style="display:inline-block"></i>How sure you felt</span><span><svg width="18" height="8" aria-hidden="true"><rect width="18" height="8" rx="4" fill="#002E3C"/></svg>What your answers show</span></div></div>`;
+const toggle = (open) => { const p = $('#phone'); p.classList.toggle('open', open); $('#dockbtn')?.setAttribute('aria-expanded', open); };
+const V = {
+  foot: dock,
+  afterAnswer() { syncMaps(); setTimeout(think, 1100); },
+  thinkEnter(nxt, done) { if (!done) $(`.dcol[data-area="${nxt.area}"]`).classList.add('next'); },
+  summaryMap: () => `<div class="rise"><p class="t-over" style="margin-bottom:8px">Your map</p>${dual()}</div>`,
+};
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#dockbtn')) toggle(true);
+  else if (e.target.closest('#sheetx,#scrim')) toggle(false);
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggle(false); });
+
+/* ---- Quick check v2 engine: mock of the adaptive test. The real model is not called; levels come from a tiny scripted update rule. ---- */
+const AREAS = [
+  { id: 'saving', name: 'Saving', icon: 'coins', lesson: 'Inflation and your savings' },
+  { id: 'borrowing', name: 'Borrowing', icon: 'card', lesson: 'Reading the APR' },
+  { id: 'investing', name: 'Investing', icon: 'trend', lesson: 'Spreading your money' },
+  { id: 'risk', name: 'Risk', icon: 'alert', lesson: 'Falling markets and long horizons' },
+  { id: 'retirement', name: 'Retirement', icon: 'sprout', lesson: 'Time and compounding' },
+];
+const AI = Object.fromEntries(AREAS.map((a, i) => [a.id, { ...a, i }]));
+const CONF = {
+  guess: { label: 'Guessing', v: .25, bars: 1, w: .5 },
+  fair: { label: 'Fairly sure', v: .6, bars: 2, w: .8 },
+  sure: { label: 'Sure', v: .9, bars: 3, w: 1 },
+};
+// [[account|example]] pairs: the first is shown (marked) with consent, the second without
+const Q = {
+  infl: { area: 'saving', why: 'Picked to learn more about Saving', ok: 1,
+    text: 'Your savings account holds [[€12,500|€10,000]] at [[2.25%|2%]] a year. Inflation runs at about 3%. Over a year, what happens to what that money can buy?',
+    opts: ['It buys a little more, because the balance grows by the interest', 'It buys a little less, because prices rise faster than the interest', 'It stays the same, because the money is safe in the bank', 'It depends on the bank, not on prices'] },
+  apr: { area: 'borrowing', why: 'Picked to cover Borrowing next', ok: 0,
+    text: 'Your instalment loan has [[€8,400|€6,000]] left at [[5.9%|6%]] APR. What does the APR tell you?',
+    opts: ['The yearly cost of the loan as a percentage, interest and fixed fees included', 'How much you repay in total over the whole loan', 'The interest rate for the first year only', 'The share of the loan you have already repaid'] },
+  card: { area: 'borrowing', why: 'Picked to look at Borrowing from another angle', ok: 1,
+    text: 'You have used [[€1,640|€1,500]] of your [[€3,000|€3,000]] card limit. If you repay only the monthly minimum, what usually happens?',
+    opts: ['The balance is gone within a few months', 'Interest keeps running on the rest, so the balance shrinks slowly and costs more', 'Interest only applies to the part you repay', 'The limit grows by the amount you repay'] },
+  div: { area: 'investing', why: 'Picked to learn more about Investing', ok: 1,
+    text: 'Your depot holds [[4 positions|4 positions]]. What does spreading money across several positions do?',
+    opts: ['It removes the risk of losing money', 'It softens the damage if one position falls, but not a fall of the whole market', 'It raises the expected return of every position', 'It only matters once you hold more than 20 positions'] },
+  risk: { area: 'risk', why: 'Picked to learn more about Risk', ok: 1,
+    text: 'The market falls 20% next month. Your savings plan puts [[€100|€100]] into a fund every month. What does the fall mean for the plan?',
+    opts: ['Stop the plan until the market recovers', 'The next €100 gets more units at the lower price, and one fall says little about the long term', 'The plan locks in the loss, so the earlier money is gone', 'The bank pays back the difference'] },
+};
+const st = {};
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+const ico = (id, c = '') => `<svg class="i ${c}" aria-hidden="true"><use href="#${id}"/></svg>`;
+const fmt = (t) => t.replace(/\[\[(.+?)\|(.+?)\]\]/g, (_, a, b) => st.acct ? `<mark class="acct">${a}</mark>` : b);
+const lvl = (p, short) => p == null ? (short ? 'Not yet' : 'Not checked yet') : p < .4 ? (short ? 'Starting' : 'Just starting') : p < .7 ? 'Building' : 'Solid';
+const confAvg = (a) => { const c = st.conf[a]; return c && c.length ? c.reduce((x, y) => x + y) / c.length : null; };
+const gapOf = (a) => { const p = st.p[a], c = confAvg(a); if (p == null || c == null) return 0; return c - p < -.2 ? -1 : c - p > .2 ? 1 : 0; };
+const asked = () => AREAS.filter((a) => st.p[a.id] != null);
+const nextQ = () => Q[st.queue[st.answered.length]];
+const isDone = () => st.answered.length >= st.queue.length;
+
+function reset() {
+  Object.assign(st, { acct: true, queue: ['infl', 'apr', 'div', 'risk'], answered: [], p: {}, conf: {}, shown: {}, sel: -1, busy: false, last: null });
+}
+function answer(id, i, conf) {
+  const q = Q[id], c = CONF[conf], a = q.area, correct = i >= 0 && i === q.ok;
+  const d = i < 0 ? -.1 : correct ? .3 * c.w : -.25 * c.w;
+  st.p[a] = Math.min(.95, Math.max(.05, (st.p[a] ?? .5) + d));
+  (st.conf[a] ||= []).push(c.v);
+  st.answered.push({ id, i, conf, correct });
+  if (id === 'apr' && !correct) st.queue.splice(2, 0, 'card');
+  st.last = a;
+}
+
+const phone = $('#phone');
+function setScreen(html) {
+  phone.classList.remove('open');
+  phone.innerHTML = `<div class="status"><span>9:41</span><span class="batt"></span></div>${html}<span class="home-ind"></span>`;
+}
+function go(s) { st.screen = s; ({ consent, question: renderQuestion, summary, lesson })[s](); }
+
+function consent() {
+  setScreen(`<div class="body screen-in">
+    <div class="head-row"><span class="tile sm">${ico('lock')}</span><span class="t-over">Your account · optional</span></div>
+    <h1 class="t-display">Use my account numbers in the questions?</h1>
+    <p class="t-body">For example: “You keep <mark class="acct">€12,500</mark> in savings at <mark class="acct">2.25%</mark>…”</p>
+    <div class="grow"></div>
+    <div class="note">${ico('eye')}<p class="t-body" style="color:var(--text)">Your answers are checked by an AI service to pick your first lesson; only the result is kept.</p></div>
+  </div>
+  <div class="foot"><button class="big press" data-acct="1" data-testid="consent-yes">Yes, use my numbers</button><button class="big ghost press" data-acct="0" data-testid="consent-no">No, use example numbers</button></div>`);
+}
+
+const qHead = (thinking) => {
+  const n = st.answered.length;
+  const segs = Array.from({ length: 6 }, (_, i) => `<i class="seg ${i < n ? 'done' : !thinking && i === n ? 'cur' : ''}"></i>`).join('');
+  const label = thinking ? `${n} of up to 6 done` : `Question ${n + 1} of up to 6`;
+  return `<div class="qrow"><span class="t-strong">${label}</span><span class="t-label">No wrong answers</span></div>
+    <div class="segs" role="img" aria-label="${label}. The check may end earlier.">${segs}</div>`;
+};
+const wrap = (i, t) => `<div class="optwrap ${i < 0 ? 'ns' : ''}" data-i="${i}"><button class="opt press" role="radio" aria-checked="false" data-i="${i}" data-testid="opt-${i}"><span class="r">${ico('check')}</span><span class="txt">${t}</span></button><div class="conf-slot"></div></div>`;
+const qBody = (q) => `<h2 class="t-section" id="qp">${fmt(q.text)}</h2>
+  <p class="why">${ico('search')}<span><span class="sr">Why this question: </span>${q.why}</span></p>
+  <div class="opts" role="radiogroup" aria-labelledby="qp">${q.opts.map((t, i) => wrap(i, t)).join('')}${wrap(-1, 'Not sure')}</div>
+  <p class="t-label src">${st.acct ? 'Your numbers, from your account on this phone' : 'Example numbers'}</p>`;
+const chipsHtml = () => `<div class="conf screen-in" role="group" aria-label="How sure are you?"><p class="t-strong">How sure are you?</p><div class="chips">${Object.entries(CONF).map(([k, c]) =>
+  `<button class="chip press" data-conf="${k}" data-testid="conf-${k}"><span class="bars b${c.bars}" aria-hidden="true"><i></i><i></i><i></i></span>${c.label}</button>`).join('')}</div></div>`;
+
+function renderQuestion() {
+  Object.assign(st, { sel: -1, busy: false, shown: { ...st.p } });
+  const q = nextQ();
+  setScreen(`<div class="qhead" id="qhead">${qHead(false)}</div>${V.top ? V.top(q) : ''}<div class="body q screen-in" id="qarea">${qBody(q)}</div>${V.foot ? V.foot() : ''}`);
+  requestAnimationFrame(syncMaps);
+}
+
+function select(i) {
+  if (st.busy) return;
+  st.sel = i;
+  $$('.optwrap').forEach((w) => { const on = +w.dataset.i === i; w.classList.toggle('sel', on); w.querySelector('.opt').setAttribute('aria-checked', on); w.querySelector('.conf-slot').innerHTML = ''; });
+  if (i < 0) { setTimeout(() => commit(-1, 'guess'), 350); return; }
+  (V.slot ? V.slot(i) : $(`.optwrap[data-i="${i}"] .conf-slot`)).innerHTML = chipsHtml();
+}
+function commit(i, conf) {
+  if (st.busy) return;
+  st.busy = true;
+  st.shown = { ...st.p };
+  answer(st.queue[st.answered.length], i, conf);
+  V.afterAnswer();
+}
+const thinkHtml = (done, nxt) => `<div class="think screen-in" role="status">
+  <p class="t-over">${done ? 'All set' : `Question ${st.answered.length + 1} of up to 6`}</p>
+  <h2 class="t-section">${done ? 'That is enough to place you' : `Choosing a question about ${AI[nxt.area].name}`}</h2>
+  <div class="skel" aria-hidden="true"><i style="width:94%"></i><i style="width:80%"></i><i style="width:60%"></i></div>
+  <div class="skel tiles" aria-hidden="true"><i></i><i></i><i></i></div></div>`;
+// A and C keep the map on screen: swap only the question area for the thinking state
+function think() {
+  const done = isDone(), nxt = nextQ();
+  $('#qhead').innerHTML = qHead(true);
+  $('#qarea').innerHTML = thinkHtml(done, nxt);
+  if (V.thinkEnter) V.thinkEnter(nxt, done);
+  setTimeout(() => go(done ? 'summary' : 'question'), done ? 1000 : 1200);
+}
+function syncMaps() {
+  $$('[data-fill]').forEach((e) => e.style.setProperty('--p', st.p[e.dataset.fill] ?? 0));
+  $$('[data-lvl]').forEach((e) => { e.textContent = lvl(st.p[e.dataset.lvl], e.hasAttribute('data-short')); });
+  $$('[data-none]').forEach((e) => e.classList.toggle('none', st.p[e.dataset.none] == null));
+  $$('[data-mark]').forEach((e) => { const c = confAvg(e.dataset.mark); e.style.setProperty('--c', c ?? 0); e.classList.toggle('none', c == null); });
+  $$('[data-st]').forEach((e) => e.classList.toggle('hit', e.dataset.st === st.last && st.answered.length > 0 && st.screen !== 'summary'));
+}
+const mv = (a, shown) => (shown ? st.shown : st.p)[a] ?? 0;
+const sr = (a) => `<span class="sr">${AI[a].name}: ${lvl(st.p[a])}</span>`;
+
+function summary() {
+  const ps = asked();
+  const avg = ps.reduce((s, a) => s + st.p[a.id], 0) / (ps.length || 1);
+  const role = avg < .45 ? 'starting' : avg < .7 ? 'building' : 'confident';
+  const gaps = ps.map((a) => ({ a, g: gapOf(a.id) })).filter((x) => x.g).sort((x, y) => Math.abs(confAvg(y.a.id) - st.p[y.a.id]) - Math.abs(confAvg(x.a.id) - st.p[x.a.id])).slice(0, 2);
+  const first = ps.reduce((m, a) => (st.p[a.id] < st.p[m.id] ? a : m), ps[0]);
+  const lab = (a) => (confAvg(a) < .45 ? 'Guessing' : confAvg(a) < .75 ? 'Fairly sure' : 'Sure');
+  const card = (x) => x.g < 0
+    ? `<section class="gap-hero rise"><p class="t-over">${x.a.name}</p><h2 class="t-section">You know more than you think</h2><p class="t-body">On ${x.a.name} you said “${lab(x.a.id)}”, yet your answers show you already understand how it works.</p></section>`
+    : `<section class="gap-hero rise"><p class="t-over">${x.a.name}</p><h2 class="t-section">There is more to explore here</h2><p class="t-body">On ${x.a.name} you said “${lab(x.a.id)}”. Your answers leave a few things open, which is where your first lesson starts.</p></section>`;
+  setScreen(`<div class="body screen-in" id="sum">
+    <p class="t-over" style="margin-top:4px">Your quick check</p>
+    ${(gaps.length ? gaps.map(card) : [`<section class="gap-hero rise"><p class="t-over">Confidence</p><h2 class="t-section">How sure you felt matches your answers</h2><p class="t-body">On the areas we checked, your confidence and your answers line up.</p></section>`]).join('')}
+    <h1 class="t-display" style="margin-top:6px">You're a ${role} learner</h1>
+    <p class="t-body">Based on ${st.answered.length} answers and how sure you felt about each.</p>
+    <div class="lesson rise" data-testid="first-lesson"><span class="tile">${ico('play')}</span><div><p class="t-over" style="color:var(--primary)">Your first lesson · ${first.name}</p><p class="t-card">${first.lesson}</p><p class="t-label" style="color:var(--text)">4 min · ${st.acct ? 'built on your own numbers' : 'built on example numbers'}</p></div></div>
+    ${V.summaryMap()}
+  </div>
+  <div class="foot"><button class="big press" data-go="lesson" data-testid="start-learning">Start learning</button><button class="big ghost press" data-go="restart">Retake the quick check</button></div>`);
+  requestAnimationFrame(syncMaps);
+}
+function lesson() {
+  setScreen(`<div class="body demo-end screen-in" style="flex:1">
+    <span class="tile lg">${ico('book')}</span><h1 class="t-display">The lesson starts here</h1><p class="t-body">The Quick check ends. The first lesson opens from this screen.</p></div>
+  <div class="foot"><button class="big press" data-go="restart">Restart the mock</button></div>`);
+}
+
+function seed() {
+  reset();
+  [['infl', 1, 'guess'], ['apr', 0, 'sure'], ['div', 0, 'sure'], ['risk', 1, 'fair']].forEach((a) => answer(...a));
+  st.shown = { ...st.p };
+}
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-acct],[data-i].opt,[data-conf],[data-go],[data-jump]');
+  if (!t) return;
+  if (t.dataset.acct != null) { st.acct = t.dataset.acct === '1'; go('question'); }
+  else if (t.classList.contains('opt')) select(+t.dataset.i);
+  else if (t.dataset.conf) commit(st.sel, t.dataset.conf);
+  else if (t.dataset.go === 'restart') { reset(); go('consent'); }
+  else if (t.dataset.go) go(t.dataset.go);
+  else if (t.dataset.jump === 'consent') { reset(); go('consent'); }
+  else if (t.dataset.jump === 'question') { reset(); go('question'); }
+  else if (t.dataset.jump === 'summary') { seed(); go('summary'); }
+});
+reset(); go('consent');
+
+</script>
+</body>
+</html>

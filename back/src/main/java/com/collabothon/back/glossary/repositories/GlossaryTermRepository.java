@@ -37,7 +37,6 @@ public interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, Long
 	@Query(nativeQuery = true, value = """
 			SELECT t.* FROM glossary_term t
 			WHERE strpos(lower(t.definition_standard), :q) > 0
-			   OR strpos(lower(coalesce(t.definition_plain, '')), :q) > 0
 			ORDER BY t.name
 			LIMIT 50
 			""")

@@ -2,13 +2,11 @@ package com.collabothon.back.glossary.services;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -70,13 +68,9 @@ public class GlossarySearchService {
 		return new SearchResult(termHits, mentions, suggestionHits);
 	}
 
-	/** The first definition (standard, then plain) that mentions the query, as a snippet around the match. */
+	/** The part of the definition that mentions the query, as a snippet around the match. */
 	private static Optional<Mention> toMention(GlossaryTerm t, String query) {
-		return Stream.of(t.getDefinitionStandard(), t.getDefinitionPlain())
-				.filter(Objects::nonNull)
-				.map(definition -> snippet(withoutMarkup(definition), query))
-				.flatMap(Optional::stream)
-				.findFirst()
+		return snippet(withoutMarkup(t.getDefinitionStandard()), query)
 				.map(snippet -> new Mention(t.getSlug(), t.getName(), snippet));
 	}
 

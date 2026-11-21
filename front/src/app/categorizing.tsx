@@ -111,11 +111,12 @@ export default function CategorizingScreen() {
   const questionStatus = quick.view ? `Question ${quick.view.index + 1} of ${quick.view.total}` : undefined;
   const status = phase === 'loading' ? STEPS[ids[step]] : phase === 'quick' ? questionStatus : undefined;
   const alert = phase === 'error' ? ERROR_TITLE : check === 'failed' ? CHECK_ERROR_TITLE : undefined;
-  // Native announces; web reads the live regions (aria-live on a Text is web-only).
+  // Native announces; web reads the live regions (aria-live on a Text is web-only). A question is read by the focus
+  // that lands on its prompt, so it is not announced as well.
   useEffect(() => {
-    const message = status ?? alert;
+    const message = phase === 'quick' ? undefined : (status ?? alert);
     if (Platform.OS !== 'web' && message) AccessibilityInfo.announceForAccessibility(message);
-  }, [status, alert]);
+  }, [phase, status, alert]);
 
   const submit = (payload: CheckAnswer[] | null) => {
     if (payload) void start(consent, payload);

@@ -516,7 +516,7 @@ test('each new question is announced to screen readers: the live region on web, 
   expect(get('flow-status')).toHaveTextContent('Question 2 of 4');
 });
 
-test.each(['ios', 'android'] as const)('on %s the question is announced with the system call', async (os) => {
+test.each(['ios', 'android'] as const)('on %s a question is read once, by the focus on its prompt', async (os) => {
   const platform = jest.replaceProperty(Platform, 'OS', os);
   const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
   announce.mockClear();
@@ -524,9 +524,11 @@ test.each(['ios', 'android'] as const)('on %s the question is announced with the
     backend();
     await open();
     await fireEvent.press(await screen.findByTestId('consent-decline'));
+    expect(get('quick-check-prompt').props.accessibilityLabel).toMatch(/^Question 1 of 4\. /);
     await type('a');
     await next();
-    expect(announce.mock.calls.map(([message]) => message)).toEqual(['Question 1 of 4', 'Question 2 of 4']);
+    expect(get('quick-check-prompt').props.accessibilityLabel).toMatch(/^Question 2 of 4\. /);
+    expect(announce).not.toHaveBeenCalled();
   } finally {
     announce.mockRestore();
     platform.restore();

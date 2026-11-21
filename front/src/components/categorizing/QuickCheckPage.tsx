@@ -105,6 +105,7 @@ export function QuickCheckPage({
       )}
       <Text
         ref={promptRef}
+        accessibilityLabel={`Question ${index + 1} of ${total}. ${prompt}`}
         tabIndex={-1}
         style={styles.prompt}
         accessibilityRole="header"

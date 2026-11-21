@@ -21,6 +21,7 @@ test('app opens on the bank; Learn runs onboarding and the consent card, then th
   await page.getByTestId('nav-learn').click();
   await page.getByTestId('onboarding-start').click();
   await page.getByTestId('onboarding-next').click();
+  await page.getByTestId('onboarding-challenge-next').click();
   await page.getByTestId('onboarding-skip-all').click();
   // The consent card previews the facts from the bank on screen; sharing them sends exactly those.
   await expect(page.getByTestId('consent-slip')).toContainText('Over 6 months of spending covered');

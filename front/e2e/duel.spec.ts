@@ -29,6 +29,7 @@ async function openDuelLobby(page: Page) {
   if (await welcome.isVisible()) {
     await page.getByTestId('onboarding-start').click();
     await page.getByTestId('onboarding-next').click();
+    await page.getByTestId('onboarding-challenge-next').click();
     await page.getByTestId('onboarding-skip-all').click();
     await page.getByTestId('consent-decline').click();
     await page.getByTestId('summary-start').click();

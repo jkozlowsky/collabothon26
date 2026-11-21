@@ -24,7 +24,7 @@ test('a new user can skip the questions; that is saved and onboarding does not c
   expect((await getProfile(request)).onboardingCompleted).toBe(false);
   await openApp(page);
   await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
-  await expect(page.getByText('Finances with confidence — one lesson at a time')).toBeVisible();
+  await expect(page.getByText('Learn how money works. Challenge your ideas with others.')).toBeVisible();
 
   await goToInvite(page);
   await expect(page.getByText('Got a minute for a few questions?')).toBeVisible();
@@ -39,12 +39,14 @@ test('a new user can skip the questions; that is saved and onboarding does not c
   await expectOnLearn(page);
 });
 
-test('the welcome screen talks about finances, and one intro slide leads to the questions', async ({ page }) => {
+test('the welcome screen introduces Atlas, and the map and duel slides lead to the questions', async ({ page }) => {
   await openApp(page);
-  await expect(page.getByText('Finances with confidence — one lesson at a time')).toBeVisible();
+  await expect(page.getByText('Learn how money works. Challenge your ideas with others.')).toBeVisible();
   await tap(page, 'onboarding-start');
   await expect(page.getByTestId('onboarding-intro')).toBeVisible();
   await tap(page, 'onboarding-next');
+  await expect(page.getByTestId('onboarding-challenge')).toBeVisible();
+  await tap(page, 'onboarding-challenge-next');
   await expect(page.getByTestId('onboarding-invite')).toBeVisible();
 });
 

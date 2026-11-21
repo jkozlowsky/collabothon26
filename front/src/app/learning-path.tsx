@@ -36,7 +36,11 @@ export default function LearningPathScreen() {
       testID="learning-path"
       footer={
         <>
-          <Button label="Start learning" onPress={() => leave(categorization.startLesson?.lessonId)} testID="summary-start" />
+          <Button
+            label="Start learning"
+            onPress={() => leave(categorization.startLesson?.lessonId)}
+            testID="summary-start"
+          />
           <Button label="See all lessons" variant="ghost" onPress={() => leave()} testID="summary-all" />
         </>
       }

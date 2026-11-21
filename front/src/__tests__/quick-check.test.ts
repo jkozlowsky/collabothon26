@@ -117,7 +117,13 @@ test('the selectors read the slots from the bank; the monthly ETF is the depot s
 });
 
 test('the seeded draw sorts the pool by code unit, not by locale', () => {
-  const finance = (id: string, area: CheckQuestion['area']): CheckQuestion => ({ ...POOL[0], id, area, accountPrompt: null, slots: [] });
+  const finance = (id: string, area: CheckQuestion['area']): CheckQuestion => ({
+    ...POOL[0],
+    id,
+    area,
+    accountPrompt: null,
+    slots: [],
+  });
   const pool = [finance('a-first', 'saving'), finance('B-first', 'saving'), finance('x', 'debt'), ...POOL.slice(4)];
   const first = drawQuestions(pool, seedAccount(), false, () => 0)[0].question.id;
   expect(first).toBe('B-first');
@@ -129,7 +135,8 @@ test('a question whose account prompt quotes an unknown or undeclared slot only 
   expect(accountUsable(withPrompt('Your loan is {loanRemaining}.', ['loanRemaining']), bank, true)).toBe(true);
   expect(accountUsable(withPrompt('Your {mystery} is {loanRemaining}.', ['loanRemaining']), bank, true)).toBe(false);
   expect(accountUsable(withPrompt('Your loan is {loanRemaining}.', []), bank, true)).toBe(false);
-  expect(accountUsable(withPrompt('Your loan is {loanRemaining}.', ['loanRemaining', 'unknown' as never]), bank, true)).toBe(false);
+  const unknownSlot = withPrompt('Your loan is {loanRemaining}.', ['loanRemaining', 'unknown' as never]);
+  expect(accountUsable(unknownSlot, bank, true)).toBe(false);
 });
 
 test('pool items the front cannot use are skipped, the rest are kept', async () => {
@@ -144,9 +151,11 @@ test('pool items the front cannot use are skipped, the rest are kept', async () 
     { ...good, id: 'no-slots', slots: undefined },
     { ...good, id: 'no-prompt', genericPrompt: undefined },
   ];
-  globalThis.fetch = jest.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(items) })) as jest.Mock;
+  const answerWith = (body: unknown) =>
+    jest.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) })) as jest.Mock;
+  globalThis.fetch = answerWith(items);
   expect(await fetchCheckQuestions(new AbortController().signal)).toEqual([good]);
 
-  globalThis.fetch = jest.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ not: 'a list' }) })) as jest.Mock;
+  globalThis.fetch = answerWith({ not: 'a list' });
   expect(await fetchCheckQuestions(new AbortController().signal)).toEqual([]);
 });

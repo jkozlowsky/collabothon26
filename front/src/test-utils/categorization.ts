@@ -1,8 +1,6 @@
 import type { Categorization } from '@/types/categorization';
 
-let n = 0;
-
-/** A stored categorisation as POST returns it; every call is a newer one. */
+/** A stored categorisation as POST returns it, made just now. */
 export function categorization(patch: Partial<Categorization> = {}): Categorization {
   return {
     userId: 'demo-user',
@@ -15,13 +13,23 @@ export function categorization(patch: Partial<Categorization> = {}): Categorizat
       {
         area: 'investing',
         direction: 'under',
-        because: 'You said: I save regularly. Your accounts with us include investment products, and your answer about investing shows you understand it.',
+        because:
+          'You said: I save regularly. Your accounts with us include investment products, ' +
+          'and your answer about investing shows you understand it.',
       },
     ],
     lessonVariant: { persona: null, level: 'beginner', lang: 'standard' },
     explanation: [
-      { output: 'role', probabilities: {}, because: ['You said: I save regularly.', 'Money goes to savings or investments every month.'] },
-      { output: 'focusAreas', probabilities: {}, because: ['You picked investing as a goal.', 'You are paying off a loan with us.'] },
+      {
+        output: 'role',
+        probabilities: {},
+        because: ['You said: I save regularly.', 'Money goes to savings or investments every month.'],
+      },
+      {
+        output: 'focusAreas',
+        probabilities: {},
+        because: ['You picked investing as a goal.', 'You are paying off a loan with us.'],
+      },
     ],
     checks: [
       { questionId: 'card-minimum', area: 'debt', lessonId: null, result: 'not-yet' },
@@ -32,7 +40,7 @@ export function categorization(patch: Partial<Categorization> = {}): Categorizat
     sharedWithModel: null,
     source: 'jev',
     model: null,
-    categorizedAt: new Date(Date.UTC(2026, 10, 21) + ++n * 1000).toISOString(),
+    categorizedAt: new Date().toISOString(),
     ...patch,
   };
 }

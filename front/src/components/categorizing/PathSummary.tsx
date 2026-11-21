@@ -32,6 +32,7 @@ export function PathSummary({ categorization: c, answersSent }: Props) {
   const start = c.startLesson;
   const startArea = start && c.checks.find((check) => check.lessonId === start.lessonId)?.area;
   const roleLines = c.explanation.find((e) => e.output === 'role')?.because ?? [];
+  const firstLesson = startArea ? `Your first lesson · ${AREA_LABEL[startArea]}` : 'Your first lesson';
   const judgeFailed = answersSent && c.source === 'fallback';
 
   const why = (area: FocusArea) =>
@@ -87,7 +88,7 @@ export function PathSummary({ categorization: c, answersSent }: Props) {
         {start && (
           <RouteStation node={icon('play')} end last>
             <Text style={type.titleCard}>{start.title}</Text>
-            <Text style={styles.muted}>Your first lesson{startArea && ` · ${AREA_LABEL[startArea]}`}</Text>
+            <Text style={styles.muted}>{firstLesson}</Text>
           </RouteStation>
         )}
       </View>
@@ -103,7 +104,13 @@ const styles = StyleSheet.create({
   gapTitle: { ...type.titleSection, color: colors.textOnBrand },
   gapBody: { ...type.bodyDefault, color: colors.textOnBrand },
   bullet: { flexDirection: 'row', gap: spacing.smPlus, alignItems: 'flex-start', marginTop: spacing.sm },
-  dot: { width: BULLET, height: BULLET, borderRadius: BULLET / 2, backgroundColor: colors.brandPrimary, marginTop: BULLET_TOP },
+  dot: {
+    width: BULLET,
+    height: BULLET,
+    borderRadius: BULLET / 2,
+    backgroundColor: colors.brandPrimary,
+    marginTop: BULLET_TOP,
+  },
   because: { ...type.bodyDefault, color: colors.textMuted, flex: 1 },
   card: {
     paddingVertical: spacing.md,

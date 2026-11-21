@@ -13,7 +13,15 @@ import { colors } from '@/constants/theme';
 import { useBank } from '@/hooks/useBank';
 import { continueToLearn } from '@/hooks/useOpenLearn';
 import { useQuickCheck } from '@/hooks/useQuickCheck';
-import { categorize, checkBackend, factLabels, isBadRequest, factsFrom, isRetryable, withTimeout } from '@/lib/categorization';
+import {
+  categorize,
+  checkBackend,
+  factLabels,
+  factsFrom,
+  isBadRequest,
+  isRetryable,
+  withTimeout,
+} from '@/lib/categorization';
 import { setSummary } from '@/lib/learningPath';
 import { fetchCheckQuestions } from '@/lib/quickCheck';
 import type { CheckAnswer, CheckQuestion } from '@/types/quickCheck';
@@ -210,7 +218,12 @@ export default function CategorizingScreen() {
         footer={
           <>
             <Button label="Use my account data" onPress={() => decide(true)} testID="consent-accept" />
-            <Button label="Continue without" variant="secondary" onPress={() => decide(false)} testID="consent-decline" />
+            <Button
+              label="Continue without"
+              variant="secondary"
+              onPress={() => decide(false)}
+              testID="consent-decline"
+            />
           </>
         }
       >
@@ -246,7 +259,9 @@ export default function CategorizingScreen() {
       note="You'll start with the general lessons."
       footer={
         <>
-          {retryable && <Button label="Retry" onPress={() => void start(consent, sent.current)} testID="categorizing-retry" />}
+          {retryable && (
+            <Button label="Retry" onPress={() => void start(consent, sent.current)} testID="categorizing-retry" />
+          )}
           <Button
             label="Skip for now"
             variant={retryable ? 'ghost' : 'primary'}

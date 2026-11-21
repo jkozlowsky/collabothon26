@@ -15,6 +15,8 @@ const hang = (init?: RequestInit) =>
   new Promise((_, reject) =>
     init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))),
   );
+const INTRO = 'Four quick questions so we know where to start. There are no wrong answers.';
+const AI_LINE = 'Your answers are checked by an AI service to pick your first lesson; only the result is kept.';
 const PROFILE = { userId: 'demo-user', goals: [], onboardingCompleted: true };
 
 let fetchMock: jest.Mock;
@@ -104,10 +106,8 @@ test('questions come one at a time, 1 of 4, with the privacy copy above the firs
 
   expect(await screen.findByTestId('quick-check')).toBeOnTheScreen();
   expect(screen.getByText('1 of 4')).toBeOnTheScreen();
-  expect(screen.getByText('Four quick questions so we know where to start. There are no wrong answers.')).toBeOnTheScreen();
-  expect(
-    screen.getByText('Your answers are checked by an AI service to pick your first lesson; only the result is kept.'),
-  ).toBeOnTheScreen();
+  expect(screen.getByText(INTRO)).toBeOnTheScreen();
+  expect(screen.getByText(AI_LINE)).toBeOnTheScreen();
   expect(screen.getByTestId('quick-check-prompt')).toHaveTextContent(promptOf(true, 0));
   expect(promptOf(true, 0)).not.toBe(promptOf(false, 0));
   expect(screen.getByText('No need to type exact amounts')).toBeOnTheScreen();
@@ -123,7 +123,7 @@ test('questions come one at a time, 1 of 4, with the privacy copy above the firs
   await press('quick-check-next');
 
   expect(screen.getByText('2 of 4')).toBeOnTheScreen();
-  expect(screen.queryByText('Four quick questions so we know where to start. There are no wrong answers.')).toBeNull();
+  expect(screen.queryByText(INTRO)).toBeNull();
 });
 
 test('without consent the same questions use example numbers and carry no slip line', async () => {
@@ -133,7 +133,7 @@ test('without consent the same questions use example numbers and carry no slip l
 
   expect(await screen.findByTestId('quick-check-prompt')).toHaveTextContent(promptOf(false, 0));
   expect(screen.queryByText('Only your answer is sent, never these numbers.')).toBeNull();
-  expect(screen.getByText('Your answers are checked by an AI service to pick your first lesson; only the result is kept.')).toBeOnTheScreen();
+  expect(screen.getByText(AI_LINE)).toBeOnTheScreen();
 });
 
 test('Back keeps the answers and the draft, and Back on question 1 returns to the consent card', async () => {
@@ -263,7 +263,9 @@ test('the summary leads with the gap, then the level and why, then up to three a
   expect(screen.getByText("You're an intermediate learner")).toBeOnTheScreen();
   expect(screen.getByText('Money goes to savings or investments every month.')).toBeOnTheScreen();
   for (const [area, label] of [['investing', 'Investing'], ['debt', 'Borrowing'], ['risk', 'Risk']])
-    expect(screen.getByTestId(`summary-area-${area}`)).toHaveTextContent(new RegExp(`${label}Your answer helped place ${label} on your path\\.$`));
+    expect(screen.getByTestId(`summary-area-${area}`)).toHaveTextContent(
+      new RegExp(`${label}Your answer helped place ${label} on your path\\.$`),
+    );
   expect(screen.getByText('Compound interest')).toBeOnTheScreen();
   expect(screen.queryByTestId('summary-area-saving')).toBeNull();
   expect(screen.queryByText("We couldn't check your answers this time")).toBeNull();
@@ -282,7 +284,8 @@ test('Start learning opens the first lesson of the weakest area', async () => {
 
 test('See all lessons opens the map; Start learning without a start lesson does too', async () => {
   backend({
-    post: () => ok(categorization({ startLesson: null, confidenceGaps: [], checks: [], focusAreas: ['investing', 'retirement'] })),
+    post: () =>
+      ok(categorization({ startLesson: null, confidenceGaps: [], checks: [], focusAreas: ['investing', 'retirement'] })),
   });
   await open();
   await fireEvent.press(await screen.findByTestId('consent-decline'));
@@ -298,9 +301,9 @@ test('See all lessons opens the map; Start learning without a start lesson does 
 });
 
 test.each([
-  ['an empty pool (no Jev key)', () => ok([])],
-  ['a failed GET', () => fail(500)],
-])('%s skips the questions and goes from consent to the summary', async (_, pool) => {
+  { name: 'an empty pool (no Jev key)', pool: () => ok([]) },
+  { name: 'a failed GET', pool: () => fail(500) },
+])('$name skips the questions and goes from consent to the summary', async ({ pool }) => {
   backend({ pool, post: () => ok(categorization({ source: 'fallback', checks: [], startLesson: null })) });
   await open();
 
@@ -346,7 +349,11 @@ test('a categorisation without checks or a start lesson (a backend without the Q
 });
 
 test('an over-confidence gap gets its own title, never "You know more than you think"', async () => {
-  const gap = { area: 'investing' as const, direction: 'over' as const, because: 'You said: I save and invest. No investment products in your accounts with us.' };
+  const gap = {
+    area: 'investing' as const,
+    direction: 'over' as const,
+    because: 'You said: I save and invest. No investment products in your accounts with us.',
+  };
   backend({ pool: () => ok([]), post: () => ok(categorization({ confidenceGaps: [gap] })) });
   await open();
   await fireEvent.press(await screen.findByTestId('consent-decline'));
@@ -399,7 +406,9 @@ test('a double tap on Start learning opens the lesson once', async () => {
 });
 
 test('a 400 on answers the backend rejects retries once without them, so the user still gets a path', async () => {
-  backend({ post: (init) => (JSON.parse(String(init?.body)).answers ? fail(400) : ok(categorization({ checks: [] }))) });
+  backend({
+    post: (init) => (JSON.parse(String(init?.body)).answers ? fail(400) : ok(categorization({ checks: [] }))),
+  });
   await open();
   await fireEvent.press(await screen.findByTestId('consent-decline'));
   await answerAll(['a', 'b', 'c', 'd']);

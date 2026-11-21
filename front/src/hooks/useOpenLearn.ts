@@ -50,7 +50,10 @@ export function useResumeLearnAfterOnboarding() {
   }, [done, pathname]);
 }
 
-/** Leaves /categorizing or the summary for the Learn screen the user opened onboarding from (the Map by default), then opens `lessonId` if given. */
+/**
+ * Leaves /categorizing or the summary for the Learn screen the user opened onboarding from (the Map by default),
+ * then opens `lessonId` if given.
+ */
 export function continueToLearn(lessonId?: number) {
   const target = pendingTarget ?? '/map';
   pendingTarget = null;

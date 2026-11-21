@@ -4,6 +4,7 @@ import { goToInvite, openApp, resetOnboarding, tap } from './app';
 import { categorization } from '../src/test-utils/categorization';
 import { POOL } from '../src/test-utils/checkPool';
 
+const INTRO = 'Four quick questions so we know where to start. There are no wrong answers.';
 const CATEGORIZATION_URL = '**/api/users/demo-user/categorization';
 
 test.beforeEach(async ({ request }) => {
@@ -33,13 +34,14 @@ async function toConsentCard(page: Page) {
 }
 
 test('consent, four questions, the summary, then the first lesson', async ({ page }) => {
-  const posts = await stubQuickCheck(page, POOL, categorization({ startLesson: { lessonId: 1, title: 'Emergency fund' } }));
+  const reply = categorization({ startLesson: { lessonId: 1, title: 'Emergency fund' } });
+  const posts = await stubQuickCheck(page, POOL, reply);
   await toConsentCard(page);
   await expect(page.getByTestId('consent-quickcheck-note')).toBeVisible();
   await tap(page, 'consent-accept');
 
   await expect(page.getByTestId('quick-check')).toBeVisible();
-  await expect(page.getByText('Four quick questions so we know where to start. There are no wrong answers.')).toBeVisible();
+  await expect(page.getByText(INTRO)).toBeVisible();
   await expect(page.getByTestId('quick-check').getByText('1 of 4', { exact: true })).toBeVisible();
   await expect(page.getByTestId('quick-check-next')).toHaveAttribute('aria-disabled', 'true');
   await page.getByTestId('quick-check-input').fill('Interest keeps growing.');
@@ -63,7 +65,12 @@ test('consent, four questions, the summary, then the first lesson', async ({ pag
   expect(posts).toHaveLength(1);
   expect(posts[0].consent).toBe(true);
   expect(posts[0].answers).toHaveLength(4);
-  expect(posts[0].answers?.map((a) => a.text)).toEqual(['Interest keeps growing.', null, 'One failing hurts less.', 'It can fall and recover.']);
+  expect(posts[0].answers?.map((a) => a.text)).toEqual([
+    'Interest keeps growing.',
+    null,
+    'One failing hurts less.',
+    'It can fall and recover.',
+  ]);
   expect(JSON.stringify(posts[0])).not.toMatch(/12,?500|1,?640/);
 
   await tap(page, 'summary-start');
@@ -71,7 +78,8 @@ test('consent, four questions, the summary, then the first lesson', async ({ pag
 });
 
 test('without a Jev key the questions are skipped and consent leads straight to the summary', async ({ page }) => {
-  const posts = await stubQuickCheck(page, [], categorization({ source: 'fallback', checks: [], startLesson: null, confidenceGaps: [] }));
+  const fallback = categorization({ source: 'fallback', checks: [], startLesson: null, confidenceGaps: [] });
+  const posts = await stubQuickCheck(page, [], fallback);
   await toConsentCard(page);
   await expect(page.getByTestId('consent-quickcheck-note')).toHaveCount(0);
   await tap(page, 'consent-decline');

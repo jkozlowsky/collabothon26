@@ -20,24 +20,22 @@ const profile = (onboardingCompleted: boolean) => ({
 
 /** Backend stub: the user's profile, no categorisation yet, an empty lesson list, and writes that succeed. */
 function stubBackend({ onboardingCompleted }: { onboardingCompleted: boolean }) {
-  fetchMock = jest.fn((url: string, init?: RequestInit) =>
-    CATEGORIZATION_URL.test(url) && !init?.method
-      ? Promise.resolve({ ok: false, status: 404, statusText: 'Not Found' })
-      : Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () =>
-            Promise.resolve(
-              PROFILE_URL.test(url) ? profile(onboardingCompleted) : CATEGORIZATION_URL.test(url) ? categorization() : [],
-            ),
-        }),
-  );
+  const bodyFor = (url: string) => {
+    if (PROFILE_URL.test(url)) return profile(onboardingCompleted);
+    return CATEGORIZATION_URL.test(url) ? categorization() : [];
+  };
+  fetchMock = jest.fn((url: string, init?: RequestInit) => {
+    if (CATEGORIZATION_URL.test(url) && !init?.method) {
+      return Promise.resolve({ ok: false, status: 404, statusText: 'Not Found' });
+    }
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(bodyFor(url)) });
+  });
   globalThis.fetch = fetchMock;
 }
 
 beforeEach(() => stubBackend({ onboardingCompleted: false }));
 
-/** A fresh onboarding continues to the consent card, then the loading steps (at least 2.4 s), the summary, then Learn. */
+/** A fresh onboarding continues to the consent card, the loading steps (at least 2.4 s), the summary, then Learn. */
 async function passConsent() {
   await fireEvent.press(await screen.findByTestId('consent-decline'));
   await fireEvent.press(await screen.findByTestId('summary-all', {}, { timeout: 4000 }));

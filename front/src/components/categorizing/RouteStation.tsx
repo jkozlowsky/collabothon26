@@ -4,7 +4,6 @@ import { StyleSheet, View } from 'react-native';
 import { colors, spacing } from '@/constants/theme';
 
 type Props = {
-  /** An icon or a number, drawn in the station's node. */
   node: ReactNode;
   /** The yellow station where the route ends: the first lesson. */
   end?: boolean;
@@ -15,7 +14,6 @@ type Props = {
 
 const NODE = 32;
 
-/** One station of the summary's route: a node on the petrol line and its content to the right. */
 export function RouteStation({ node, end, last, testID, children }: Props) {
   return (
     <View style={styles.station} testID={testID}>

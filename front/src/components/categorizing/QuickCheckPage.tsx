@@ -29,7 +29,6 @@ type Props = {
   onBack: () => void;
 };
 
-/** One Quick check question: the route of stations on top, an open answer below, "Not sure" as the way out. */
 export function QuickCheckPage({ index, total, parts, account, value, onChange, onNext, onUnsure, onBack }: Props) {
   const text = value;
   const [focused, setFocused] = useState(false);

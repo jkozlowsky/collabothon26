@@ -22,7 +22,8 @@ const isSlot = (name: string): name is Slot => (SLOTS as readonly string[]).incl
 function wellFormed(q: Partial<CheckQuestion> | null): q is CheckQuestion {
   if (!q || typeof q.id !== 'string' || !q.category || !q.area) return false;
   const inCategory = AREAS[q.category]?.includes(q.area) === true;
-  const prompts = typeof q.genericPrompt === 'string' && (q.accountPrompt === null || typeof q.accountPrompt === 'string');
+  const accountOk = q.accountPrompt === null || typeof q.accountPrompt === 'string';
+  const prompts = typeof q.genericPrompt === 'string' && accountOk;
   return inCategory && prompts && Array.isArray(q.slots);
 }
 

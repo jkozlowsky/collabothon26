@@ -43,3 +43,6 @@ yarn-error.*
 # playwright
 test-results/
 playwright-report/
+
+# demo recordings (make record)
+recordings/out/

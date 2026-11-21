@@ -1,227 +1,308 @@
 ---
-status: ready
+status: grilled
 topic: B
-owner: Jan; question pool content: Danylo (lessons)
-branch: feat/quick-check (from quick-check + origin/main)
+owner: Jan; question bank content: Danylo (lessons)
+branch: feat/quick-check
 ---
-# F1b Quick check and learning path summary
+# F1b Quick check v2: adaptive test and learning path
 
 ## Goal
 <!-- frozen once approved: only Jan changes it -->
-The onboarding should show that Finance Quest **knows the user** and **understands what they need to learn**. After Remigiusz's three questions and the consent card, the user answers four short open questions drawn from a pool tied to Danylo's lessons. Where the user agreed, the questions are built on their own account ("You keep €12,500 in savings at 2.25%…"). Jev judges each answer against a written criterion in one call. A summary screen then says, in plain words, what kind of learner they are, where they know more (or less) than they think, and which lesson to start with.
+Onboarding should show that Finance Quest **knows the user** and **understands what they need to learn**. After Remigiusz's three questions, the consent card and a "What we know about you" card, the user takes a short adaptive test. A few profile tiles fill in only what is still missing. Then come 3–6 single-choice knowledge questions, and each answer is followed by a confidence chip. Jev is the examiner: after every answer it rates mastery per area and picks the next question from a bank tied to Danylo's lessons. When it has seen enough, it says the test is done. A dock at the foot of the screen shows two markers per area as the answers come in: how sure the user felt, and what their answers show. The summary names the confidence gap, the learner role and the first lesson, and the Learn map marks that lesson "Start here".
 
 What the jury should see:
-- **It knows me**: questions quote the user's own numbers, computed on the device; exact amounts never leave it.
-- **It understands me**: Jev judges free-text answers; a `choice` on a criterion is something an `if` cannot do.
-- **Confidence gap with evidence**: "You said: I save regularly. Your answer about how long to stay invested shows you understand compounding."
-- **Actionable**: the summary ends on a concrete first lesson.
+- **It knows me**: questions quote the user's own numbers, computed on the device; exact amounts never leave it, and the "What we know" card shows ranges only.
+- **It understands me**: Jev, not an `if`, decides after each answer how well the user knows an area and what to ask next; a rule takes over only as a safety net.
+- **Measured confidence gap**: the chips against the answers ("On Saving you said “Guessing”, yet your answers show you already understand how it works."), visible live on the dock.
+- **Actionable**: the summary ends on a concrete first lesson, and the map shows it as "Start here" until it is done.
 
-## Jan's decisions (21.11)
-- Q1 Quick check is our step in `/categorizing`: consent card → Quick check → loading → summary → lesson. Remigiusz's onboarding is unchanged.
-- Q2/Q15 Questions are written by people, not generated: each of Danylo's lessons carries 1–2 **check questions** in the format below; Jev only judges.
-- Q4 Answers are open text (1–2 sentences) plus a "Not sure" button.
+Design source: direction C "Two markers on a dock", `docs/design/mockups/quick-check-v2-c.html` (dock with two markers, confidence chips inside the tapped tile, profile questions, "What we know about you" card, Learn map with "Start here").
+
+## Jan's decisions
+v2 (21.11, grilling rounds 1–3; binding over everything below):
+- Rebuild: the text field goes; single-choice tiles plus confidence chips (Guessing / Fairly sure / Sure); Jev drives the test, a rule is the fallback.
+- Mockups v2: direction C. Profile questions are asked inside the quiz as tiles, only the missing ones: age band only when life stage was skipped, savings cover in ranges only without consent, time frame always. A "What we know about you" card comes before the quiz. The recommended first lesson must be visible in the interface, not only on the summary.
+- Bank: separate from the lesson questions; every question carries a `lessonId` and stays close to its lesson (same concept and level, other numbers or scenario, never a copy of a lesson question).
+- Q1 Every question has a mandatory `lessonId`; an area without a lesson has no questions and no place on the dock.
+- Q2 A subagent writes a starter bank of ~8 questions from the 3 lessons; Danylo reviews and extends it.
+- Q3 Question format: id, lessonId, area, `easy`/`hard`, an account version and a generic version, 3–4 options with exactly one correct, a misconception for each wrong option, and one sentence saying what it checks. `GET` never returns the correct option.
+- Q4 `V16__check_questions.sql` is rewritten in place (it is on no remote branch), with an FK to `lesson(id)`.
+- Q5 Stateless `POST …/quick-check/step` with the whole history returns `mastery`, `nextQuestionId`, `done`.
+- Q6 No language-level output from the test (there are no lesson variants for it).
+- Q7 Profile ranges live in the categorisation row, not in `user_profile`.
+- Q8 Our front makes the "Start here" change in `map.tsx`; Jan tells the map's author.
+- Q9 Work continues on `feat/quick-check`. Removed: the text field, the UUID boundary, the answer-redaction tests, the 280-char limit, `EXPO_PUBLIC_QUIZ_SEED`.
+- Q10 Profile questions come first in a fixed order (age band → savings cover → time frame); Jev does not pick them.
+- Q11 Jev step: `state` = profile ranges + account facts (with consent) + history (area, correct, misconception, confidence). Questions: `mastery_<area>` noul, `next` choice (criteria = each question's "what it checks"), `enough` noul. Our code enforces min 3 / max 6 knowledge questions; done when `enough` ≥ 0.7; a `next` outside the list → rule.
+- Q12 Step timeout 3 s; after the first step failure the rest of the test runs on rules. The final call keeps 7 s and D6. The user sees a message only when the final call falls back.
+- Q13 Rule (Reference): start 0.5, scores per answer, mean; next question; end condition; all values named constants.
+- Q14 Confidence gap from chips (Reference); Jev `choice` `under`/`over`/`aligned` per area, rule as fallback, at most 2 gap cards. D5 is gone; `experience` still feeds the role.
+- Q15 First lesson: candidates from non-Solid areas, Jev `choice` over lessonIds (criterion = lesson `summary`), rule fallback; all Solid → highest uncompleted lesson plus "You're ready for the next step".
+- Q16 Mastery levels without percentages (Reference).
+- Q17 Time frame "Within a year" moves saving before investing (rule and Jev `state`); the investing question it gets is the one about short-term risk.
+- Q18 "Start here" = the first uncompleted lesson (`lesson_completion`) of the areas to learn; it moves on after each completion and disappears when all are done.
+- Q19 "Why this question" comes from a template; the model writes no user-facing text.
+- Q20 New GDPR art. 13 notice (Reference copy); the consent card loses the sentence about typed text; the slip on account questions stays.
+- Q21 Tests: backend with `MockRestServiceServer` (Jev step, timeout, rest on rules, `next` outside the list, rules Q13–Q15, `GET` without the correct option); e2e for both paths, the account and life-stage toggles, and "Start here". Smoke twice (no key, then key); the report starts from the no-key view.
+- Q22 Order: backend (opus) → bank content (sonnet, reviewed by the backend implementer) → front (sonnet, after the contract commit); 3 reviews + triage.
+- Q23 Jan announces: to Danylo the bank format and the missing lessons for debt/risk/retirement; to the map's author the `map.tsx` change; on the channel the step endpoint and V16. `decisions.md` is updated at approval.
+- Q24 No seed; with a key the test may differ between runs.
+
+Still valid from v1 (21.11):
+- Q1 Quick check is our step in `/categorizing`: consent card → "What we know" → Quick check → loading → summary → lesson. Remigiusz's onboarding is unchanged.
+- Q2/Q15 Questions are written by people, never generated.
 - Q6 Without consent the same questions use example numbers.
-- Q7 When `JevProperties.callsJev()` is false the Quick check is skipped (no keyword imitation of a judge) and the summary comes from the rules; a TypeSafe key is required for the demo.
-- Q8 The consent card says Quick check answers go to the lesson picker; only the judgement is stored, never the raw text (GDPR art. 5(1)(c)). D3: the app never sends exact amounts, but your own words are sent as typed, so the card and the hint under the input say exactly that (GDPR art. 5(1)(c), art. 25: honest wording over masking digits, which would hurt the judging).
-- Q9/Q18 A summary screen before Learn: confidence gap first, then role and 2–3 areas with "why", then "Start learning", which opens the first lesson of the weakest area.
-- Q10 Blueprint: 4 questions, 2 from **finance** (Everyday money, Saving, Borrowing) and 2 from **investing** (Investing, Protect & plan), drawn without repetition. D7: one question per area within a category (account version only as tiebreak), plus a `retirement` question so pre-retirement users are covered ("All generations"); skipped if a category has fewer than 2 areas.
-- Q12 Every check question has an account version and a generic version; with consent, the draw prefers questions whose account data exists.
-- Q13 Random per onboarding; optional `EXPO_PUBLIC_QUIZ_SEED` makes the draw repeatable for a rehearsed demo (mulberry32 over the pool sorted by `id`; a non-numeric seed is ignored; dev builds only; it overrides Q20).
-- Q14 Jev judges each answer against its criterion: `understands` / `partly` / `not-yet`; `not-yet` areas missing from `focusAreas` are inserted at the front in check order, de-duplicated, capped at 5; the summary shows the first 3.
-- Q16 Coordinator writes a starter pool of 9 (4 finance + 5 investing, with D7's `retirement` question); Danylo takes it over and extends it with his lessons.
-- Q17 The pool lives in the backend next to the lessons (migration); the front fills account numbers in only when rendering. D9: `GET` does not return `criterion` (the judge's rubric stays in the backend), and the backend wraps every answer as delimited data in the Jev request (OWASP LLM01 prompt injection); Danylo is told.
-- Q19 One Jev call at the end, during the loading screen; no right/wrong feedback per question ("No wrong answers").
-- Q20 Every new onboarding draws new questions and recategorises.
-- Migrations: categorisation moves to `V15__categorization.sql` (renamed from `V5__categorization.sql` on PR #25's branch; main already has `V4__account_and_progress`) and the pool is `V16__check_questions.sql`. Flyway versioned migrations are immutable and ordered, so no `outOfOrder`; `origin/main` is merged into the integration branch before Q-B. PR #29 takes `V6__glossary.sql`.
-- Mockups (Q-M, done in 7e452a8): direction B "The route" (`docs/design/mockups/quick-check-b.html`) plus the slip line from C, "Only your answer is sent, never these numbers.", on account questions; gap card title "You know more than you think".
-- Backend tests use only JUnit assertions (`org.junit.jupiter.api.Assertions`), no AssertJ or Hamcrest; Q-B first rewrites the existing categorisation tests that use AssertJ in a separate commit.
-- D2 Jev judges an answer against the generic prompt plus the instruction "the person saw their own figures; judge the reasoning, not the numbers", so an account-version answer is not marked `not-yet` for missing the generic example's numbers; account prompts no longer ask "how did you work it out".
-- D4 One line above question 1 on both the consent and the no-consent path (GDPR art. 13): "Your answers are checked by an AI service to pick your first lesson; only the result is kept."
-- D5 Confidence gaps from checks come from a rule table for `saving` and `investing`: experience low × `understands` → `UNDER`, experience high × `not-yet` → `OVER`, with F1's thresholds per area (saving: low = `not-saving`, `occasional`; high = `regular`, `investing`, `planning`. investing: low = `not-saving`, `occasional`, `regular`; high = `investing`, `planning`); skipped experience → no gap; valid without consent, text from a template. It keeps the headline pitch point and works on the no-consent path.
-- D6 If Jev fails after answers were sent, the whole categorisation falls back to rules (F1 rule), `checks` holds only the "Not sure" entries, and the summary says "We couldn't check your answers this time".
-- D8 MiFID II wording: the risk and ETF questions ask how spreading money changes risk and whether a short-term fall says anything about the long term; no named product in any prompt.
-- Coordinator's calls: answers up to 280 characters; "Not sure" counts as `not-yet` and sends no text; all copy in English; the model is never named.
+- Q9/Q18 A summary screen (`/learning-path`) comes before Learn.
+- Q17 The bank lives in the backend next to the lessons (migration); the front fills account numbers in only when rendering.
+- Q20 Every new onboarding recategorises (no seen-state).
+- Migrations: `V15__categorization.sql`, `V16__check_questions.sql`; no `outOfOrder`.
+- Backend tests use JUnit assertions only (`org.junit.jupiter.api.Assertions`).
+- D6 If the final Jev call fails, the whole categorisation falls back to rules (F1 rule).
+- All copy in English; the model is never named; educate, never advise (MiFID II): no named product in any question.
+
+Removed v1 decisions (one line each):
+- Q4 open-text answers: replaced by tiles + chips.
+- Q7 Quick check skipped without a key: the keyless path now runs the test on rules.
+- Q10 / D7 blueprint 2 finance + 2 investing and the forced `retirement` question: the order is adaptive.
+- Q12 account-version preference in the draw: the front no longer draws.
+- Q13 `EXPO_PUBLIC_QUIZ_SEED`: removed (Q24).
+- Q14 `understands`/`partly`/`not-yet` judgement and focus reordering: replaced by mastery (Q11, Q16).
+- Q16 starter pool of 9: replaced by Q2.
+- Q19 one Jev call at the end: replaced by step calls plus the final call.
+- D2 "judge the reasoning, not the numbers": nothing is judged as text.
+- D3 / D4 notices about typed words: replaced by Q20.
+- D5 experience × check gap table: replaced by Q14.
+- D8 risk/ETF prompt wording: covered by the bank rules below.
+- D9 delimited answer text and the random UUID boundary (OWASP LLM01): no free text reaches Jev.
+- The 280-char limit and the answer-redaction tests: no text field.
+- `checks` and `startLesson` from check results: replaced by the fields below.
+- Mockup B "The route": replaced by v2 C.
+
+## To confirm
+Forks settled with the option marked →; Jan decides.
+- **Age band and `lifeStage`.** The tile says "So examples fit your stage of life". (a) the band only goes to Jev and the row (b) a skipped life stage is filled from the band: `18-25` → student, `26-40` → family, `41-60` → established, `60+` → pre-retirement, so F5 personas and F1's retirement focus use it. → (b): using the range for the purpose the tile states (GDPR art. 5(1)(b) purpose limitation) and covering "all generations".
+- **D6 line wording.** On the rules path the answers are still scored, so "We couldn't check your answers this time" is inaccurate. (a) keep it (b) "We used a simpler check this time". → (b): accurate information about the processing (GDPR art. 5(1)(a), art. 13).
+- **Back during the test.** The test is adaptive, so the next question depends on the earlier answers. (a) answers are final; Back (button or hardware) returns to the "What we know" card and starts the test again with an empty history (b) step back one question and recompute. → (a): adaptive tests do not revisit items, and the restart is stated on the card ("Start the quick check"), so there is no unexpected change of context (WCAG 2.2 SC 3.2.2).
 
 ## Contract
-Consumers: Danylo (check questions per lesson), the summary screen, F5 lesson variants. Changes go to `.planning/decisions.md` and the team channel.
+Consumers: Danylo (bank format), the summary screen, the map's author (`startHere`), F5 (`lessonVariant`, unchanged). Changes go to `.planning/decisions.md` and the team channel. Everything F1 defines (`docs/specs/F1-profiling.md`: facts, consent rule, Jev call, validation, fallback, because lines) stays unless changed here.
 
 ```
-GET  /api/check-questions                     → CheckQuestion[]          // the whole pool ordered by `id`; the front draws
-POST /api/users/{userId}/categorization       {consent, facts?, answers?: CheckAnswer[]} → Categorization
-
-CheckQuestion = {
-  id: string,                                 // stable slug, e.g. "savings-runway"
-  category: "finance" | "investing",
-  area: "saving" | "debt" | "investing" | "risk" | "retirement",
-  lessonId: number | null,                    // the lesson that teaches it
-  accountPrompt: string | null,               // with {slot} placeholders; null = generic only
-  slots: string[],                            // slots accountPrompt needs, from the list below
-  genericPrompt: string                       // example numbers, no slots
-}                                             // `criterion` stays in the backend (D9)
-CheckAnswer = {questionId: string, text: string | null}     // null = "Not sure"; text ≤ 280 chars
-
-Categorization gains:
-  checks: [{questionId, area, lessonId, result: "understands" | "partly" | "not-yet"}],   // [] when skipped
-  startLesson: {lessonId: number, title: string} | null
-  stored rows without `checks`/`startLesson` read as `[]`/null.
-confidenceGaps[].because may cite checks (D5), only when every check in the gap's area is `understands`:
-  UNDER: "You said: {experience label}. Your answer about {area} shows you understand it."
-  OVER (every check in the area `not-yet`, no answer cited): "You said: {experience label}. Your Quick check points to {area} as a place to learn more."
-  Mixed results in one area: no check-based gap.
+GET  /api/check-questions                          → CheckQuestion[]    // the whole bank ordered by id, with or without a key
+POST /api/users/{userId}/quick-check/step          StepRequest → StepResponse
+POST /api/users/{userId}/categorization            {consent, facts?, profile?, history?} → Categorization
+GET  /api/users/{userId}/categorization            → Categorization | 404     // startHere computed on read
 ```
-- **Slots** (filled on the device from `BankState` through Danylo's selectors): `savingsBalance`, `savingsInterestRate`, `monthOut`, `loanRemaining`, `loanApr`, `cardUsed`, `cardLimit`, `etfMonthly`, `depotTotal`, `positionCount`. An account version is usable only with consent and every slot available: a slot is available when its value is > 0, `positionCount` must be ≥ 2, and the `rate-vs-inflation` version needs `savingsInterestRate` < 3. Amounts are whole euros from cents (`en-IE`). Q-F adds the selectors `etfMonthly` (`Math.abs(amount)` of the standing order whose recipient starts with "Depot") and any other missing slot to `selectors.ts`.
-- **What Jev gets per answer**: the **generic** prompt, the criterion and the answer text, never the account version, so the app sends no exact amounts. The text is wrapped as delimited data with the instruction to treat it as an answer, never as instructions (OWASP LLM01), plus the D2 instruction to judge the reasoning, not the numbers. Each answered check is one `choice` question `check_<id>` (key = `check_` + id with `-` → `_`) with labels `understands`, `partly`, `not-yet`, in the same request as role and focus areas. The request-level `state` gains `checks: [{questionId, genericPrompt, criterion, answer}]` for answered checks. A "Not sure" answer creates no `check_<id>` question; the backend sets its result to `not-yet`. `sharedWithModel` records `checks: [{questionId, answered}]`, never the text.
-- **Errors**: `answers` absent or `[]` → no check (`checks: []`). Otherwise exactly 4 answers, 2 `finance` + 2 `investing` by the stored category, unique and known ids; `text` is null or 1–280 UTF-16 code units after trim; blank → 400. When `JevProperties.callsJev()` is false, answers are ignored before validation. The 400 `detail` never echoes the rejected value. If Jev fails after answers were sent: whole fallback (D6). The 5-minute reuse of a recent categorisation is skipped when `answers` is non-empty.
-- **Storage**: pool in `V16__check_questions.sql` (`check_question` table: `id` with `CHECK (id ~ '^[a-z0-9-]+$')`, `area` with a CHECK that it belongs to `category`, `lesson_id` FK to `lesson` `ON DELETE SET NULL`, nullable), seeded with the starter pool; seed `lesson_id` as `(SELECT id FROM lesson WHERE position = n)`. The number is in `.planning/decisions.md`; announce it on the team channel before push. `checks` and `startLesson` live inside the categorisation JSONB; raw answer text is never stored or logged.
-- **startLesson**: sort checks that have a `lessonId` by (`not-yet` before `partly`, then the area's index in the reordered `focusAreas`) and take the first. Else take `min(lesson_id)` from `check_question` for the first focus area that has one. Else null (the button opens the map).
+
+`GET /api/check-questions` (no correct option, no misconceptions, no "checks" sentence, no level):
+```json
+[{
+  "id": "inflation-real-value",
+  "area": "saving",
+  "accountPrompt": "Your savings account holds €{savingsBalance} at {savingsInterestRate}% a year. Inflation runs at about 3%. Over a year, what happens to what that money can buy?",
+  "slots": ["savingsBalance", "savingsInterestRate"],
+  "genericPrompt": "Your savings account holds €10,000 at 2% a year. Inflation runs at about 3%. Over a year, what happens to what that money can buy?",
+  "options": [
+    "It buys a little more, because the balance grows by the interest",
+    "It buys a little less, because prices rise faster than the interest",
+    "It stays the same, because the money is safe in the bank",
+    "It depends on the bank, not on prices"
+  ]
+}]
+```
+`accountPrompt` is null for generic-only questions. Options carry no slots. Slots, their availability rules and their formatting are unchanged from v1: `savingsBalance`, `savingsInterestRate`, `monthOut`, `loanRemaining`, `loanApr`, `cardUsed`, `cardLimit`, `etfMonthly`, `depotTotal`, `positionCount`, filled by `slotValues` in `front/src/lib/bank/selectors.ts`. An account version is shown only with consent and when every slot is available; otherwise the generic version is shown.
+
+`POST /api/users/{userId}/quick-check/step`:
+```json
+{
+  "consent": true,
+  "facts": {"incomeBand": "2-3.5k", "cashBufferMonths": "6+", "savingsRate": "20%+", "savesRegularly": true, "inOverdraft": false, "holdsInvestments": true, "hasLoan": true},
+  "profile": {"ageBand": null, "savingsCover": null, "horizon": "1-5y"},
+  "history": [
+    {"questionId": "inflation-real-value", "optionIndex": 1, "confidence": "guessing"},
+    {"questionId": "compound-two-years", "optionIndex": null, "confidence": null}
+  ],
+  "useRules": false
+}
+```
+```json
+{"mastery": {"saving": 0.6, "investing": 0.25}, "nextQuestionId": "time-in-market", "done": false, "useRules": false}
+```
+- `optionIndex: null` with `confidence: null` = "Not sure". `history: []` returns the first question, picked by the rule (no Jev call: there is nothing to judge yet).
+- `mastery` has a key for every area that has bank questions; `null` = no answer yet. `done: true` comes with `nextQuestionId: null`.
+- `useRules` in the response is `true` when no key is configured (`JevProperties.callsJev()` false) or when this step's Jev call failed; the front sends the last response's value with the next step. With `useRules: true` the backend makes no Jev call.
+
+Final `POST /api/users/{userId}/categorization`:
+```json
+{
+  "consent": false,
+  "profile": {"ageBand": "26-40", "savingsCover": "1-3", "horizon": "within-1y"},
+  "history": [
+    {"questionId": "emergency-months", "optionIndex": 0, "confidence": "sure"},
+    {"questionId": "inflation-real-value", "optionIndex": 2, "confidence": "sure"},
+    {"questionId": "short-term-fall", "optionIndex": 1, "confidence": "fairly-sure"}
+  ]
+}
+```
+`profile` and `history` are absent when the Quick check was skipped (empty or failed `GET`); then F1 applies unchanged.
+
+Value sets: `ageBand` `18-25` | `26-40` | `41-60` | `60+`; `savingsCover` = F1 `cashBufferMonths` values `<1` | `1-3` | `3-6` | `6+`; `horizon` `within-1y` | `1-5y` | `5y+` | `not-sure`; `confidence` `guessing` | `fairly-sure` | `sure`. Every profile field is nullable.
+
+`Categorization` (F1) changes; stored in the categorisation JSONB:
+```
+profile: {ageBand, savingsCover, horizon} | null         // the ranges the user picked (Q7)
+mastery: {<area>: number | null}                         // {} without a Quick check
+confidenceGaps: [{area, direction: "under" | "over", because}]   // ≤ 2, from Q14 when the Quick check ran; F1's facts table only without one
+startLesson: {lessonId, title, area} | null
+readyForNext: boolean                                    // every area Solid (Q15)
+pathLessonIds: number[]                                  // startLesson first, then the other lessons of non-Solid areas
+startHere: {lessonId, title, area} | null                // not stored: first id of pathLessonIds the user has not completed
+sharedWithModel gains: profile, answerCount              // never the per-answer history
+v1 `checks` is removed. Rows without these fields read as null / {} / [] / false.
+```
+- The per-answer history is not stored (Q20: "We keep the result and the ranges you pick"); the request history is used for the call and dropped.
+- `startHere` reads `lesson_completion` through the existing `LessonCompletionRepository.existsByUserIdAndLessonId` (read only; the profile module is not changed).
+- On a failed final call `sharedWithModel` still records what was sent, so the summary decides the D6 line from the stored row alone: `source == "fallback"` and `sharedWithModel != null`.
+
+### Jev step call
+`POST {jev.base-url}/v1/systemone` as in F1. Read timeout 3 s (`JevConsts.STEP_READ_TIMEOUT`, a second client built from the injected `RestClient.Builder`); the final call keeps the shared 7 s. `state`:
+```json
+{
+  "profile": {"ageBand": null, "savingsCover": null, "horizon": "within-1y"},
+  "facts": {"...": "F1 facts, only with consent"},
+  "answers": [
+    {"area": "saving", "result": "wrong", "misconception": "Thinks money in the bank keeps its value whatever prices do.", "confidence": "sure"},
+    {"area": "investing", "result": "not-sure", "misconception": null, "confidence": null}
+  ]
+}
+```
+`result` is `correct` | `wrong` | `not-sure`; `misconception` is the chosen wrong option's text from the bank, else null. Questions, verbatim (`mastery_<area>` only for areas with at least one answer; `next` labels are the unasked question ids, each criterion its `checks` sentence):
+
+<!-- jev-step-questions: the backend test compares the Jev request with this block -->
+```json
+{
+  "mastery_saving":     {"type": "noul", "instructions": "Do this person's answers about saving, emergency funds and inflation show that they understand these ideas well?"},
+  "mastery_debt":       {"type": "noul", "instructions": "Do this person's answers about borrowing, loans and credit cards show that they understand these ideas well?"},
+  "mastery_investing":  {"type": "noul", "instructions": "Do this person's answers about investing, compound interest and market ups and downs show that they understand these ideas well?"},
+  "mastery_risk":       {"type": "noul", "instructions": "Do this person's answers about risk, spreading money and scams show that they understand these ideas well?"},
+  "mastery_retirement": {"type": "noul", "instructions": "Do this person's answers about planning for retirement show that they understand these ideas well?"},
+  "next": {"type": "choice",
+    "instructions": "Which of these questions would show best what this person still needs to learn, given their answers so far, how sure they felt and when they might need their money?",
+    "criteria": {"<question id>": "<the question's checks sentence>"}},
+  "enough": {"type": "noul", "instructions": "Do the answers so far show clearly enough what this person already understands and what they should learn first?"}
+}
+```
+Step outcome: `mastery` = the `mastery_<area>` probabilities. `done` when answered ≥ `MAX_QUESTIONS`, when no unasked question is left, or when answered ≥ `MIN_QUESTIONS` and `enough` ≥ `ENOUGH_THRESHOLD`; otherwise `nextQuestionId` = `next`. A response that fails F1's validation (missing question, label outside its set, `next` not among the unasked ids, probability outside [0, 1]), a timeout or any error → this step runs on the rule and returns `useRules: true`.
+
+### Jev final call
+F1's request (role and `focus_*` verbatim from F1's `jev-questions` block) plus `state.profile` and `state.answers` as in the step call, plus these questions (`mastery_<area>` as in the step block; `gap_<area>` only for areas with at least one answer that carries a chip; `first_lesson` only with 2+ candidates, Q15):
+
+<!-- jev-final-questions: the backend test compares the Jev request with this block -->
+```json
+{
+  "gap_<area>": {"type": "choice",
+    "instructions": "In this area, how does how sure this person felt compare with how well they answered?",
+    "criteria": {
+      "under": "Their answers in this area are mostly right, yet they said they were guessing or only fairly sure.",
+      "over": "They said they were sure, yet their answers in this area show gaps.",
+      "aligned": "How sure they felt roughly matches how well they answered."}},
+  "first_lesson": {"type": "choice",
+    "instructions": "Which lesson should this person start with, given which ideas their answers show they have not mastered yet?",
+    "criteria": {"lesson_<id>": "<the lesson's summary>"}}
+}
+```
+F1 validation applies to the whole response; any failure → the whole categorisation on rules (D6), 7 s read timeout.
+
+### Validation and errors
+`ProblemDetail` from the global handler; `detail` never echoes a rejected value. Both POSTs share these rules:
+- F1 rules: malformed JSON, missing `consent`, `userId` blank or over 64 chars, a fact outside its set, `facts` with `consent: false` → 400; onboarding not finished or skipped → 404 "Finish onboarding first" (the step needs the goals).
+- `profile` value outside its set → 400.
+- `history`: more than `MAX_QUESTIONS` entries, an unknown or repeated `questionId`, `optionIndex` outside the question's options, `confidence` null with a non-null `optionIndex` (or the reverse), `confidence` outside its set → 400.
+- Final POST: F1's 5-minute reuse of a recent categorisation is skipped when `history` is non-empty.
 
 ## Reference
 
-### Starter pool (Danylo takes it over; the criterion column is backend-only, D9)
-| id | cat. | area | lesson | account prompt | generic prompt | criterion |
-|---|---|---|---|---|---|---|
-| `savings-runway` | finance | saving | 1 Emergency fund | You keep €{savingsBalance} in savings and spend about €{monthOut} a month. If your income stopped tomorrow, how long would your money last? | Imagine you keep €5,000 in savings and spend €1,500 a month. If your income stopped tomorrow, how long would your money last, and how did you work it out? | Relates savings to monthly spending (roughly savings ÷ spending) and sees the money as a safety net for emergencies. |
-| `rate-vs-inflation` | finance | saving | 3 Inflation | Your savings account pays {savingsInterestRate}% a year. If prices rise 3% a year, what happens to what your €{savingsBalance} can buy? | A savings account pays 2% a year while prices rise 3% a year. What happens to what €5,000 can buy? | Sees that when prices rise faster than the interest, the money buys less over time. |
-| `loan-apr` | finance | debt | — | Your instalment loan has €{loanRemaining} left at {loanApr}% APR. What does that APR tell you about the loan? | A loan of €8,000 has a 6% APR. What does the APR tell you about the loan? | Explains APR as the yearly cost of borrowing, so a higher APR makes the same loan cost more. |
-| `card-minimum` | finance | debt | — | You have used €{cardUsed} of your €{cardLimit} credit card limit. What happens if you pay only the minimum each month? | You owe €1,000 on a credit card. What happens if you pay only the minimum each month? | Sees that the unpaid balance keeps costing interest, so the debt lasts longer and costs more. |
-| `etf-drop` | investing | investing | — | Every month €{etfMonthly} goes into your monthly ETF plan. If the market falls 20% next month, what happens to that money? | Every month €100 goes into a world ETF. If the market falls 20% next month, what happens to that money? | Understands the value can fall and rise and that a short-term fall says little about the long term. |
-| `time-in-market` | investing | investing | 2 Compound interest | Your depot holds €{depotTotal}. Why does how long you stay invested matter? | You invest €1,000. Why does how long you stay invested matter? | Describes compounding: returns earn returns, so a longer horizon grows the money more. |
-| `one-etf-vs-one-stock` | investing | risk | — | Your depot has {positionCount} positions. How does spreading money over many companies change risk compared with putting it all in one company? | How does spreading money over many companies change risk compared with putting it all in one company? | Explains spreading money over many companies, so one company failing hurts less. |
-| `too-good-offer` | investing | risk | — | — | Someone online promises 20% a month with no risk. What tells you something is wrong? | Recognises that high guaranteed returns without risk are a scam signal; return and risk go together. |
-| `pension-gap` | investing | retirement | — | — | Why might your state pension alone not cover what you spend today? | Sees that income in retirement is usually lower than during work, so the gap has to be planned for ahead. |
-Every prompt asks about understanding and recommends nothing (MiFID II). Draw: one question per area within each category (finance: `saving`, `debt`; investing: `investing`, `risk`, `retirement`).
+### Fallback rule (Q13–Q15; constants in `CategorizationConsts`)
+| constant | value | use |
+|---|---|---|
+| `RULE_START` | 0.5 | value of an area with no answer, for ordering only; shown as "Not checked yet" |
+| `SCORE_CORRECT_SURE` / `_FAIRLY_SURE` / `_GUESSING` | 0.85 / 0.75 / 0.6 | one correct answer |
+| `SCORE_WRONG` | 0.25 | a wrong answer or "Not sure" |
+| `MIN_QUESTIONS` / `MAX_QUESTIONS` | 3 / 6 | knowledge questions per test, both paths |
+| `RULE_MAX_QUESTIONS` | 4 | the rule ends here |
+| `ENOUGH_THRESHOLD` | 0.7 | Jev `enough` |
+| `JUST_STARTING_BELOW` / `SOLID_ABOVE` | 0.4 / 0.75 | levels (Q16) |
+| `MAX_GAP_CARDS` | 2 | gaps on the summary |
+| `SHORT_HORIZON_QUESTION_ID` | `short-term-fall` | Q17 |
 
-### Quick check screen (`/categorizing`, after consent)
-- One question per screen, progress "1 of 4", the prompt, a multiline input (280-char counter), "Next" (disabled while empty) and "Not sure". No right/wrong feedback. Back goes to the previous question with its answer kept; Back on question 1 returns to the consent card with the answers kept; the last Next is disabled while the POST is in flight.
-- Copy above the first question, on both paths: "Four quick questions so we know where to start. There are no wrong answers." and "Your answers are checked by an AI service to pick your first lesson; only the result is kept." Under the input: "No need to type exact amounts". Under account questions: "Only your answer is sent, never these numbers."
-- Skipped entirely when `GET /api/check-questions` returns `[]`: `JevProperties.callsJev()` is false, or either category has fewer than 2 areas with a question. A failed GET counts as `[]`.
+- **Mastery**: the mean of the area's answer scores; no answers → null.
+- **Area order**: areas from the user's goals first (F1 goals → areas map), then the rest in `saving, debt, investing, risk, retirement` order, keeping only areas with bank questions; `horizon` `within-1y` moves `saving` before `investing`.
+- **Next**: (1) after a wrong or "Not sure" answer, an unasked `easy` question from the same area; (2) otherwise the first area in order with no answer; (3) when every area has an answer, the area with the lowest mastery (ties: area order). Within an area: `easy` before `hard`, then `id`; for `investing` with `horizon` `within-1y`, `short-term-fall` first while it is unasked. No unasked question in the chosen area → the next rule down.
+- **Done**: answered ≥ `RULE_MAX_QUESTIONS`, or answered ≥ `MIN_QUESTIONS` and every area has an answer, or no unasked question left.
+- **Gaps (Q14)**, per area, from the chips ("Not sure" carries no chip and is ignored): `over` when a wrong answer has `sure`; else `under` when a correct answer has `guessing`; else none. Jev `aligned` = none. At most `MAX_GAP_CARDS`: `under` before `over`, then area order. The quoted chip label: `under` quotes the lowest chip in the area, `over` the highest.
+- **First lesson (Q15)**: candidates = the distinct `lessonId`s of bank questions in non-Solid areas (an area with no answer counts as non-Solid). One candidate → it, without a Jev question. Rule: the weakest area (lowest mastery, an area with no answer = `RULE_START`, ties: area order); in it, the answered question with the lowest score (ties: earlier in the history) gives the lesson; an area with no answer gives its lowest `lessonId`. No candidates (every area Solid) → the uncompleted lesson with the highest `position`, `readyForNext: true`; every lesson completed → `startLesson: null`.
+- **pathLessonIds**: `startLesson` first, then the other candidates by area mastery ascending (no answer = `RULE_START`), then lesson id; with `readyForNext` just `[startLesson.lessonId]`.
+- **F1 fallback inputs**: without bank data, `savingsCover` stands in for `cashBufferMonths` in F1's focus rule. F1's facts gap table applies only when the Quick check did not run.
 
-### Summary screen (`/learning-path`)
-- Order: confidence gap card titled "You know more than you think" (when there is one) → "You're {a beginner / an intermediate / an advanced} learner" with the role's because lines → 2–3 focus areas with one "why" each → "Start learning" (opens `startLesson`, else the map) and a quiet "See all lessons".
-- Educate, never advise: sentences describe what the answers and the account show; no product, no "you should".
-- If Jev failed after answers were sent, one line: "We couldn't check your answers this time".
-- Shown after each categorisation from `/categorizing` (every onboarding recategorises, Q20, so no seen-state is kept); `/learning-path` without a categorisation redirects to the map. Profile can link to it later.
+### Mastery levels (Q16)
+| mastery | label | dock short label |
+|---|---|---|
+| null | Not checked yet | Not yet |
+| < 0.4 | Just starting | Starting |
+| 0.4 – 0.75 | Building | Building |
+| > 0.75 | Solid | Solid |
+
+Never a percentage or number on screen. The "How sure you felt" marker (front only, display): mean of the area's chips, Guessing 0.25 / Fairly sure 0.6 / Sure 0.9, "Not sure" counted as Guessing.
+
+### Horizon (Q17)
+`within-1y` changes the area order and the investing pick (rule above), and Jev sees it in `state.profile`. Other values change nothing in the rule.
+
+### "Start here" (Q18)
+`startHere` = the first id in `pathLessonIds` with no `lesson_completion` row for the user, else null. The map shows it on that lesson's card; after a completion the next GET moves it on; when all are done it disappears.
+
+### Screens (look: mockup C; `finance-quest-ui` skill; tokens from `front/src/constants/theme.ts`)
+- **Consent card** (F1 + Q20): the facts preview as in F1, then the notice. The v1 sentence about typed answers is removed.
+- **"What we know about you"**: rows for life stage ("You told us" / "Life stage not shared · You skipped this · We will ask one question."), goals ("You told us"), and with consent the F1 fact lines tagged "From your accounts", without consent "Account access is off · You chose this · We will ask about your savings."; footer "Ranges only, never exact amounts. Your questions use the exact numbers on this phone."; buttons "Start the quick check" and "Change account access" (back to the consent card).
+- **Question**: header "Question {n} of up to {MAX_QUESTIONS + profile questions}" with "No wrong answers" (knowledge) or "Not scored" (profile); the prompt; "Why this question: …"; tiles as a radio group. Knowledge tile tap → the chips "How sure are you?" Guessing / Fairly sure / Sure appear inside that tile; a chip tap commits. A "Not sure" tile commits at once. A profile tile commits on tap and has no chips and no dock. Under account questions the slip "Only your answer is sent, never these numbers."; under generic ones "Example numbers"; under profile ones "A fact about you, not a test.". No right/wrong feedback.
+- **Between questions**: a status line "Choosing your next question" while the step runs; on `done` "All set · That is enough to place you".
+- **Dock**: "Your map so far", one column per bank area with the filled bar (mastery) and the hollow diamond (how sure); a tap opens the sheet "Your map in detail" (levels, legend "How sure you felt" / "What your answers show"; Close, Escape and the scrim close it). Each column has a screen-reader text "{Area}: {level}". Reduced motion: the diamond (350 ms), bar (700 ms) and sheet (320 ms) appear in place.
+- **Summary** (`/learning-path`): gap cards (≤ 2) or, when the Quick check ran with no gap, the aligned card → "You're {a beginner / an intermediate / an advanced} learner" + "Based on {n} answers and how sure you felt about each." → "Your first lesson · {Area}" with the title (and "You're ready for the next step" when `readyForNext`) → "Your map" (both markers) → "Start learning" (opens `startLesson`, else the map) and a quiet "See all lessons". The D6 line when `source == "fallback"` and `sharedWithModel != null`.
+- **Map** (`(learn)/map.tsx`): on the `startHere` lesson card a "Start here" badge and the line "Why here: Your answers about {Area}"; reloaded on focus; 404 or error → the list as today.
+- Area display names: Saving, Borrowing (`debt`), Investing, Risk, Retirement.
+
+### Copy, verbatim (Q19, Q20 and the cards)
+- Why this question (Q19): knowledge, first question in the area: "Picked to learn more about {Area}"; area already asked: "Picked to look at {Area} from another angle". Profile: age band "So examples fit your stage of life"; savings cover "So examples fit your savings"; time frame "So examples match your time frame".
+- Consent notice (Q20): "Your answers are checked by an AI service to pick your first lesson; only your choices are sent, never your account numbers. We keep the result and the ranges you pick."
+- Profile questions (Q10 order): "Which age band are you in?" 18–25 / 26–40 / 41–60 / 60+; "How many months of spending could your savings cover?" Less than 1 month / 1–3 months / 3–6 months / More than 6 months; "When might you need the money you save or invest?" Within a year / 1–5 years / 5+ years / Not sure.
+- Gap cards: under, title "You know more than you think", because "On {Area} you said “{chip}”, yet your answers show you already understand how it works."; over, title "There is more to explore here", because "On {Area} you said “{chip}”. Your answers leave a few things open, which is where your first lesson starts."; aligned, title "How sure you felt matches your answers", text "On the areas we checked, your confidence and your answers line up." The backend builds `because`; the front adds the titles.
+- D6 line: "We couldn't check your answers this time" (wording under To confirm).
+
+### Bank rules (for the content task and Danylo)
+- Columns of `check_question`: `id` (slug `^[a-z0-9-]+$`), `lesson_id` (NOT NULL, FK `lesson(id)` `ON DELETE CASCADE`), `area`, `level` (`easy` | `hard`), `account_prompt` (nullable), `slots`, `generic_prompt`, `options` (3–4), `correct_index` (inside `options`), `misconceptions` (same length as `options`, NULL at `correct_index`, text elsewhere), `checks` (one sentence). DB `CHECK`s hold the lengths, ranges and sets.
+- Starter bank, 8 rows from V2's lessons (1 Emergency fund and 3 Inflation → `saving`; 2 Compound interest → `investing`): each area at least 2 `easy` and 1 `hard`, so a 6-question test never runs out; `short-term-fall` (investing, easy, lesson 2) asks about a market fall next month against a long horizon. Same concept and level as the lesson, other numbers or scenario, no lesson question copied.
+- Every prompt asks about understanding and recommends nothing: no named product, no "should", no buy / invest / switch as advice (MiFID II).
 
 ## Tasks
-Simplest working solution, no code or tests for later.
+Simplest working solution, no code or tests for later. Each task loads `ponytail:ponytail` and runs `ponytail:ponytail-review` on its diff; backend rules from `CLAUDE.local.md` "Backend: konwencje" (layer subpackages under `categorization`, one type per file, Lombok, MapStruct, JPQL projections, named constants, Bean Validation on DTOs, JUnit assertions, TDD).
 
-- [x] **Q-M mockups**: done in 7e452a8; chosen direction B "The route" (`docs/design/mockups/quick-check-b.html`) plus the slip line from C and the gap card title "You know more than you think".
-- [ ] **Q-B backend** (`java-springboot`). Steps in order: (1) merge `origin/main` into the integration branch and restore main's `V4__account_and_progress`; (2) rename `V5__categorization.sql` → `V15__categorization.sql`; (3) rewrite the AssertJ tests (`RulesTests`, `JevPropertiesTests`, `JevRedirectTests`, `JevClientTests`, `CategorizationControllerTests`) to JUnit assertions in a separate commit; then `V16__check_questions.sql` with the starter pool, `GET /api/check-questions` (no `criterion`), answers in `POST`, Jev `check_<id>` questions, `checks`, `startLesson`, focus-area reordering, gap rules from checks (D5). Done when `./mvnw clean test` (JUnit assertions only) covers each 400 case, the startLesson ordering, the focus reordering, 4× Not sure and two POSTs with different answers; the Jev request carries generic prompts only and "Not sure" sends no text; the 5-minute reuse is skipped when `answers` is non-empty; a sentinel answer is absent from the logs, the ProblemDetail and `categorization.data` on the success path, the 400 path and the Jev 500 path (`OutputCaptureExtension`, `MockRestServiceServer`); a pool test checks that every `{slot}` in `accountPrompt` is in `slots` and in the known set.
-- [ ] **Q-F front**: draw 2 + 2 per D7 with optional seed, slot filling from `BankState`, the Quick check screen, the summary screen, the consent card line. Done when `npm run check` and Playwright cover consent → 4 questions → summary → lesson and the no-key path skipping straight to the summary; the happy path uses Playwright `page.route` stubs for `/api/check-questions` and the POST; every clickable element has a `testID`.
-- [ ] **Danylo handover**: the check-question format above and the starter pool, sent by Jan. Done when Danylo has confirmed the format and the contract (including `GET` without `criterion`) is in `decisions.md`.
+- [ ] **Q-B backend contract** (opus, `java-springboot`), first. Rewrite `back/src/main/resources/db/migration/V16__check_questions.sql` in place to the bank columns above with a 4-row placeholder seed (per area one `easy`, one `hard`, `short-term-fall` among them). `GET /api/check-questions` in the new shape (no key check); `POST /api/users/{userId}/quick-check/step` (new `QuickCheckController`, `QuickCheckService`); the step Jev client with 3 s; the final call additions; the stored fields and `startHere`; remove the v1 text path (`CheckAnswerDto`, `JevCheckDto`, `CheckDto`, `checks`, the boundary code, `AnswerRedactionTests`). Files: `back/src/main/java/com/collabothon/back/categorization/**`, `back/src/test/java/com/collabothon/back/categorization/**`, V16. Commit the contract (DTOs, V16 schema) on its own first. Done when `./mvnw clean test` is green and covers: GET without `correctIndex`, `misconceptions`, `checks`; each 400 case above; step with Jev (`MockRestServiceServer`) returning `next`; a 3 s timeout and a `next` outside the list → rule and `useRules: true`; `useRules: true` → no Jev request; each rule row (scores, next, done, gaps, first lesson, all Solid, `within-1y`); both Jev request bodies equal the two blocks; the stored row has no per-answer history; `startHere` moves after a `lesson_completion` row. Tests read expectations from the seeded bank, not from literal ids, so the content task does not break them.
+- [ ] **Q-C bank content** (sonnet), after Q-B's contract commit. Replace V16's placeholder seed with the 8 rows per "Bank rules", reading `git show origin/main:back/src/main/resources/db/migration/V2__lessons.sql`. Done when `./mvnw clean test` stays green, every account prompt's `{slot}` is in `slots` and in the known set (existing pool test), and the Q-B implementer has reviewed the rows against the bank rules and MiFID wording (findings fixed).
+- [ ] **Q-F front** (sonnet, `expo` skills, `frontend-react-best-practices`, `finance-quest-ui`), after Q-B's contract commit. Types in `front/src/types/quickCheck.ts` and `categorization.ts`; `front/src/lib/quickCheck.ts` (fetch, slot filling; the draw and the seed go); `front/src/hooks/useQuickCheck.ts` (profile questions, step calls with a 5 s client timeout, one retry with `useRules: true`, a second failure ends the test and sends the history so far); `ConsentCard` (Q20), a new "What we know" card, `QuickCheckPage` (tiles, chips, Not sure, why line, slip), the dock and sheet, `PathSummary`, `categorizing.tsx`, `learning-path.tsx`; remove the text input, the 280 limit and `EXPO_PUBLIC_QUIZ_SEED` (also from `front/.env.example`). Every clickable element has a `testID`. Done when `npx expo lint`, `npx tsc --noEmit` and `npm run check` pass and Playwright (`page.route` stubs for GET, step and POST) covers: consent → What we know → profile tiles → knowledge questions with chips → summary → lesson; the no-consent path (savings-cover tile, generic prompts); life stage skipped (age-band tile); a step failure continuing on rules; `done` before `MAX_QUESTIONS`.
+- [ ] **Q-F map** (same worker, last). `front/src/app/(main)/(learn)/map.tsx`: GET categorisation, the "Start here" badge (`testID="start-here"`) and why line on the `startHere` lesson, reload on focus; nothing else on the screen changes. Done when Playwright shows the badge on the stubbed `startHere` lesson, no badge on 404, and the badge on the next lesson after a stubbed completion.
+- [ ] **Smoke** (coordinator, `playwright-cli`): the whole flow on the real backend without a key, then with the key. Done when both runs reach the map with "Start here" and the report starts from the no-key run.
 
 ## Never
-- Generated questions, a right/wrong verdict per question, or a score shown as a grade.
-- Exact account amounts sent by the app, or raw answer text stored or logged.
-
-## To confirm
-Forks settled with the simplest option; Jan decides. Restored 21.11 (the round-1 triage commit 6ebc961 dropped this section by mistake).
-- **Over-gap title.** The spec fixes only "You know more than you think" (under); an `over` gap shows "There is more to explore here". (a) keep (b) other wording (c) no card for `over`. Recommend (a).
-- **Draw does not force `retirement`.** A pre-retirement user may not get the retirement question. (a) keep random (b) force it for life stage `later-life`. Recommend (b) for "all generations", small change in the draw.
-- **Consent line vs the real draw.** The note shows when the pool is non-empty; after skipping malformed items the draw could still come out empty. (a) keep (b) compute the draw before the card. Recommend (a): only malformed rows trigger it.
-- **Generic "why" line.** An area that is neither a goal nor answered reads "It fits the answers you gave." even when onboarding was skipped and Jev fell back. (a) keep (b) "A good place to start." Recommend (b).
-- **Start learning without a lesson.** Only saving and investing questions link lessons (1–3); a path of Borrowing + Risk opens the map. (a) keep (spec) (b) Danylo links more lessons. Recommend (b) before the demo.
-- **`checkBackend` GET kept** for F1's check-error screens. Keep.
-- **Text typed with consent, then consent declined** is still sent; the input hint says not to type exact amounts. Keep (consent covers bank data; D4 notice covers answers).
-- **Web may read the question position twice** (focus label + live region). (a) keep (b) web: label without position. Recommend (b), low.
-- **`etfMonthly`** takes the first Depot order, monthly or not. Fine on the seed; revisit with Danylo's data.
-- Resolved: per-area why (goals by area, F-N11), `summarySeenAt` (removed, Q20), last-Next in-flight state (disabled `ready` state), `duel.spec` (F-e2e).
+- Free text to Jev; Jev sees only bank content, choices, chips and ranges.
+- Exact amounts to Jev, in the stored row or on the "What we know" card.
+- User-facing text written by the model: Jev returns labels and probabilities, every sentence comes from our templates.
+- The model's name anywhere in the UI.
+- Product advice or buy / invest / switch wording in questions, options or copy (MiFID II).
+- A seed or any other way to fix the question order.
+- A language-level output or language variants from the Quick check.
+- A right/wrong verdict per question, a percentage or a score shown as a grade.
 
 ## Review triage
-Round 1 (21.11), reports in `.planning/reviews/F1b-diff-{back,front}-2026-11-21.md`. Sources: AR adversarial-review, CR code-review, K conformance (repo rules). `#` = source + number in that report.
+v1 "To confirm" and both v1 triage rounds: `.planning/reviews/F1b-v1-triage.md` (coordinator's checkout).
 
 | # | finding | file:line | class | reason or commit |
 |---|---|---|---|---|
-| B-AR1 | `<>`→`‹›` swap does not stop an answer closing its tag; instructions never call state data | CategorizationService:154, JevClient:56-74 | fix | random per-request boundary named in every question + "data, not instructions" (OWASP LLM01) |
-| B-AR2 | Jev read timeout 4 s with up to 4 extra judgements | application.properties:28 | fix | 7 s (r2: the front's 10 s also covers the profile wait) |
-| B-AR3 | POST without answers within 5 min drops checks | CategorizationService:78-84,161 | fix | Jan 21.11: reuse the stored row with its checks when onboarding answers and consent match |
-| B-AR4 | OVER gap cites "your answer" for not-yet / Not sure | CategorizationRules:170 | fix | Jan 21.11: UNDER cites only answered `understands`; OVER from a check = "You said: {experience}." + area, no answer cited |
-| B-AR5 | reuse guard untested | QuickCheckTests:252 | fix | test without → with answers |
-| B-AR6 | 400 sentinel not in the rejected value; logs checked on one path | QuickCheckTests:340,524 | fix | sentinel in offending value, logs on every 400 path |
-| B-AR7 | startLesson sort test passes on area order alone | QuickCheckTests:412 | fix | test where area order and result order disagree |
-| B-AR8 | `answers: [null]` → 400 without a key | CategorizationRequestDto:15 | fix | element null handled in `pick`, ignored without a key |
-| B-AR9 | V16 seed by non-unique `position` | V16__check_questions.sql:16 | fix | match `position` and `title` (V16 not applied anywhere yet) |
-| B-AR10 | D6 line after reload undecidable | CategorizationService:97 | defer | reload is off the demo path; revisit with the Profile link |
-| B-AR11 | records print answer text in `toString()` | CheckAnswerDto, JevCheckDto | fix | redacted `toString()` |
-| B-AR12 | mixed evidence in one area makes an UNDER gap | CategorizationRules:151 | fix | no check-based gap on mixed results |
-| B-AR13 | Jev-500 stub body empty | QuickCheckTests:536 | fix | sentinel in the error body |
-| B-AR14 | answers list unbounded; NBSP/FEFF blank mismatch | CategorizationRequestDto:15 | fix / reject | `@Size(max = 4)`; whitespace variant is cosmetic |
-| B-AR15 | no-consent test passes whatever consent is; small items | QuickCheckTests | fix | assert the consent:false path; other small items reject (framework/DB constraints) |
-| B-AR-spec | D2 instruction sent when the generic version was shown | JevClient | reject | "judge reasoning, not numbers" is right for both versions |
-| B-CR1/K2 | DTOs built by hand from the projection | CategorizationService:92,103; CategorizationRules:208 | fix | MapStruct, one target per mapper (CLAUDE.local) |
-| B-CR2/K1 | name-only consts `ANSWER_TAG`, `CHECK_QUESTION_PREFIX` | JevConsts:13,15 | fix | inline (with B-AR1) |
-| B-CR3 | `substring(len-1)` period surgery | CategorizationRules:159 | fix | build because lines from parts |
-| B-CR4 | `FocusArea.valueOf(area.name())` | CategorizationRules:150 | fix | `ConfidenceArea.focusArea()` |
-| B-CR5 | pool read on every POST, outside its service | CategorizationService:62 | fix | read in `CheckQuestionService`, only with answers |
-| B-CR6 | two similar converters | entities/*Converter | reject | a generic converter adds an abstraction for two 20-line files |
-| B-CR7 | validator before size check | CheckQuestionService:55 | fix | covered by B-AR14 |
-| B-CR8/9 | lines > 120, restating Javadoc, mid-class constants | several | fix | wrap, trim, move up |
-| B-CR-S1 | startLesson skips `understands` checks | CategorizationRules:201 | reject | spec ranks weak checks; an understood lesson is not a start |
-| B-CR-S3 | V16 not in decisions.md | — | reject | recorded in coordinator's `.planning/decisions.md` |
-| B-K3 | response DTOs without contract annotations | dto/* | fix / reject | `@Size(max = 64)` on `questionId`; OpenAPI annotations not adopted here (no springdoc) |
-| B-K4 | tests rely on seeded lessons and pool | QuickCheckTests | reject | reference data from migrations; the tests prove the seed |
-| B-K5/6/7/8 | fixed user ids, literal date, double verdicts, rename helper | QuickCheckTests | fix | random ids, `Clock`, ids only, inline |
-| B-K9-11 | test-only commit, two goals, late split | git log | reject | no history rewrite; brief for next rounds |
-| B-merge | duplicate `common` beans; duel imports changed | 747284a | fix | Jan 21.11: keep; Jan tells F8's author |
-| F-AR1 | summary crashes without `checks` | PathSummary:23 | fix | `checks ?? []`, `startLesson ?? null` |
-| F-AR2 | 400 with answers leaves only "Skip" | categorizing.tsx | fix | retry once without answers |
-| F-AR3 | consent switch after Back wipes answers | categorizing.tsx decide() | fix | keep items and answers, recompute account per item; test |
-| F-AR4 | module state leaks between tests | learningPath.ts:18 | fix | state reset/isolation; navigation moves to the route (F-CR2) |
-| F-AR5 | stale "existing → Learn" test | categorizing.test.tsx:180 | fix | with Q20 change (F-CR-S5) |
-| F-AR6 | real-backend e2e assume no key | e2e/app.ts:63, smoke.spec:166 | fix | stub `/api/check-questions` with `[]` there |
-| F-AR7 | per-answer verdict copy | learningPath.ts areaWhy | fix | Jan 21.11: "Your answer helped place {area} on your path." |
-| F-AR8 | string-matching the backend's sentence; raw slug shown | areaWhy | fix | match on area, show `AREA_LABEL` |
-| F-AR9 | hardware back during questions / on summary | categorizing.tsx, learning-path.tsx | fix | previous question; summary → `continueToLearn()` |
-| F-AR10/CR-S2 | draft lost on Back | QuickCheckPage onBack | fix | keep draft |
-| F-AR11 | new question not focused/announced (WCAG 2.4.3, 4.1.3) | QuickCheckPage | fix | focus prompt / announce "Question n of 4" |
-| F-AR12 | input border 1.5:1 (WCAG 1.4.11) | QuickCheckPage styles.input | fix | ≥ 3:1 token |
-| F-AR13 | consent note "as you type them" (GDPR art. 13) | ConsentCard | fix | "sent once, exactly as you write them, to an AI service that picks your first lesson" |
-| F-AR14 | `maxLength` untested | QuickCheckPage | fix | assert 280 |
-| F-AR15 | malformed pool item / unknown slot throws | quickCheck.ts | fix | skip item; generic prompt |
-| F-AR16/CR-S1 | seed depends on `localeCompare` and found-order | quickCheck.ts:45 | fix | code-unit sort, fixed area order |
-| F-AR17/18 | untested branches; small guards | tests, summary | fix | over title, double tap, hung GET, slow POST; D6 line not for 4× Not sure; tap guard; autoComplete off |
-| F-CR1 | `Drawn` type in lib | quickCheck.ts:13 | fix | `src/types/quickCheck.ts` |
-| F-CR2/K-SOLID | navigation and copy inside `lib/learningPath` | learningPath.ts | fix | route navigates; copy in component |
-| F-CR3 | state machine inline in route | categorizing.tsx:135 | fix | `useQuickCheck` hook |
-| F-CR4/K | literal sizes | QuickCheckPage:103, PathSummary:91 | fix | tokens / named constants |
-| F-CR5/K | restating JSDoc | several | fix | trim |
-| F-CR6 | long lines | several | fix | wrap |
-| F-CR7 | track components may duplicate PathSteps | QuestionTrack, RouteStation | fix | reuse PathSteps if it fits, else keep |
-| F-CR-S4 | "Start learning: {title}" | learning-path.tsx:26 | fix | label "Start learning", title as secondary text |
-| F-CR-S5 | existing categorisation short-circuits re-onboarding (Q20) | categorizing.tsx:64 | fix | new onboarding always recategorises |
-| F-K literals | `'rate-vs-inflation'`, `'Depot'`, "Four" | quickCheck.ts:38, selectors.ts:62, QuickCheckPage:59 | fix | named constants; count from `total` |
-| F-K chains | multi-operator one-liners, nested ternaries | quickCheck.ts, QuestionTrack, learningPath, PathSummary, categorization.ts, onboarding.test | fix | named steps |
-| F-K tuples | parallel `answers` array; `test.each` tuples | categorizing.tsx:50, quick-check-flow.test:195 | fix | answers on drawn items; objects |
-| F-K back | hand-rolled back button | QuickCheckPage:42 | reject | `BackButton` lives in Remigiusz's `onboarding/ui.tsx`, which stays as on main |
-| F-K optional | `quickCheck?` always passed | ConsentCard:11 | fix | required |
-| F-K mock | `jest.mock` of our own `quickCheck` | quick-check-flow.test:51 | fix | use the seed seam |
-| F-K data | fixed date; literal slot values | test-utils/categorization.ts:35, quick-check.test:96 | fix | from now; from `seedAccount()` |
-| F-K env | `.env.example` carries a value | front/.env.example:5 | fix | key only |
-| F-K commits | red/mixed commits | git log | reject | no history rewrite; brief for next rounds |
-| F-e2e | `duel.spec` stops at the consent card (REAL) | e2e/duel.spec.ts | fix | Jan 21.11: two optional clicks like smoke.spec; Jan tells F8's author |
-
-Round 2 (21.11), reports `.planning/reviews/F1b-diff-{back,front}-r2-2026-11-21.md`. All round-1 `fix` rows landed (back 23/23, front 27/30, the rest below).
-
-| # | finding | file:line | class | reason or commit |
-|---|---|---|---|---|
-| B-N1 | `@Size(max = 4)` runs before the keyless ignore | CategorizationRequestDto:18 | fix | dropped; `pick` rejects 5 with a key (4bcb719) |
-| B-N2/3/4/5 | `questionId` cap, template `deepCopy`, V16 lesson links, three rule cases unpinned | tests | fix | 936c395, 35d7a94, 2d8833f, e70e080 |
-| B-N6 | answered not-yet + Not sure in one area → OVER | CategorizationRules:124 | reject | Not sure counts as not-yet (Q-decision), so the area is all not-yet |
-| B-N7 | POST without answers after 5 min clears checks | CategorizationService:86 | reject | every onboarding recategorises (Q20) |
-| B-N8 | 8 s read leaves ~1 s of the front's 10 s | application.properties | fix | 7 s (bce30a9) |
-| B-N9 | local DBs with an older V16 checksum | V16 | reject | V16 was never applied outside Testcontainers (unpushed branch) |
-| B-N10 | log capture INFO only | QuickCheckTests | fix | DEBUG capture (59f71f6) |
-| B-r2-CR | fence format split service/client; Javadoc, comparator, `cite`, `if`, `assertEquals` | JevClient, CategorizationRules, CategorizationService | fix | 096b369, 9598456, 299bc25 |
-| B-r2-commits | test-only and catch-all commits | git log | reject | no history rewrite |
-| F-N1/N2/N19 | retry without answers hides the D6 line; tests pin neither body | categorizing.tsx:141 | fix | round 2 → Q-F |
-| F-N3 | duel.spec stops at Quick check on a keyed backend | e2e/duel.spec.ts | fix | one `skipQuickCheck` line (beyond Jan's two clicks; reported) |
-| F-N4 | "sent once" false | ConsentCard:60 | fix | drop "once" |
-| F-N5/N6 | web live region pre-filled; focus on disabled Next (WCAG 4.1.3, 2.4.3) | QuickCheckPage, FlowPage | fix | hoist live regions; focus prompt |
-| F-N7/N8 | wall-clock tap guard | useQuickCheck:8,42 | fix | visible disabled state; e2e waits for enabled |
-| F-N9 | decline → Back → accept keeps the no-consent draw | useQuickCheck:33 | fix | redraw while nothing typed |
-| F-N10 | typed text sent after consent withdrawn | — | reject | consent covers bank data; D4 notice covers answers on both paths |
-| F-N11/N12 | goal and Not-sure "why" copy | PathSummary:38 | fix | goals by area; "Your answer helped" only with text |
-| F-N13/N16/N17 | area order, pool robustness, privacy list | quickCheck.ts, tests | fix | round 2 → Q-F |
-| F-N15 | iOS swipe / web Back | — | reject | Android + web; browser Back is the router's |
-| F-r2-CR | chains, literals, alias, count word, tuples, hex, `checkBackend`, test title | several | fix | round 2 → Q-F |
-| F-r2-commits | mixed commits | git log | reject | no history rewrite |

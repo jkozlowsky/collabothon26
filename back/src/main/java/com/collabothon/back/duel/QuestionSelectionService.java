@@ -9,7 +9,7 @@ import java.util.random.RandomGenerator;
 
 import org.springframework.stereotype.Service;
 
-import com.collabothon.back.common.BadRequestException;
+import com.collabothon.back.common.exceptions.BadRequestException;
 import com.collabothon.back.duel.DuelQuestion.Difficulty;
 
 import lombok.AccessLevel;

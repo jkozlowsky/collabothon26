@@ -8,8 +8,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 
-import com.collabothon.back.common.BadRequestException;
-import com.collabothon.back.common.NotFoundException;
+import com.collabothon.back.common.exceptions.BadRequestException;
+import com.collabothon.back.common.exceptions.NotFoundException;
 import com.collabothon.back.duel.BotService.BotPersona;
 import com.collabothon.back.duel.DuelPersistenceService.PlayerSnapshot;
 import com.collabothon.back.duel.MatchAssembler.AnswerOutcome;

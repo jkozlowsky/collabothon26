@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.collabothon.back.common.BadRequestException;
+import com.collabothon.back.common.exceptions.BadRequestException;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;

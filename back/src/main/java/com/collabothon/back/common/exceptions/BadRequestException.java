@@ -1,4 +1,4 @@
-package com.collabothon.back.common;
+package com.collabothon.back.common.exceptions;
 
 public class BadRequestException extends RuntimeException {
 

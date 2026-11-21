@@ -8,6 +8,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
 
 import com.collabothon.back.common.consts.LoggingConsts;
+import com.collabothon.back.common.exceptions.BadRequestException;
 import com.collabothon.back.common.exceptions.NotFoundException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +35,7 @@ class LoggingAspect {
 			}
 			return result;
 		}
-		catch (NotFoundException e) {
+		catch (NotFoundException | BadRequestException e) {
 			log.info("{} rejected after {} ms: {}", method, millisSince(start), e.getClass().getSimpleName());
 			throw e;
 		}

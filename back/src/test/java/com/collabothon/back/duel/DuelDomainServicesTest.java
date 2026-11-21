@@ -12,7 +12,7 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
-import com.collabothon.back.common.BadRequestException;
+import com.collabothon.back.common.exceptions.BadRequestException;
 import com.collabothon.back.duel.LevelCurve.LevelInfo;
 import com.collabothon.back.duel.QuestionSelectionService.SelectedQuestion;
 

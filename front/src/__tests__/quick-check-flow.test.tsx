@@ -243,3 +243,13 @@ test('a categorisation found when the screen opens is shown once, then Learn', a
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
   expect(screen.queryByTestId('learning-path')).toBeNull();
 });
+
+test('a categorisation without checks or a start lesson (a backend without the Quick check) still shows the summary', async () => {
+  const { checks, startLesson, ...old } = categorization();
+  backend({ pool: () => ok([]), post: () => ok(old) });
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+
+  expect(await screen.findByTestId('learning-path', {}, { timeout: 4000 })).toBeOnTheScreen();
+  expect(screen.getByTestId('summary-start')).toHaveTextContent('Start learning');
+});

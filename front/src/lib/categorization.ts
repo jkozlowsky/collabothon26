@@ -52,12 +52,23 @@ export async function existingCategorization(signal: AbortSignal): Promise<Categ
 }
 
 /** `facts` only with consent: the backend refuses account data the user did not agree to share. */
-export async function categorize(facts: Facts | null, signal: AbortSignal, answers: CheckAnswer[] = []): Promise<Categorization> {
-  const body = JSON.stringify({ consent: facts !== null, ...(facts && { facts }), ...(answers.length ? { answers } : {}) });
+export async function categorize(
+  facts: Facts | null,
+  signal: AbortSignal,
+  answers: CheckAnswer[] = [],
+): Promise<Categorization> {
+  const consent = facts !== null;
+  const body = JSON.stringify({
+    consent,
+    ...(consent && { facts }),
+    ...(answers.length > 0 && { answers }),
+  });
   await profileSaved(signal);
   for (let attempt = 1; ; attempt++) {
     try {
-      return await api<Categorization>(CATEGORIZATION_PATH, { method: 'POST', body, signal });
+      const stored = await api<Categorization>(CATEGORIZATION_PATH, { method: 'POST', body, signal });
+      // A backend without the Quick check leaves these out.
+      return { ...stored, checks: stored.checks ?? [], startLesson: stored.startLesson ?? null };
     } catch (e) {
       if (!isStatus(e, 404) || attempt > PROFILE_RETRIES) throw e;
       await new Promise((r) => setTimeout(r, PROFILE_BACKOFF_MS * attempt));

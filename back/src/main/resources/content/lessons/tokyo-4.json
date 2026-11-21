@@ -1,93 +1,220 @@
 {
   "id": "tokyo-4",
   "story": "tokyo",
-  "title": "The yen in your basket",
-  "place": "Narita · arrivals",
-  "topic": "Currency moves both ways",
-  "minutes": 3,
-  "xp": 50,
-  "concepts": ["currency-risk"],
+  "title": "The currency in your fund",
+  "place": "Exchange rates · your funds",
+  "topic": "Exchange rates change what you own",
+  "minutes": 4,
+  "xp": 60,
+  "concepts": [
+    "currency-risk"
+  ],
   "steps": [
     {
-      "type": "chat",
-      "id": "c1",
-      "title": "Haruto, nephew from Toronto",
-      "messages": [
-        { "from": "Haruto", "text": "Landed! Auntie, how is your world fund doing?" },
-        { "from": "Michiko", "me": true, "text": "Strange. The fund says flat, but in yen I'm up a lot" },
-        { "from": "Haruto", "text": "That's the yen, not the fund" },
-        { "from": "Michiko", "me": true, "text": "So I made money without the shares going up?" }
-      ]
+      "type": "text",
+      "id": "t1",
+      "phase": "learn",
+      "kicker": "Exchange rates",
+      "title": "One fund, many currencies",
+      "body": "You buy $1,000 of a fund when €1 is worth $1.25. You pay €800. Then the euro becomes weaker. The fund's price did not change, but now it is worth €1,000. A world fund buys companies in many countries, with prices in dollars, yen or pounds. When the exchange rate changes, the fund's value in euros changes too. This is called [[currency-risk]]. It can make you gain or lose."
     },
     {
       "type": "predict",
       "id": "p1",
-      "concepts": ["currency-risk"],
-      "prompt": "In 2021 Michiko bought $10,000 of a fund at ¥110 per dollar. The fund is flat in dollars. Now a dollar costs ¥150. How much is it worth in yen, compared with what she paid?",
-      "input": { "kind": "slider", "min": -50, "max": 50, "step": 1, "unit": "%" },
-      "answer": 36,
-      "reveal": "+36%. She paid ¥1.1 million, and the same $10,000 is now ¥1.5 million. The shares didn't move; the yen got weaker. Simplified from real data."
-    },
-    {
-      "type": "text",
-      "id": "t1",
-      "title": "The same door swings both ways",
-      "body": "Owning things priced in another currency adds [[currency-risk]]. A weaker yen made Michiko's foreign shares worth more in yen. If the yen gets stronger again, the same shares are worth fewer yen, even if they don't move at all."
-    },
-    {
-      "type": "match",
-      "id": "m1",
-      "concepts": ["currency-risk", "home-bias"],
-      "prompt": "Match each idea from the Tokyo story with its meaning.",
-      "pairs": [
-        ["Currency risk", "Exchange rates change the value in your money"],
-        ["Home bias", "Holding mostly your own country"],
-        ["Tax-free account", "Gains inside are not taxed"],
-        ["Drawdown", "A fall from a previous high"]
-      ]
+      "phase": "challenge",
+      "concepts": [
+        "currency-risk"
+      ],
+      "prompt": "You buy $1,000 of a fund. At that time, €1 is worth $1.00, so you pay €1,000. The fund's price in dollars stays the same. Later, €1 is worth $1.25. How much has your fund gained or lost in euros?",
+      "input": {
+        "kind": "slider",
+        "min": -50,
+        "max": 50,
+        "step": 1,
+        "unit": "%"
+      },
+      "answer": -20,
+      "reveal": "It lost 20%. Your $1,000 is now worth €800. The share prices did not change. The euro became stronger, so each dollar buys fewer euros."
     },
     {
       "type": "quiz",
       "id": "q1",
-      "concepts": ["currency-risk"],
-      "prompt": "The yen gets 20% stronger against the dollar. Michiko's dollar fund doesn't move. What happens in yen?",
+      "phase": "challenge",
+      "concepts": [
+        "currency-risk"
+      ],
+      "prompt": "True or false: a fund can lose value in euros even if its price in dollars does not change.",
       "options": [
-        "Her fund is worth fewer yen",
-        "Her fund is worth more yen",
-        "Nothing, the fund didn't move"
+        "True",
+        "False"
       ],
       "correctIndex": 0,
-      "explanation": "Each dollar now buys fewer yen. A flat fund in dollars becomes a loss in yen. Currency moves can help or hurt; they rarely stay still."
+      "explanation": "True. When the euro becomes stronger, each dollar is worth fewer euros. This is [[currency-risk]]."
+    },
+    {
+      "type": "match",
+      "id": "m1",
+      "phase": "challenge",
+      "prompt": "Match each term from this path with its meaning.",
+      "pairs": [
+        [
+          "Currency risk",
+          "Exchange rates change what your investments are worth in euros"
+        ],
+        [
+          "Home bias",
+          "Investing mostly in your own country"
+        ],
+        [
+          "Time horizon",
+          "The time until you need the money"
+        ],
+        [
+          "Drawdown",
+          "A fall from a previous high"
+        ]
+      ]
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "phase": "challenge",
+      "concepts": [
+        "currency-risk"
+      ],
+      "prompt": "The euro becomes 20% stronger against the dollar. The price of a dollar fund stays the same. What happens to its value in euros?",
+      "options": [
+        "It is worth fewer euros",
+        "It is worth more euros",
+        "Nothing, because the fund's price did not change"
+      ],
+      "correctIndex": 0,
+      "explanation": "Each dollar now buys fewer euros. So the fund is worth less in euros, even though its dollar price did not move. Exchange rates can help you or hurt you."
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "phase": "you",
+      "kicker": "Your investments",
+      "title": "Your money in other currencies",
+      "body": "**{worldShare}** of your investment account is in world funds. Most companies in these funds have prices in other currencies. When the euro goes up or down, the value of these funds in euros changes."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s1",
+      "phase": "you",
+      "concepts": [
+        "currency-risk"
+      ],
+      "prompt": "About {worldShare} of your investment account is in other currencies. Move the euro slider. The result shows how your account changes in euros, even if no share price moves.",
+      "model": "currencyMove",
+      "params": {
+        "euroMove": {
+          "label": "Change of the euro against other currencies",
+          "min": -30,
+          "max": 30,
+          "step": 5,
+          "value": 10,
+          "unit": "%"
+        },
+        "foreignShare": {
+          "label": "Your money in other currencies",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "value": 60,
+          "unit": "%",
+          "fromBank": "worldShare"
+        }
+      },
+      "output": {
+        "label": "Change of your account in euros",
+        "unit": "%"
+      },
+      "goal": {
+        "condition": {
+          "of": "output",
+          "min": -1000000
+        },
+        "hint": "Move a slider to see the result change."
+      },
+      "note": "The second slider starts at your real share. This is an example. Real funds hold many currencies."
     }
   ],
-  "variants": {
-    "lang:plain": {
-      "c1": {
-        "messages": [
-          { "from": "Haruto", "text": "I'm here! Auntie, how is your world fund?" },
-          { "from": "Michiko", "me": true, "text": "Strange. The fund didn't change, but in yen I have more" },
-          { "from": "Haruto", "text": "That's because of the yen, not the fund" },
-          { "from": "Michiko", "me": true, "text": "So I won money but the shares didn't go up?" }
-        ]
-      },
-      "p1": {
-        "prompt": "In 2021 Michiko bought $10,000 of a fund. One dollar cost ¥110. The fund is still $10,000. Now one dollar costs ¥150. How much more or less is it in yen? Guess.",
-        "reveal": "+36%. She paid ¥1.1 million. Now the same $10,000 is ¥1.5 million. The shares stayed the same. The yen became weaker."
-      },
-      "t1": {
-        "title": "It can go both ways",
-        "body": "If you own things in another currency, the exchange rate changes their value in your money. This is [[currency-risk]]. A weak yen helped Michiko. A strong yen would hurt her, even if the shares stay the same."
-      },
-      "m1": { "prompt": "Match each word with what it means." },
-      "q1": {
-        "prompt": "The yen gets 20% stronger. Michiko's dollar fund stays the same. What happens in yen?",
-        "options": [
-          "Her fund is worth fewer yen",
-          "Her fund is worth more yen",
-          "Nothing changes"
+  "video": {
+    "minutes": 4,
+    "scenes": [
+      {
+        "type": "scene",
+        "id": "v1",
+        "title": "Same fund, new price",
+        "desc": "A fund's price in dollars can stay the same while its value in euros changes.",
+        "duration": 12,
+        "camera": "push",
+        "setting": {
+          "place": "cafe",
+          "time": "day"
+        },
+        "layers": [
+          {
+            "kind": "tag",
+            "at": 1,
+            "text": "$1,000",
+            "tone": "neutral",
+            "x": 0.25,
+            "y": 0.25
+          },
+          {
+            "kind": "tag",
+            "at": 1.5,
+            "text": "€1 = $1.25",
+            "tone": "neutral",
+            "x": 0.72,
+            "y": 0.25
+          },
+          {
+            "kind": "amount",
+            "at": 4.5,
+            "len": 3,
+            "from": 800,
+            "to": 1000,
+            "currency": "EUR",
+            "label": "The fund in euros"
+          },
+          {
+            "kind": "tag",
+            "at": 5,
+            "text": "€1 = $1.00",
+            "tone": "good",
+            "x": 0.72,
+            "y": 0.4
+          }
         ],
-        "explanation": "One dollar now gives fewer yen. So the same fund is worth less in yen."
+        "captions": [
+          {
+            "at": 0.5,
+            "text": "You buy $1,000 of a fund when €1 is worth $1.25."
+          },
+          {
+            "at": 4.5,
+            "text": "You pay €800. Then the euro becomes weaker."
+          },
+          {
+            "at": 8,
+            "text": "The fund's price did not change, but now it is worth €1,000."
+          }
+        ],
+        "transcript": "t1"
       }
-    }
+    ],
+    "beats": [
+      "v1",
+      "p1",
+      "q1",
+      "m1",
+      "q2",
+      "t2",
+      "s1"
+    ]
   }
 }

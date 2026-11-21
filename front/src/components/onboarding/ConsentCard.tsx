@@ -36,7 +36,7 @@ export function ConsentCard({ facts }: Props) {
       <Text style={type.display} accessibilityRole="header">
         Make it personal?
       </Text>
-      <Text style={type.body}>Let Finance Quest read a few summaries from your account, so you answer fewer questions.</Text>
+      <Text style={type.body}>Let Atlas read a few summaries from your account, so you answer fewer questions.</Text>
       <Lines title="Your account already shows" lines={facts} icon="check" color={colors.feedbackSuccess} testID="consent-facts" />
       <Lines title="We will still ask" lines={STILL_ASKED} icon="help-circle" color={colors.textMuted} testID="consent-asks" />
       <View style={styles.line}>

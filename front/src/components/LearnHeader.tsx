@@ -12,7 +12,7 @@ export function LearnHeader({ learner }: Props) {
     <View style={styles.row}>
       <View style={styles.text}>
         <Text style={styles.greeting} numberOfLines={1}>
-          Hi {learner.name} · {learner.profileLabel}
+          Hi {learner.name}
         </Text>
         <Text style={styles.title} accessibilityRole="header">
           Where to next?

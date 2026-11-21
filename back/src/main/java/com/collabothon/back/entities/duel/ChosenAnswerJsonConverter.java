@@ -1,0 +1,29 @@
+package com.collabothon.back.entities.duel;
+
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Converter;
+import tools.jackson.databind.json.JsonMapper;
+
+/** Maps {@link ChosenAnswer} to the JSON text column {@code duel_answer.chosen_answer}, e.g. {@code {"option":2}}. */
+@Converter
+public class ChosenAnswerJsonConverter implements AttributeConverter<ChosenAnswer, String> {
+
+	private static final JsonMapper JSON = JsonMapper.builder().build();
+
+	@Override
+	public String convertToDatabaseColumn(ChosenAnswer answer) {
+		if (answer == null) {
+			return null;
+		}
+		return JSON.writeValueAsString(answer);
+	}
+
+	@Override
+	public ChosenAnswer convertToEntityAttribute(String json) {
+		if (json == null) {
+			return null;
+		}
+		return JSON.readValue(json, ChosenAnswer.class);
+	}
+
+}

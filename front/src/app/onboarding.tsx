@@ -6,7 +6,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AnswerTile } from '@/components/categorizing/AnswerTile';
 import { ConfidenceScale } from '@/components/onboarding/ConfidenceScale';
 import { ConsentCard } from '@/components/onboarding/ConsentCard';
-import { LessonGlobeIllustration, QuickCheckHero, WelcomeHero } from '@/components/onboarding/Illustrations';
+import { AtlasHero, DuelIllustration, LessonGlobeIllustration, QuickCheckHero } from '@/components/onboarding/Illustrations';
 import { Page } from '@/components/onboarding/Page';
 import {
   BackButton,
@@ -14,13 +14,14 @@ import {
   ChoiceChip,
   CloseButton,
   OptionCard,
+  Rise,
   SkipLink,
   StepHeader,
   type,
 } from '@/components/onboarding/ui';
 import { EXPERIENCE, GOAL_GROUPS, LIFE_STAGES, PURPOSES, type Option } from '@/constants/onboarding';
 import { PROFILE_QUESTIONS } from '@/constants/quickCheck';
-import { colors, fonts, spacing } from '@/constants/theme';
+import { colors, radii, spacing, type as text } from '@/constants/theme';
 import { useBank } from '@/hooks/useBank';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { ageBandOf, ageLabel, factLabels, factsFrom } from '@/lib/categorization';
@@ -30,6 +31,7 @@ import type { ConfidenceRating, Horizon, ProfileRanges } from '@/types/quickChec
 type Step =
   | 'welcome'
   | 'intro'
+  | 'challenge'
   | 'consent'
   | 'life-stage'
   | 'experience'
@@ -40,7 +42,7 @@ type Step =
   | 'confidence'
   | 'check-intro';
 
-const OPENING: Step[] = ['welcome', 'intro', 'consent'];
+const OPENING: Step[] = ['welcome', 'intro', 'challenge', 'consent'];
 /** Asked only without account access: with it, the account already shows these. */
 const WITHOUT_ACCOUNT: Step[] = ['life-stage', 'experience', 'savings-cover'];
 const CLOSING: Step[] = ['purpose', 'horizon', 'confidence', 'check-intro'];
@@ -127,13 +129,39 @@ export default function OnboardingScreen() {
         footer={<BigButton label="Get started" onPress={next} testID="onboarding-start" />}
       >
         <View style={styles.grow} />
-        <WelcomeHero />
-        <View style={styles.gap} />
-        <Text style={[type.overline, styles.onDarkAccent]}>FINANCE QUEST</Text>
-        <Text style={styles.welcomeTitle}>Finances with confidence — one lesson at a time</Text>
-        <Text style={[type.body, styles.onDarkMuted]}>
-          Short lessons built around your own money. A few minutes a day is enough.
-        </Text>
+        <AtlasHero />
+        <View style={{ height: spacing.xl }} />
+        <Rise delay={250}>
+          <Text style={styles.welcomeOverline}>WELCOME TO</Text>
+        </Rise>
+        <Rise delay={350}>
+          <Text style={styles.wordmark} accessibilityRole="header">
+            Atlas<Text style={styles.wordmarkDot}>.</Text>
+          </Text>
+        </Rise>
+        <Rise delay={480}>
+          <Text style={styles.welcomeTitle}>Learn how money works. Challenge your ideas with others.</Text>
+        </Rise>
+        <Rise delay={600}>
+          <Text style={styles.welcomeBody}>
+            Short lessons built around your own money, and duels to see whose thinking holds up. A few minutes a day
+            is enough.
+          </Text>
+        </Rise>
+        <Rise delay={720} style={styles.pillars}>
+          {(
+            [
+              ['book-open', 'Learn'],
+              ['zap', 'Challenge'],
+              ['trending-up', 'Grow'],
+            ] as const
+          ).map(([icon, label]) => (
+            <View key={label} style={styles.pillar}>
+              <Feather name={icon} size={14} color={colors.brandAccent} />
+              <Text style={styles.pillarText}>{label}</Text>
+            </View>
+          ))}
+        </Rise>
         <View style={styles.grow} />
       </Page>
     );
@@ -142,22 +170,89 @@ export default function OnboardingScreen() {
   if (step === 'intro') {
     return (
       <Page
+        dark
         testID="onboarding-intro"
         header={
           <View style={styles.row}>
-            <BackButton onPress={back} />
-            <SkipLink onPress={skipAll} testID="onboarding-skip-intro" />
+            <BackButton onPress={back} onDark />
+            <SkipLink onPress={skipAll} onDark testID="onboarding-skip-intro" />
           </View>
         }
         footer={<BigButton label="Next" onPress={next} testID="onboarding-next" />}
       >
         <LessonGlobeIllustration />
-        <View style={styles.gap} />
-        <Text style={type.display}>A world of money lessons</Text>
-        <Text style={type.body}>
-          Budgeting, saving, borrowing, investing, spotting scams. Every pin is a short path of 2–5 minute lessons set in
-          a real place — from tulip mania in Amsterdam to saving on the go in Nairobi.
-        </Text>
+        <View style={{ height: spacing.xl }} />
+        <Rise delay={300}>
+          <Text style={styles.welcomeOverline}>LEARN · THE MAP</Text>
+        </Rise>
+        <Rise delay={400}>
+          <Text style={[type.display, { color: colors.textOnBrand }]}>Every pin is a field of finance</Text>
+        </Rise>
+        <Rise delay={500}>
+          <Text style={styles.welcomeBody}>
+            Tap a pin to open its path: a few 2–5 minute lessons on one topic, set in a real place — from tulip mania
+            in Amsterdam to saving on the go in Nairobi.
+          </Text>
+        </Rise>
+        <Rise delay={620} style={styles.pillars}>
+          {(
+            [
+              ['check-circle', 'Done'],
+              ['map-pin', 'Up next'],
+              ['lock', 'Locked'],
+            ] as const
+          ).map(([icon, label]) => (
+            <View key={label} style={styles.pillar}>
+              <Feather name={icon} size={14} color={colors.brandAccent} />
+              <Text style={styles.pillarText}>{label}</Text>
+            </View>
+          ))}
+        </Rise>
+      </Page>
+    );
+  }
+
+  if (step === 'challenge') {
+    return (
+      <Page
+        dark
+        testID="onboarding-challenge"
+        header={
+          <View style={styles.row}>
+            <BackButton onPress={back} onDark />
+            <SkipLink onPress={skipAll} onDark testID="onboarding-skip-intro" />
+          </View>
+        }
+        footer={<BigButton label="Next" onPress={next} testID="onboarding-challenge-next" />}
+      >
+        <DuelIllustration />
+        <View style={{ height: spacing.xl }} />
+        <Rise delay={300}>
+          <Text style={[type.overline, { color: colors.brandAccent }]}>CHALLENGE · DUELS</Text>
+        </Rise>
+        <Rise delay={400}>
+          <Text style={[type.display, { color: colors.textOnBrand }]}>Put what you know to the test</Text>
+        </Rise>
+        <Rise delay={500}>
+          <Text style={styles.welcomeBody}>
+            Go head-to-head with friends or other learners: same questions, same clock. Climb the weekly league and see
+            whose ideas hold up.
+          </Text>
+        </Rise>
+        <Rise delay={620} style={styles.pillars}>
+          {(
+            [
+              ['clock', '7 quick rounds'],
+              ['users', 'Friends or random'],
+              ['award', 'Weekly league'],
+            ] as const
+          ).map(([icon, label]) => (
+            <View key={label} style={styles.pillar}>
+              <Feather name={icon} size={14} color={colors.brandAccent} />
+              <Text style={styles.pillarText}>{label}</Text>
+            </View>
+          ))}
+        </Rise>
       </Page>
     );
   }
@@ -381,9 +476,24 @@ const styles = StyleSheet.create({
   gap: { height: spacing.xxxl },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm - 2 },
-  welcomeTitle: { fontFamily: fonts.bold, fontSize: 30, lineHeight: 36, color: colors.textOnBrand },
-  onDarkAccent: { color: colors.brandAccent },
-  onDarkMuted: { color: colors.onBrandMuted },
+  welcomeOverline: { ...text.overline, color: colors.brandAccent, letterSpacing: 3 },
+  wordmark: { ...text.displayHero, color: colors.textOnBrand },
+  wordmarkDot: { color: colors.brandAccent },
+  welcomeTitle: { ...text.displayLarge, color: colors.textOnBrand },
+  welcomeBody: { ...type.body, color: colors.onBrandMuted },
+  pillars: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  pillar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: radii.pill,
+    backgroundColor: colors.onBrandTile,
+    borderWidth: 1,
+    borderColor: colors.onBrandHairline,
+  },
+  pillarText: { ...text.labelStrong, color: colors.textOnBrand },
   answers: { gap: spacing.smPlus, marginTop: spacing.lg },
   goalGroup: { gap: spacing.xs + spacing.xxs },
   goalGroupTitle: { ...type.overline, color: colors.textMuted, textTransform: 'uppercase' },

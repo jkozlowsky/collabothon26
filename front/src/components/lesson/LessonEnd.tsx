@@ -12,10 +12,12 @@ type Props = {
   onConcept: (key: string) => void;
   onNext?: () => void;
   onClose: () => void;
+  /** Video mode: replays the last scene. */
+  onWatchAgain?: () => void;
 };
 
 /** End of a lesson: XP, the concepts it covered (missed ones marked for review), next lesson. */
-export function LessonEnd({ title, xp, concepts, onConcept, onNext, onClose }: Props) {
+export function LessonEnd({ title, xp, concepts, onConcept, onNext, onClose, onWatchAgain }: Props) {
   return (
     <View style={styles.wrap} testID="lesson-end">
       <View style={styles.badge}>
@@ -57,6 +59,7 @@ export function LessonEnd({ title, xp, concepts, onConcept, onNext, onClose }: P
       <View style={styles.actions}>
         {onNext && <Button label="Next lesson" onPress={onNext} testID="lesson-next" />}
         <Button label="Back to Learn" variant={onNext ? 'ghost' : 'primary'} onPress={onClose} testID="back-to-list" />
+        {onWatchAgain && <Button label="Watch again" variant="ghost" onPress={onWatchAgain} testID="lesson-watch-again" />}
       </View>
     </View>
   );

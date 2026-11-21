@@ -112,11 +112,11 @@ function depotSeries(rng: Rng, total: number): DepotSeries {
 }
 
 const HOLDINGS: Holding[] = [
-  { id: 'world-etf', name: 'World Equity ETF', icon: 'globe', meta: '12.4 units · ETF', kind: 'ETF', assetClass: 'etfs', isin: 'IE00B4L5Y983', value: 381240, change: 8.1, units: 12.4 },
+  { id: 'world-etf', name: 'World Equity ETF', icon: 'globe', meta: '12.4 units · ETF', kind: 'ETF', assetClass: 'etfs', isin: 'IE00B4L5Y983', value: 381240, change: 8.1, units: 12.4, region: 'world' },
   // Figma's allocation counts these two as "Stocks 25%": single-company dividend and theme exposure.
-  { id: 'europe-dividend', name: 'Europe Dividend ETF', icon: 'trending', meta: '20 units · ETF', kind: 'ETF', assetClass: 'stocks', isin: 'DE000A0H0744', value: 112080, change: 2.4, units: 20 },
-  { id: 'clean-energy', name: 'Clean Energy Fund', icon: 'leaf', meta: '8 units · Fund', kind: 'Fund', assetClass: 'stocks', isin: 'LU0405846410', value: 64250, change: -2.3, units: 8 },
-  { id: 'gov-bond', name: 'Government Bond 2030', icon: 'bond', meta: '€ 800 nominal · Bond', kind: 'Bond', assetClass: 'bonds', isin: 'DE0001102507', value: 81200, change: 0.6, units: null },
+  { id: 'europe-dividend', name: 'Europe Dividend ETF', icon: 'trending', meta: '20 units · ETF', kind: 'ETF', assetClass: 'stocks', isin: 'DE000A0H0744', value: 112080, change: 2.4, units: 20, region: 'europe' },
+  { id: 'clean-energy', name: 'Clean Energy Fund', icon: 'leaf', meta: '8 units · Fund', kind: 'Fund', assetClass: 'stocks', isin: 'LU0405846410', value: 64250, change: -2.3, units: 8, region: 'world' },
+  { id: 'gov-bond', name: 'Government Bond 2030', icon: 'bond', meta: '€ 800 nominal · Bond', kind: 'Bond', assetClass: 'bonds', isin: 'DE0001102507', value: 81200, change: 0.6, units: null, region: 'europe' },
   { id: 'cash', name: 'Cash', icon: 'cash', meta: 'Settlement account', kind: 'Cash', assetClass: 'cash', isin: '—', value: 55240, change: 0, units: null },
 ];
 
@@ -203,8 +203,8 @@ export function seedAccount(seed: number = DEFAULT_SEED): BankState {
     depotSeries: depotSeries(rng, depotTotal),
     teasers: {
       home: { title: 'Continue: Your first share', meta: 'Lesson 3 of 6 · 4 min', progress: 2 / 6, focus: 'frankfurt-first-share' },
-      credits: { title: 'How interest really works', meta: 'Finance Quest · 4 lessons · 3 min each', progress: 0.25, focus: 'interest' },
-      invest: { title: 'Before your next trade: diversification', meta: 'Finance Quest · 5 lessons · no advice', progress: 0.2, focus: 'diversification' },
+      credits: { title: 'How interest really works', meta: 'Atlas · 4 lessons · 3 min each', progress: 0.25, focus: 'interest' },
+      invest: { title: 'Before your next trade: diversification', meta: 'Atlas · 5 lessons · no advice', progress: 0.2, focus: 'diversification' },
     },
   };
 }

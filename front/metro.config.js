@@ -1,4 +1,4 @@
-// Proxy /api/* and WebSocket /ws/* -> backend on loopback, so the phone reaches the
+// Proxy /api/*, /audio/* (lesson narration) and WebSocket /ws/* -> backend on loopback, so the phone reaches the
 // backend through the same Expo tunnel it uses for Metro. Also default Metro's HTTP
 // server to 127.0.0.1 (Expo SDK 58 otherwise binds *:8081 under --tunnel).
 const { getDefaultConfig } = require('expo/metro-config');
@@ -164,7 +164,7 @@ if (!http.createServer[PATCHED_CREATE_SERVER]) {
 
 config.server.enhanceMiddleware = (metroMiddleware) => {
   const proxyMiddleware = (req, res, next) => {
-    if (!req.url.startsWith('/api/')) return metroMiddleware(req, res, next);
+    if (!req.url.startsWith('/api/') && !req.url.startsWith('/audio/')) return metroMiddleware(req, res, next);
 
     const target = new URL(req.url, BACKEND_URL);
     const upstream = http.request(

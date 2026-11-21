@@ -56,7 +56,7 @@ function savedOnboarding() {
 const categorized = () =>
   fetchMock.mock.calls.filter(([url, init]) => CATEGORIZATION_URL.test(url) && init?.method === 'POST').map(([, init]) => JSON.parse(init.body));
 
-/** The app opens on the bank; Finance Quest (and its onboarding) starts from the Learn button. */
+/** The app opens on the bank; Atlas (and its onboarding) starts from the Learn button. */
 async function openLearn() {
   await renderRouter(routes, { initialUrl: '/' });
   await fireEvent.press(await screen.findByTestId('nav-learn'));
@@ -77,7 +77,7 @@ test('app opens on the bank; the first Learn tap runs onboarding, skipping the i
 
   await press('nav-learn');
   expect(await screen.findByTestId('onboarding-welcome')).toBeOnTheScreen();
-  expect(screen.getByText('Finances with confidence — one lesson at a time')).toBeOnTheScreen();
+  expect(screen.getByText('Learn how money works. Challenge your ideas with others.')).toBeOnTheScreen();
   await press('onboarding-start');
   await press('onboarding-skip-intro');
   await passSummary();
@@ -138,6 +138,7 @@ test('the consent screen lists what the account shows, what is still asked and t
   await openLearn();
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
   await press('onboarding-next');
+  await press('onboarding-challenge-next');
 
   expect(get('onboarding-consent')).toBeOnTheScreen();
   expect(screen.getByText('Make it personal?')).toBeOnTheScreen();
@@ -157,6 +158,7 @@ test('with account access three questions follow, then the quick check intro; th
   await openLearn();
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
   await press('onboarding-next');
+  await press('onboarding-challenge-next');
   await press('consent-accept');
 
   await choose('purpose', 'Step 1 of 3', 'option-home');
@@ -187,6 +189,7 @@ test('without account access the life stage, the experience and the savings cove
   await openLearn();
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
   await press('onboarding-next');
+  await press('onboarding-challenge-next');
   await press('consent-decline');
 
   await choose('life-stage', 'Step 1 of 6', `option-${WITHOUT_ACCOUNT.lifeStage}`);
@@ -212,6 +215,7 @@ test.each([
   else {
     await fireEvent.press(await screen.findByTestId('onboarding-start'));
     await press('onboarding-next');
+    await press('onboarding-challenge-next');
     await press('consent-accept');
     await press('option-retirement');
     await press('onboarding-continue');

@@ -1,114 +1,208 @@
 {
   "id": "berlin-3",
   "story": "berlin",
-  "title": "Word from Berlin: Notgroschen",
-  "place": "Kita · Monday morning",
-  "topic": "The emergency buffer",
-  "minutes": 3,
+  "title": "Money for emergencies",
+  "place": "Your savings · for surprises",
+  "topic": "An emergency fund",
+  "minutes": 4,
   "xp": 50,
-  "concepts": ["emergency-fund", "time-horizon"],
+  "concepts": [
+    "emergency-fund",
+    "time-horizon"
+  ],
   "steps": [
-    {
-      "type": "chat",
-      "id": "c1",
-      "title": "Jonas",
-      "messages": [
-        { "from": "Jonas", "text": "The washing machine just died. Water everywhere" },
-        { "from": "Jonas", "text": "And my contract ends in March, they won't extend it" },
-        { "from": "Lena", "me": true, "text": "Okay. How long could we manage on one salary?" },
-        { "from": "Jonas", "text": "No idea. A few months?" }
-      ]
-    },
     {
       "type": "text",
       "id": "t1",
-      "kicker": "Word from Berlin",
-      "title": "Notgroschen",
-      "body": "The \"emergency penny\": money kept aside for when something breaks or a job ends. It's an [[emergency-fund]]. Its job isn't to grow. Its job is to be there at once, so nothing has to be sold or borrowed in a hurry."
+      "phase": "learn",
+      "kicker": "Emergency fund",
+      "title": "Money that is ready at once",
+      "body": "An [[emergency-fund]] is money for surprises. It pays your costs if a job ends or something breaks. It does not need to grow. It needs to be there at once. Then you do not have to sell investments or borrow money in a hurry. People count it in months of costs."
     },
     {
       "type": "predict",
       "id": "p1",
-      "concepts": ["emergency-fund"],
-      "prompt": "The family's costs are €2,800 a month. How big is a buffer for 3 months?",
-      "input": { "kind": "slider", "min": 0, "max": 20000, "step": 400, "unit": "€" },
+      "phase": "challenge",
+      "concepts": [
+        "emergency-fund"
+      ],
+      "prompt": "A household spends €2,800 a month. How big is an emergency fund for 3 months?",
+      "input": {
+        "kind": "slider",
+        "min": 0,
+        "max": 20000,
+        "step": 400,
+        "unit": "€"
+      },
       "answer": 8400,
-      "reveal": "3 × €2,800 = €8,400. A buffer is counted in months of costs, not in a round number. With one income gone, it buys time to find the next job."
+      "reveal": "3 × €2,800 = €8,400. You count an emergency fund in months of costs, not as a round number. If an income stops, it gives you time to find a new one."
     },
     {
       "type": "sort",
       "id": "so1",
-      "concepts": ["time-horizon"],
-      "prompt": "Swipe each item: when is the money needed?",
-      "buckets": ["Within a year", "Can wait 10+ years"],
-      "items": [
-        { "text": "Next month's rent", "bucket": 0 },
-        { "text": "A new washing machine", "bucket": 0 },
-        { "text": "Mia's money for when she's 18", "bucket": 1 },
-        { "text": "Three months of costs if a job ends", "bucket": 0 },
-        { "text": "Lena's pension", "bucket": 1 },
-        { "text": "A car repair", "bucket": 0 }
+      "phase": "challenge",
+      "concepts": [
+        "time-horizon"
       ],
-      "explanation": "Money needed soon has a short [[time-horizon]]: it has to be there, whatever markets do. Money that can wait decades has time to ride out falls."
-    },
-    {
-      "type": "match",
-      "id": "m1",
-      "concepts": ["emergency-fund", "real-return"],
-      "prompt": "Match each word from the Berlin story with its meaning.",
-      "pairs": [
-        ["Tagesgeld", "Savings account with access any day"],
-        ["Notgroschen", "Money kept aside for emergencies"],
-        ["Inflation", "Prices rising over time"],
-        ["Real return", "Interest minus inflation"]
-      ]
+      "prompt": "When is this money needed? Swipe each item to the left or to the right.",
+      "buckets": [
+        "Within a year",
+        "In 10 years or later"
+      ],
+      "items": [
+        {
+          "text": "Next month's rent",
+          "bucket": 0
+        },
+        {
+          "text": "A new washing machine",
+          "bucket": 0
+        },
+        {
+          "text": "Three months of costs if a job ends",
+          "bucket": 0
+        },
+        {
+          "text": "Money for a child at 18",
+          "bucket": 1
+        },
+        {
+          "text": "Your pension",
+          "bucket": 1
+        },
+        {
+          "text": "A car repair",
+          "bucket": 0
+        }
+      ],
+      "explanation": "Money you need soon has a short [[time-horizon]]. It must be there, whatever prices do. Money that can wait for decades has time to recover from falls."
     },
     {
       "type": "quiz",
       "id": "q1",
-      "concepts": ["emergency-fund"],
-      "prompt": "Why does a buffer belong somewhere it can't fall, even if it earns little?",
+      "phase": "challenge",
+      "concepts": [
+        "emergency-fund"
+      ],
+      "prompt": "True or false: an emergency fund should grow as fast as possible.",
       "options": [
-        "It's needed exactly when things go wrong, maybe while markets are down too",
-        "Because savings accounts pay the most",
-        "Because a buffer should grow as fast as possible"
+        "True",
+        "False"
+      ],
+      "correctIndex": 1,
+      "explanation": "False. An emergency fund must be there when something goes wrong. Investments can be down at exactly that moment. So the fund sits where its value cannot fall, even if it earns little."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "phase": "challenge",
+      "concepts": [
+        "emergency-fund"
+      ],
+      "prompt": "A job ends. At the same time, investments are down 20%. Where is the emergency fund most useful?",
+      "options": [
+        "In a savings account, where its value did not fall",
+        "In a stock fund, where it lost 20%",
+        "Half in each, so half of it lost value"
       ],
       "correctIndex": 0,
-      "explanation": "Job losses and market falls often come together. A buffer that has dropped 20% when you need it has failed at its one job."
+      "explanation": "Job losses and market falls often happen at the same time. In a savings account, the full amount is there when you need it."
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "phase": "you",
+      "kicker": "Your savings",
+      "title": "How long your savings last",
+      "body": "You spend about **{monthlySpending}** a month. Your savings account holds **{savingsBalance}**. That covers about **{bufferMonths}** months of costs."
+    },
+    {
+      "type": "action",
+      "id": "a1",
+      "phase": "decide",
+      "title": "Your decision",
+      "body": "Your savings cover about **{bufferMonths}** months of your costs today. How many months of costs do you want to keep as your emergency fund? You choose the number.",
+      "bodyNoData": "How many months of your costs do you want to keep as your emergency fund? You choose the number.",
+      "rule": {
+        "label": "My emergency fund",
+        "min": 1,
+        "max": 12,
+        "step": 1,
+        "value": 3,
+        "unit": " months",
+        "appliesTo": "monthlySpending",
+        "kind": "multiple",
+        "result": "= {amount} ready any day"
+      },
+      "cta": "Save my rule"
     }
   ],
-  "variants": {
-    "lang:plain": {
-      "c1": {
-        "messages": [
-          { "from": "Jonas", "text": "The washing machine is broken. Water everywhere" },
-          { "from": "Jonas", "text": "And my job ends in March" },
-          { "from": "Lena", "me": true, "text": "Okay. How long can we live on one salary?" },
-          { "from": "Jonas", "text": "I don't know. A few months?" }
-        ]
-      },
-      "t1": {
-        "body": "It means \"emergency penny\": money for when something breaks or a job ends. In English: an [[emergency-fund]]. It doesn't need to grow. It needs to be there right away, so you don't have to sell or borrow in a hurry."
-      },
-      "p1": {
-        "prompt": "The family spends €2,800 every month. How much money is 3 months of costs? Guess.",
-        "reveal": "3 × €2,800 = €8,400. Count the buffer in months of costs. It gives time to find a new job."
-      },
-      "so1": {
-        "prompt": "Swipe each item: when do they need this money?",
-        "buckets": ["In the next year", "In 10 years or later"],
-        "explanation": "Money you need soon must be there, whatever happens. Money that can wait many years has time to recover. How long money can wait is the [[time-horizon]]."
-      },
-      "m1": { "prompt": "Match each word with what it means." },
-      "q1": {
-        "prompt": "Why keep the buffer somewhere it can't go down, even if it earns little?",
-        "options": [
-          "You need it when things go wrong, maybe when markets are down too",
-          "Savings accounts pay the most",
-          "A buffer should grow fast"
+  "video": {
+    "minutes": 4,
+    "scenes": [
+      {
+        "type": "scene",
+        "id": "v1",
+        "title": "Ready at once",
+        "desc": "An [[emergency-fund]] pays your costs when something goes wrong. It does not need to grow.",
+        "duration": 12,
+        "camera": "push",
+        "setting": {
+          "place": "home",
+          "time": "night"
+        },
+        "layers": [
+          {
+            "kind": "tag",
+            "at": 1,
+            "text": "Job ends",
+            "tone": "bad",
+            "x": 0.28,
+            "y": 0.25
+          },
+          {
+            "kind": "amount",
+            "at": 4,
+            "len": 3,
+            "from": 0,
+            "to": 6000,
+            "currency": "EUR",
+            "label": "3 months of costs"
+          },
+          {
+            "kind": "tag",
+            "at": 8,
+            "text": "Ready",
+            "tone": "good",
+            "x": 0.75,
+            "y": 0.25
+          }
         ],
-        "explanation": "Losing a job and falling markets often happen together. A buffer that lost 20% doesn't help."
+        "captions": [
+          {
+            "at": 0.5,
+            "text": "An emergency fund is money for surprises."
+          },
+          {
+            "at": 4,
+            "text": "It pays your costs if a job ends or something breaks."
+          },
+          {
+            "at": 7.5,
+            "text": "It does not need to grow. It needs to be there at once."
+          }
+        ],
+        "transcript": "t1"
       }
-    }
+    ],
+    "beats": [
+      "v1",
+      "p1",
+      "so1",
+      "q1",
+      "q2",
+      "t2",
+      "a1"
+    ]
   }
 }

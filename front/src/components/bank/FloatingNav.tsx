@@ -70,7 +70,7 @@ export function FloatingNav({ state, navigateToTab }: BottomTabBarProps) {
           <Tappable
             testID={mode === 'bank' ? 'nav-learn' : 'nav-bank'}
             accessibilityRole="button"
-            accessibilityLabel={mode === 'bank' ? 'Open Finance Quest' : 'Back to the bank'}
+            accessibilityLabel={mode === 'bank' ? 'Open Atlas' : 'Back to the bank'}
             haptic="light"
             pressedScale={0.94}
             onPress={onOrb}
@@ -78,7 +78,7 @@ export function FloatingNav({ state, navigateToTab }: BottomTabBarProps) {
           >
             <Animated.View key={mode} entering={FadeIn.duration(220)} style={styles.orbInner}>
               <Icon name={mode === 'bank' ? 'globe' : 'card'} size={22} color={colors.brandPrimary} />
-              <Text style={styles.orbLabel}>{mode === 'bank' ? 'Learn' : 'Bank'}</Text>
+              <Text style={styles.orbLabel}>{mode === 'bank' ? 'Atlas' : 'Bank'}</Text>
             </Animated.View>
           </Tappable>
         </Animated.View>
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgSurface,
     ...elevation.glass,
   },
-  // Bank side: the way into Finance Quest, ringed in yellow ("your next step").
+  // Bank side: the way into Atlas, ringed in yellow ("your next step").
   orbLearn: { borderWidth: 2, borderColor: colors.brandAccent },
   // Learn side: a quiet glass-like way back.
   orbBank: { borderWidth: 1, borderColor: colors.glassBorder },

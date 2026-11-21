@@ -88,7 +88,7 @@ export function StorySheet({ stories, height, collapsedTop, onSelect, startHere 
             </Pressable>
             <View style={styles.header}>
               <Text style={styles.title} accessibilityRole="header">
-                Your stories
+                Your journeys
               </Text>
               <Text style={styles.meta}>
                 {stories.length} paths · {done} done

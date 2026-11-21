@@ -2,10 +2,12 @@ import {
   chainReturns,
   concentratedChange,
   countryMixChange,
+  currencyMoveChange,
   formatValue,
   hiddenYearlyRate,
   leveragedReturn,
   MODELS,
+  monthlyPlanValue,
   realValueChange,
   requiredGainToRecover,
   sweep,
@@ -62,4 +64,14 @@ test('"12 payments, no interest" with 15% off for cash hides about 36% a year', 
 test('15% at home falling 40% and the rest falling 10% is −14.5% in total', () => {
   expect(countryMixChange(15, -40, -10)).toBe(-14.5);
   expect(MODELS.countryMix.y({ homeShare: 100, homeMove: -40, worldMove: -10 })).toBe(-40);
+});
+
+test('€100 a month at 5% a year grows to about €41,100 in 20 years; at 0% it is just the payments', () => {
+  expect(monthlyPlanValue(100, 20, 5)).toBe(41103);
+  expect(monthlyPlanValue(100, 20, 0)).toBe(24000);
+});
+
+test('with 60% priced abroad, a 10% stronger euro costs about 5.5% in euros', () => {
+  expect(currencyMoveChange(60, 10)).toBe(-5.5);
+  expect(currencyMoveChange(60, -20)).toBe(15);
 });

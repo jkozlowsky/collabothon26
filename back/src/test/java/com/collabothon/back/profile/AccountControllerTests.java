@@ -28,7 +28,7 @@ class AccountControllerTests {
 	ResultActions complete(String userId, String lessonId, String date) throws Exception {
 		return mvc.perform(post("/api/lessons/" + lessonId + "/result").param("userId", userId)
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"steps\":[],\"completedOn\":\"" + date + "\"}"));
+			.content("{\"steps\":[],\"mode\":\"classic\",\"completedOn\":\"" + date + "\"}"));
 	}
 
 	@Test

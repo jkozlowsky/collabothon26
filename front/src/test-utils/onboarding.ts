@@ -13,6 +13,7 @@ export async function walkSurvey({ consent = true, purpose = 'home', horizon = '
   const tap = (id: string) => fireEvent.press(screen.getByTestId(id));
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
   await tap('onboarding-next');
+  await tap('onboarding-challenge-next');
   await tap(consent ? 'consent-accept' : 'consent-decline');
   const picks = [
     ...(consent ? [] : Object.values(WITHOUT_ACCOUNT).map((value) => `option-${value}`)),

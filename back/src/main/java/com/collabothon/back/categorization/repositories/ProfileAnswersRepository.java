@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 
 import com.collabothon.back.categorization.repositories.projections.ProfileAnswersProjection;
-import com.collabothon.back.profile.UserProfile;
+import com.collabothon.back.entities.profile.UserProfile;
 
 public interface ProfileAnswersRepository extends Repository<UserProfile, String> {
 

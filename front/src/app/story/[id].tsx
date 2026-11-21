@@ -1,4 +1,5 @@
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -6,9 +7,12 @@ import { AsyncContent } from '@/components/AsyncContent';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/bank/Icon';
 import { IconButton } from '@/components/bank/IconButton';
+import { Sheet } from '@/components/bank/Sheet';
 import { StoryLandmark } from '@/components/StoryLandmark';
 import { colors, elevation, radii, spacing, storyColors, tints, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
+import { useBank } from '@/hooks/useBank';
+import { depotTotal, monthlyInvesting } from '@/lib/bank/selectors';
 import { USER_ID } from '@/lib/user';
 import type { LessonSummary } from '@/types/lessons';
 import type { StoryPage } from '@/types/stories';
@@ -23,7 +27,7 @@ function skyline(city: string) {
 }
 
 export default function StoryScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, lesson: targetLessonId } = useLocalSearchParams<{ id: string; lesson?: string }>();
   const { data, loading, error, reload } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(USER_ID)}`);
   useFocusEffect(reload);
   const story = data?.find((item) => item.id === id);
@@ -35,108 +39,204 @@ export default function StoryScreen() {
   const accent = storyColors[story?.color ?? 'slate'] ?? colors.storySlate;
   const tint = tints[story?.color ?? 'slate'] ?? tints.slate;
 
+  const [dismissedLocked, setDismissedLocked] = useState(false);
+  const scrollRef = useRef<any>(null);
+
+  const targetLesson = story?.lessons.find((l) => l.id === targetLessonId);
+  const lockedPopupVisible = !dismissedLocked && Boolean(targetLesson && targetLesson.status === 'locked');
+
   return (
-    <ScrollView testID="screen-story" style={styles.screen} contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}>
-      <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.hero, { backgroundColor: tint, paddingTop: insets.top + spacing.xl }]}>
-        {story && (
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.skyline]}>
-            {skyline(story.city).map((height, index) => (
-              <View key={index} style={[styles.building, { height, backgroundColor: tint }]} />
-            ))}
-          </View>
-        )}
-        {story?.landmark && <StoryLandmark kind={story.landmark.kind} at={story.landmark.at} color={tint} />}
-        <View style={styles.header}>
-          <IconButton icon="chevron-left" label="Back to the globe" onPress={back} />
-          <View style={styles.heading}>
-            {story && <Text style={[styles.overline, { color: accent }]}>Story · {story.progress.total} stops</Text>}
-            <Text accessibilityRole="header" style={styles.title}>{story?.city ?? 'Story'}</Text>
-            {story && <Text style={styles.subtitle}>{story.topic}</Text>}
+    <>
+      <ScrollView
+        ref={scrollRef}
+        testID="screen-story"
+        style={styles.screen}
+        contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}
+      >
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={[styles.hero, { backgroundColor: tint, paddingTop: insets.top + spacing.xl }]}>
+          {story && (
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.skyline]}>
+              {skyline(story.city).map((height, index) => (
+                <View key={index} style={[styles.building, { height, backgroundColor: tint }]} />
+              ))}
+            </View>
+          )}
+          {story?.landmark && <StoryLandmark kind={story.landmark.kind} at={story.landmark.at} color={tint} />}
+          <View style={styles.header}>
+            <IconButton icon="chevron-left" label="Back to the globe" onPress={back} />
+            <View style={styles.heading}>
+              {story && <Text style={[styles.overline, { color: accent }]}>{story.city} · {story.progress.total} stops</Text>}
+              <Text accessibilityRole="header" style={styles.title}>{story?.area ?? story?.city ?? 'Story'}</Text>
+              {story && <Text style={styles.subtitle}>{story.topic}</Text>}
+            </View>
           </View>
         </View>
-      </View>
-      <View style={styles.content}>
-        <AsyncContent loading={loading} error={error} onRetry={reload}>
-          {() => story ? (
-            <>
-              {story.character && (
-                <View style={styles.story}>
-                  <View style={styles.character}>
-                    <View style={[styles.avatar, { backgroundColor: tint }]}>
-                      <Text style={[styles.avatarLetter, { color: accent }]}>{story.character.name.charAt(0)}</Text>
+        <View style={styles.content}>
+          <AsyncContent loading={loading} error={error} onRetry={reload}>
+            {() => story ? (
+              <>
+                {story.personal && <YourMoney story={story} accent={accent} tint={tint} />}
+                {story.character && (
+                  <View style={styles.story}>
+                    <View style={styles.character}>
+                      <View style={[styles.avatar, { backgroundColor: tint }]}>
+                        <Text style={[styles.avatarLetter, { color: accent }]}>{story.character.name.charAt(0)}</Text>
+                      </View>
+                      <View style={styles.bio}>
+                        <Text style={styles.stopTitle}>{story.character.name}, {story.character.age}</Text>
+                        <Text style={styles.muted}>{[story.character.role, story.character.place].filter(Boolean).join(' · ')}</Text>
+                      </View>
+                      {story.character.savings && (
+                        <View style={styles.savings}>
+                          <Text style={styles.balance}>{story.character.savings}</Text>
+                          <Text style={styles.muted}>saved</Text>
+                        </View>
+                      )}
                     </View>
-                    <View style={styles.bio}>
-                      <Text style={styles.stopTitle}>{story.character.name}, {story.character.age}</Text>
-                      <Text style={styles.muted}>{[story.character.role, story.character.place].filter(Boolean).join(' · ')}</Text>
-                    </View>
-                    {story.character.savings && (
-                      <View style={styles.savings}>
-                        <Text style={styles.balance}>{story.character.savings}</Text>
-                        <Text style={styles.muted}>saved</Text>
+                    {story.intro && <Text style={styles.storyText}>{story.intro}</Text>}
+                    {story.words && story.words.length > 0 && (
+                      <View style={styles.words}>
+                        <Text style={styles.muted}>Words from {story.city}</Text>
+                        {story.words.map((word) => (
+                          <Text key={word.native} style={[styles.word, { color: accent, backgroundColor: tint }]}>
+                            {word.native} {word.meaning}
+                          </Text>
+                        ))}
                       </View>
                     )}
-                  </View>
-                  {story.intro && <Text style={styles.storyText}>{story.intro}</Text>}
-                  {story.words && story.words.length > 0 && (
-                    <View style={styles.words}>
-                      <Text style={styles.muted}>Words from {story.city}</Text>
-                      {story.words.map((word) => (
-                        <Text key={word.native} style={[styles.word, { color: accent, backgroundColor: tint }]}>
-                          {word.native} {word.meaning}
-                        </Text>
-                      ))}
+                    <View style={styles.progress}>
+                      <View style={styles.stamps} aria-hidden>
+                        {story.lessons.map(({ id: lessonId, status }) => (
+                          <View key={lessonId} style={[styles.stamp, status === 'done' && { ...styles.stamped, borderColor: accent, backgroundColor: accent }]}>
+                            {status === 'done' && <Icon name="check" size={13} color={colors.textOnBrand} />}
+                          </View>
+                        ))}
+                      </View>
+                      <Text accessibilityLiveRegion="polite" style={styles.muted}>
+                        {story.progress.done} of {story.progress.total} stamps
+                      </Text>
                     </View>
-                  )}
-                  <View style={styles.progress}>
-                    <View style={styles.stamps} aria-hidden>
-                      {story.lessons.map(({ id: lessonId, status }) => (
-                        <View key={lessonId} style={[styles.stamp, status === 'done' && { ...styles.stamped, borderColor: accent, backgroundColor: accent }]}>
-                          {status === 'done' && <Icon name="check" size={13} color={colors.textOnBrand} />}
-                        </View>
-                      ))}
+                  </View>
+                )}
+                {story.lessons.length > 0 ? (
+                  <View style={styles.route}>
+                    <View style={[styles.lineLabel, { backgroundColor: accent }]}>
+                      <Icon name="transfer" size={15} color={colors.textOnBrand} />
+                      <Text style={styles.lineText}>
+                        {story.character ? `${story.character.name}'s line` : story.personal ? 'Your line' : story.city} · {story.progress.total} stops · {minutes} min
+                      </Text>
                     </View>
-                    <Text accessibilityLiveRegion="polite" style={styles.muted}>
-                      {story.progress.done} of {story.progress.total} stamps
-                    </Text>
+                    {story.lessons.map((lesson, index) => (
+                      <Stop
+                        key={lesson.id}
+                        lesson={lesson}
+                        index={index}
+                        last={index === story.lessons.length - 1}
+                        previousDone={story.lessons[index - 1]?.status === 'done'}
+                        current={lesson.id === nextId}
+                        highlighted={lesson.id === targetLessonId}
+                        onHighlightLayout={(y) => {
+                          scrollRef.current?.scrollTo({ y: Math.max(0, y - 60), animated: true });
+                        }}
+                        accent={accent}
+                      />
+                    ))}
                   </View>
-                </View>
-              )}
-              {story.lessons.length > 0 ? (
-                <View style={styles.route}>
-                  <View style={[styles.lineLabel, { backgroundColor: accent }]}>
-                    <Icon name="transfer" size={15} color={colors.textOnBrand} />
-                    <Text style={styles.lineText}>
-                      {story.character ? `${story.character.name}'s line` : story.city} · {story.progress.total} stops · {minutes} min
-                    </Text>
-                  </View>
-                  {story.lessons.map((lesson, index) => (
-                    <Stop
-                      key={lesson.id}
-                      lesson={lesson}
-                      index={index}
-                      last={index === story.lessons.length - 1}
-                      previousDone={story.lessons[index - 1]?.status === 'done'}
-                      current={lesson.id === nextId}
-                      accent={accent}
-                    />
-                  ))}
-                </View>
-              ) : <Text style={styles.muted}>Lessons coming soon.</Text>}
-            </>
-          ) : <Text style={styles.muted}>Story unavailable.</Text>}
-        </AsyncContent>
-      </View>
-    </ScrollView>
+                ) : <Text style={styles.muted}>Lessons coming soon.</Text>}
+              </>
+            ) : <Text style={styles.muted}>Story unavailable.</Text>}
+          </AsyncContent>
+        </View>
+      </ScrollView>
+
+      {/* Locked lesson sheet popup */}
+      <Sheet
+        visible={lockedPopupVisible}
+        onClose={() => setDismissedLocked(true)}
+        title="Lesson locked"
+        testID="story-locked-sheet"
+      >
+        <View style={styles.lockedSheetContent}>
+          <Text style={styles.lockedSheetText} testID="story-locked-message">
+            This lesson is locked. Finish the earlier lessons in {story?.city} first.
+          </Text>
+          <View style={styles.lockedSheetButtons}>
+            <Button
+              label="Open story"
+              variant="primary"
+              onPress={() => setDismissedLocked(true)}
+              testID="story-locked-open"
+            />
+            <Button
+              label="Close"
+              variant="ghost"
+              onPress={() => {
+                setDismissedLocked(true);
+                back();
+              }}
+              testID="story-locked-close"
+            />
+          </View>
+        </View>
+      </Sheet>
+    </>
   );
 }
 
-function Stop({ lesson, index, last, previousDone, current, accent }: {
+/** Card for a personal story: the user's own money from the mock bank, then the path summary and stamps. */
+function YourMoney({ story, accent, tint }: { story: StoryPage; accent: string; tint: string }) {
+  const { state, money } = useBank();
+  const monthly = monthlyInvesting(state);
+  const figures = [
+    { label: 'On savings', value: money(state.savings.balance, { whole: true }) },
+    { label: 'Invested', value: money(depotTotal(state), { whole: true }) },
+    { label: 'Saved each month', value: monthly ? money(monthly, { whole: true }) : '—' },
+  ];
+  return (
+    <View style={styles.story} testID="your-money">
+      <View style={styles.character}>
+        <View style={[styles.avatar, { backgroundColor: tint }]}>
+          <Text style={[styles.avatarLetter, { color: accent }]}>{state.owner.initials.charAt(0)}</Text>
+        </View>
+        <View style={styles.bio}>
+          <Text style={styles.stopTitle}>Your money today</Text>
+          <Text style={styles.muted}>From your accounts · only on this device</Text>
+        </View>
+      </View>
+      <View style={styles.figures}>
+        {figures.map((figure) => (
+          <View key={figure.label} style={styles.figure}>
+            <Text style={styles.balance}>{figure.value}</Text>
+            <Text style={styles.muted}>{figure.label}</Text>
+          </View>
+        ))}
+      </View>
+      {story.intro && <Text style={styles.storyText}>{story.intro}</Text>}
+      <View style={styles.progress}>
+        <View style={styles.stamps} aria-hidden>
+          {story.lessons.map(({ id: lessonId, status }) => (
+            <View key={lessonId} style={[styles.stamp, status === 'done' && { ...styles.stamped, borderColor: accent, backgroundColor: accent }]}>
+              {status === 'done' && <Icon name="check" size={13} color={colors.textOnBrand} />}
+            </View>
+          ))}
+        </View>
+        <Text accessibilityLiveRegion="polite" style={styles.muted}>
+          {story.progress.done} of {story.progress.total} stamps
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function Stop({ lesson, index, last, previousDone, current, highlighted, onHighlightLayout, accent }: {
   lesson: LessonSummary;
   index: number;
   last: boolean;
   previousDone: boolean;
   current: boolean;
+  highlighted?: boolean;
+  onHighlightLayout?: (y: number) => void;
   accent: string;
 }) {
   const done = lesson.status === 'done';
@@ -145,23 +245,37 @@ function Stop({ lesson, index, last, previousDone, current, accent }: {
   const doneTrack = { backgroundColor: accent };
 
   return (
-    <View style={styles.stop}>
+    <View
+      style={styles.stop}
+      onLayout={(e) => {
+        if (highlighted) {
+          onHighlightLayout?.(e.nativeEvent.layout.y);
+        }
+      }}
+    >
       <View style={styles.markerColumn} aria-hidden>
         {index > 0 && <View style={[styles.track, styles.trackAbove, previousDone && doneTrack]} />}
         {!last && <View style={[styles.track, styles.trackBelow, done && doneTrack]} />}
-        <View style={[styles.marker, current && styles.markerCurrent, done && { ...styles.markerDone, backgroundColor: accent }]}>
+        <View style={[styles.marker, current && styles.markerCurrent, highlighted && styles.markerHighlighted, done && { ...styles.markerDone, backgroundColor: accent }]}>
           {done
             ? <Icon name="check" size={16} color={colors.textOnBrand} />
             : <Text style={styles.markerNumber}>{index + 1}</Text>}
         </View>
       </View>
-      <View style={[styles.stopBody, current && styles.currentCard]}>
+      <View style={[styles.stopBody, current && styles.currentCard, highlighted && styles.highlightedCard]}>
         <Text style={[styles.overline, { color: accent }, locked && styles.locked]}>{lesson.place}</Text>
         <Text style={[styles.stopTitle, locked && styles.locked]}>{lesson.title}</Text>
-        <Text style={styles.muted}>
-          {topic ? `${topic} · ` : ''}{lesson.minutes} min
-          {done ? ' · Completed' : locked ? ' · Locked' : ` · +${lesson.xp} XP`}
-        </Text>
+        <View style={styles.metaRow}>
+          <Text style={styles.muted}>
+            {topic ? `${topic} · ` : ''}{lesson.minutes} min
+            {done ? ' · Completed' : locked ? ' · Locked' : ` · +${lesson.xp} XP`}
+          </Text>
+          {lesson.video && (
+            <View accessible accessibilityLabel="Also as video" testID={`lesson-video-${lesson.id}`}>
+              <Icon name="film" size={14} color={colors.textMuted} />
+            </View>
+          )}
+        </View>
         {!locked && (
           <View style={styles.action}>
             <Button
@@ -195,6 +309,9 @@ const styles = StyleSheet.create({
   bio: { flexGrow: 1, flexShrink: 1 },
   savings: { alignItems: 'flex-end', marginLeft: 'auto' },
   balance: type.labelStrong,
+  figures: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  figure: { flexGrow: 1, flexBasis: 90, gap: spacing.xs },
+  metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.xs },
   storyText: type.bodyDefault,
   progress: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: spacing.sm },
   stamps: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, flexShrink: 1 },
@@ -210,14 +327,19 @@ const styles = StyleSheet.create({
   trackBelow: { top: 32, bottom: 0 },
   marker: { marginTop: 12, width: 40, height: 40, borderRadius: radii.pill, borderWidth: 3, borderColor: colors.borderStrong, backgroundColor: colors.bgSurface, alignItems: 'center', justifyContent: 'center' },
   markerCurrent: { backgroundColor: colors.brandAccent, borderColor: colors.brandPrimary },
+  markerHighlighted: { backgroundColor: colors.brandAccent, borderColor: colors.brandPrimary, borderWidth: 3 },
   markerDone: { borderColor: colors.bgSurface },
   markerNumber: { ...type.titleCard, color: colors.brandPrimary },
   stopBody: { flex: 1, gap: spacing.xs, marginBottom: spacing.lg, padding: spacing.md, borderWidth: 2, borderColor: 'transparent', borderRadius: radii.card },
   currentCard: { borderColor: colors.brandAccent, backgroundColor: colors.bgSurface, ...elevation.mid },
+  highlightedCard: { borderColor: colors.brandPrimary, backgroundColor: colors.bgSurface, ...elevation.high },
   stopTitle: type.titleCard,
   muted: { ...type.labelDefault, color: colors.textMuted },
   locked: { color: colors.textMuted },
   words: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center' },
   word: { ...type.labelStrong, borderRadius: radii.pill, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
   action: { alignSelf: 'flex-start', maxWidth: '100%', marginTop: spacing.xs },
+  lockedSheetContent: { padding: spacing.xl, gap: spacing.lg },
+  lockedSheetText: { ...type.bodyDefault, color: colors.textPrimary, fontSize: 16, lineHeight: 22 },
+  lockedSheetButtons: { gap: spacing.sm },
 });

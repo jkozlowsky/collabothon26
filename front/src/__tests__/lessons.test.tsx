@@ -13,11 +13,11 @@ jest.mock('@/components/globe/GlobeScene', () => ({
 }));
 
 const summaries: LessonSummary[] = [
-  { id: 'seoul-1', story: 'seoul', title: 'The chat that always knows', place: 'Yeouido', topic: null, minutes: 4, xp: 50, status: 'available' },
-  { id: 'seoul-2', story: 'seoul', title: 'Pulling everything in', place: 'Gangnam', topic: null, minutes: 4, xp: 60, status: 'locked' },
+  { id: 'seoul-1', story: 'seoul', title: 'The chat that always knows', place: 'Yeouido', topic: null, minutes: 4, xp: 50, status: 'available', video: null },
+  { id: 'seoul-2', story: 'seoul', title: 'Pulling everything in', place: 'Gangnam', topic: null, minutes: 4, xp: 60, status: 'locked', video: null },
 ];
 
-function lesson(lang: 'standard' | 'plain'): Lesson {
+function lesson(): Lesson {
   return {
     id: 'seoul-1',
     story: 'seoul',
@@ -26,7 +26,12 @@ function lesson(lang: 'standard' | 'plain'): Lesson {
     minutes: 4,
     xp: 50,
     concepts: ['drawdown'],
-    lang,
+    video: null,
+    startMode: 'classic',
+    city: 'Seoul',
+    color: 'violet',
+    landmark: { kind: 'tower', at: 0.69 },
+    audioBase: '/audio/',
     position: 1,
     total: 5,
     next: 'seoul-2',
@@ -36,7 +41,7 @@ function lesson(lang: 'standard' | 'plain'): Lesson {
       {
         type: 'quiz',
         id: 'q1',
-        prompt: lang === 'plain' ? 'A price fell by half. How much to get back?' : 'XYZ fell 50%. What rise gets it back?',
+        prompt: 'XYZ fell 50%. What rise gets it back?',
         options: ['+50%', '+100%'],
         correctIndex: 1,
         explanation: 'Half has to double.',
@@ -70,19 +75,19 @@ beforeEach(() => {
           ? summaries
           : url.includes('/api/stories?')
             ? [{
-              id: 'seoul', city: 'Seoul', topic: 'Hype & borrowed money', color: 'violet',
+              id: 'seoul', city: 'Seoul', topic: 'Hype and borrowed money', color: 'violet',
               character: { name: 'Ji-woo', age: 27, role: 'Office worker' },
               lessons: posted
                 ? summaries.map((summary, index) => ({ ...summary, status: index === 0 ? 'done' : 'available' }))
                 : summaries,
               progress: { done: posted ? 1 : 0, total: summaries.length },
             }]
-            : lesson(url.includes('lang=plain') ? 'plain' : 'standard');
+            : lesson();
     return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
   }) as jest.Mock;
 });
 
-test('plays a lesson: glossary sheet, plain toggle, a missed quiz comes back, sort, XP at the end', async () => {
+test('plays a lesson: glossary sheet, a missed quiz comes back, sort, XP at the end', async () => {
   await renderRouter(appRoutes, { initialUrl: '/map' });
 
   // Without GL (Jest) the globe is a static picture where Seoul is out of view, so its card opens
@@ -100,10 +105,10 @@ test('plays a lesson: glossary sheet, plain toggle, a missed quiz comes back, so
   await fireEvent.press(screen.getByTestId('sheet-close'));
   await fireEvent.press(screen.getByTestId('continue'));
 
-  // "Aa" swaps in the plain text and keeps the place in the lesson.
   expect(screen.getByText('XYZ fell 50%. What rise gets it back?')).toBeOnTheScreen();
-  await fireEvent.press(screen.getByTestId('lesson-plain-toggle'));
-  expect(await screen.findByText('A price fell by half. How much to get back?')).toBeOnTheScreen();
+  // No video track: no Watch button, and the plain-language toggle is gone.
+  expect(screen.queryByTestId('lesson-watch')).toBeNull();
+  expect(screen.queryByText('Aa')).toBeNull();
 
   // Wrong first try: explanation, then the step is queued again.
   await fireEvent.press(screen.getByTestId('option-0'));
@@ -131,7 +136,7 @@ test('plays a lesson: glossary sheet, plain toggle, a missed quiz comes back, so
       { stepId: 'so1', correctFirstTry: true },
     ],
     scenarioChoices: {},
-    lang: 'plain',
+    mode: 'classic',
     completedOn: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
   });
   expect(screen.getByText('↻ Drawdown')).toBeOnTheScreen();

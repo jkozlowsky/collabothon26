@@ -53,7 +53,7 @@ export default function RootLayout() {
 }
 
 /**
- * The app opens on the bank (host app shell). Finance Quest onboarding is opened from the Learn
+ * The app opens on the bank (host app shell). Atlas onboarding is opened from the Learn
  * button (useOpenLearn), never forced at launch, and closed by useResumeLearnAfterOnboarding.
  */
 function RootStack() {

@@ -17,7 +17,7 @@ import { holdingDetail } from '@/lib/bank/details';
 import { formatPercent } from '@/lib/bank/money';
 import type { Holding } from '@/types/bank';
 
-/** Bank — Invest (Figma 26:1128). Buying goes through the Finance Quest nudge first. */
+/** Bank — Invest (Figma 26:1128). Buying goes through the Atlas nudge first. */
 export default function InvestScreen() {
   const { state, money } = useBank();
   const { demoOnly } = useToast();

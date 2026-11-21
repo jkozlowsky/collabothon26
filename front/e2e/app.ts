@@ -45,7 +45,7 @@ export async function gotoBank(page: Page) {
   await profile;
 }
 
-/** The app opens on the bank; Finance Quest (and its onboarding, the first time) starts from Learn. */
+/** The app opens on the bank; Atlas (and its onboarding, the first time) starts from Learn. */
 export async function openApp(page: Page) {
   await skipQuickCheck(page);
   await gotoBank(page);
@@ -54,10 +54,11 @@ export async function openApp(page: Page) {
 
 export const tap = (page: Page, testId: string) => page.getByTestId(testId).click();
 
-/** Welcome → intro slide → the consent screen. */
+/** Welcome → map slide → duel slide → the consent screen. */
 export async function goToConsent(page: Page) {
   await tap(page, 'onboarding-start');
   await tap(page, 'onboarding-next');
+  await tap(page, 'onboarding-challenge-next');
   await expect(page.getByTestId('onboarding-consent')).toBeVisible();
 }
 

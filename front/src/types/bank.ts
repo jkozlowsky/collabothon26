@@ -55,7 +55,15 @@ export type BankIconName =
   | 'coins'
   | 'flame'
   | 'refresh'
-  | 'arrow-right';
+  | 'arrow-right'
+  | 'film'
+  | 'volume-on'
+  | 'volume-off'
+  | 'transcript'
+  | 'watch'
+  | 'play-fill'
+  | 'pause'
+  | 'replay';
 
 export type Account = {
   name: string;
@@ -150,6 +158,9 @@ export type SavingsAccount = {
 
 export type AssetClass = 'etfs' | 'stocks' | 'bonds' | 'cash';
 
+/** `world`: spread over many countries. `europe`: European countries only. */
+export type HoldingRegion = 'world' | 'europe';
+
 export type Holding = {
   id: string;
   name: string;
@@ -162,6 +173,8 @@ export type Holding = {
   value: number;
   /** 1Y change in percent, shown under the value. */
   change: number;
+  /** Where the holding invests; none for depot cash. Lessons use it for "how spread is your depot". */
+  region?: HoldingRegion;
   units: number | null;
 };
 
@@ -171,7 +184,7 @@ export type DepotSeries = Record<ChartRange, { points: number[]; change: number 
 
 export type FqTeaserPlacement = 'home' | 'credits' | 'invest';
 
-/** A Finance Quest card shown inside the bank. `focus` tells the Map what to open. */
+/** A Atlas card shown inside the bank. `focus` tells the Map what to open. */
 export type FqTeaser = {
   title: string;
   meta: string;

@@ -18,6 +18,8 @@ class CorsConfig implements WebMvcConfigurer {
 	@Override
 	public void addCorsMappings(CorsRegistry registry) {
 		registry.addMapping("/api/**").allowedOrigins(allowedOrigins).allowedMethods("*");
+		// Lesson narration (static/audio), played by the web build straight from the backend when EXPO_PUBLIC_API_URL is set.
+		registry.addMapping("/audio/**").allowedOrigins(allowedOrigins).allowedMethods("GET", "HEAD");
 	}
 
 }

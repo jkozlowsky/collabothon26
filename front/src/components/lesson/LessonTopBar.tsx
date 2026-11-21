@@ -7,15 +7,13 @@ import { colors, radii, spacing, type } from '@/constants/theme';
 type Props = {
   /** 0–1 */
   progress: number;
-  plain: boolean;
-  /** Hidden on the end screen. */
-  showLangToggle: boolean;
-  onTogglePlain: () => void;
+  /** Switches to the video form; set only when the lesson has a video track and is not finished. */
+  onWatch?: () => void;
   onClose: () => void;
 };
 
-/** Close · progress · "Aa" plain-language toggle. */
-export function LessonTopBar({ progress, plain, showLangToggle, onTogglePlain, onClose }: Props) {
+/** Close · progress · "Watch" (the video form of the same lesson, when it has one). */
+export function LessonTopBar({ progress, onWatch, onClose }: Props) {
   return (
     <View style={styles.bar}>
       <Tappable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close lesson" testID="lesson-close" style={styles.icon}>
@@ -28,16 +26,16 @@ export function LessonTopBar({ progress, plain, showLangToggle, onTogglePlain, o
       >
         <View style={[styles.fill, { width: `${progress * 100}%` }]} />
       </View>
-      {showLangToggle && (
+      {onWatch && (
         <Tappable
-          onPress={onTogglePlain}
-          accessibilityRole="switch"
-          accessibilityLabel="Plain language"
-          accessibilityState={{ checked: plain }}
-          testID="lesson-plain-toggle"
-          style={[styles.toggle, plain && styles.toggleOn]}
+          onPress={onWatch}
+          accessibilityRole="button"
+          accessibilityLabel="Watch this lesson as video"
+          testID="lesson-watch"
+          style={styles.watch}
         >
-          <Text style={[styles.toggleLabel, plain && styles.toggleLabelOn]}>Aa</Text>
+          <Icon name="watch" size={16} color={colors.brandPrimary} />
+          <Text style={styles.watchLabel}>Watch</Text>
         </Tappable>
       )}
     </View>
@@ -49,17 +47,15 @@ const styles = StyleSheet.create({
   icon: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   track: { flex: 1, height: 8, borderRadius: radii.bar, backgroundColor: colors.borderDefault, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: radii.bar, backgroundColor: colors.brandPrimary },
-  toggle: {
-    minWidth: 44,
-    height: 36,
-    paddingHorizontal: spacing.sm,
+  watch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
     borderRadius: radii.button,
     borderWidth: 1,
     borderColor: colors.borderStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  toggleOn: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
-  toggleLabel: { ...type.titleCard, color: colors.brandPrimary },
-  toggleLabelOn: { color: colors.textOnBrand },
+  watchLabel: { ...type.labelStrong, color: colors.brandPrimary },
 });

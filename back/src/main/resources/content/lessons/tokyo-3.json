@@ -2,97 +2,258 @@
   "id": "tokyo-3",
   "story": "tokyo",
   "title": "The 34-year wait",
-  "place": "Kabutocho · old exchange",
-  "topic": "Deep falls and little time",
+  "place": "History · Tokyo, 1989",
+  "topic": "Big falls take time to recover",
   "minutes": 4,
   "xp": 60,
-  "concepts": ["drawdown", "time-horizon", "concentration-risk"],
+  "concepts": [
+    "drawdown",
+    "time-horizon",
+    "concentration-risk"
+  ],
   "steps": [
-    {
-      "type": "chat",
-      "id": "c1",
-      "title": "Kenji",
-      "messages": [
-        { "from": "Kenji", "text": "Japanese shares only go up now. Look at the last two years" },
-        { "from": "Michiko", "me": true, "text": "My father bought in 1989. He talked about it until he died" },
-        { "from": "Kenji", "text": "That was a long time ago" },
-        { "from": "Michiko", "me": true, "text": "He waited 20 years and it still hadn't come back" }
-      ]
-    },
     {
       "type": "text",
       "id": "t1",
-      "kicker": "What happened",
-      "title": "December 1989 to February 2024",
-      "body": "Japan's main stock index peaked at the end of 1989. By 2009 it had fallen about 80%. It passed its old peak only in 2024: **34 years** later. Someone who put everything in at the top waited most of a working life. Simplified from real data."
+      "phase": "learn",
+      "kicker": "What happened in Japan",
+      "title": "From 1989 to 2024",
+      "body": "Japan's main stock index reached a peak at the end of 1989. The index measures the value of Japan's biggest companies. By 2009, it had fallen by about 80%. It went above the old peak only in 2024, 34 years later. A fall from a previous high is called a [[drawdown]]. The numbers are rounded."
     },
     {
       "type": "slider-chart",
       "id": "s1",
-      "concepts": ["drawdown"],
-      "prompt": "How much must a price rise to get back after a fall? Find the fall that needs a +400% rise.",
+      "phase": "learn",
+      "concepts": [
+        "drawdown"
+      ],
+      "prompt": "After a loss, the price must rise more than it fell to get back to the start. Move the slider to find the loss that needs a rise of 400%.",
       "model": "drawdownRecovery",
       "params": {
-        "loss": { "label": "Loss", "min": -90, "max": 0, "step": 5, "value": -20, "unit": "%" }
+        "loss": {
+          "label": "Loss",
+          "min": -90,
+          "max": 0,
+          "step": 5,
+          "value": -20,
+          "unit": "%"
+        }
       },
-      "output": { "label": "Rise needed to get back", "unit": "%" },
-      "goal": { "condition": { "of": "output", "min": 400, "max": 400 }, "hint": "It's the fall Japan's index had by 2009." }
-    },
-    {
-      "type": "predict",
-      "id": "p1",
-      "concepts": ["time-horizon"],
-      "prompt": "A portfolio falls 50%. Afterwards it grows 7% a year. How many years until it's back where it started?",
-      "input": { "kind": "slider", "min": 0, "max": 20, "step": 1, "unit": " years" },
-      "answer": 10,
-      "reveal": "About 10 years: −50% needs +100%, and 7% a year doubles money in about ten. Michiko retires in 7. A deep fall now could outlast her working years."
+      "output": {
+        "label": "Rise needed to get back to the start",
+        "unit": "%"
+      },
+      "goal": {
+        "condition": {
+          "of": "output",
+          "min": 400,
+          "max": 400
+        },
+        "hint": "Look at how much Japan's index fell by 2009."
+      }
     },
     {
       "type": "quiz",
       "id": "q1",
-      "concepts": ["time-horizon", "concentration-risk"],
-      "prompt": "Why does the same −50% fall weigh more at 58 than at 27?",
+      "phase": "challenge",
+      "concepts": [
+        "drawdown"
+      ],
+      "prompt": "Look at the chart. What happened to money invested at the peak in 1989?",
       "options": [
-        "There may not be enough years left to recover before the money is needed",
-        "Older people pay higher fees",
-        "Falls are deeper for older investors"
+        "It fell by about 80% and took 34 years to get back",
+        "It grew a little every year",
+        "It fell, and then recovered within two years"
       ],
       "correctIndex": 0,
-      "explanation": "The fall is the same; the [[time-horizon]] isn't. At 27, ten years of recovery fit before most goals. At 58, they run into retirement."
+      "explanation": "The index fell from 100 in 1989 to about 20 in 2009. It went back above 100 only in 2024. A deep [[drawdown]] can last longer than a working life.",
+      "chart": {
+        "series": [
+          100,
+          45,
+          50,
+          25,
+          20,
+          45,
+          60,
+          100
+        ],
+        "labels": [
+          "1989",
+          "1992",
+          "1996",
+          "2003",
+          "2009",
+          "2013",
+          "2017",
+          "2024"
+        ],
+        "unit": "",
+        "caption": "Japan's main stock index. The value in 1989 is set to 100. The numbers are rounded."
+      }
+    },
+    {
+      "type": "predict",
+      "id": "p1",
+      "phase": "challenge",
+      "concepts": [
+        "time-horizon"
+      ],
+      "prompt": "An investment loses 50% of its value. After that, it grows by 7% each year. How many years does it take to get back to the start?",
+      "input": {
+        "kind": "slider",
+        "min": 0,
+        "max": 20,
+        "step": 1,
+        "unit": " years"
+      },
+      "answer": 10,
+      "reveal": "About 10 years. After a 50% loss, the investment must grow by 100%. At 7% a year, money doubles in about 10 years. If you need the money sooner, it may not recover in time."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "phase": "challenge",
+      "concepts": [
+        "drawdown"
+      ],
+      "prompt": "True or false: after a 50% fall, a 50% rise brings you back to the start.",
+      "options": [
+        "True",
+        "False"
+      ],
+      "correctIndex": 1,
+      "explanation": "False. €100 falls to €50. A 50% rise on €50 is €25, so you have €75. To get back to €100, you need a rise of 100%. This is how a [[drawdown]] works."
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "phase": "you",
+      "kicker": "Your investments",
+      "title": "Your biggest investment",
+      "body": "Your investment account holds **{depotTotal}**. Your biggest single investment is **{largestPositionShare}** of it. If that one investment falls, your whole account falls with it. Having a big share of your money in one place is called [[concentration-risk]]."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s2",
+      "phase": "you",
+      "concepts": [
+        "concentration-risk"
+      ],
+      "prompt": "Your biggest investment is {largestPositionShare} of your account. Imagine it falls 60% and everything else stays the same. The result shows the change of your whole account. Move the slider to try other shares.",
+      "model": "oneCompanyCrash",
+      "params": {
+        "share": {
+          "label": "Share of your biggest investment",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "value": 50,
+          "unit": "%",
+          "fromBank": "largestPositionShare"
+        }
+      },
+      "output": {
+        "label": "Change of your investment account",
+        "unit": "%"
+      },
+      "goal": {
+        "condition": {
+          "of": "output",
+          "min": -1000000
+        },
+        "hint": "Move the slider to see the result change."
+      },
+      "note": "The slider starts at your real share. This is an example, not a forecast."
     }
   ],
+  "video": {
+    "minutes": 4,
+    "scenes": [
+      {
+        "type": "scene",
+        "id": "v1",
+        "title": "34 years",
+        "desc": "Japan's stock market fell by about 80% and needed 34 years to recover. How long your money can wait is your [[time-horizon]]. The numbers are rounded.",
+        "duration": 13,
+        "camera": "pull",
+        "setting": {
+          "place": "office",
+          "time": "night"
+        },
+        "layers": [
+          {
+            "kind": "chart",
+            "at": 1,
+            "len": 8,
+            "series": [
+              100,
+              45,
+              25,
+              20,
+              60,
+              100
+            ],
+            "labels": [
+              "1989",
+              "1992",
+              "2003",
+              "2009",
+              "2017",
+              "2024"
+            ],
+            "unit": ""
+          },
+          {
+            "kind": "tag",
+            "at": 5,
+            "text": "−80%",
+            "tone": "bad",
+            "x": 0.45,
+            "y": 0.6
+          },
+          {
+            "kind": "tag",
+            "at": 9.5,
+            "text": "34 years",
+            "tone": "neutral",
+            "x": 0.78,
+            "y": 0.25
+          }
+        ],
+        "captions": [
+          {
+            "at": 0.5,
+            "text": "Japan's main stock index reached a peak at the end of 1989."
+          },
+          {
+            "at": 4.5,
+            "text": "By 2009, it had fallen by about 80%."
+          },
+          {
+            "at": 8,
+            "text": "It went above the old peak only in 2024, 34 years later."
+          }
+        ],
+        "transcript": "t1"
+      }
+    ],
+    "beats": [
+      "v1",
+      "s1",
+      "q1",
+      "p1",
+      "q2",
+      "t2",
+      "s2"
+    ]
+  },
   "variants": {
     "level:beginner": {
-      "s1": { "goal": { "hint": "Try −80%: only a fifth is left." } }
-    },
-    "lang:plain": {
-      "c1": {
-        "messages": [
-          { "from": "Kenji", "text": "Japanese shares only go up now. Look at the last two years" },
-          { "from": "Michiko", "me": true, "text": "My father bought in 1989. He talked about it for years" },
-          { "from": "Kenji", "text": "That was long ago" },
-          { "from": "Michiko", "me": true, "text": "After 20 years his money still wasn't back" }
-        ]
-      },
-      "t1": {
-        "body": "Japan's main share index was highest at the end of 1989. By 2009 it was about 80% lower. It was higher than in 1989 again only in 2024: **34 years** later."
-      },
       "s1": {
-        "prompt": "After a fall, how much must a price go up to get back? Find the fall that needs +400% to get back.",
-        "output": { "label": "How much it must go up" }
-      },
-      "p1": {
-        "prompt": "Money falls by half. Then it grows 7% every year. How many years until it is back? Guess.",
-        "reveal": "About 10 years. Half must double, and 7% a year doubles money in about ten years. Michiko stops working in 7 years."
-      },
-      "q1": {
-        "prompt": "Why is a −50% fall worse at 58 than at 27?",
-        "options": [
-          "There may not be enough years to get the money back before you need it",
-          "Older people pay more fees",
-          "Prices fall more for older people"
-        ],
-        "explanation": "The fall is the same. But at 58 there is less time before the money is needed. How long money can wait is the [[time-horizon]]."
+        "goal": {
+          "hint": "Try −80%. Then only one fifth of the money is left."
+        }
       }
     }
   }

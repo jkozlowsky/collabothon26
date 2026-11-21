@@ -1,8 +1,10 @@
 [
   {
     "id": "seoul",
+    "area": "Investing",
+    "category": "Hype & leverage",
     "city": "Seoul",
-    "topic": "Hype & borrowed money",
+    "topic": "Hype and borrowed money",
     "status": "available",
     "pin": { "lat": 37.57, "lng": 126.98 },
     "icon": "message-circle",
@@ -19,26 +21,26 @@
   },
   {
     "id": "berlin",
+    "area": "Saving",
+    "category": "Inflation & savings",
     "city": "Berlin",
-    "topic": "Safe money that shrinks",
+    "topic": "Why safe savings lose value",
     "status": "available",
     "pin": { "lat": 52.52, "lng": 13.4 },
     "icon": "shield",
     "color": "teal",
     "landmark": { "kind": "gate", "at": 0.62 },
-    "character": { "name": "Lena", "age": 34, "role": "Project manager", "place": "Kreuzberg", "savings": "€18,000" },
-    "intro": "Lena and Jonas keep €18,000 on a savings account that never falls. Mia is two, prices keep rising, and Oma wants to put money aside for Mia. What does \"safe\" cost over 18 years?",
-    "words": [
-      { "native": "Sparbuch", "meaning": "passbook savings" },
-      { "native": "Notgroschen", "meaning": "emergency penny" }
-    ],
+    "intro": "Five short lessons about your own savings. You learn why safe money can lose value, how money grows over many years, how much to keep for emergencies, what to do in a bad year, and how to split your savings.",
     "currency": { "code": "EUR", "perEur": 1 },
-    "lessonIds": ["berlin-1", "berlin-2", "berlin-3", "berlin-4", "berlin-5"]
+    "lessonIds": ["berlin-1", "berlin-2", "berlin-3", "berlin-4", "berlin-5"],
+    "personal": true
   },
   {
     "id": "sao-paulo",
+    "area": "Credit & loans",
+    "category": "Instalments & debt",
     "city": "São Paulo",
-    "topic": "Twelve easy payments",
+    "topic": "The real cost of instalments",
     "status": "available",
     "pin": { "lat": -23.55, "lng": -46.63 },
     "icon": "credit-card",
@@ -56,20 +58,18 @@
   },
   {
     "id": "tokyo",
+    "area": "Investing",
+    "category": "Diversification",
     "city": "Tokyo",
-    "topic": "One country or the world",
+    "topic": "Spreading your investments",
     "status": "available",
     "pin": { "lat": 35.68, "lng": 139.69 },
     "icon": "globe",
     "color": "rose",
     "landmark": { "kind": "lattice", "at": 0.66 },
-    "character": { "name": "Michiko", "age": 58, "role": "School administrator", "place": "Marunouchi", "savings": "¥12,000,000" },
-    "intro": "Michiko retires in seven years with ¥12 million on deposit. Her colleagues open new NISA accounts and buy only Japanese companies. Her father bought at the 1989 peak.",
-    "words": [
-      { "native": "新NISA", "meaning": "new NISA" },
-      { "native": "貯蓄から投資へ", "meaning": "from savings to investment" }
-    ],
-    "currency": { "code": "JPY", "perEur": 165 },
-    "lessonIds": ["tokyo-1", "tokyo-2", "tokyo-3", "tokyo-4", "tokyo-5"]
+    "intro": "Five short lessons about your own money. You learn what saving and investing are for, how much depends on one country, how long big falls take to recover, how exchange rates change your investments, and how a monthly plan grows.",
+    "currency": { "code": "EUR", "perEur": 1 },
+    "lessonIds": ["tokyo-1", "tokyo-2", "tokyo-3", "tokyo-4", "tokyo-5"],
+    "personal": true
   }
 ]

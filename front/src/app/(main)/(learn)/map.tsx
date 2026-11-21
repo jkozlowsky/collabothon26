@@ -14,7 +14,7 @@ import { LEARNER, STORIES, withLessons } from '@/lib/stories';
 import { USER_ID } from '@/lib/user';
 import type { LessonSummary } from '@/types/lessons';
 
-/** Map tab (Figma 3:496): header, the globe with story pins, and the "Your stories" sheet. */
+/** Map tab (Figma 3:496): header, the globe with story pins, and the "Your journeys" sheet. */
 export default function MapScreen() {
   const globe = useRef<GlobeHandle>(null);
   // Estimates until the first layout pass measures the real values.
@@ -38,12 +38,20 @@ export default function MapScreen() {
   }, [lessons, startId]);
 
   const openStory = (id: string) => router.push({ pathname: '/story/[id]', params: { id } });
+  const openDuel = () => router.push('/duel');
 
   return (
     <View style={styles.screen} testID="screen-learn" onLayout={(e) => setHeight(e.nativeEvent.layout.height)}>
       <SafeAreaView edges={['top', 'left', 'right']} onLayout={(e) => setSheetTop(e.nativeEvent.layout.height + spacing.md)}>
         <LearnHeader learner={LEARNER} />
-        <Globe ref={globe} stories={stories} onOpenStory={openStory} onSpin={() => setHint(false)} startHere={startHere} />
+        <Globe
+          ref={globe}
+          stories={stories}
+          onOpenStory={openStory}
+          onSpin={() => setHint(false)}
+          arena={{ onOpen: openDuel }}
+          startHere={startHere}
+        />
         {/* Keeps its space when hidden, so the sheet does not jump. */}
         <View style={!hint && styles.hidden}>
           <GlobeHint />

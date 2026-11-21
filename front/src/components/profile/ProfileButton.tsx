@@ -3,7 +3,7 @@ import { Avatar } from '@/components/profile/Avatar';
 import { useAccount } from '@/hooks/useAccount';
 import { useOpenLearn } from '@/hooks/useOpenLearn';
 
-/** The user's avatar in the bank header; opens the Finance Quest profile (onboarding first, the first time). */
+/** The user's avatar in the bank header; opens the Atlas profile (onboarding first, the first time). */
 export function ProfileButton() {
   const { account } = useAccount();
   const openLearn = useOpenLearn();

@@ -62,6 +62,15 @@ const GLYPHS: Record<BankIconName, Glyph> = {
   coins: { set: 'mci', name: 'database-outline' },
   flame: { set: 'ion', name: 'flame-outline' },
   'arrow-right': { set: 'feather', name: 'arrow-right' },
+  // Lesson video player.
+  film: { set: 'feather', name: 'film' },
+  'volume-on': { set: 'feather', name: 'volume-2' },
+  'volume-off': { set: 'feather', name: 'volume-x' },
+  transcript: { set: 'feather', name: 'file-text' },
+  watch: { set: 'feather', name: 'play-circle' },
+  'play-fill': { set: 'ion', name: 'play' },
+  pause: { set: 'ion', name: 'pause' },
+  replay: { set: 'feather', name: 'rotate-ccw' },
 };
 
 export function Icon({ name, size = 22, color }: Props) {

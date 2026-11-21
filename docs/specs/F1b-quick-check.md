@@ -172,10 +172,10 @@ mastery: {<area>: number | null}                         // {} without a Quick c
 confidence: {<area>: number | null}                      // per-area chip aggregate (Reference), so the dock rebuilds after reload
 answerCount: number                                      // knowledge answers; 0 without a Quick check
 confidenceGaps: [{area, direction: "under" | "over", because}]   // ≤ 2, from Q14 when the Quick check ran; F1's facts table only without one
-startLesson: {lessonId, title, area, storyId, storyCity} | null   // lessonId a JSON lesson id (string), title the lesson's, storyCity stories.json city; null → the summary hides the first-lesson card
+startLesson: {lessonId, title, area, storyId, storyCity} | null   // lessonId a JSON lesson id (string), title the lesson's, storyCity stories.json city, area the area that picked the story (J4; null when no candidate picked it, e.g. all Solid); null → the summary hides the first-lesson card
 readyForNext: boolean                                    // every area Solid (Q15, D7)
 pathStoryIds: string[]                                   // story ids in path order: startLesson's story first, then the other candidate stories (v2.1)
-startHere: {lessonId, title, area, storyId, storyCity} | null   // not stored: the key is absent from the row; the first path story with a lesson not done, at its first lesson not done; null when every path story is done (v2.1)
+startHere: {lessonId, title, area, storyId, storyCity} | null   // not stored: the key is absent from the row; the first path story with a lesson not done, at its first lesson not done; area as in startLesson for its story, for a later path story its bank area with the lowest stored mastery; null when every path story is done (v2.1)
 sharedWithModel: {facts | null, answers | null, goals, profile | null, answerCount, stepCallsMade} | null   // categories sent to Jev in steps or the final call, built when stepCallsMade > 0 or the final call was sent, whether or not the Quick check ran; answers (onboarding) only when the final call was sent; goals always (steps and the final call both send them); null = nothing was sent
 v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / false.
 ```
@@ -437,6 +437,7 @@ PR #31 (`origin/main` d4b2a22) changed what F1b v2 was built on:
 - **J1** Adapt F1b to main: merge `origin/main` into `feat/quick-check` (merge, no rebase). Main's code wins on conflicts; F1b re-applies its changes on top.
 - **J2** "Start here" is a **story**. Its start lesson is that story's next lesson that is not done, so it is always `available`. Lesson locking stays untouched.
 - **J3** Role cap: when the Quick check ran and no area is at least Building (mastery ≥ 0.4 with ≥ 1 answer), the stored role is at most `INTERMEDIATE`, whatever Jev or the rule said. A role that is already lower stays.
+- **J4** `area` names the area that picked the story; all Solid → first story in stories.json, area null.
 
 ### Contract changes (supersede the v2 text above where they differ)
 1. **V16 bank:** `lesson_id VARCHAR(64) NOT NULL`, no foreign key (the `lesson` table is gone). Rewrite V16 in place (Q4 still holds: V16 is on no remote branch). Remap:

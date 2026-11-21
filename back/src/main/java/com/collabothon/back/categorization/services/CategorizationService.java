@@ -138,7 +138,7 @@ public class CategorizationService {
 		StoryPlan plan = QuickCheckRules.plan(stories,
 				QuickCheckRules.candidates(lessons, stories, pathOrder, mastery, history, completed), picked, pathOrder,
 				mastery, history, completed);
-		StartLessonDto startLesson = plan.start() == null ? null : startLesson(plan.start(), lessons, completed);
+		StartLessonDto startLesson = plan.start() == null ? null : startLesson(plan.start(), plan.area(), completed);
 		FocusArea startArea = startLesson == null ? null : startLesson.area();
 		List<ConfidenceGapDto> gaps = ran
 				? QuickCheckRules.gapCards(gaps(order, history, mastery, fromJev.judgement()), history, startArea)
@@ -174,7 +174,7 @@ public class CategorizationService {
 		if (saved == 0) {
 			throw new NotFoundException(NO_PROFILE);
 		}
-		return c.withStartHere(startHere(c.pathStoryIds(), stories, lessons, completed));
+		return c.withStartHere(startHere(c, stories, lessons, completed));
 	}
 
 	/** Jev's labels where its call answered, each history against the chips; the rule otherwise. In area order. */
@@ -193,22 +193,23 @@ public class CategorizationService {
 	}
 
 	/** The first story of the path that still exists and has a lesson left; read fresh, never stored. */
-	private StartLessonDto startHere(List<String> path, List<Story> stories, List<BankLesson> lessons,
+	private StartLessonDto startHere(CategorizationDto c, List<Story> stories, List<BankLesson> lessons,
 			Set<String> completed) {
-		return path.stream()
+		StartLessonDto start = c.startLesson();
+		return c.pathStoryIds().stream()
 			.flatMap(id -> stories.stream().filter(s -> s.id().equals(id)))
 			.filter(s -> QuickCheckRules.startLesson(s, completed).isPresent())
 			.findFirst()
-			.map(s -> startLesson(s, lessons, completed))
+			.map(s -> startLesson(s, start != null && s.id().equals(start.storyId()) ? start.area()
+					: QuickCheckRules.storedPickingArea(s, lessons, c.mastery()), completed))
 			.orElse(null);
 	}
 
 	/** Call only for a story with a lesson left. */
-	private StartLessonDto startLesson(Story story, List<BankLesson> lessons, Set<String> completed) {
+	private StartLessonDto startLesson(Story story, FocusArea area, Set<String> completed) {
 		String lessonId = QuickCheckRules.startLesson(story, completed).orElseThrow();
 		return startLessonMapper.toStartLesson(story, lessonId,
-				content.lesson(lessonId).orElseThrow().path("title").asString(),
-				QuickCheckRules.area(story, lessonId, lessons));
+				content.lesson(lessonId).orElseThrow().path("title").asString(), area);
 	}
 
 	private List<Story> stories() {
@@ -229,7 +230,7 @@ public class CategorizationService {
 			.query(String.class)
 			.optional()
 			.flatMap(this::read)
-			.map(c -> c.withStartHere(startHere(c.pathStoryIds(), stories(),
+			.map(c -> c.withStartHere(startHere(c, stories(),
 					QuickCheckRules.lessons(checkQuestions.bank(), bankLessonMapper::toLesson),
 					progress.completed(userId))));
 	}

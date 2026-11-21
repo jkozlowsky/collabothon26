@@ -364,6 +364,23 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
+	void theAreaIsTheOneThatPickedTheStoryNotTheStartLessonsOwn() throws Exception {
+		bank.question("in-berlin", "berlin-2", "investing", "easy");
+		String history = """
+				[{"questionId": "sv-a", "optionIndex": 0, "confidence": "sure"},
+				 {"questionId": "in-berlin", "optionIndex": 1, "confidence": "sure"}]""";
+
+		// Investing (0.25) is weakest and its answer sits in Berlin; Berlin's next stop berlin-1 is a saving lesson.
+		categorize(onRules(QUICK_CHECK.replace(HISTORY, history)
+			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": 0.85, \"investing\": 0.25}")))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.startLesson.lessonId").value("berlin-1"))
+			.andExpect(jsonPath("$.startLesson.area").value("investing"))
+			.andExpect(jsonPath("$.startHere.area").value("investing"));
+		stored().andExpect(jsonPath("$.startHere.area").value("investing"));
+	}
+
+	@Test
 	void aPostWithAHistoryAsksJevAgainInsteadOfReusingTheLastResult() throws Exception {
 		String body = QUICK_CHECK.replace(HISTORY, "[{\"questionId\": \"sv-a\", \"optionIndex\": 0, \"confidence\": \"sure\"}]");
 		for (int i = 0; i < 2; i++) {

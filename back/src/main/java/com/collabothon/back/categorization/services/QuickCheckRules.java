@@ -230,12 +230,19 @@ final class QuickCheckRules {
 		return story.lessonIds().stream().filter(id -> !completed.contains(id)).findFirst();
 	}
 
-	/** The start lesson's area, else the area of the story's first lesson with bank questions. */
-	static FocusArea area(Story story, String lessonId, List<BankLesson> lessons) {
-		return Stream.concat(Stream.of(lessonId), story.lessonIds().stream())
-			.flatMap(id -> lessons.stream().filter(l -> l.id().equals(id)))
+	/** J4: the area that put the story on the path, i.e. that of its first lesson in candidate order. */
+	static FocusArea pickingArea(Story story, List<BankLesson> candidates) {
+		return candidates.stream().filter(l -> story.lessonIds().contains(l.id())).findFirst().map(BankLesson::area)
+			.orElse(null);
+	}
+
+	/** A later path story read back without the history: its bank area with the lowest stored mastery, unanswered last. */
+	static FocusArea storedPickingArea(Story story, List<BankLesson> lessons, Map<String, Double> mastery) {
+		return lessons.stream()
+			.filter(l -> story.lessonIds().contains(l.id()))
 			.map(BankLesson::area)
-			.findFirst()
+			.min(Comparator.comparing((FocusArea area) -> mastery.get(area.wire()),
+					Comparator.nullsLast(Comparator.naturalOrder())).thenComparing(Comparator.naturalOrder()))
 			.orElse(null);
 	}
 
@@ -284,7 +291,7 @@ final class QuickCheckRules {
 			Map<FocusArea, Double> mastery, List<Answer> answers, Set<String> completed) {
 		if (candidates.isEmpty()) {
 			Optional<Story> next = stories.stream().filter(s -> startLesson(s, completed).isPresent()).findFirst();
-			return new StoryPlan(next.orElse(null), order.stream().allMatch(area -> solid(area, mastery, answers)),
+			return new StoryPlan(next.orElse(null), null, order.stream().allMatch(area -> solid(area, mastery, answers)),
 					next.map(s -> List.of(s.id())).orElse(List.of()));
 		}
 		List<BankLesson> pool = pool(candidates, answers);
@@ -294,7 +301,7 @@ final class QuickCheckRules {
 						() -> storyOf(ruleFirstLesson(pool, order, mastery, answers).id(), stories).orElseThrow());
 		List<String> path = new ArrayList<>(List.of(start.id()));
 		stories(candidates, stories).stream().map(Story::id).filter(id -> !id.equals(start.id())).forEach(path::add);
-		return new StoryPlan(start, false, path);
+		return new StoryPlan(start, pickingArea(start, candidates), false, path);
 	}
 
 	private static double masteryOrStart(Map<FocusArea, Double> mastery, FocusArea area) {

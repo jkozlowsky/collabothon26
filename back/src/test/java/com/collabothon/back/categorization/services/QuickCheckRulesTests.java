@@ -291,6 +291,7 @@ class QuickCheckRulesTests {
 				right(I_EASY, Confidence.SURE));
 
 		assertEquals("s3", plan.start().id());
+		assertEquals(SAVING, plan.area());
 		assertFalse(plan.readyForNext());
 		// Then the rest of saving, then investing; unanswered areas would follow.
 		assertEquals(List.of("s3", "s1", "s2", "s4"), plan.pathStoryIds());
@@ -322,10 +323,15 @@ class QuickCheckRulesTests {
 	}
 
 	@Test
-	void aStartLessonWithoutQuestionsTakesTheAreaOfTheStorysFirstBankLesson() {
-		assertEquals(INVESTING, QuickCheckRules.area(story("s2"), "s2-1", LESSONS));
-		assertEquals(SAVING, QuickCheckRules.area(story("s3"), "s3-2", LESSONS));
-		assertNull(QuickCheckRules.area(story("s9"), "s9-1", LESSONS));
+	void aLaterPathStoryReadBackTakesItsWeakestStoredArea() {
+		Story mixed = new Story("mix", "City", "Topic", List.of("s1-1", "s2-1"));
+
+		assertEquals(INVESTING, QuickCheckRules.storedPickingArea(mixed, LESSONS, Map.of("saving", 0.6, "investing", 0.3)));
+		Map<String, Double> savingUnanswered = new LinkedHashMap<>();
+		savingUnanswered.put("saving", null);
+		savingUnanswered.put("investing", 0.6);
+		assertEquals(INVESTING, QuickCheckRules.storedPickingArea(mixed, LESSONS, savingUnanswered));
+		assertEquals(SAVING, QuickCheckRules.storedPickingArea(mixed, LESSONS, Map.of()));
 	}
 
 	@Test
@@ -355,6 +361,7 @@ class QuickCheckRulesTests {
 
 		StoryPlan plan = plan(Set.of(), allSure);
 		assertEquals("s1", plan.start().id());
+		assertNull(plan.area());
 		assertTrue(plan.readyForNext());
 		assertEquals(List.of("s1"), plan.pathStoryIds());
 

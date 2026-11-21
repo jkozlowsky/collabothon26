@@ -44,7 +44,7 @@ export const LEVEL_LABEL = { none: 'Not checked yet', starting: 'Just starting',
 export const LEVEL_SHORT = { none: 'Not yet', starting: 'Starting', building: 'Building', solid: 'Solid' } as const;
 
 type ProfileKey = keyof ProfileRanges;
-export type ProfileQuestion = {
+type ProfileQuestion = {
   key: ProfileKey;
   prompt: string;
   why: string;

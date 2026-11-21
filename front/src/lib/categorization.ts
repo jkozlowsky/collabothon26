@@ -74,7 +74,14 @@ export async function categorize(
   quick?: Partial<QuickResult>,
 ): Promise<Categorization> {
   const consent = facts !== null;
-  const base = { consent, ...(consent && { facts }), ...(quick?.useRules && { useRules: true }) };
+  const { useRules, stepCallsMade } = quick ?? {};
+  // The F1 resend keeps stepCallsMade: the backend discloses what the steps sent to the model even without a profile.
+  const base = {
+    consent,
+    ...(consent && { facts }),
+    ...(useRules && { useRules }),
+    ...(stepCallsMade !== undefined && { stepCallsMade }),
+  };
   await profileSaved(signal);
   try {
     return await postCategorization({ ...base, ...quick }, signal);

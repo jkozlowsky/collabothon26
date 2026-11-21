@@ -319,6 +319,8 @@ test('the dock fills in as answers come: a screen-reader text per area, then the
 
   await tap(page, 'map-dock');
   await expect(page.getByText('Your map in detail')).toBeVisible();
+  // The modal moves focus in on its own a moment after it opens; Escape only reaches it from inside.
+  await page.getByTestId('sheet-close').focus();
   await page.keyboard.press('Escape');
   await expect(page.getByText('Your map in detail')).toHaveCount(0);
 
@@ -343,6 +345,8 @@ test('with reduced motion the dock markers and the sheet appear in place', async
   expect(await transition('dock-diamond-saving')).toBe('0s');
 
   await tap(page, 'map-dock');
+  // The spring needs about half a second; 100 ms is enough for a sheet that does not animate.
+  await page.waitForTimeout(100);
   const box = await page.getByTestId('map-sheet').boundingBox();
   const viewport = page.viewportSize()!;
   expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height + 1);

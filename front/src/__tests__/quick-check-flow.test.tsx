@@ -590,7 +590,7 @@ test('a 400 on the final POST takes the F1 path instead of a Retry that cannot s
   expect(await screen.findByTestId('learning-path', {}, { timeout: 4000 })).toBeOnTheScreen();
   expect(finals().map((f) => Object.keys(f).sort())).toEqual([
     ['consent', 'facts', 'history', 'mastery', 'profile', 'stepCallsMade', 'useRules'],
-    ['consent', 'facts'],
+    ['consent', 'facts', 'stepCallsMade'],
   ]);
 });
 

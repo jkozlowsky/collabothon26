@@ -40,7 +40,7 @@ export async function fetchCheckQuestions(signal: AbortSignal): Promise<CheckQue
   }
 }
 
-export type StepBody = {
+type StepBody = {
   consent: boolean;
   facts?: Facts | null;
   profile: ProfileRanges;
@@ -135,7 +135,7 @@ export function areaMarks(
   mastery: Mastery,
   confidence: Mastery,
   answers: Partial<Record<FocusArea, number>>,
-  fallbackAnswers: number,
+  fallbackAnswers = 0,
 ): AreaMark[] {
   return areas.map((area) => ({
     area,

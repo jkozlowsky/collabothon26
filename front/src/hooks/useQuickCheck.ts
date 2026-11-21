@@ -212,7 +212,7 @@ export function useQuickCheck({ pool, bank, consent, facts, lifeStageSkipped, on
     /** "Question {position} of up to {total}": the shown question, which is the answered one while its step runs. */
     position: Math.max(1, atQuestion ? answered + 1 : answered),
     total: MAX_QUESTIONS + required.length,
-    dock: areaMarks(areas, mastery, confidenceByArea(history, pool), answerCounts(history, pool), 0),
+    dock: areaMarks(areas, mastery, confidenceByArea(history, pool), answerCounts(history, pool)),
     begin,
     answer,
     back,

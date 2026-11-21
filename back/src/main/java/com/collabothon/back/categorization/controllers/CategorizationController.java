@@ -31,7 +31,7 @@ class CategorizationController {
 	@PostMapping
 	CategorizationDto categorize(@PathVariable @NotBlank @Size(max = MAX_USER_ID_LENGTH) String userId,
 			@Valid @RequestBody CategorizationRequestDto request) {
-		return service.categorize(userId, request.consent(), request.facts(), request.answers());
+		return service.categorize(userId, request);
 	}
 
 	@GetMapping

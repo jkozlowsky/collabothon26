@@ -1,15 +1,10 @@
 package com.collabothon.back.categorization.dto;
 
-import java.util.List;
-
+/** What reached Jev in the step calls or the final call: categories and counts, never the answers themselves. */
 public record SharedWithModelDto(
 		FactsDto facts,
 		OnboardingAnswersDto answers,
-		List<SharedCheckDto> checks
-) {
-
-	public SharedWithModelDto {
-		checks = checks == null ? List.of() : checks;
-	}
-
-}
+		ProfileRangesDto profile,
+		int answerCount,
+		int stepCallsMade
+) {}

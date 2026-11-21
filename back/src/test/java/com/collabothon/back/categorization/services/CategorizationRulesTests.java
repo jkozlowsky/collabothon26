@@ -23,13 +23,10 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 import com.collabothon.back.categorization.consts.FactsConsts;
-import com.collabothon.back.categorization.dto.CheckDto;
 import com.collabothon.back.categorization.dto.ConfidenceGapDto;
 import com.collabothon.back.categorization.dto.FactsDto;
 import com.collabothon.back.categorization.dto.LessonVariantDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
-import com.collabothon.back.categorization.enums.CheckResult;
-import com.collabothon.back.categorization.enums.ConfidenceArea;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.LessonLang;
@@ -56,62 +53,54 @@ class CategorizationRulesTests {
 	private static final OnboardingAnswersDto SKIPPED = new OnboardingAnswersDto(null, List.of(), null, true);
 
 	private static List<ConfidenceGapDto> confidenceGaps(OnboardingAnswersDto a, FactsDto f) {
-		return CategorizationRules.confidenceGaps(a, f, List.of());
-	}
-
-	private static List<ConfidenceGapDto> gapsFromChecks(String experience, FactsDto facts, CheckDto... checks) {
-		return CategorizationRules.confidenceGaps(said(experience), facts, List.of(checks));
-	}
-
-	private static CheckDto check(FocusArea area, CheckResult result) {
-		return new CheckDto("q-" + area.wire(), area, null, result);
+		return CategorizationRules.confidenceGaps(a, f);
 	}
 
 	private static void assertContains(List<ConfidenceGapDto> gaps, ConfidenceGapDto expected) {
 		assertTrue(gaps.contains(expected), () -> expected + " not in " + gaps);
 	}
 
-	private static ConfidenceGapDto gap(ConfidenceArea area, GapDirection direction, String because) {
+	private static ConfidenceGapDto gap(FocusArea area, GapDirection direction, String because) {
 		return new ConfidenceGapDto(area, direction, because);
 	}
 
 	@Test
 	void savingUnderWhenTheySayLittleButSaveEveryMonth() {
-		assertContains(confidenceGaps(said("not-saving"), ALEX), gap(ConfidenceArea.SAVING, GapDirection.UNDER,
+		assertContains(confidenceGaps(said("not-saving"), ALEX), gap(FocusArea.SAVING, GapDirection.UNDER,
 				"You said: I don't save yet. Money goes to savings or investments every month."));
-		assertContains(confidenceGaps(said("occasional"), ALEX), gap(ConfidenceArea.SAVING, GapDirection.UNDER,
+		assertContains(confidenceGaps(said("occasional"), ALEX), gap(FocusArea.SAVING, GapDirection.UNDER,
 				"You said: I save now and then. Money goes to savings or investments every month."));
 		assertEquals(List.of(), confidenceGaps(said("occasional"), TOM));
 	}
 
 	@Test
 	void savingOverWhenTheySaySavingButHaveNoBuffer() {
-		assertEquals(List.of(gap(ConfidenceArea.SAVING, GapDirection.OVER,
+		assertEquals(List.of(gap(FocusArea.SAVING, GapDirection.OVER,
 				"You said: I save regularly. Your accounts cover less than a month of spending.")),
 				confidenceGaps(said("regular"), LENA));
-		assertContains(confidenceGaps(said("investing"), LENA), gap(ConfidenceArea.SAVING, GapDirection.OVER,
+		assertContains(confidenceGaps(said("investing"), LENA), gap(FocusArea.SAVING, GapDirection.OVER,
 				"You said: I save and invest. Your accounts cover less than a month of spending."));
-		assertContains(confidenceGaps(said("planning"), LENA), gap(ConfidenceArea.SAVING, GapDirection.OVER,
+		assertContains(confidenceGaps(said("planning"), LENA), gap(FocusArea.SAVING, GapDirection.OVER,
 				"You said: I plan my finances ahead. Your accounts cover less than a month of spending."));
 		assertEquals(List.of(), confidenceGaps(said("occasional"), LENA));
 	}
 
 	@Test
 	void investingUnderWhenTheyDoNotSayInvestingButHoldInvestments() {
-		assertEquals(List.of(gap(ConfidenceArea.INVESTING, GapDirection.UNDER,
+		assertEquals(List.of(gap(FocusArea.INVESTING, GapDirection.UNDER,
 				"You said: I save regularly. Your accounts with us include investment products.")),
 				confidenceGaps(said("regular"), ALEX));
-		assertContains(confidenceGaps(said("not-saving"), ALEX), gap(ConfidenceArea.INVESTING, GapDirection.UNDER,
+		assertContains(confidenceGaps(said("not-saving"), ALEX), gap(FocusArea.INVESTING, GapDirection.UNDER,
 				"You said: I don't save yet. Your accounts with us include investment products."));
 		assertEquals(List.of(), confidenceGaps(said("investing"), ALEX));
 	}
 
 	@Test
 	void investingOverWhenTheySayInvestingButHoldNone() {
-		assertEquals(List.of(gap(ConfidenceArea.INVESTING, GapDirection.OVER,
+		assertEquals(List.of(gap(FocusArea.INVESTING, GapDirection.OVER,
 				"You said: I plan my finances ahead. No investment products in your accounts with us.")),
 				confidenceGaps(said("planning"), TOM));
-		assertEquals(List.of(gap(ConfidenceArea.INVESTING, GapDirection.OVER,
+		assertEquals(List.of(gap(FocusArea.INVESTING, GapDirection.OVER,
 				"You said: I save and invest. No investment products in your accounts with us.")),
 				confidenceGaps(said("investing"), TOM));
 		assertEquals(List.of(), confidenceGaps(said("regular"), TOM));
@@ -121,98 +110,6 @@ class CategorizationRulesTests {
 	void noGapsWithoutBankDataOrAnExperienceAnswer() {
 		assertEquals(List.of(), confidenceGaps(said("not-saving"), null));
 		assertEquals(List.of(), confidenceGaps(SKIPPED, ALEX));
-	}
-
-	@Test
-	void anUnderstoodAnswerRevealsAGapWhenTheyRateThemselvesLow() {
-		assertEquals(List.of(gap(ConfidenceArea.SAVING, GapDirection.UNDER,
-				"You said: I don't save yet. Your answer about saving shows you understand it.")),
-				gapsFromChecks("not-saving", null, check(FocusArea.SAVING, CheckResult.UNDERSTANDS)));
-		assertEquals(List.of(gap(ConfidenceArea.SAVING, GapDirection.UNDER,
-				"You said: I save now and then. Your answer about saving shows you understand it.")),
-				gapsFromChecks("occasional", null, check(FocusArea.SAVING, CheckResult.UNDERSTANDS)));
-		for (String low : List.of("not-saving", "occasional", "regular")) {
-			assertEquals(1, gapsFromChecks(low, null, check(FocusArea.INVESTING, CheckResult.UNDERSTANDS)).size(), low);
-		}
-		assertEquals(List.of(), gapsFromChecks("regular", null, check(FocusArea.SAVING, CheckResult.UNDERSTANDS)));
-		assertEquals(List.of(), gapsFromChecks("investing", null, check(FocusArea.INVESTING, CheckResult.UNDERSTANDS)));
-	}
-
-	@Test
-	void aNotYetResultRevealsAGapWhenTheyRateThemselvesHighWithoutCitingAnAnswer() {
-		assertEquals(List.of(gap(ConfidenceArea.SAVING, GapDirection.OVER,
-				"You said: I save regularly. Your Quick check points to saving as a place to learn more.")),
-				gapsFromChecks("regular", null, check(FocusArea.SAVING, CheckResult.NOT_YET)));
-		for (String high : List.of("regular", "investing", "planning")) {
-			assertEquals(1, gapsFromChecks(high, null, check(FocusArea.SAVING, CheckResult.NOT_YET)).size(), high);
-		}
-		for (String high : List.of("investing", "planning")) {
-			assertEquals(1, gapsFromChecks(high, null, check(FocusArea.INVESTING, CheckResult.NOT_YET)).size(), high);
-		}
-		assertEquals(List.of(), gapsFromChecks("occasional", null, check(FocusArea.SAVING, CheckResult.NOT_YET)));
-		assertEquals(List.of(), gapsFromChecks("regular", null, check(FocusArea.INVESTING, CheckResult.NOT_YET)));
-	}
-
-	@Test
-	void partlyAndOtherAreasAndASkippedExperienceRevealNoGap() {
-		assertEquals(List.of(), gapsFromChecks("not-saving", null, check(FocusArea.SAVING, CheckResult.PARTLY)));
-		assertEquals(List.of(), gapsFromChecks("planning", null, check(FocusArea.INVESTING, CheckResult.PARTLY)));
-		for (FocusArea other : List.of(FocusArea.DEBT, FocusArea.RISK, FocusArea.RETIREMENT)) {
-			assertEquals(List.of(), gapsFromChecks("not-saving", null, check(other, CheckResult.UNDERSTANDS)));
-			assertEquals(List.of(), gapsFromChecks("planning", null, check(other, CheckResult.NOT_YET)));
-		}
-		assertEquals(List.of(), CategorizationRules.confidenceGaps(SKIPPED, null,
-				List.of(check(FocusArea.SAVING, CheckResult.UNDERSTANDS))));
-	}
-
-	@Test
-	void mixedResultsInOneAreaRevealNoGap() {
-		for (CheckResult other : List.of(CheckResult.NOT_YET, CheckResult.PARTLY)) {
-			assertEquals(List.of(), gapsFromChecks("not-saving", null, check(FocusArea.SAVING, CheckResult.UNDERSTANDS),
-					check(FocusArea.SAVING, other)));
-		}
-		assertEquals(List.of(), gapsFromChecks("planning", null, check(FocusArea.SAVING, CheckResult.NOT_YET),
-				check(FocusArea.SAVING, CheckResult.UNDERSTANDS)));
-		assertEquals(1, gapsFromChecks("not-saving", null, check(FocusArea.SAVING, CheckResult.UNDERSTANDS),
-				check(FocusArea.SAVING, CheckResult.UNDERSTANDS)).size());
-	}
-
-	@Test
-	void anUnderstoodAnswerIsCitedByTheMatchingAccountGapInsteadOfAddingAnother() {
-		assertEquals(List.of(gap(ConfidenceArea.SAVING, GapDirection.UNDER,
-				"You said: I save now and then. Money goes to savings or investments every month. "
-						+ "Your answer about saving shows you understand it."),
-				gap(ConfidenceArea.INVESTING, GapDirection.UNDER,
-						"You said: I save now and then. Your accounts with us include investment products.")),
-				gapsFromChecks("occasional", ALEX, check(FocusArea.SAVING, CheckResult.UNDERSTANDS)));
-		assertEquals(List.of(gap(ConfidenceArea.SAVING, GapDirection.OVER,
-				"You said: I save regularly. Your accounts cover less than a month of spending.")),
-				gapsFromChecks("regular", LENA, check(FocusArea.SAVING, CheckResult.UNDERSTANDS)));
-		assertFalse(gapsFromChecks("occasional", ALEX, check(FocusArea.SAVING, CheckResult.UNDERSTANDS),
-				check(FocusArea.SAVING, CheckResult.PARTLY)).get(0).because().contains("Your answer"));
-	}
-
-	@Test
-	void aCheckCanRaiseAGapWhileAccountFactsAreGiven() {
-		assertEquals(List.of(gap(ConfidenceArea.SAVING, GapDirection.UNDER,
-				"You said: I don't save yet. Your answer about saving shows you understand it.")),
-				gapsFromChecks("not-saving", TOM, check(FocusArea.SAVING, CheckResult.UNDERSTANDS)));
-	}
-
-	@Test
-	void anUnderstoodInvestingAnswerIsCitedByTheInvestingAccountGap() {
-		assertEquals(List.of(gap(ConfidenceArea.INVESTING, GapDirection.UNDER,
-				"You said: I save regularly. Your accounts with us include investment products. "
-						+ "Your answer about investing shows you understand it.")),
-				gapsFromChecks("regular", ALEX, check(FocusArea.INVESTING, CheckResult.UNDERSTANDS)));
-	}
-
-	@Test
-	void notYetAndPartlyTogetherRevealNoGapForAHighRating() {
-		assertEquals(List.of(), gapsFromChecks("planning", null, check(FocusArea.SAVING, CheckResult.NOT_YET),
-				check(FocusArea.SAVING, CheckResult.PARTLY)));
-		assertEquals(List.of(), gapsFromChecks("planning", null, check(FocusArea.INVESTING, CheckResult.NOT_YET),
-				check(FocusArea.INVESTING, CheckResult.PARTLY)));
 	}
 
 	@Test
@@ -324,10 +221,6 @@ class CategorizationRulesTests {
 				lines.addAll(roleBecause(a, facts));
 				lines.addAll(focusBecause(List.of(FocusArea.values()), a, facts));
 				confidenceGaps(a, facts).forEach(gap -> lines.add(gap.because()));
-				for (CheckResult result : CheckResult.values()) {
-					CategorizationRules.confidenceGaps(a, facts, List.of(check(FocusArea.SAVING, result),
-							check(FocusArea.INVESTING, result))).forEach(gap -> lines.add(gap.because()));
-				}
 			}
 		}
 		assertFalse(lines.isEmpty());

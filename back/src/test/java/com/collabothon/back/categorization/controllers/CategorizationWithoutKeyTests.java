@@ -3,7 +3,6 @@ package com.collabothon.back.categorization.controllers;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -50,35 +49,8 @@ class CategorizationWithoutKeyTests {
 	}
 
 	@Test
-	void quickCheckIsSkippedWithoutAKey() throws Exception {
-		mvc.perform(get("/api/check-questions")).andExpect(status().isOk()).andExpect(content().json("[]"));
-	}
-
-	@Test
-	void fiveAnswersAreIgnoredToo() throws Exception {
-		mvc.perform(put("/api/users/tom/profile/onboarding").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"goals\": [], \"skipped\": true}"))
-			.andExpect(status().isOk());
-
-		mvc.perform(post("/api/users/tom/categorization").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"consent\": true, \"answers\": [" + "{\"questionId\": \"a\", \"text\": \"x\"},".repeat(5)
-					+ "null]}"))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.checks").isEmpty());
-		jev.verify();
-	}
-
-	@Test
-	void answersAreIgnoredBeforeValidationWithoutAKey() throws Exception {
-		mvc.perform(put("/api/users/tom/profile/onboarding").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"goals\": [], \"skipped\": true}"))
-			.andExpect(status().isOk());
-
-		mvc.perform(post("/api/users/tom/categorization").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"consent\": true, \"answers\": [null, {\"questionId\": \"nope\", \"text\": \"  \"}]}"))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.checks").isEmpty());
-		jev.verify();
+	void theBankIsServedWithoutAKey() throws Exception {
+		mvc.perform(get("/api/check-questions")).andExpect(status().isOk()).andExpect(jsonPath("$").isNotEmpty());
 	}
 
 }

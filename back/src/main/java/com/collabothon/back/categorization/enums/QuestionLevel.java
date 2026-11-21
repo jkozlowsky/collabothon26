@@ -2,9 +2,9 @@ package com.collabothon.back.categorization.enums;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
-public enum CheckCategory {
+public enum QuestionLevel {
 
-	FINANCE, INVESTING;
+	EASY, HARD;
 
 	@JsonValue
 	public String wire() {

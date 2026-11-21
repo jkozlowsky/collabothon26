@@ -168,8 +168,10 @@ class CategorizationControllerTests {
 				    "because": ["Your accounts cover more than 6 months of spending.", "You picked investing as a goal.",
 				                "You are paying off a loan with us.",
 				                "Your accounts with us include investment products."]}],
-				 "checks": [], "startLesson": {"lessonId": %d, "title": "Compound interest"},
-				 "sharedWithModel": {"facts": %s, "answers": %s, "checks": []},
+				 "profile": null, "mastery": {}, "confidence": {}, "answerCount": 0,
+				 "startLesson": {"lessonId": %d, "title": "Compound interest", "area": "investing"},
+				 "readyForNext": false, "pathLessonIds": [], "startHere": null,
+				 "sharedWithModel": {"facts": %s, "answers": %s, "profile": null, "answerCount": 0, "stepCallsMade": 0},
 				 "source": "jev", "model": "jev-2026-05", "categorizedAt": "2026-06-15T10:00:00Z"}"""
 			.formatted(jdbc.sql("SELECT id FROM lesson WHERE position = 2").query(Long.class).single(), FACTS, ANSWERS);
 

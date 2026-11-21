@@ -44,7 +44,7 @@ class JevClientTests {
 	}
 
 	private static JevResult ask(RestClient.Builder builder, String baseUrl, String apiKey) {
-		return new JevClient(builder, JSON, properties(baseUrl, apiKey)).ask(ANSWERS, null, List.of());
+		return new JevClient(builder, JSON, properties(baseUrl, apiKey)).ask(ANSWERS, null);
 	}
 
 	// Both records go to an external model verbatim; a new component must be a deliberate change here.

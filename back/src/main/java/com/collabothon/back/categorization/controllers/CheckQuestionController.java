@@ -19,8 +19,8 @@ class CheckQuestionController {
 	private final CheckQuestionService service;
 
 	@GetMapping
-	List<CheckQuestionDto> pool() {
-		return service.pool();
+	List<CheckQuestionDto> questions() {
+		return service.questions();
 	}
 
 }

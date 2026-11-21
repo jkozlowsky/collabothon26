@@ -2,17 +2,22 @@ package com.collabothon.back.categorization.repositories.projections;
 
 import java.util.List;
 
-import com.collabothon.back.categorization.enums.CheckCategory;
 import com.collabothon.back.categorization.enums.FocusArea;
+import com.collabothon.back.categorization.enums.QuestionLevel;
 
 public record CheckQuestionProjection(
 		String id,
-		CheckCategory category,
-		FocusArea area,
 		Long lessonId,
 		String lessonTitle,
+		String lessonSummary,
+		int lessonPosition,
+		FocusArea area,
+		QuestionLevel level,
 		String accountPrompt,
 		List<String> slots,
 		String genericPrompt,
-		String criterion
+		List<String> options,
+		int correctIndex,
+		List<String> misconceptions,
+		String checks
 ) {}

@@ -2,7 +2,6 @@ package com.collabothon.back.categorization.services;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -10,29 +9,21 @@ import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 
-import com.collabothon.back.categorization.config.JevProperties;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 import com.collabothon.back.categorization.dto.CategorizationDto;
-import com.collabothon.back.categorization.dto.CheckAnswerDto;
-import com.collabothon.back.categorization.dto.CheckDto;
+import com.collabothon.back.categorization.dto.CategorizationRequestDto;
 import com.collabothon.back.categorization.dto.ExplanationDto;
 import com.collabothon.back.categorization.dto.FactsDto;
-import com.collabothon.back.categorization.dto.JevCheckDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
-import com.collabothon.back.categorization.dto.SharedCheckDto;
 import com.collabothon.back.categorization.dto.SharedWithModelDto;
+import com.collabothon.back.categorization.dto.StartLessonDto;
 import com.collabothon.back.categorization.enums.CategorizationSource;
-import com.collabothon.back.categorization.enums.CheckResult;
 import com.collabothon.back.categorization.enums.ExplanationOutput;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.LifeStage;
-import com.collabothon.back.categorization.mappers.CheckMapper;
-import com.collabothon.back.categorization.mappers.JevCheckMapper;
 import com.collabothon.back.categorization.mappers.OnboardingAnswersMapper;
-import com.collabothon.back.categorization.mappers.SharedCheckMapper;
 import com.collabothon.back.categorization.mappers.StartLessonMapper;
 import com.collabothon.back.categorization.repositories.ProfileAnswersRepository;
-import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 import com.collabothon.back.common.exceptions.NotFoundException;
 
 import lombok.AccessLevel;
@@ -57,15 +48,7 @@ public class CategorizationService {
 
 	private final JevClient jev;
 
-	private final JevProperties jevProperties;
-
 	private final CheckQuestionService checkQuestions;
-
-	private final JevCheckMapper jevCheckMapper;
-
-	private final CheckMapper checkMapper;
-
-	private final SharedCheckMapper sharedCheckMapper;
 
 	private final StartLessonMapper startLessonMapper;
 
@@ -73,60 +56,37 @@ public class CategorizationService {
 
 	private final Clock clock;
 
-	public CategorizationDto categorize(String userId, boolean consent, FactsDto facts,
-			List<CheckAnswerDto> checkAnswers) {
+	public CategorizationDto categorize(String userId, CategorizationRequestDto request) {
+		boolean consent = request.consent();
+		FactsDto facts = request.facts();
 		OnboardingAnswersDto answers = profiles.findAnswers(userId)
 			.map(mapper::toAnswers)
 			.orElseThrow(() -> new NotFoundException(NO_PROFILE));
 		Instant now = Instant.now(clock);
-		// Without a judge the answers cannot be used, so they are dropped before any validation.
-		List<CheckAnswerDto> submitted = checkAnswers == null || !jevProperties.callsJev() ? List.of() : checkAnswers;
-		List<CheckQuestionProjection> picked = List.of();
-		if (submitted.isEmpty()) {
-			Optional<CategorizationDto> recent = find(userId)
-				.filter(c -> isRecentJevResult(c, answers, consent, facts, now));
-			if (recent.isPresent()) {
-				return recent.get();
-			}
+		Optional<CategorizationDto> recent = find(userId)
+			.filter(c -> isRecentJevResult(c, answers, consent, facts, now));
+		if (recent.isPresent()) {
+			return recent.get();
 		}
-		else {
-			picked = checkQuestions.pick(submitted);
-		}
-		List<JevCheckDto> toJudge = new ArrayList<>();
-		List<SharedCheckDto> sharedChecks = new ArrayList<>();
-		for (int i = 0; i < picked.size(); i++) {
-			CheckQuestionProjection q = picked.get(i);
-			String text = submitted.get(i).text();
-			sharedChecks.add(sharedCheckMapper.toShared(q, text != null));
-			if (text != null) {
-				toJudge.add(jevCheckMapper.toJevCheck(q, text));
-			}
-		}
-		JevResult fromJev = jev.ask(answers, facts, toJudge);
+		JevResult fromJev = jev.ask(answers, facts);
 		Judgement j = fromJev.judgement().orElseGet(() -> CategorizationRules.fallback(answers, facts));
-		SharedWithModelDto shared = fromJev.sent() ? new SharedWithModelDto(facts, answers, sharedChecks) : null;
-		List<CheckDto> checks = new ArrayList<>();
-		for (int i = 0; i < picked.size(); i++) {
-			CheckQuestionProjection q = picked.get(i);
-			CheckResult result = submitted.get(i).text() == null ? CheckResult.NOT_YET : j.checks().get(q.id());
-			if (result != null) {
-				checks.add(checkMapper.toCheck(q, result));
-			}
-		}
+		SharedWithModelDto shared = fromJev.sent() ? new SharedWithModelDto(facts, answers, null, 0, 0) : null;
 
 		LifeStage lifeStage = LifeStage.fromAnswer(answers.lifeStage());
-		List<FocusArea> focus = CategorizationRules.focusWithChecks(j.focusAreas(), checks);
+		List<FocusArea> focus = j.focusAreas();
 		List<ExplanationDto> explanation = List.of(
 				new ExplanationDto(ExplanationOutput.ROLE, j.roleProbabilities(),
 						CategorizationRules.roleBecause(answers, facts)),
 				new ExplanationDto(ExplanationOutput.FOCUS_AREAS, j.focusProbabilities(),
 						CategorizationRules.focusBecause(focus, answers, facts)));
 
+		StartLessonDto startLesson = CategorizationRules.earliestLessonQuestion(focus, checkQuestions.bank())
+			.map(startLessonMapper::toStartLesson)
+			.orElse(null);
 		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, j.role(), lifeStage, focus,
-				CategorizationRules.confidenceGaps(answers, facts, checks),
-				CategorizationRules.lessonVariant(j.role(), lifeStage), explanation, checks,
-				checkQuestions.startLesson(checks, focus, picked).map(startLessonMapper::toStartLesson).orElse(null),
-				shared,
+				CategorizationRules.confidenceGaps(answers, facts),
+				CategorizationRules.lessonVariant(j.role(), lifeStage), explanation, null, null, null, null,
+				startLesson, null, null, null, shared,
 				fromJev.judgement().isPresent() ? CategorizationSource.JEV : CategorizationSource.FALLBACK, j.model(),
 				now);
 		// Inserting only while onboarding is completed turns a reset during the Jev call into a 404.

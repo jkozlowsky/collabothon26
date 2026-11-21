@@ -2,9 +2,9 @@ package com.collabothon.back.categorization.enums;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
-public enum CheckResult {
+public enum AnswerResult {
 
-	UNDERSTANDS, PARTLY, NOT_YET;
+	CORRECT, WRONG, NOT_SURE;
 
 	@JsonValue
 	public String wire() {

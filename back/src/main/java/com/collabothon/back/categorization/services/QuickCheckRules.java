@@ -35,6 +35,7 @@ import com.collabothon.back.categorization.enums.Confidence;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.QuestionLevel;
+import com.collabothon.back.categorization.enums.Role;
 import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 
 final class QuickCheckRules {
@@ -147,6 +148,14 @@ final class QuickCheckRules {
 	static boolean solid(FocusArea area, Map<FocusArea, Double> mastery, List<Answer> answers) {
 		Double m = mastery.get(area);
 		return m != null && m > SOLID_ABOVE && inArea(answers, area).size() >= SOLID_MIN_ANSWERS;
+	}
+
+	/** J3: without an area at least Building (mastery ≥ JUST_STARTING_BELOW with an answer), at most intermediate. */
+	static Role cappedRole(Role role, Map<FocusArea, Double> mastery, List<Answer> answers) {
+		boolean building = mastery.entrySet().stream()
+			.anyMatch(m -> m.getValue() != null && m.getValue() >= JUST_STARTING_BELOW
+					&& !inArea(answers, m.getKey()).isEmpty());
+		return role == Role.ADVANCED && !building ? Role.INTERMEDIATE : role;
 	}
 
 	/** Areas where at least one answer carries a chip: the only ones a gap can be about. */

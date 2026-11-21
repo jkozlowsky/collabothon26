@@ -30,6 +30,7 @@ import com.collabothon.back.categorization.enums.ExplanationOutput;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.LifeStage;
+import com.collabothon.back.categorization.enums.Role;
 import com.collabothon.back.categorization.mappers.BankLessonMapper;
 import com.collabothon.back.categorization.mappers.JevAnswerMapper;
 import com.collabothon.back.categorization.mappers.OnboardingAnswersMapper;
@@ -129,6 +130,7 @@ public class CategorizationService {
 		String savingsCover = ran ? profile.savingsCover() : null;
 		Judgement j = fromJev.judgement()
 			.orElseGet(() -> CategorizationRules.fallback(answers, facts, lifeStage, savingsCover));
+		Role role = ran ? QuickCheckRules.cappedRole(j.role(), mastery, history) : j.role();
 		// Without the Quick check nothing was measured, so the judged focus leads the path.
 		List<FocusArea> pathOrder = ran ? order
 				: Stream.concat(j.focusAreas().stream().filter(order::contains), order.stream()).distinct().toList();
@@ -153,8 +155,8 @@ public class CategorizationService {
 						CategorizationRules.roleBecause(answers, facts)),
 				new ExplanationDto(ExplanationOutput.FOCUS_AREAS, j.focusProbabilities(),
 						CategorizationRules.focusBecause(focus, answers, facts)));
-		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, j.role(), lifeStage, focus, gaps,
-				CategorizationRules.lessonVariant(j.role(), lifeStage), explanation, profile,
+		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, role, lifeStage, focus, gaps,
+				CategorizationRules.lessonVariant(role, lifeStage), explanation, profile,
 				QuickCheckRules.byWire(mastery),
 				ran ? QuickCheckRules.byWire(QuickCheckRules.confidence(order, history)) : Map.of(),
 				history.size(), startLesson, plan.readyForNext(), plan.pathStoryIds(), null, shared,

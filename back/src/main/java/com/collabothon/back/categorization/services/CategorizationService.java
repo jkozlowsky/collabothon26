@@ -137,7 +137,8 @@ public class CategorizationService {
 				? QuickCheckRules.gapCards(gaps(order, history, mastery, fromJev.judgement()), history, startArea)
 				: CategorizationRules.confidenceGaps(answers, facts);
 		SharedWithModelDto shared = fromJev.sent() || request.stepCallsMade() > 0
-				? new SharedWithModelDto(facts, fromJev.sent() ? answers : null, profile, history.size(),
+				? new SharedWithModelDto(facts, fromJev.sent() ? answers : null, answers.goals(),
+						ran || request.stepCallsMade() > 0 ? request.profile() : null, history.size(),
 						request.stepCallsMade())
 				: null;
 
@@ -224,7 +225,8 @@ public class CategorizationService {
 
 	private static boolean isRecentJevResult(CategorizationDto c, OnboardingAnswersDto answers, boolean consent,
 			FactsDto facts, Instant now) {
-		return c.source() == CategorizationSource.JEV && c.consent() == consent && c.sharedWithModel() != null
+		return c.source() == CategorizationSource.JEV && c.profile() == null && c.answerCount() == 0
+				&& c.consent() == consent && c.sharedWithModel() != null
 				&& answers.equals(c.sharedWithModel().answers()) && Objects.equals(facts, c.sharedWithModel().facts())
 				&& c.categorizedAt().isAfter(now.minus(CategorizationConsts.RECATEGORIZE_AFTER));
 	}

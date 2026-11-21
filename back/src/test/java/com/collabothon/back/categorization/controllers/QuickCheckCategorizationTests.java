@@ -266,7 +266,8 @@ class QuickCheckCategorizationTests {
 		categorize(onRules(QUICK_CHECK)).andExpect(status().isOk())
 			.andExpect(jsonPath("$.source").value("fallback"))
 			.andExpect(jsonPath("$.sharedWithModel.stepCallsMade").value(3))
-			.andExpect(jsonPath("$.sharedWithModel.answers").isEmpty());
+			.andExpect(jsonPath("$.sharedWithModel.answers").isEmpty())
+			.andExpect(jsonPath("$.sharedWithModel.goals[0]").value("start-saving"));
 
 		categorize(onRules(QUICK_CHECK).replace("\"stepCallsMade\": 3", "\"stepCallsMade\": 0"))
 			.andExpect(status().isOk())
@@ -392,11 +393,32 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void stepCallsMadeOutsideItsRangeIsClamped() throws Exception {
+	void stepCallsMadeAboveSixIsStoredAsSent() throws Exception {
 		categorize(onRules(QUICK_CHECK).replace("\"stepCallsMade\": 3", "\"stepCallsMade\": 9")).andExpect(status().isOk())
-			.andExpect(jsonPath("$.sharedWithModel.stepCallsMade").value(6));
-		categorize(onRules(QUICK_CHECK).replace("\"stepCallsMade\": 3", "\"stepCallsMade\": -1")).andExpect(status().isOk())
-			.andExpect(jsonPath("$.sharedWithModel").isEmpty());
+			.andExpect(jsonPath("$.sharedWithModel.stepCallsMade").value(9));
+	}
+
+	@Test
+	void anF1ResendAfterStepCallsStillDisclosesThem() throws Exception {
+		categorize("{\"consent\": false, \"useRules\": true, \"stepCallsMade\": 2}").andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"sharedWithModel": {"facts": null, "answers": null, "goals": ["start-saving"], "profile": null,
+					 "answerCount": 0, "stepCallsMade": 2}}""", JsonCompareMode.LENIENT));
+	}
+
+	@Test
+	void aRequestWithoutTheQuickCheckDoesNotReuseAQuickCheckResult() throws Exception {
+		for (int i = 0; i < 2; i++) {
+			jev.expect(requestTo(JEV_URL))
+				.andRespond(withSuccess(jevFinal(choice("gap_saving", "over", "under", "over", "aligned")
+						+ choice("gap_investing", "under", "under", "over", "aligned")
+						+ lessons(emergency, inflation, compound)), MediaType.APPLICATION_JSON));
+		}
+
+		categorize(QUICK_CHECK).andExpect(status().isOk()).andExpect(jsonPath("$.answerCount").value(4));
+		categorize(NO_QUICK_CHECK).andExpect(status().isOk())
+			.andExpect(jsonPath("$.answerCount").value(0))
+			.andExpect(jsonPath("$.profile").isEmpty());
 	}
 
 	@Test
@@ -536,6 +558,7 @@ class QuickCheckCategorizationTests {
 						QUICK_CHECK.replace("\"optionIndex\": null, \"confidence\": null",
 								"\"optionIndex\": null, \"confidence\": \"sure\"")),
 				Arguments.of("confidence outside its set", QUICK_CHECK.replace("\"guessing\"", "\"" + SENTINEL + "\"")),
+				Arguments.of("negative step calls", QUICK_CHECK.replace("\"stepCallsMade\": 3", "\"stepCallsMade\": -1")),
 				Arguments.of("profile value outside its set", QUICK_CHECK.replace("\"1-5y\"", "\"" + SENTINEL + "\"")),
 				Arguments.of("savings cover with consent", QUICK_CHECK.replace("\"consent\": false", "\"consent\": true")));
 	}

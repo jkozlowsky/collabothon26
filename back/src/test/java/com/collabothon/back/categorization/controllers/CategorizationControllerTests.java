@@ -167,7 +167,7 @@ class CategorizationControllerTests {
 				 "startLesson": {"lessonId": %1$d, "title": "Compound interest", "area": "investing"},
 				 "readyForNext": false, "pathLessonIds": [%1$d, %2$d, %3$d],
 				 "startHere": {"lessonId": %1$d, "title": "Compound interest", "area": "investing"},
-				 "sharedWithModel": {"facts": %4$s, "answers": %5$s, "profile": null, "answerCount": 0, "stepCallsMade": 0},
+				 "sharedWithModel": {"facts": %4$s, "answers": %5$s, "goals": ["start-saving", "stocks-etfs"], "profile": null, "answerCount": 0, "stepCallsMade": 0},
 				 "source": "jev", "model": "jev-2026-05", "categorizedAt": "2026-06-15T10:00:00Z"}"""
 			.formatted(compound, emergency, inflation, FACTS, ANSWERS);
 

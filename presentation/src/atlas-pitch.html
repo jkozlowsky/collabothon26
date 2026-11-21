@@ -41,7 +41,7 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
 
 .wordmark {
   position: absolute; z-index: 3; left: var(--gutter-l); top: max(22px, calc(env(safe-area-inset-top, 0px) + 16px));
-  margin: 0; font-size: clamp(18px, 1.5vw, 26px); font-weight: 800; letter-spacing: -0.03em;
+  margin: 0; font-size: clamp(30px, min(3vw, 5.4vh), 56px); font-weight: 800; letter-spacing: -0.035em; line-height: 1;
 }
 .wordmark span { color: var(--yellow); }
 
@@ -49,7 +49,7 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
 .content {
   position: absolute; top: 0; bottom: 0; left: 0;
   width: min(55vw, 1060px); box-sizing: border-box;
-  padding: clamp(64px, 11vh, 120px) 16px clamp(72px, 11vh, 110px) var(--gutter-l);
+  padding: clamp(84px, 13vh, 140px) 16px clamp(32px, 6vh, 80px) var(--gutter-l);
   display: grid; align-content: center; z-index: 2;
 }
 .stop { grid-area: 1 / 1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: clamp(20px, 3vw, 56px); align-items: center; min-width: 0; }
@@ -102,6 +102,28 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
 .beats b { font-size: var(--t-body); }
 .beats b::before { content: counter(beat) "  "; color: var(--yellow); }
 .beats span { font-size: var(--t-label); color: var(--ink-muted); line-height: 1.35; }
+.beats.one { grid-template-columns: minmax(0, 1fr); }
+.beats.one span { font-size: var(--t-body); }
+
+/* Stop 2: the Atlas notification inside the bank app (same look as AtlasNudge in the app) */
+.nudge {
+  position: relative; display: flex; align-items: flex-start; gap: clamp(12px, 1.1vw, 18px); overflow: hidden;
+  background: var(--card); color: var(--card-text); border: 3px solid var(--yellow); border-radius: 22px;
+  padding: clamp(14px, 2vh, 22px) clamp(44px, 3.4vw, 60px) clamp(16px, 2.3vh, 26px) clamp(14px, 1.2vw, 22px);
+  box-shadow: 0 12px 32px rgba(0, 10, 14, 0.45); max-width: 40em;
+}
+.nudge-globe { flex: none; width: clamp(40px, 3.4vw, 60px); aspect-ratio: 1; }
+.nudge-globe svg { width: 100%; height: 100%; display: block; }
+.nudge-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.nudge-over { margin: 0; font-size: var(--t-label); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #1B4250; }
+.nudge-text { margin: 0; font-size: var(--t-lead); font-weight: 700; line-height: 1.3; color: var(--card-text); }
+.nudge-meta { margin: 0; font-size: var(--t-body); color: var(--card-muted); }
+.nudge-x { position: absolute; top: clamp(10px, 1.6vh, 18px); right: clamp(14px, 1.3vw, 22px); font-size: clamp(20px, 1.8vw, 30px); line-height: 1; color: var(--card-muted); }
+.nudge-timer { position: absolute; left: 0; bottom: 0; height: 4px; width: 100%; background: var(--yellow); transform-origin: left; transform: scaleX(0.8); }
+.nudge:not(.pending) .nudge-timer { animation: run-down 5s linear both; }
+.nudge.pending { transform: translateY(-28px); }
+@keyframes run-down { from { transform: scaleX(1); } to { transform: scaleX(0.12); } }
+
 .path { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; font-size: var(--t-body); }
 .path li { display: flex; align-items: center; gap: 10px; }
 .check { flex: none; width: 1.3em; height: 1.3em; border-radius: 50%; background: var(--success); display: grid; place-items: center; }
@@ -146,6 +168,8 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
 .media-hint { margin: 0; font-size: 12px; color: var(--ink-muted); opacity: 0; transition: opacity 300ms; }
 .phone:hover + .media-hint { opacity: 1; }
 
+.phone:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+
 /* ---------- Pin and callout ---------- */
 .pin-layer { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
 .pin-layer > * { position: absolute; left: 0; top: 0; opacity: 0; }
@@ -178,50 +202,12 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
 .callout-over { font-size: clamp(11px, 0.8vw, 14px); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--card-muted); }
 .callout-title { font-size: clamp(17px, 1.45vw, 28px); font-weight: 700; letter-spacing: -0.01em; color: var(--card-text); line-height: 1.15; }
 
-/* ---------- Controls ---------- */
-.controls {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
-  padding: 0 var(--gutter-r) max(18px, calc(env(safe-area-inset-bottom, 0px) + 14px)) var(--gutter-l);
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-}
-.nav-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--hairline); background: rgba(0, 31, 41, 0.6); color: var(--ink); display: grid; place-items: center; cursor: pointer; padding: 0; }
-.nav-btn:disabled { opacity: 0.35; cursor: default; }
-.nav-btn svg { width: 18px; height: 18px; }
-.route { display: flex; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none; flex-wrap: wrap; }
-.route li { display: flex; align-items: center; gap: 4px; }
-.route li + li::before { content: ""; width: 12px; border-top: 2px dashed rgba(245, 247, 247, 0.25); }
-.stop-btn { font: inherit; font-size: 12px; font-weight: 600; color: var(--ink-muted); background: none; cursor: pointer; border: 1px solid transparent; border-radius: 999px; padding: 5px 10px; display: flex; align-items: center; gap: 7px; }
-.stop-btn::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--c); opacity: 0.55; }
-.stop-btn[aria-current="step"] { color: var(--ink); border-color: var(--hairline); background: rgba(0, 31, 41, 0.6); }
-.stop-btn[aria-current="step"]::before { opacity: 1; }
-.pips { display: inline-flex; gap: 3px; }
-.pips i { width: 5px; height: 5px; border-radius: 50%; background: rgba(245, 247, 247, 0.3); }
-.pips i.on { background: var(--yellow); }
-.hint { margin: 0 0 0 auto; font-size: 12px; color: var(--ink-muted); padding: 6px 12px; border-radius: 999px; background: rgba(0, 31, 41, 0.78); }
-.top-btns { position: absolute; z-index: 3; top: max(16px, calc(env(safe-area-inset-top, 0px) + 12px)); right: var(--gutter-r); display: flex; gap: 8px; }
-.top-btn { font: inherit; font-size: 12px; font-weight: 600; color: var(--ink); background: rgba(0, 31, 41, 0.78); border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 13px; cursor: pointer; }
-button:focus-visible, .phone:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
-
-/* Speaker notes (key N) */
-.notes-panel {
-  position: absolute; z-index: 4; left: var(--gutter-l); right: var(--gutter-r); bottom: max(70px, calc(env(safe-area-inset-bottom, 0px) + 66px));
-  max-width: 980px; background: rgba(0, 20, 27, 0.94); border: 1px solid var(--hairline); border-radius: 16px;
-  padding: 16px 20px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4); display: flex; flex-direction: column; gap: 8px;
-}
-.notes-meta { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
-.notes-meta b { color: var(--yellow); font-weight: 700; }
-.notes-meta .over { color: #FF8A7A; }
-.notes-text { margin: 0; font-size: 16px; line-height: 1.5; color: var(--ink); max-height: 30vh; overflow-y: auto; }
 
 /* Narrow screens: copy on top, globe rising from the bottom-right corner, no phone */
-@media (max-width: 1180px) {
-  .stop-btn .label { display: none; }
-  .stop-btn[aria-current="step"] .label { display: inline; }
-}
 @media (max-aspect-ratio: 19/20) {
   .content { width: auto; right: 0; bottom: auto; padding: max(64px, calc(env(safe-area-inset-top, 0px) + 56px)) var(--gutter-r) 0 var(--gutter-l); align-content: start; }
   .stop { grid-template-columns: minmax(0, 1fr); }
-  .media, .hint { display: none; }
+  .media { display: none; }
   .callout { gap: 10px; padding: 10px 14px 10px 10px; }
   .callout-tile { width: 32px; }
   .callout-title { font-size: 16px; }
@@ -250,19 +236,18 @@ button:focus-visible, .phone:focus-visible { outline: 3px solid var(--yellow); o
 
   <main class="content" id="content" aria-live="polite">
 
-    <!-- 1 · The problem (whole globe) -->
-    <section class="stop no-media" data-kind="overview" data-label="Problem" data-title="The problem" data-seconds="25">
+    <!-- 1 · Motto (whole globe) -->
+    <section class="stop no-media" data-kind="overview" data-title="Atlas">
       <div class="text">
         <p class="eyebrow">Commerzbank challenge · Collabothon 2026</p>
-        <h1 class="display">People don’t lack information. <em>They lack the confidence to act.</em></h1>
-        <p class="lead">Self-directed investors of every generation have apps, articles and videos. What they miss is the confidence to use them on their own money.</p>
-        <p class="lead"><b>Atlas</b> is a learning module inside the bank app. Let’s follow one customer.</p>
+        <h1 class="display">Atlas lets your financial decisions <em>land safely.</em></h1>
+        <p class="lead">People don’t lack information. <b>They lack the confidence to act.</b> Atlas is a learning module inside the Commerzbank app that builds that confidence from the customer’s own numbers.</p>
+        <p class="lead">Let’s follow one customer.</p>
       </div>
-      <aside class="notes" hidden>Commerzbank asked us how to make financial learning something people seek out and act on. Our answer starts from one idea: people don’t lack information, they lack the confidence to act. Let us show you through one customer.</aside>
     </section>
 
-    <!-- 2 · Frankfurt: meet Alex -->
-    <section class="stop" data-kind="city" data-city="Frankfurt" data-lat="50.11" data-lng="8.68" data-color="#FFCC00" data-label="Meet Alex" data-title="Frankfurt: meet Alex" data-seconds="35" hidden>
+    <!-- 2 · Frankfurt: Alex in his bank app, Atlas reaches out -->
+    <section class="stop" data-kind="city" data-city="Frankfurt" data-lat="50.11" data-lng="8.68" data-color="#FFCC00" data-title="Frankfurt: meet Alex" hidden>
       <div class="text">
         <p class="eyebrow">Meet Alex</p>
         <div class="person">
@@ -275,125 +260,133 @@ button:focus-visible, .phone:focus-visible { outline: 3px solid var(--yellow); o
         <div class="card">
           <dl class="kv">
             <dt>Net income</dt><dd>€2,150 <small>/ month</small></dd>
-            <dt>Left over</dt><dd>~€880 <small>/ month</small></dd>
             <dt>Current account</dt><dd>€4,280</dd>
             <dt>Savings account</dt><dd>€12,500 <small>· no clear purpose</small></dd>
-            <dt>ETF savings plan</dt><dd>€100 <small>/ month, for 18 months</small></dd>
+            <dt>ETF savings plan</dt><dd>€100 <small>/ month</small></dd>
           </dl>
         </div>
-        <p class="small">He invests, but without much knowledge or confidence.</p>
-        <div class="pills" data-step="1">
-          <p class="pill">Commerzbank app</p><span class="arrow">→</span><p class="pill">Learn</p><span class="arrow">→</span><p class="pill yellow">Atlas</p>
+        <div class="nudge" data-step="1" role="img" aria-label="Notification from Atlas: You have €12,500 in savings at 2.25% a year. Learn how to keep it from losing value. Berlin, Saving, 5 minutes.">
+          <span class="nudge-globe" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="23" fill="#1B4250"/><path d="M9 17c3-4 8-5 11-3 2 2 0 5-3 6-4 1-6 4-9 2-1-1 0-3 1-5z" fill="#D7EAE3"/><path d="M27 10c4 0 8 2 9 5-2 2-5 1-7 3-2 1-4-1-4-3 0-2 0-5 2-5z" fill="#D7EAE3"/><path d="M26 25c4-1 9 0 10 4 1 4-2 9-6 10-3 1-4-3-5-6-1-3-2-7 1-8z" fill="#D7EAE3"/><path d="M12 30c2 0 4 2 4 4s-2 3-3 2-2-4-1-6z" fill="#D7EAE3"/></svg>
+          </span>
+          <div class="nudge-body">
+            <p class="nudge-over">Atlas · From your numbers</p>
+            <p class="nudge-text">You have € 12,500 in savings at 2.25% a year. Learn how to keep it from losing value.</p>
+            <p class="nudge-meta">Berlin · Saving · 5 min</p>
+          </div>
+          <span class="nudge-x" aria-hidden="true">×</span>
+          <span class="nudge-timer" aria-hidden="true"></span>
         </div>
-        <p class="lead" data-step="1">He opens his bank app every day. Today he taps <b>Learn</b>, and Atlas opens.</p>
+        <div class="pills" data-step="2">
+          <p class="pill">Commerzbank app</p><span class="arrow">→</span><p class="pill">Atlas notification</p><span class="arrow">→</span><p class="pill yellow">Atlas</p>
+        </div>
       </div>
       <div class="media">
-        <figure class="phone" data-clip="01-bank-to-learn" tabindex="0" aria-label="App recording, click to replay"></figure>
+        <figure class="phone" data-clip="01-bank-nudge" tabindex="0" aria-label="App recording, click to replay"></figure>
       </div>
-      <aside class="notes" hidden>This is Alex. He’s 29 and lives in Frankfurt. He earns 2,150 euros net and has about 880 left each month. 12,500 sits in savings, and he puts 100 euros a month into an ETF, without really knowing why. He and his partner want a flat in two or three years, but his savings have no plan. [click] Alex opens his Commerzbank app every day. Today he taps Learn, and Atlas opens.</aside>
     </section>
 
-    <!-- 3 · Boarding Atlas (Frankfurt, no flight) -->
-    <section class="stop" data-kind="city" data-city="Frankfurt" data-lat="50.11" data-lng="8.68" data-color="#FFCC00" data-label="Boarding" data-title="Boarding Atlas" data-seconds="50" hidden>
+    <!-- 3 · Frankfurt: entering Atlas, onboarding builds the path -->
+    <section class="stop" data-kind="city" data-city="Frankfurt" data-lat="50.11" data-lng="8.68" data-color="#FFCC00" data-title="Entering Atlas" hidden>
       <div class="text">
         <p class="eyebrow">Onboarding</p>
-        <h2 class="headline">Atlas asks only what the bank <em>can’t</em> tell</h2>
-        <div class="cards">
-          <div class="card">
-            <p class="card-title">Atlas asks Alex</p>
-            <dl class="kv">
-              <dt>Stage of life</dt><dd>Building his life</dd>
-              <dt>Goal</dt><dd>A flat in 2–3 years</dd>
-              <dt>Money today</dt><dd>Saves and invests</dd>
-            </dl>
-          </div>
-          <div class="card" data-step="1" data-clip="03-consent-quick-check">
-            <p class="card-title">Jev reads from the bank · with consent</p>
-            <ul class="ticks">
-              <li>Saves regularly</li>
-              <li>Has a safety net</li>
-              <li>Invests small amounts</li>
-            </ul>
-          </div>
-        </div>
-        <div class="card" data-step="1">
-          <p class="card-title">Quick check, picked by Jev</p>
+        <h2 class="headline">Where financial decisions <em>land safely</em></h2>
+        <ol class="beats">
+          <li><b>Intro</b><span>What Atlas is and why it is here</span></li>
+          <li><b>How it works</b><span>Short missions built from his own numbers</span></li>
+          <li><b>What awaits</b><span>Stories across the globe, duels in the Arena</span></li>
+          <li><b>Quick check</b><span>A few questions on what he already knows</span></li>
+        </ol>
+        <div class="card" data-step="1" data-clip="03-quick-check">
+          <p class="card-title">Quick check</p>
           <dl class="kv">
             <dt>Real interest rates</dt><dd style="color:#FF8A7A">Wrong</dd>
             <dt>Confidence</dt><dd>2 / 5</dd>
           </dl>
         </div>
-        <div class="pills" data-step="2" data-clip="04-summary">
-          <p class="pill yellow">Atlas’ plan: start with Saving, from the basics</p>
+        <div class="card" data-step="2" data-clip="04-learning-path">
+          <p class="card-title">Learning path built for Alex</p>
+          <div class="pills">
+            <p class="pill yellow">Start: Saving</p>
+            <p class="pill">Beginner learner</p>
+            <p class="pill">First stop: Berlin</p>
+          </div>
         </div>
       </div>
       <div class="media">
         <figure class="phone" data-clip="02-onboarding" tabindex="0" aria-label="App recording, click to replay"></figure>
       </div>
-      <aside class="notes" hidden>Alex agrees that Atlas can tailor learning to his bank data. Atlas only asks what the data can’t tell: his stage of life, his goal and how he handles money. [click] Jev, our AI, already sees from the bank that he saves regularly, has a safety net and invests small amounts, and picks a short check for him. It shows a gap: he gets the real-interest question wrong and rates his confidence two out of five. [click] So Atlas starts him on Saving, from the basics.</aside>
     </section>
 
-    <!-- 4 · Berlin: why safe money shrinks -->
-    <section class="stop" data-kind="city" data-city="Berlin" data-lat="52.52" data-lng="13.40" data-color="#1E9AA8" data-label="Berlin" data-title="Berlin: why safe money shrinks" data-seconds="75" hidden>
+    <!-- 4 · Berlin: Mission 1 begins -->
+    <section class="stop" data-kind="city" data-city="Berlin" data-lat="52.52" data-lng="13.40" data-color="#1E9AA8" data-title="Berlin: Mission 1" hidden>
       <div class="text">
-        <p class="eyebrow">Saving · Berlin story</p>
-        <h2 class="headline">Lesson 1: <em>Safe money that shrinks</em></h2>
-        <p class="lead">Atlas suggests the <b>Saving</b> area. Each lesson takes about 4 minutes.</p>
-        <ol class="beats" data-step="1" data-clip="06-lesson">
-          <li><b>Explain</b><span>Real vs. nominal interest, in plain words</span></li>
-          <li><b>Play with it</b><span>Move a slider, predict the result</span></li>
-          <li><b>Check</b><span>A quick quiz with feedback</span></li>
-          <li><b>Your numbers</b><span>His €12,500 at 2.25% against inflation</span></li>
+        <p class="eyebrow">Saving · Mission 1 · 5 min</p>
+        <h2 class="headline">Safe money <em>that shrinks</em></h2>
+        <div class="pills">
+          <p class="pill yellow">Watch the video</p><span class="arrow">or</span><p class="pill">Read the transcript</p>
+        </div>
+        <ol class="beats one">
+          <li data-step="1" data-clip="06-lesson-start"><b>Reference point</b><span>“This basket holds what €100 buys today. Move the interest until the basket stays full after 10 years.”</span></li>
+          <li data-step="2"><b>Myth or fact</b><span>Swipe each statement about inflation and savings.</span></li>
+          <li data-step="3"><b>Challenge question</b><span>“€10,000 is for a flat deposit in 3 years. Prices rise 2.5% a year. Where does it wait?” Pick one, then jump 3 years ahead.</span></li>
         </ol>
-        <div class="card" data-step="2">
-          <p class="card-title">The Berlin path · all 5 done within two weeks</p>
+      </div>
+      <div class="media">
+        <figure class="phone" data-clip="05-map-to-berlin" tabindex="0" aria-label="App recording, click to replay"></figure>
+      </div>
+    </section>
+
+    <!-- 5 · Berlin: the lesson meets his own money -->
+    <section class="stop" data-kind="city" data-city="Berlin" data-lat="52.52" data-lng="13.40" data-color="#1E9AA8" data-title="Berlin: his own numbers" hidden>
+      <div class="text">
+        <p class="eyebrow">Saving · Mission 1 · 5 min</p>
+        <h2 class="headline">From the lesson <em>to his own money</em></h2>
+        <ol class="beats one" style="counter-reset: beat 3">
+          <li><b>Checkpoints</b><span>Three short questions, each with feedback.</span></li>
+          <li data-step="1"><b>Your situation</b><span>His real accounts through the lesson: €12,500 at 2.25% against inflation.</span></li>
+          <li data-step="1"><b>Your basket</b><span>The same simulation, now at his own real interest rate.</span></li>
+          <li data-step="2" data-clip="08-lesson-end"><b>Review</b><span>The questions he got wrong come back once more.</span></li>
+          <li data-step="2"><b>Back to Learn</b><span>The path leads him on to Mission 2: Your safety net.</span></li>
+        </ol>
+      </div>
+      <div class="media">
+        <figure class="phone" data-clip="07-lesson-yours" tabindex="0" aria-label="App recording, click to replay"></figure>
+      </div>
+    </section>
+
+    <!-- 6 · Back home: two weeks later, Alex acts -->
+    <section class="stop" data-kind="city" data-city="Frankfurt" data-lat="50.11" data-lng="8.68" data-color="#FFCC00" data-title="Back home: Alex acts" hidden>
+      <div class="text">
+        <p class="eyebrow">Two weeks later</p>
+        <h2 class="headline">Knowledge, then confidence. <em>Then a first step.</em></h2>
+        <div class="card">
+          <p class="card-title">Saving · all 5 missions done</p>
           <ol class="path">
             <li><span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="#002E3C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></span>Safe money that shrinks</li>
+            <li><span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="#002E3C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></span>Your safety net</li>
+            <li><span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="#002E3C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></span>Pay yourself first</li>
             <li><span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="#002E3C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></span>Growth on growth</li>
-            <li><span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="#002E3C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></span>Money for emergencies</li>
-            <li><span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="#002E3C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></span>The scary first year</li>
-            <li><span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="#002E3C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></span>Your own split</li>
+            <li><span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="#002E3C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></span>Three pots, one plan</li>
           </ol>
         </div>
-      </div>
-      <div class="media">
-        <figure class="phone" data-clip="05-globe" tabindex="0" aria-label="App recording, click to replay"></figure>
-      </div>
-      <aside class="notes" hidden>Atlas suggests the Saving area, starting from the basics, and the globe takes him to the Berlin story. [click] His first lesson: why safe money shrinks. A short explanation, then he plays with it on a slider and predicts the result, a quick quiz, and finally his own numbers: his 12,500 at 2.25 percent against inflation. [click] Five short lessons like this, and within two weeks he has finished the whole area.</aside>
-    </section>
-
-    <!-- 5 · Back home: Alex decides -->
-    <section class="stop" data-kind="city" data-city="Frankfurt" data-lat="50.11" data-lng="8.68" data-color="#FFCC00" data-label="Decision" data-title="Back home: Alex decides" data-seconds="55" hidden>
-      <div class="text">
-        <p class="eyebrow">From knowledge to action</p>
-        <h2 class="headline">Atlas explains. <em>Alex decides.</em></h2>
-        <p class="small">The summary recaps what he learned and his goal: a flat in 2–3 years. Atlas shows the trade-offs with his own numbers.</p>
-        <table class="options">
-          <thead><tr><th>Option</th><th>Access</th><th>Rate</th><th>Value can fall</th></tr></thead>
-          <tbody>
-            <tr><td>Savings account</td><td>Any time</td><td>Variable, 2.25% today</td><td>No</td></tr>
-            <tr><td>Fixed-term deposit</td><td>At the end of the term</td><td>Fixed for the term</td><td>No</td></tr>
-            <tr><td>ETF</td><td>Any time</td><td>No fixed return</td><td>Yes</td></tr>
-          </tbody>
-        </table>
+        <p class="small" data-step="1">Atlas lays out the options with his own numbers: savings account, fixed-term deposit, ETF. It never picks one for him.</p>
         <div class="split" data-step="1" role="img" aria-label="Alex splits €12,500: €7,500 safety net, €5,000 fixed-term deposit for 24 months">
-          <div class="keep">€7,500 safety net<small>about 6 months of his costs (~€1,270 / month)</small></div>
-          <div class="lock">€5,000 deposit<small>24 months, fixed rate</small></div>
+          <div class="keep">€7,500 safety net<small>about 6 months of his costs</small></div>
+          <div class="lock">€5,000 fixed-term deposit<small>24 months, fixed rate</small></div>
         </div>
-        <div class="bank-row" data-step="2" data-clip="08-deposit">
+        <div class="bank-row" data-step="2" data-clip="10-deposit">
           <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="#002E3C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></span>
-          <div><b>Fixed-term deposit opened in his bank</b><br><span>€5,000 · 24 months · <span class="todo">[x.x]% p.a.</span> fixed</span></div>
+          <div><b>One tap: Fixed-term deposit, in his bank</b><br><span>€5,000 · 24 months · 2.5% a year, fixed</span></div>
         </div>
-        <p class="footnote" data-step="2">Atlas shows options and consequences. It never recommends a product.</p>
       </div>
       <div class="media">
-        <figure class="phone" data-clip="08-deposit" tabindex="0" aria-label="App recording, click to replay"></figure>
+        <figure class="phone" data-clip="09-first-step" tabindex="0" aria-label="App recording, click to replay"></figure>
       </div>
-      <aside class="notes" hidden>Back home. The summary recaps what he learned and reminds him of the flat. Atlas doesn’t tell him what to buy; it shows the trade-offs with his numbers. [click] Alex decides himself: 7,500 stays as a six-month safety net, 5,000 goes into a 24-month fixed-term deposit. [click] One tap takes him to his bank, and the deposit is there.</aside>
     </section>
 
-    <!-- 6 · Rome: the Arena -->
-    <section class="stop" data-kind="city" data-city="Rome" data-lat="41.89" data-lng="12.49" data-color="#6F8FE0" data-label="Arena" data-title="Rome: the Arena" data-seconds="35" hidden>
+    <!-- 7 · Rome: the Arena -->
+    <section class="stop" data-kind="city" data-city="Rome" data-lat="41.89" data-lng="12.49" data-color="#6F8FE0" data-title="Rome: the Arena" hidden>
       <div class="text">
         <p class="eyebrow">Duels</p>
         <h2 class="headline">Revise by playing. <em>Ranked by knowledge, never by money.</em></h2>
@@ -407,13 +400,12 @@ button:focus-visible, .phone:focus-visible { outline: 3px solid var(--yellow); o
         </div>
       </div>
       <div class="media">
-        <figure class="phone" data-clip="07-duel" tabindex="0" aria-label="App recording, click to replay"></figure>
+        <figure class="phone" data-clip="11-duel" tabindex="0" aria-label="App recording, click to replay"></figure>
       </div>
-      <aside class="notes" hidden>To keep the knowledge fresh, Alex plays duels in the Arena, against another person or solo. Ranked by what you know, never by money. [click] After each match he sees why he got a question wrong, from the stories he has played.</aside>
     </section>
 
-    <!-- 7 · Tokyo: next stop -->
-    <section class="stop no-media" data-kind="city" data-city="Tokyo" data-lat="35.68" data-lng="139.69" data-color="#D9577A" data-label="Tokyo" data-title="Tokyo: next stop" data-seconds="20" hidden>
+    <!-- 8 · Tokyo: next stop -->
+    <section class="stop no-media" data-kind="city" data-city="Tokyo" data-lat="35.68" data-lng="139.69" data-color="#D9577A" data-title="Tokyo: next stop" hidden>
       <div class="text">
         <p class="eyebrow">Next area · Tokyo</p>
         <h2 class="display">Long-term <em>investing</em></h2>
@@ -423,29 +415,8 @@ button:focus-visible, .phone:focus-visible { outline: 3px solid var(--yellow); o
           <p class="pill">Questions?</p>
         </div>
       </div>
-      <aside class="notes" hidden>Alex made an informed decision, and his money now matches his goal. His next stop: long-term investing, in Tokyo. Thank you, we are happy to take questions.</aside>
     </section>
   </main>
-
-  <aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes">
-    <p class="notes-meta" id="notes-meta"></p>
-    <p class="notes-text" id="notes-text"></p>
-  </aside>
-
-  <nav class="controls" aria-label="Presentation">
-    <button class="nav-btn" id="prev" type="button" aria-label="Back">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-    </button>
-    <ol class="route" id="route"></ol>
-    <button class="nav-btn" id="next" type="button" aria-label="Next">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-    <p class="hint">← → or a clicker · N notes</p>
-  </nav>
-  <div class="top-btns">
-    <button class="top-btn" id="notes-btn" type="button" aria-pressed="false">Notes</button>
-    <button class="top-btn" id="fs" type="button">Full screen</button>
-  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
@@ -454,14 +425,17 @@ button:focus-visible, .phone:focus-visible { outline: 3px solid var(--yellow); o
 (() => {
   /* What each recording should show; used while a clip is missing. */
   const CLIP_INFO = {
-    '01-bank-to-learn': 'The bank app, then Learn opens Atlas',
-    '02-onboarding': 'Atlas welcome and the profile questions',
-    '03-consent-quick-check': 'Consent, what Jev knows, the quick check',
-    '04-summary': 'How Atlas sees Alex',
-    '05-globe': 'The globe flies to Berlin',
-    '06-lesson': 'Lesson 1: Safe money that shrinks',
-    '07-duel': 'A duel in the Arena',
-    '08-deposit': 'Summary → Go to your bank → deposit opened (record by hand)',
+    '01-bank-nudge': 'Bank app → the Atlas notification → Alex taps Atlas',
+    '02-onboarding': 'Atlas intro, how it works, what awaits',
+    '03-quick-check': 'The quick check',
+    '04-learning-path': 'The learning path: Saving, beginner learner',
+    '05-map-to-berlin': 'Main screen, the plane flies to Berlin, video or transcript',
+    '06-lesson-start': 'Basket slider, myth or fact, challenge question',
+    '07-lesson-yours': 'Checkpoints, your situation, your basket',
+    '08-lesson-end': 'Review of mistakes, Back to Learn → Mission 2',
+    '09-first-step': 'Saving done → Alex picks the fixed-term deposit',
+    '10-deposit': 'The fixed-term deposit in the mock bank',
+    '11-duel': 'A duel in the Arena',
   };
   const CLIP_DIR = 'clips/';
   const TRAVEL_MS = 1900;
@@ -472,11 +446,6 @@ button:focus-visible, .phone:focus-visible { outline: 3px solid var(--yellow); o
   const pinEl = document.getElementById('pin');
   const glowEl = document.getElementById('glow');
   const calloutEl = document.getElementById('callout');
-  const routeEl = document.getElementById('route');
-  const prevBtn = document.getElementById('prev');
-  const nextBtn = document.getElementById('next');
-  const notesPanel = document.getElementById('notes-panel');
-  const notesBtn = document.getElementById('notes-btn');
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const stops = [...document.querySelectorAll('.stop')].map((el, i) => {
@@ -486,16 +455,13 @@ button:focus-visible, .phone:focus-visible { outline: 3px solid var(--yellow); o
       i,
       kind: el.dataset.kind,
       city: el.dataset.city || '',
-      label: el.dataset.label,
       title: el.dataset.title,
       lat: Number(el.dataset.lat),
       lon: Number(el.dataset.lng),
       color: el.dataset.color || '#FFCC00',
-      seconds: Number(el.dataset.seconds) || 0,
       stepEls,
       steps: Math.max(1, ...stepEls.map((s) => Number(s.dataset.step) + 1)),
       phone: el.querySelector('.phone'),
-      notes: (el.querySelector('.notes')?.textContent || '').trim(),
     };
   });
 
@@ -782,15 +748,12 @@ button:focus-visible, .phone:focus-visible { outline: 3px solid var(--yellow); o
     stopIndex = next;
     stepIndex = Math.min(step, to.steps - 1);
     try { history.replaceState(null, '', `#stop-${next + 1}`); } catch (e) { /* the frame may refuse */ }
-    stopEnteredAt = performance.now();
     setArrived(false);
 
     const sameCity = prev !== next && from.kind === 'city' && to.kind === 'city' && key(from) === key(to);
     const duration = instant || reduced || sameCity || prev === next ? 0 : TRAVEL_MS;
     showStop(next, duration ? Math.round(duration * 0.5) : 0);
     applySteps(to, false);
-    renderRoute();
-    renderNotes();
 
     let leg = null;
     if (duration && from.kind === 'city' && to.kind === 'city') {
@@ -844,8 +807,6 @@ button:focus-visible, .phone:focus-visible { outline: 3px solid var(--yellow); o
     const stop = stops[stopIndex];
     stepIndex = k;
     applySteps(stop, true);
-    renderRoute();
-    renderNotes();
   }
 
   function next() {
@@ -859,79 +820,12 @@ button:focus-visible, .phone:focus-visible { outline: 3px solid var(--yellow); o
     else if (stopIndex > 0) goToStop(stopIndex - 1, stops[stopIndex - 1].steps - 1);
   }
 
-  function renderRoute() {
-    routeEl.innerHTML = '';
-    stops.forEach((s, i) => {
-      const li = document.createElement('li');
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'stop-btn';
-      b.style.setProperty('--c', s.kind === 'city' ? s.color : '#A9C2C9');
-      b.setAttribute('aria-label', `Stop ${i + 1}: ${s.title}`);
-      const label = document.createElement('span');
-      label.className = 'label';
-      label.textContent = s.label;
-      b.appendChild(label);
-      if (i === stopIndex) {
-        b.setAttribute('aria-current', 'step');
-        if (s.steps > 1) {
-          const pips = document.createElement('span');
-          pips.className = 'pips';
-          for (let k = 0; k < s.steps; k++) {
-            const p = document.createElement('i');
-            if (k <= stepIndex) p.className = 'on';
-            pips.appendChild(p);
-          }
-          b.appendChild(pips);
-        }
-      }
-      b.addEventListener('click', (e) => { e.stopPropagation(); goToStop(i); });
-      li.appendChild(b);
-      routeEl.appendChild(li);
-    });
-    prevBtn.disabled = stopIndex === 0 && stepIndex === 0;
-    nextBtn.disabled = stopIndex === stops.length - 1 && stepIndex === stops[stopIndex].steps - 1;
-  }
-
-  /* ---------- Speaker notes (N) ---------- */
-  let stopEnteredAt = performance.now();
-  let talkStartedAt = null;
-  const fmt = (ms) => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
-  const plannedTotal = stops.reduce((sum, s) => sum + s.seconds, 0);
-  const plannedBefore = (i) => stops.slice(0, i).reduce((sum, s) => sum + s.seconds, 0);
-
-  function renderNotes() {
-    if (notesPanel.hidden) return;
-    const s = stops[stopIndex];
-    const now = performance.now();
-    const onStop = now - stopEnteredAt;
-    const over = onStop / 1000 > s.seconds;
-    const total = talkStartedAt ? now - talkStartedAt : 0;
-    document.getElementById('notes-meta').innerHTML =
-      `<span><b>${stopIndex + 1}/${stops.length}</b> ${s.title}</span>`
-      + `<span>Step ${stepIndex + 1}/${s.steps}</span>`
-      + `<span class="${over ? 'over' : ''}">On stop ${fmt(onStop)} / target ${fmt(s.seconds * 1000)}</span>`
-      + `<span>Talk ${fmt(total)} · plan at this stop ${fmt(plannedBefore(stopIndex) * 1000)} of ${fmt(plannedTotal * 1000)}</span>`;
-    document.getElementById('notes-text').textContent = s.notes;
-  }
-  setInterval(renderNotes, 500);
-
-  function toggleNotes() {
-    notesPanel.hidden = !notesPanel.hidden;
-    notesBtn.setAttribute('aria-pressed', String(!notesPanel.hidden));
-    renderNotes();
-  }
-
-  /* ---------- Input ---------- */
-  function markTalkStart() { if (talkStartedAt === null) talkStartedAt = performance.now(); }
-
   document.addEventListener('keydown', (e) => {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     const onButton = e.target.closest && e.target.closest('button, .phone');
     if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) {
       if ((e.key === 'Enter' || e.key === ' ') && onButton) return;
       e.preventDefault();
-      markTalkStart();
       next();
     } else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) {
       e.preventDefault();
@@ -940,39 +834,17 @@ button:focus-visible, .phone:focus-visible { outline: 3px solid var(--yellow); o
       goToStop(0);
     } else if (e.key === 'End') {
       goToStop(stops.length - 1);
-    } else if (e.key === 'n' || e.key === 'N') {
-      toggleNotes();
-    } else if (e.key === 'f' || e.key === 'F') {
-      toggleFullscreen();
     }
   });
-  prevBtn.addEventListener('click', (e) => { e.stopPropagation(); back(); });
-  nextBtn.addEventListener('click', (e) => { e.stopPropagation(); markTalkStart(); next(); });
-  notesBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleNotes(); });
 
   let downX = null;
   stage.addEventListener('pointerdown', (e) => { downX = e.clientX; });
   stage.addEventListener('pointerup', (e) => {
-    if (downX === null || e.target.closest('button, a, .content, .controls, .notes-panel, .top-btns')) { downX = null; return; }
+    if (downX === null || e.target.closest('a, .phone')) { downX = null; return; }
     const dx = e.clientX - downX;
     downX = null;
-    markTalkStart();
     if (Math.abs(dx) > 40) (dx < 0 ? next : back)();
     else next();
-  });
-
-  const fsBtn = document.getElementById('fs');
-  async function toggleFullscreen() {
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else await document.documentElement.requestFullscreen();
-    } catch (err) {
-      fsBtn.textContent = 'Full screen unavailable';
-    }
-  }
-  fsBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleFullscreen(); });
-  document.addEventListener('fullscreenchange', () => {
-    fsBtn.textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
   });
 
   window.addEventListener('resize', () => {

@@ -193,6 +193,29 @@ class CategorizationRulesTests {
 	}
 
 	@Test
+	void aCheckCanRaiseAGapWhileAccountFactsAreGiven() {
+		assertEquals(List.of(gap(ConfidenceArea.SAVING, GapDirection.UNDER,
+				"You said: I don't save yet. Your answer about saving shows you understand it.")),
+				gapsFromChecks("not-saving", TOM, check(FocusArea.SAVING, CheckResult.UNDERSTANDS)));
+	}
+
+	@Test
+	void anUnderstoodInvestingAnswerIsCitedByTheInvestingAccountGap() {
+		assertEquals(List.of(gap(ConfidenceArea.INVESTING, GapDirection.UNDER,
+				"You said: I save regularly. Your accounts with us include investment products. "
+						+ "Your answer about investing shows you understand it.")),
+				gapsFromChecks("regular", ALEX, check(FocusArea.INVESTING, CheckResult.UNDERSTANDS)));
+	}
+
+	@Test
+	void notYetAndPartlyTogetherRevealNoGapForAHighRating() {
+		assertEquals(List.of(), gapsFromChecks("planning", null, check(FocusArea.SAVING, CheckResult.NOT_YET),
+				check(FocusArea.SAVING, CheckResult.PARTLY)));
+		assertEquals(List.of(), gapsFromChecks("planning", null, check(FocusArea.INVESTING, CheckResult.NOT_YET),
+				check(FocusArea.INVESTING, CheckResult.PARTLY)));
+	}
+
+	@Test
 	void declarationDecidesTheFallbackRole() {
 		assertEquals(Role.ADVANCED, fallbackRole(said("investing"), TOM));
 		assertEquals(Role.ADVANCED, fallbackRole(said("planning"), null));

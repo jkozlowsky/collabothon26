@@ -100,7 +100,7 @@ Every prompt asks about understanding and recommends nothing (MiFID II). Draw: o
 - Order: confidence gap card titled "You know more than you think" (when there is one) → "You're {a beginner / an intermediate / an advanced} learner" with the role's because lines → 2–3 focus areas with one "why" each → "Start learning" (opens `startLesson`, else the map) and a quiet "See all lessons".
 - Educate, never advise: sentences describe what the answers and the account show; no product, no "you should".
 - If Jev failed after answers were sent, one line: "We couldn't check your answers this time".
-- Shown when `categorizedAt` is later than a locally stored `summarySeenAt`; `/learning-path` without a categorisation redirects to the map. Profile can link to it later.
+- Shown after each categorisation from `/categorizing` (every onboarding recategorises, Q20, so no seen-state is kept); `/learning-path` without a categorisation redirects to the map. Profile can link to it later.
 
 ## Tasks
 Simplest working solution, no code or tests for later.

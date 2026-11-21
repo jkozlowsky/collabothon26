@@ -3,6 +3,8 @@ import { defineConfig, devices } from '@playwright/test';
 /** Port of the Expo web server. Override (E2E_PORT=8082) to test without touching a running `make dev`. */
 const WEB_PORT = Number(process.env.E2E_PORT ?? 8081);
 const WEB_URL = `http://localhost:${WEB_PORT}`;
+const BACKEND_PORT = Number(process.env.BACKEND_PORT ?? 8080);
+const BACKEND_URL = process.env.BACKEND_URL ?? `http://localhost:${BACKEND_PORT}`;
 
 /**
  * End-to-end tests: the web build of the app in Chromium against the real backend.
@@ -31,7 +33,7 @@ export default defineConfig({
     {
       command: './mvnw spring-boot:test-run',
       cwd: '../back',
-      url: 'http://localhost:8080/actuator/health',
+      url: `${BACKEND_URL}/actuator/health`,
       timeout: 300_000,
       reuseExistingServer: !process.env.CI,
     },

@@ -25,9 +25,6 @@ export function resolveApiUrl(): string {
 
 export const API_URL = resolveApiUrl();
 
-/** WebSocket base URL following API_URL's host and scheme (http -> ws, https -> wss). */
-export const WS_URL = API_URL.replace(/^http/, 'ws');
-
 export class ApiError extends Error {
   constructor(
     readonly status: number,

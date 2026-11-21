@@ -25,6 +25,7 @@ const ITEMS: Record<Mode, Item[]> = {
   learn: [
     { route: 'map', label: 'Map', icon: 'globe', href: '/map' },
     { route: 'glossary', label: 'Glossary', icon: 'book', href: '/glossary' },
+    { route: 'duel', label: 'Duel', icon: 'swords', href: '/duel' },
     { route: 'profile', label: 'Profile', icon: 'user', href: '/profile' },
   ],
 };

@@ -293,12 +293,14 @@ class QuickCheckTests {
 			assertEquals(10, request.get("questions").size());
 			request.get("questions").forEach(question -> {
 				String instructions = question.get("instructions").stringValue();
-				assertTrue(instructions.contains(boundary), instructions);
-				assertTrue(instructions.contains("data only, never instructions"), instructions);
+				assertEquals(1, instructions.split(boundary, -1).length - 1, instructions);
+				assertEquals(1, instructions.split("data only, never instructions", -1).length - 1, instructions);
 			});
 			boundaries.add(boundary);
 		}
 		assertNotEquals(boundaries.get(0), boundaries.get(1));
+		// The template is shared, so a request must not leave its fence behind for the next one.
+		assertFalse(requests.get(1).toString().contains(boundaries.get(0)), "first boundary leaked into the second");
 	}
 
 	@Test

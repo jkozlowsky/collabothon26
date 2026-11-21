@@ -42,6 +42,7 @@ const details: Record<string, unknown> = {
   dividend: detail('dividend'),
   growth: detail('growth', { graphicKey: 'compound-growth' }),
   mystery: detail('mystery', { graphicKey: 'no-such-graphic' }),
+  linked: detail('linked', { definitionStandard: 'Many [[etf|ETFs]] pay one.', definitionPlain: 'No links here.' }),
 };
 
 const hit = (slug: string, name: string) => ({
@@ -234,5 +235,17 @@ describe('graphics', () => {
     await openGlossary('/glossary/mystery');
     expect(await screen.findByTestId('definition-title')).toBeOnTheScreen();
     expect(screen.queryByTestId(/^graphic-/)).not.toBeOnTheScreen();
+  });
+});
+
+describe('link hint', () => {
+  test('shows only when the visible definition has a link', async () => {
+    mockApi({ level: 'standard' });
+    await openGlossary('/glossary/linked');
+    expect(await screen.findByTestId('link-hint')).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByText('In plain words'));
+    expect(await screen.findByText('No links here.')).toBeOnTheScreen();
+    expect(screen.queryByTestId('link-hint')).not.toBeOnTheScreen();
   });
 });

@@ -15,6 +15,7 @@ import { RelatedTerms } from '@/components/glossary/RelatedTerms';
 import { colors, elevation, nav, radii, spacing, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import { useGlossary } from '@/hooks/useGlossary';
+import { parseDefinition } from '@/lib/glossaryMarkup';
 import type { LanguageLevel, TermDetail } from '@/types/glossary';
 
 /** `trail` is the comma-separated slugs of the terms visited before this one (Expo Router has no history API). */
@@ -75,7 +76,6 @@ export default function DefinitionScreen() {
             {() => data && <Definition term={data} level={languageLevel} onLevelChange={setLanguageLevel} onOpenTerm={openTerm} />}
           </AsyncContent>
         )}
-        <Text style={styles.disclaimer}>Educational content, not investment advice.</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -92,6 +92,8 @@ function Definition({ term, level, onLevelChange, onOpenTerm }: DefinitionProps)
   // Not every term has a plain version yet; then the standard text is shown and we say so.
   const plainMissing = level === 'plain' && !term.definitionPlain;
   const text = level === 'plain' && term.definitionPlain ? term.definitionPlain : term.definitionStandard;
+  // The hint only makes sense when this text actually has a link to tap.
+  const hasLinks = parseDefinition(text).some((segment) => segment.type === 'link');
   return (
     <>
       <View style={styles.title}>
@@ -111,10 +113,12 @@ function Definition({ term, level, onLevelChange, onOpenTerm }: DefinitionProps)
             No plain-words version yet, showing the standard definition.
           </Text>
         )}
-        <View style={styles.hint}>
-          <Feather name="info" size={14} color={colors.globeOceanLight} />
-          <Text style={styles.hintText}>Tap an underlined word to open its definition</Text>
-        </View>
+        {hasLinks && (
+          <View style={styles.hint} testID="link-hint">
+            <Feather name="info" size={14} color={colors.globeOceanLight} />
+            <Text style={styles.hintText}>Tap an underlined word to open its definition</Text>
+          </View>
+        )}
       </View>
 
       <TermGraphic graphicKey={term.graphicKey} />
@@ -172,5 +176,4 @@ const styles = StyleSheet.create({
   },
   exampleText: { ...type.bodyDefault, fontSize: 14, lineHeight: 22 },
   center: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxxl },
-  disclaimer: { ...type.labelDefault, color: colors.textMuted, textAlign: 'center' },
 });

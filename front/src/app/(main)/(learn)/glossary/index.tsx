@@ -88,7 +88,6 @@ export default function GlossaryScreen() {
                 ))}
               </>
             )}
-            <Text style={styles.disclaimer}>Educational content, not investment advice.</Text>
           </View>
         )}
       </AsyncContent>
@@ -100,5 +99,4 @@ const styles = StyleSheet.create({
   body: { gap: spacing.lg },
   empty: { ...type.bodyDefault, color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.xl },
   error: { ...type.labelDefault, color: colors.feedbackDanger },
-  disclaimer: { ...type.labelDefault, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm },
 });

@@ -19,6 +19,7 @@ public record CategorizationDto(
 		LessonVariantDto lessonVariant,
 		List<ExplanationDto> explanation,
 		List<CheckDto> checks,
+		StartLessonDto startLesson,
 		SharedWithModelDto sharedWithModel,
 		CategorizationSource source,
 		String model,

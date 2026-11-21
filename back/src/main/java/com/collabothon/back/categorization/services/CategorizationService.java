@@ -25,8 +25,10 @@ import com.collabothon.back.categorization.dto.SharedWithModelDto;
 import com.collabothon.back.categorization.enums.CategorizationSource;
 import com.collabothon.back.categorization.enums.CheckResult;
 import com.collabothon.back.categorization.enums.ExplanationOutput;
+import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.LifeStage;
 import com.collabothon.back.categorization.mappers.OnboardingAnswersMapper;
+import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
 import com.collabothon.back.categorization.repositories.ProfileAnswersRepository;
 import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 import com.collabothon.back.common.exceptions.NotFoundException;
@@ -57,6 +59,8 @@ public class CategorizationService {
 
 	private final CheckQuestionService checkQuestions;
 
+	private final CheckQuestionRepository checkPool;
+
 	private final JsonMapper json;
 
 	private final Clock clock;
@@ -69,7 +73,8 @@ public class CategorizationService {
 		Instant now = Instant.now(clock);
 		// Without a judge the answers cannot be used, so they are dropped before any validation.
 		List<CheckAnswerDto> submitted = checkAnswers == null || !jevProperties.callsJev() ? List.of() : checkAnswers;
-		List<CheckQuestionProjection> picked = submitted.isEmpty() ? List.of() : checkQuestions.pick(submitted);
+		List<CheckQuestionProjection> pool = checkPool.findPool();
+		List<CheckQuestionProjection> picked = submitted.isEmpty() ? List.of() : checkQuestions.pick(submitted, pool);
 		if (submitted.isEmpty()) {
 			Optional<CategorizationDto> recent = find(userId)
 				.filter(c -> isRecentJevResult(c, answers, consent, facts, now));
@@ -100,15 +105,17 @@ public class CategorizationService {
 		}
 
 		LifeStage lifeStage = LifeStage.fromAnswer(answers.lifeStage());
+		List<FocusArea> focus = CategorizationRules.focusWithChecks(j.focusAreas(), checks);
 		List<ExplanationDto> explanation = List.of(
 				new ExplanationDto(ExplanationOutput.ROLE, j.roleProbabilities(),
 						CategorizationRules.roleBecause(answers, facts)),
 				new ExplanationDto(ExplanationOutput.FOCUS_AREAS, j.focusProbabilities(),
-						CategorizationRules.focusBecause(j.focusAreas(), answers, facts)));
+						CategorizationRules.focusBecause(focus, answers, facts)));
 
-		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, j.role(), lifeStage, j.focusAreas(),
+		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, j.role(), lifeStage, focus,
 				CategorizationRules.confidenceGaps(answers, facts),
-				CategorizationRules.lessonVariant(j.role(), lifeStage), explanation, checks, shared,
+				CategorizationRules.lessonVariant(j.role(), lifeStage), explanation, checks,
+				CategorizationRules.startLesson(checks, focus, pool).orElse(null), shared,
 				fromJev.judgement().isPresent() ? CategorizationSource.JEV : CategorizationSource.FALLBACK, j.model(),
 				now);
 		// Inserting only while onboarding is completed turns a reset during the Jev call into a 404.

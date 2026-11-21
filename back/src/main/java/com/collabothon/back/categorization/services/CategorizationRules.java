@@ -15,12 +15,16 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
+import com.collabothon.back.categorization.dto.CheckDto;
 import com.collabothon.back.categorization.dto.ConfidenceGapDto;
 import com.collabothon.back.categorization.dto.FactsDto;
 import com.collabothon.back.categorization.dto.LessonVariantDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
+import com.collabothon.back.categorization.dto.StartLessonDto;
+import com.collabothon.back.categorization.enums.CheckResult;
 import com.collabothon.back.categorization.enums.ConfidenceArea;
 import com.collabothon.back.categorization.enums.Experience;
 import com.collabothon.back.categorization.enums.FocusArea;
@@ -29,6 +33,7 @@ import com.collabothon.back.categorization.enums.LessonLang;
 import com.collabothon.back.categorization.enums.LessonLevel;
 import com.collabothon.back.categorization.enums.LifeStage;
 import com.collabothon.back.categorization.enums.Role;
+import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 
 final class CategorizationRules {
 
@@ -132,6 +137,41 @@ final class CategorizationRules {
 
 	private static ConfidenceGapDto gap(ConfidenceArea area, GapDirection direction, Experience said, String shows) {
 		return new ConfidenceGapDto(area, direction, said.saidLine() + " " + shows);
+	}
+
+	/** Weak spots the answers revealed go first; the areas Jev picked keep their order behind them. */
+	static List<FocusArea> focusWithChecks(List<FocusArea> focus, List<CheckDto> checks) {
+		Set<FocusArea> areas = new LinkedHashSet<>();
+		checks.stream()
+			.filter(c -> c.result() == CheckResult.NOT_YET && !focus.contains(c.area()))
+			.map(CheckDto::area)
+			.forEach(areas::add);
+		areas.addAll(focus);
+		return List.copyOf(areas);
+	}
+
+	/** The lesson of the weakest check, else the earliest lesson of the first focus area that has one. */
+	static Optional<StartLessonDto> startLesson(List<CheckDto> checks, List<FocusArea> focus,
+			List<CheckQuestionProjection> pool) {
+		Comparator<CheckDto> weakestFirst = Comparator
+			.comparing((CheckDto c) -> c.result() == CheckResult.NOT_YET ? 0 : 1)
+			.thenComparing(c -> focus.contains(c.area()) ? focus.indexOf(c.area()) : focus.size());
+		Optional<Long> lessonId = checks.stream()
+			.filter(c -> c.lessonId() != null && c.result() != CheckResult.UNDERSTANDS)
+			.min(weakestFirst)
+			.map(CheckDto::lessonId)
+			.or(() -> focus.stream().flatMap(area -> earliestLesson(area, pool).stream()).findFirst());
+		return lessonId.flatMap(id -> pool.stream()
+			.filter(q -> id.equals(q.lessonId()))
+			.findFirst()
+			.map(q -> new StartLessonDto(id, q.lessonTitle())));
+	}
+
+	private static Optional<Long> earliestLesson(FocusArea area, List<CheckQuestionProjection> pool) {
+		return pool.stream()
+			.filter(q -> q.area() == area && q.lessonId() != null)
+			.map(CheckQuestionProjection::lessonId)
+			.min(Comparator.naturalOrder());
 	}
 
 	static LessonVariantDto lessonVariant(Role role, LifeStage lifeStage) {

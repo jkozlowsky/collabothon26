@@ -51,13 +51,12 @@ public class CheckQuestionService {
 	}
 
 	/** The questions behind the answers, in answer order; the messages never repeat what was sent. */
-	List<CheckQuestionProjection> pick(List<CheckAnswerDto> answers) {
+	List<CheckQuestionProjection> pick(List<CheckAnswerDto> answers, List<CheckQuestionProjection> pool) {
 		if (answers.stream().anyMatch(answer -> !validator.validate(answer).isEmpty())) {
 			throw new BadRequestException("Each answer needs a question id and text of 1 to "
 					+ CategorizationConsts.MAX_ANSWER_LENGTH + " characters, or null for Not sure");
 		}
-		Map<String, CheckQuestionProjection> byId = questions.findPool()
-			.stream()
+		Map<String, CheckQuestionProjection> byId = pool.stream()
 			.collect(Collectors.toMap(CheckQuestionProjection::id, Function.identity()));
 		List<CheckQuestionProjection> picked = answers.stream().map(answer -> byId.get(answer.questionId())).toList();
 		if (picked.contains(null) || picked.stream().distinct().count() != picked.size()) {

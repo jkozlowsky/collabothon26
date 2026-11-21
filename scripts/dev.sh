@@ -133,6 +133,14 @@ case "$MODE" in
     if ! command -v adb >/dev/null 2>&1 && [ ! -x "${ANDROID_HOME:-$HOME/Android/Sdk}/platform-tools/adb" ]; then
       export ANDROID_HOME=/nonexistent
     fi
+    # The tunnel host is built from urlRandomness in front/.expo/settings.json. Expo can generate
+    # it with an underscore (e.g. "huoqT_M" -> huoqt_m-<user>-8081.exp.direct); `_` is not valid
+    # in a hostname, so Expo Go on the phone cannot load the app. Strip it before Expo starts.
+    EXPO_SETTINGS=front/.expo/settings.json
+    if [ -f "$EXPO_SETTINGS" ] && grep -qE '"urlRandomness": *"[^"]*_' "$EXPO_SETTINGS"; then
+      sed -i -E ':a; s/("urlRandomness": *"[^"_]*)_/\1/; ta' "$EXPO_SETTINGS"
+      echo "▶ Removed '_' from the Expo tunnel name (invalid in a hostname, breaks Expo Go)."
+    fi
     METRO_PORT="$(pick_metro_port)"
     prewarm_android_bundle "$METRO_PORT" &
     CHILD_PIDS+=("$!")

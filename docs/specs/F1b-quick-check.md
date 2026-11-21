@@ -172,15 +172,15 @@ mastery: {<area>: number | null}                         // {} without a Quick c
 confidence: {<area>: number | null}                      // per-area chip aggregate (Reference), so the dock rebuilds after reload
 answerCount: number                                      // knowledge answers; 0 without a Quick check
 confidenceGaps: [{area, direction: "under" | "over", because}]   // ≤ 2, from Q14 when the Quick check ran; F1's facts table only without one
-startLesson: {lessonId, title, area} | null              // null → the summary hides the first-lesson card
+startLesson: {lessonId, title, area, storyId, storyCity} | null   // lessonId a JSON lesson id (string), title the lesson's, storyCity stories.json city; null → the summary hides the first-lesson card
 readyForNext: boolean                                    // every area Solid (Q15, D7)
-pathLessonIds: number[]                                  // startLesson first, then the other candidates (Reference)
-startHere: {lessonId, title, area} | null                // not stored: the key is absent from the row (Q18, Reference)
+pathStoryIds: string[]                                   // story ids in path order: startLesson's story first, then the other candidate stories (v2.1)
+startHere: {lessonId, title, area, storyId, storyCity} | null   // not stored: the key is absent from the row; the first path story with a lesson not done, at its first lesson not done; null when every path story is done (v2.1)
 sharedWithModel: {facts | null, answers | null, goals, profile | null, answerCount, stepCallsMade} | null   // categories sent to Jev in steps or the final call, built when stepCallsMade > 0 or the final call was sent, whether or not the Quick check ran; answers (onboarding) only when the final call was sent; goals always (steps and the final call both send them); null = nothing was sent
 v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / false.
 ```
 - The per-answer history is not stored (Q20: "We keep the result and the ranges"); the request history is used for the call and dropped.
-- `startHere` and the completed-lesson filter read `lesson_completion` through a read-only JPQL or native query in a categorization repository; the profile module's package-private `LessonCompletionRepository` stays untouched.
+- `startHere` and the completion filter read completions through `com.collabothon.back.lesson.LessonProgress.completed(userId)` and lessons and stories through `LessonContent` (`stories()`, `lessonIdsOf`, `lesson`), public and read-only for F1b (v2.1).
 - The summary decides the D2 line from the stored row alone: `source == "fallback"` and `sharedWithModel != null`.
 
 ### Jev step call
@@ -230,7 +230,7 @@ F1's request (role and `focus_*` verbatim from F1's `jev-questions` block) plus 
       "aligned": "How sure they felt roughly matches how well they answered."}},
   "first_lesson": {"type": "choice",
     "instructions": "Which lesson should this person start with, given which ideas their answers show they have not mastered yet?",
-    "criteria": {"lesson_<id>": "<the lesson's summary>"}}
+    "criteria": {"story_<id>": "<the story's topic>"}}
 }
 ```
 F1 validation applies to the whole response; any failure → the whole categorisation on rules (D6), 7 s read timeout. A valid `gap_<area>` label whose precondition fails in the history becomes `aligned` (Reference, Gaps).

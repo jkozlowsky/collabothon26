@@ -3,6 +3,7 @@
  * ("X% of your savings sit in one place"), so keep them pure and cheap.
  */
 import type { AssetClass, BankState, ChartRange } from '@/types/bank';
+import type { Slot } from '@/types/quickCheck';
 
 export const ASSET_CLASS_LABEL: Record<AssetClass, string> = {
   etfs: 'ETFs',
@@ -52,4 +53,23 @@ export function depotChart(s: BankState, range: ChartRange): { points: number[];
   const { points, change } = s.depotSeries[range];
   const scale = depotTotal(s) / points[points.length - 1];
   return { points: points.map((p) => p * scale), change };
+}
+
+const euros = (cents: number) => Math.round(cents / 100);
+
+/** What a Quick check account prompt may quote, in the units it prints (whole euros, percent, a count). */
+export function slotValues(s: BankState): Record<Slot, number> {
+  const etfPlan = s.standingOrders.find((o) => o.recipient.startsWith('Depot'));
+  return {
+    savingsBalance: euros(s.savings.balance),
+    savingsInterestRate: s.savings.rate,
+    monthOut: euros(s.account.monthOut),
+    loanRemaining: euros(s.loan.remaining),
+    loanApr: s.loan.apr,
+    cardUsed: euros(s.creditCard.used),
+    cardLimit: euros(s.creditCard.limit),
+    etfMonthly: etfPlan ? euros(Math.abs(etfPlan.amount)) : 0,
+    depotTotal: euros(depotTotal(s)),
+    positionCount: positionCount(s),
+  };
 }

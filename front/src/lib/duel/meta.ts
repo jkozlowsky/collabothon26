@@ -1,4 +1,4 @@
-import { colors } from '@/constants/theme';
+import { colors, tints } from '@/constants/theme';
 import type { BankIconName } from '@/types/bank';
 import type { CategoryIcon, CategorySlug, DuelMode } from '@/types/duel';
 
@@ -31,7 +31,7 @@ export const CATEGORY_LIST: CategoryMeta[] = [
     shortName: 'Instruments',
     icon: 'trending',
     accent: colors.storyTeal,
-    tint: 'rgba(30, 154, 168, 0.14)',
+    tint: tints.teal,
   },
   {
     slug: 'risk',
@@ -39,7 +39,7 @@ export const CATEGORY_LIST: CategoryMeta[] = [
     shortName: 'Risk',
     icon: 'pie',
     accent: colors.storyViolet,
-    tint: 'rgba(110, 90, 214, 0.14)',
+    tint: tints.violet,
   },
   {
     slug: 'costs',
@@ -47,7 +47,7 @@ export const CATEGORY_LIST: CategoryMeta[] = [
     shortName: 'Costs',
     icon: 'percent',
     accent: colors.storyOrange,
-    tint: 'rgba(232, 131, 58, 0.14)',
+    tint: tints.orange,
   },
   {
     slug: 'money-basics',
@@ -55,7 +55,7 @@ export const CATEGORY_LIST: CategoryMeta[] = [
     shortName: 'Money basics',
     icon: 'coins',
     accent: colors.feedbackXp,
-    tint: 'rgba(181, 139, 0, 0.14)',
+    tint: tints.xp,
   },
   {
     slug: 'psychology',
@@ -63,7 +63,7 @@ export const CATEGORY_LIST: CategoryMeta[] = [
     shortName: 'Psychology',
     icon: 'brain',
     accent: colors.storyRose,
-    tint: 'rgba(217, 87, 122, 0.14)',
+    tint: tints.rose,
   },
 ];
 

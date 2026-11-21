@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/bank/Icon';
-import { Tappable } from '@/components/onboarding/ui';
+import { motion, Tappable } from '@/components/onboarding/ui';
 import { colors, radii, spacing, type } from '@/constants/theme';
 import type { BankIconName } from '@/types/bank';
 
@@ -20,10 +20,11 @@ export function ModeCard({ icon, title, subtitle, selected, onPress, testID }: P
     <Tappable
       testID={testID}
       accessibilityRole="radio"
-      accessibilityState={{ selected }}
+      accessibilityState={{ checked: selected }}
+      haptic="selection"
       onPress={onPress}
       containerStyle={styles.container}
-      style={[styles.card, selected && styles.cardSelected]}
+      style={[styles.card, selected && styles.cardSelected, motion.colors]}
     >
       <View style={[styles.tile, selected && styles.tileSelected]}>
         <Icon name={icon} size={18} color={colors.brandPrimary} />
@@ -42,7 +43,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.borderDefault,
     padding: spacing.md,
-    gap: 4,
+    gap: spacing.xxs,
   },
   cardSelected: { backgroundColor: colors.brandAccentSoft, borderColor: colors.brandPrimary },
   tile: {

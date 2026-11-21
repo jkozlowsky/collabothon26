@@ -15,7 +15,7 @@ import com.collabothon.back.duel.MatchAssembler.MatchResult;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 
-/** Rebuilds the result of a finished match from the database, for the REST reload and for a late {@code match.resume}. */
+/** Rebuilds the result of a finished match from the database; the result screen reads it once the match has settled. */
 @Service
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 class StoredMatchService {
@@ -35,8 +35,6 @@ class StoredMatchService {
 	private final DuelPersistenceService persistence;
 
 	private final LevelCurve levelCurve;
-
-	private final BotService botService;
 
 	private final ScoringService scoringService;
 
@@ -89,13 +87,23 @@ class StoredMatchService {
 		return MatchAssembler.storedReview(slots, byId, byPosition, lang);
 	}
 
+	/** The rival as they were before the match: their current Elo minus what this match changed. */
+	private PlayerCard humanRivalCard(DuelMatch match, boolean isA) {
+		PlayerCard current = persistence
+			.loadPlayerSnapshot(isA ? match.getPlayerB() : match.getPlayerA(), match.getCategoryId())
+			.card();
+		Integer rivalDelta = isA ? match.getEloDeltaB() : match.getEloDeltaA();
+		if (current.elo() == null || rivalDelta == null) {
+			return current;
+		}
+		return new PlayerCard(current.name(), current.level(), current.elo() - rivalDelta, current.avatar(), false);
+	}
+
 	private PlayerCard rivalCard(DuelMatch match, boolean isA) {
 		return switch (match.getMode()) {
-			case BOT -> new PlayerCard(match.getBotName(), match.getBotLevel() != null ? match.getBotLevel() : 1, null,
-					botService.avatarForName(match.getBotName()), true);
-			case HUMAN -> persistence
-				.loadPlayerSnapshot(isA ? match.getPlayerB() : match.getPlayerA(), match.getCategoryId())
-				.card();
+			case BOT -> new PlayerCard(match.getBotName(), match.getBotLevel() != null ? match.getBotLevel() : 1, null, null,
+					true);
+			case HUMAN -> humanRivalCard(match, isA);
 			case SOLO -> null;
 		};
 	}

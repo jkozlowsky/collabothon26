@@ -31,8 +31,6 @@ export type RivalProgress = {
   connected: boolean;
 };
 
-export type ConnectionStatus = 'connecting' | 'open' | 'reconnecting' | 'closed';
-
 export type MatchPhase = 'matchmaking' | 'question' | 'feedback' | 'waiting' | 'result';
 
 export type ReconnectedNotice = {
@@ -44,17 +42,10 @@ export type ReconnectedNotice = {
 
 export type DuelMatchState = {
   phase: MatchPhase;
-  connection: ConnectionStatus;
   mode: DuelMode;
   category: CategorySlug;
   matchId: number | null;
   questionCount: number;
-
-  // Matchmaking state
-  elapsedSec: number;
-  widened: boolean;
-  botOffer: boolean;
-  botOfferDismissed: boolean;
 
   // Match participants & live progress
   you: PlayerCard | null;
@@ -66,7 +57,7 @@ export type DuelMatchState = {
   question: ActiveQuestion | null;
   selectedOption: number | null;
   feedback: AnswerFeedback | null;
-  /** True when user clicked "Next question" before the next server message arrived. */
+  /** True when user clicked "Next question" before the next question arrived. */
   awaitingNext: boolean;
 
   // Messages buffered while the user reads the feedback banner
@@ -82,10 +73,9 @@ export type DuelMatchState = {
 
 export type DuelAction =
   | ServerMessage
-  | { type: 'socket.status'; status: ConnectionStatus }
   | { type: 'ui.selectOption'; option: number }
   | { type: 'ui.advance' }
-  | { type: 'ui.dismissBotOffer' }
+  | { type: 'ui.clearError' }
   | { type: 'ui.dismissReconnectBanner' }
   | { type: 'ui.reset'; category: CategorySlug; mode: DuelMode }
   | { type: 'rest.matchEnd'; result: MatchEnd };
@@ -112,16 +102,10 @@ export function createInitialDuelState(
 
   return {
     phase: 'matchmaking',
-    connection: 'connecting',
     mode,
     category,
     matchId: resumed ? resumed.matchId : null,
     questionCount: DEFAULT_QUESTION_COUNT,
-
-    elapsedSec: 0,
-    widened: false,
-    botOffer: false,
-    botOfferDismissed: false,
 
     you: null,
     rival: null,
@@ -172,14 +156,11 @@ function applyYourDot(dots: LocalDot[], index: number, value: LocalDot): LocalDo
 
 export function duelReducer(state: DuelMatchState, action: DuelAction): DuelMatchState {
   switch (action.type) {
-    case 'socket.status':
-      return { ...state, connection: action.status };
-
     case 'ui.reset':
       return createInitialDuelState(action.category, action.mode);
 
-    case 'ui.dismissBotOffer':
-      return { ...state, botOfferDismissed: true };
+    case 'ui.clearError':
+      return { ...state, error: null, selectedOption: null };
 
     case 'ui.dismissReconnectBanner':
       return { ...state, reconnectedNotice: null };
@@ -236,7 +217,7 @@ export function duelReducer(state: DuelMatchState, action: DuelAction): DuelMatc
         };
       }
 
-      // Server hasn't delivered the next message yet — wait for it cleanly.
+      // The next question hasn't arrived yet — wait for it cleanly.
       return {
         ...state,
         phase: 'question',
@@ -259,23 +240,7 @@ export function duelReducer(state: DuelMatchState, action: DuelAction): DuelMatc
         error: null,
       };
 
-    // ---------- Server messages ----------
-
-    case 'queue.waiting':
-      if (state.phase !== 'matchmaking') return state;
-      return {
-        ...state,
-        elapsedSec: action.elapsedSec,
-        widened: action.widened,
-      };
-
-    case 'queue.botOffer':
-      if (state.phase !== 'matchmaking') return state;
-      return {
-        ...state,
-        botOffer: true,
-        botOfferDismissed: false,
-      };
+    // ---------- Events built from REST responses ----------
 
     case 'match.start': {
       const count = action.questionCount || DEFAULT_QUESTION_COUNT;

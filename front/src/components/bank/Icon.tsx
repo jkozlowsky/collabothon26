@@ -60,7 +60,6 @@ const GLYPHS: Record<BankIconName, Glyph> = {
   'wifi-off': { set: 'feather', name: 'wifi-off' },
   coins: { set: 'mci', name: 'database-outline' },
   flame: { set: 'ion', name: 'flame-outline' },
-  refresh: { set: 'feather', name: 'refresh-cw' },
   'arrow-right': { set: 'feather', name: 'arrow-right' },
 };
 

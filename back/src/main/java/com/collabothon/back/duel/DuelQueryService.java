@@ -18,7 +18,7 @@ import com.collabothon.back.duel.MatchAssembler.MatchResult;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 
-/** Read side of the duel REST API: category cards, progress and finished-match results. */
+/** Read side of the duel REST API: category cards and progress. */
 @Service
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 class DuelQueryService {
@@ -30,8 +30,6 @@ class DuelQueryService {
 	private final DuelProgressRepository progress;
 
 	private final DuelAnswerRepository answers;
-
-	private final StoredMatchService storedMatches;
 
 	private final LevelCurve levelCurve;
 
@@ -56,12 +54,6 @@ class DuelQueryService {
 			}
 		}
 		return standings(userId, DuelLang.EN, accuracy);
-	}
-
-	@Transactional(readOnly = true)
-	public MatchResult matchResult(long matchId, String userId, DuelLang lang) {
-		return storedMatches.findResult(matchId, userId, lang)
-			.orElseThrow(() -> new NotFoundException("Match not found: " + matchId));
 	}
 
 	private List<CategoryStanding> standings(String userId, DuelLang lang, Map<Long, Double> accuracyByCategory) {

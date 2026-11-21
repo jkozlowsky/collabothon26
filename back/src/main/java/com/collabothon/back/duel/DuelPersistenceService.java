@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.random.RandomGenerator;
 
@@ -19,18 +20,20 @@ import com.collabothon.back.duel.QuestionSelectionService.SelectedQuestion;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 
-/** The transactional boundary of a live match: creating it, logging answers and settling XP and Elo at the end. */
+/** The transactional boundary of a match: creating it, logging answers and settling XP and Elo at the end. */
 @Service
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 class DuelPersistenceService {
 
 	private static final int RECENT_MATCH_WINDOW = 3;
 
+	private static final int RIVAL_CANDIDATES = 3;
+
 	private final DuelCategoryRepository categories;
 
 	private final DuelQuestionRepository questions;
 
-	private final DuelPlayerRepository players;
+	private final DuelAccountRepository accounts;
 
 	private final DuelMatchRepository matches;
 
@@ -56,13 +59,22 @@ class DuelPersistenceService {
 	/** A player's card, XP, Elo and human-match count in one category; unknown players start fresh. */
 	@Transactional(readOnly = true)
 	public PlayerSnapshot loadPlayerSnapshot(String userId, Long categoryId) {
-		DuelPlayer player = players.findById(userId).orElse(null);
-		String name = player != null ? player.getDisplayName() : userId;
-		int avatar = player != null ? player.getAvatar() : DuelPlayer.DEFAULT_AVATAR;
+		DuelAccount account = accounts.findById(userId).orElse(null);
+		String name = account != null ? account.getFirstName() : userId;
+		String avatar = account != null ? account.getAvatar() : DuelAccount.DEFAULT_AVATAR;
 		DuelProgress stats = progress.findById(new DuelProgress.Key(userId, categoryId))
 			.orElseGet(() -> new DuelProgress(userId, categoryId));
 		int level = levelCurve.fromXp(stats.getXp()).level();
 		return new PlayerSnapshot(new PlayerCard(name, level, stats.getElo(), avatar, false), stats.getElo());
+	}
+
+	/** The mocked human rival: a duel player in the category whose Elo is closest to {@code elo}, never the caller. */
+	@Transactional(readOnly = true)
+	public Optional<String> pickRival(Long categoryId, String userId, int elo, RandomGenerator rng) {
+		List<DuelProgress> closest = progress.findClosestByElo(categoryId, userId, elo,
+				PageRequest.of(0, RIVAL_CANDIDATES));
+		return closest.isEmpty() ? Optional.empty()
+				: Optional.of(closest.get(rng.nextInt(closest.size())).getUserId());
 	}
 
 	/** Picks the match questions, preferring ones none of the players saw in their last three matches. */

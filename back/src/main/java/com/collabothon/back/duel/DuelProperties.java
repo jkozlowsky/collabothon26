@@ -15,12 +15,8 @@ import org.springframework.validation.annotation.Validated;
 record DuelProperties(
 		@Min(1) @DefaultValue("6") int questionsPerMatch,
 		@Positive @DefaultValue("40000") long questionTimeoutMs,
-		@PositiveOrZero @DefaultValue("5") int queueWidenSec,
-		@PositiveOrZero @DefaultValue("10") int queueBotOfferSec,
-		@Positive @DefaultValue("1000") long queueTickMs,
-		@PositiveOrZero @DefaultValue("150") int queueEloWindow,
-		@PositiveOrZero @DefaultValue("8000") long botMinDelayMs,
-		@PositiveOrZero @DefaultValue("30000") long botMaxDelayMs) {
+		@PositiveOrZero @DefaultValue("3000") long botMinDelayMs,
+		@PositiveOrZero @DefaultValue("10000") long botMaxDelayMs) {
 
 	@AssertTrue(message = "app.duel.bot-max-delay-ms must not be below app.duel.bot-min-delay-ms")
 	boolean isBotDelayRangeValid() {

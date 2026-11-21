@@ -84,8 +84,17 @@ class DuelControllerTests {
 			.andExpect(jsonPath("$.top[0].rank").value(1))
 			.andExpect(jsonPath("$.me.userId").value("demo-user"))
 			.andExpect(jsonPath("$.me.name").value("Alex"))
-			.andExpect(jsonPath("$.me.avatar").value(2))
+			.andExpect(jsonPath("$.me.avatar").value("m1"))
 			.andExpect(jsonPath("$.me.elo").value(1156));
+	}
+
+	@Test
+	void friendsRankingListsEveryAccountWithItsNameAndAvatar() throws Exception {
+		mvc.perform(get("/api/duel/rankings").param("scope", "friends").param("userId", "demo-user"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.top[?(@.userId == 'demo-ola')].name").value("Ola"))
+			.andExpect(jsonPath("$.top[?(@.userId == 'demo-ola')].avatar").value("f1"))
+			.andExpect(jsonPath("$.me.userId").value("demo-user"));
 	}
 
 	@Test

@@ -44,7 +44,7 @@ class RankingService {
 
 	private final DuelPersistenceService persistence;
 
-	private final DuelPlayerRepository players;
+	private final DuelAccountRepository accounts;
 
 	private final DuelProgressRepository progress;
 
@@ -109,11 +109,15 @@ class RankingService {
 		return buildRanking(entries, loadPlayers(userIds), userId);
 	}
 
-	/** Stand-in friends ranking until the account module exposes a real friends list. */
+	/**
+	 * Stand-in friends ranking until a real friends list exists: every account counts as a friend, so it
+	 * lists all accounts (plus the caller even without one) ordered by overall Elo; those without duel
+	 * progress appear with the starting Elo and level 1.
+	 */
 	private Ranking friendsRankings(String userId) {
-		Map<String, DuelPlayer> playerMap = new HashMap<>();
+		Map<String, DuelAccount> playerMap = new HashMap<>();
 		Set<String> userIds = new LinkedHashSet<>();
-		for (DuelPlayer p : players.findAll()) {
+		for (DuelAccount p : accounts.findAll()) {
 			playerMap.put(p.getUserId(), p);
 			userIds.add(p.getUserId());
 		}
@@ -163,13 +167,13 @@ class RankingService {
 		return buildRanking(entries, loadPlayers(userIds), userId);
 	}
 
-	private Map<String, DuelPlayer> loadPlayers(Set<String> userIds) {
+	private Map<String, DuelAccount> loadPlayers(Set<String> userIds) {
 		if (userIds.isEmpty()) {
 			return Map.of();
 		}
-		return players.findAllByUserIdIn(userIds)
+		return accounts.findAllByUserIdIn(userIds)
 			.stream()
-			.collect(Collectors.toMap(DuelPlayer::getUserId, Function.identity(), (a, b) -> a));
+			.collect(Collectors.toMap(DuelAccount::getUserId, Function.identity(), (a, b) -> a));
 	}
 
 	private Map<String, List<DuelProgress>> groupProgressByUser(List<DuelProgress> list) {
@@ -195,14 +199,16 @@ class RankingService {
 		return new OverallStats(calibratedCount > 0, level, elo, totalXp);
 	}
 
-	private Ranking buildRanking(List<RankEntry> sorted, Map<String, DuelPlayer> playerMap, String userId) {
+	private Ranking buildRanking(List<RankEntry> sorted, Map<String, DuelAccount> playerMap, String userId) {
 		List<RankedEntry> top = new ArrayList<>(Math.min(TOP_LIMIT, sorted.size()));
 		RankedEntry me = null;
 		for (int i = 0; i < sorted.size(); i++) {
 			RankEntry entry = sorted.get(i);
-			DuelPlayer player = playerMap.getOrDefault(entry.userId(),
-					new DuelPlayer(entry.userId(), entry.userId(), DuelPlayer.DEFAULT_AVATAR));
-			RankedEntry row = new RankedEntry(i + 1, player, entry.level(), entry.elo(), entry.value());
+			DuelAccount account = playerMap.get(entry.userId());
+			String name = account != null ? account.getFirstName() : entry.userId();
+			String avatar = account != null ? account.getAvatar() : DuelAccount.DEFAULT_AVATAR;
+			RankedEntry row = new RankedEntry(i + 1, entry.userId(), name, avatar, entry.level(), entry.elo(),
+					entry.value());
 			if (i < TOP_LIMIT) {
 				top.add(row);
 			}
@@ -217,7 +223,7 @@ class RankingService {
 	}
 
 	/** One leaderboard row; {@code value} is Elo, or the Elo gained this week in the weekly league. */
-	record RankedEntry(int rank, DuelPlayer player, int level, int elo, int value) {
+	record RankedEntry(int rank, String userId, String name, String avatar, int level, int elo, int value) {
 	}
 
 	/** The top 50 and the caller's own row, null while the caller is unranked. */

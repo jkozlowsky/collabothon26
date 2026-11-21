@@ -1,18 +1,32 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import {
   createInitialDuelState,
   duelReducer,
   type DuelMatchState,
   type LocalDot,
 } from '@/lib/duel/reducer';
-import { createDuelSocket, resolveDuelWsUrl, type DuelSocketClient } from '@/lib/duel/socket';
 import { USER_ID } from '@/lib/user';
-import type { CategorySlug, DuelMode, Lang, MatchEnd } from '@/types/duel';
+import type {
+  AnswerRequest,
+  AnswerResult,
+  CategorySlug,
+  DuelMode,
+  Lang,
+  MatchEnd,
+  MatchStart,
+  MatchState,
+  ServerMessage,
+  StartMatchRequest,
+} from '@/types/duel';
 
 const FEEDBACK_AUTO_ADVANCE_MS = 3000;
 const COUNTDOWN_TICK_MS = 250;
+const POLL_INTERVAL_MS = 1000;
+/** A human match shows "Finding a rival…" for a moment so the search reads as real. */
+const FINDING_RIVAL_MS = 1500;
+const MAX_POLL_FAILURES = 3;
 const ACTIVE_MATCH_STORAGE_KEY = `fq_duel_active_match:${USER_ID}`;
 
 type StoredActiveMatch = {
@@ -68,7 +82,7 @@ export function clearStoredActiveMatch(): void {
 export type UseDuelMatchParams = {
   category: CategorySlug;
   mode: DuelMode;
-  /** When set, loads a finished match result via REST instead of opening a live socket. */
+  /** When set, loads a finished match result via REST instead of starting a match. */
   reloadMatchId?: number;
   lang?: Lang;
 };
@@ -79,12 +93,24 @@ export type UseDuelMatchResult = {
   secondsLeft: number;
   selectOption: (option: number) => void;
   nextQuestion: () => void;
-  acceptBot: () => void;
-  keepWaiting: () => void;
   leave: () => void;
   playAgain: () => void;
+  /** After a failed request: resume the match by id, or start over when there is none to resume. */
+  retry: () => void;
   dismissReconnectBanner: () => void;
 };
+
+const userQuery = (lang: Lang) => `userId=${encodeURIComponent(USER_ID)}&lang=${lang}`;
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function errorMessage(err: unknown): ServerMessage {
+  if (err instanceof ApiError && err.status === 404) {
+    return { type: 'error', code: 'MATCH_NOT_FOUND', message: 'This match is no longer available.' };
+  }
+  const message = err instanceof Error ? err.message : 'Request failed';
+  return { type: 'error', code: 'REQUEST_FAILED', message };
+}
 
 export function useDuelMatch({
   category,
@@ -103,17 +129,15 @@ export function useDuelMatch({
   });
   const [secondsLeft, setSecondsLeft] = useState(40);
 
-  const socketRef = useRef<DuelSocketClient | null>(null);
-  // Keep latest matchId / phase accessible in reconnect callbacks without recreating the socket.
-  const latestRef = useRef({
-    matchId: state.matchId,
-    phase: state.phase,
-    category,
-    mode,
-  });
+  // The poll and the answer handler read the latest state without being recreated on every change.
+  const latestRef = useRef(state);
   useEffect(() => {
-    latestRef.current = { matchId: state.matchId, phase: state.phase, category, mode };
-  }, [state.matchId, state.phase, category, mode]);
+    latestRef.current = state;
+  }, [state]);
+  // Bumped whenever an answer is sent, so a poll that started earlier cannot overwrite what the answer produced.
+  const answerEpochRef = useRef(0);
+  const pollFailuresRef = useRef(0);
+  const startRef = useRef<{ key: number; promise: Promise<MatchStart> } | null>(null);
 
   // Persist active matchId + local dots in sessionStorage so a page reload mid-match resumes cleanly.
   useEffect(() => {
@@ -121,7 +145,7 @@ export function useDuelMatch({
       clearStoredActiveMatch();
       return;
     }
-    if (state.matchId !== null) {
+    if (state.matchId !== null && state.phase !== 'result') {
       writeStoredMatch({
         matchId: state.matchId,
         category: state.category,
@@ -129,15 +153,35 @@ export function useDuelMatch({
         yourDots: state.yourDots,
       });
     }
-  }, [state.matchId, state.category, state.mode, state.yourDots, state.error?.code]);
+  }, [state.matchId, state.phase, state.category, state.mode, state.yourDots, state.error?.code]);
 
-  // Optional REST reload for a finished match (/duel/match?matchId=...)
+  const loadResult = useCallback(
+    async (matchId: number) => {
+      const result = await api<MatchEnd>(`/api/duel/matches/${matchId}?${userQuery(lang)}`);
+      clearStoredActiveMatch();
+      dispatch({ type: 'match.end', ...result });
+    },
+    [lang],
+  );
+
+  /** Fetch the match snapshot and feed it to the reducer, or load the result if it already finished. */
+  const resume = useCallback(
+    async (matchId: number) => {
+      const snapshot = await api<MatchState>(`/api/duel/matches/${matchId}/state?${userQuery(lang)}`);
+      if (snapshot.finished) {
+        await loadResult(matchId);
+        return;
+      }
+      dispatch({ type: 'match.state', ...snapshot });
+    },
+    [lang, loadResult],
+  );
+
+  // Finished match opened by id (/duel/match?matchId=...)
   useEffect(() => {
     if (!reloadMatchId || sessionKey > 0) return;
     let cancelled = false;
-    api<MatchEnd>(
-      `/api/duel/matches/${reloadMatchId}?userId=${encodeURIComponent(USER_ID)}&lang=${lang}`,
-    )
+    api<MatchEnd>(`/api/duel/matches/${reloadMatchId}?${userQuery(lang)}`)
       .then((res) => {
         if (!cancelled) dispatch({ type: 'rest.matchEnd', result: res });
       })
@@ -149,52 +193,93 @@ export function useDuelMatch({
     };
   }, [reloadMatchId, lang, sessionKey]);
 
-  // Live STOMP lifecycle + auto-reconnect with match.resume
+  // Start a match, or resume the one remembered for this tab.
   useEffect(() => {
     if (reloadMatchId && sessionKey === 0) return;
+    let cancelled = false;
+    const resumeId = latestRef.current.matchId;
 
-    const url = resolveDuelWsUrl();
-    dispatch({ type: 'socket.status', status: 'connecting' });
-
-    const client = createDuelSocket({
-      url,
-      userId: USER_ID,
-      lang,
-      onOpen: () => {
-        dispatch({ type: 'socket.status', status: 'open' });
-        const { matchId, phase, category: cat, mode: m } = latestRef.current;
-        if (matchId !== null && phase !== 'result') {
-          client.send({ type: 'match.resume', matchId });
-        } else if (phase === 'matchmaking') {
-          client.send({ type: 'queue.join', category: cat, mode: m });
-        }
-      },
-      onMessage: (message) => {
-        dispatch(message);
-      },
-      onDisconnect: () => {
-        if (latestRef.current.phase !== 'result') {
-          dispatch({ type: 'socket.status', status: 'reconnecting' });
-        }
-      },
-    });
-
-    socketRef.current = client;
-
-    return () => {
-      client.close();
-      socketRef.current = null;
-    };
-  }, [category, mode, lang, sessionKey, reloadMatchId]);
-
-  // Close socket once the match has finished so we don't keep an idle connection open.
-  useEffect(() => {
-    if (state.phase === 'result' && socketRef.current) {
-      socketRef.current.close();
-      socketRef.current = null;
-      dispatch({ type: 'socket.status', status: 'closed' });
+    if (resumeId !== null) {
+      resume(resumeId).catch((err: unknown) => {
+        if (!cancelled) dispatch(errorMessage(err));
+      });
+      return () => {
+        cancelled = true;
+      };
     }
-  }, [state.phase]);
+
+    // One request per session even when React runs this effect twice (StrictMode).
+    if (startRef.current?.key !== sessionKey) {
+      const body: StartMatchRequest = { userId: USER_ID, category, mode, lang };
+      const request = api<MatchStart>('/api/duel/matches', { method: 'POST', body: JSON.stringify(body) });
+      const promise =
+        mode === 'HUMAN' ? Promise.all([request, wait(FINDING_RIVAL_MS)]).then(([start]) => start) : request;
+      startRef.current = { key: sessionKey, promise };
+    }
+    startRef.current.promise
+      .then((start) => {
+        if (cancelled) return;
+        const { question, ...match } = start;
+        dispatch({ type: 'match.start', ...match });
+        dispatch({ type: 'question', ...question });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) dispatch(errorMessage(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [category, mode, lang, sessionKey, reloadMatchId, resume]);
+
+  // Poll the snapshot every second while playing or waiting: it carries the rival's progress, resolves the
+  // server-side question timeouts and tells us when the match is settled.
+  const polling =
+    state.matchId !== null &&
+    state.error === null &&
+    (state.phase === 'question' || state.phase === 'feedback' || state.phase === 'waiting');
+  const matchId = state.matchId;
+  useEffect(() => {
+    if (!polling || matchId === null) return;
+    let cancelled = false;
+    const tick = async () => {
+      const epoch = answerEpochRef.current;
+      try {
+        const snapshot = await api<MatchState>(`/api/duel/matches/${matchId}/state?${userQuery(lang)}`);
+        if (cancelled || epoch !== answerEpochRef.current) return;
+        pollFailuresRef.current = 0;
+        if (snapshot.finished) {
+          await loadResult(matchId);
+          return;
+        }
+        if (snapshot.rivalProgress) dispatch({ type: 'rival.progress', ...snapshot.rivalProgress });
+
+        const local = latestRef.current;
+        if (local.phase !== 'question' || !local.question || local.selectedOption !== null) return;
+        const localIndex = local.question.index;
+        const serverIndex = snapshot.question?.index ?? null;
+        if (serverIndex === localIndex) return;
+        if (serverIndex === localIndex + 1 || (serverIndex === null && localIndex === local.questionCount - 1)) {
+          // The question ran out while we were looking at it.
+          dispatch({ type: 'answer.result', index: localIndex, correct: false, timedOut: true });
+          if (snapshot.question) dispatch({ type: 'question', ...snapshot.question });
+          else dispatch({ type: 'match.waiting' });
+        } else {
+          dispatch({ type: 'match.state', ...snapshot });
+        }
+      } catch (err) {
+        if (cancelled) return;
+        pollFailuresRef.current += 1;
+        if ((err instanceof ApiError && err.status === 404) || pollFailuresRef.current >= MAX_POLL_FAILURES) {
+          dispatch(errorMessage(err));
+        }
+      }
+    };
+    const id = setInterval(tick, POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [polling, matchId, lang, loadResult]);
 
   // Countdown drawn directly from the server's deadline timestamp (no local drift).
   const deadline = state.question?.deadline ?? null;
@@ -226,46 +311,54 @@ export function useDuelMatch({
     (option: number) => {
       if (state.phase !== 'question' || state.selectedOption !== null) return;
       if (state.matchId === null || !state.question) return;
+      const { matchId: id, question } = state;
       dispatch({ type: 'ui.selectOption', option });
-      socketRef.current?.send({
-        type: 'answer',
-        matchId: state.matchId,
-        index: state.question.index,
-        option,
-      });
+      answerEpochRef.current += 1;
+      const body: AnswerRequest = { userId: USER_ID, index: question.index, option };
+      api<AnswerResult>(`/api/duel/matches/${id}/answers`, { method: 'POST', body: JSON.stringify(body) })
+        .then(async (res) => {
+          dispatch({ type: 'answer.result', index: res.index, correct: res.correct, timedOut: res.timedOut });
+          if (res.rivalProgress) dispatch({ type: 'rival.progress', ...res.rivalProgress });
+          if (res.nextQuestion) {
+            dispatch({ type: 'question', ...res.nextQuestion });
+          } else if (res.finished) {
+            await loadResult(id);
+          } else {
+            dispatch({ type: 'match.waiting' });
+          }
+        })
+        .catch((err: unknown) => dispatch(errorMessage(err)));
     },
-    [state.phase, state.selectedOption, state.matchId, state.question],
+    [state, loadResult],
   );
 
   const nextQuestion = useCallback(() => {
     dispatch({ type: 'ui.advance' });
   }, []);
 
-  const acceptBot = useCallback(() => {
-    socketRef.current?.send({ type: 'queue.acceptBot' });
-  }, []);
-
-  const keepWaiting = useCallback(() => {
-    dispatch({ type: 'ui.dismissBotOffer' });
-  }, []);
-
   const leave = useCallback(() => {
     clearStoredActiveMatch();
-    if (latestRef.current.phase === 'matchmaking') {
-      socketRef.current?.send({ type: 'queue.leave' });
-    }
-    socketRef.current?.close();
-    socketRef.current = null;
   }, []);
 
   const playAgain = useCallback(() => {
     clearStoredActiveMatch();
-    socketRef.current?.close();
-    socketRef.current = null;
-    latestRef.current = { matchId: null, phase: 'matchmaking', category, mode };
+    startRef.current = null;
     dispatch({ type: 'ui.reset', category, mode });
     setSessionKey((k) => k + 1);
   }, [category, mode]);
+
+  const retry = useCallback(() => {
+    const current = latestRef.current;
+    if (current.matchId === null || current.error?.code === 'MATCH_NOT_FOUND') {
+      playAgain();
+      return;
+    }
+    const id = current.matchId;
+    pollFailuresRef.current = 0;
+    answerEpochRef.current += 1;
+    dispatch({ type: 'ui.clearError' });
+    resume(id).catch((err: unknown) => dispatch(errorMessage(err)));
+  }, [playAgain, resume]);
 
   const dismissReconnectBanner = useCallback(() => {
     dispatch({ type: 'ui.dismissReconnectBanner' });
@@ -276,10 +369,9 @@ export function useDuelMatch({
     secondsLeft,
     selectOption,
     nextQuestion,
-    acceptBot,
-    keepWaiting,
     leave,
     playAgain,
+    retry,
     dismissReconnectBanner,
   };
 }

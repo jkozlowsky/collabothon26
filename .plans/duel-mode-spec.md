@@ -266,6 +266,8 @@ The demo story is consistent across frames: Alex, Investor psychology, Lv 12 →
 
 ## 12. Architecture
 
+> **Transport (current, supersedes the WebSocket/STOMP material below):** every mode runs over plain REST plus 1 s polling, like the rest of the app: `POST /api/duel/matches`, `POST /api/duel/matches/{id}/answers`, `GET /api/duel/matches/{id}/state`, `GET /api/duel/matches/{id}` (result). There are no sockets, schedulers or timers: each request resolves question timeouts lazily from the server clock. PvP is mocked for the demo: in HUMAN mode the server picks an existing account with duel progress closest to your Elo and simulates its answers (accuracy from its level, 8 to 30 s per answer, drawn at match start); Elo moves for both as before. The sections below are kept for the rules and data model; the contract is `front/src/types/duel.ts`.
+
 > **Authoritative contracts (override the sketches below if they differ):**
 > - Schema: `back/src/main/resources/db/migration/V10__duel.sql` (V1–V3 are on main, V4–V6 are taken by the categorization branch). It adds `duel_player (user_id, display_name, avatar 1–4)` for names and Explorer Avatars until the account module exposes them, and seeds the 5 categories.
 > - Questions: `V11__duel_questions.sql`. Demo players, progress and this week's matches: `V12__duel_demo_data.sql`.

@@ -1,18 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
-import { Icon } from '@/components/bank/Icon';
-import {
-  MatchmakingView,
-  QuestionView,
-  ResultView,
-  WaitingView,
-} from '@/components/duel/MatchViews';
-import { colors, spacing, type } from '@/constants/theme';
+import { EmptyState } from '@/components/EmptyState';
+import { DuelPage } from '@/components/duel/DuelPage';
+import { MatchmakingView } from '@/components/duel/MatchmakingView';
+import { QuestionView } from '@/components/duel/QuestionView';
+import { ResultView } from '@/components/duel/ResultView';
+import { WaitingView } from '@/components/duel/WaitingView';
+import { useAccount } from '@/hooks/useAccount';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useOpenLearn } from '@/hooks/useOpenLearn';
 import { isCategorySlug, isDuelMode } from '@/lib/duel/meta';
@@ -37,7 +33,7 @@ export default function DuelMatchScreen() {
       ? Number(params.matchId)
       : undefined;
 
-  // Match routes sit outside the onboarding guard (so a reload can resume): enforce it here, before any socket opens.
+  // Match routes sit outside the onboarding guard (so a reload can resume): enforce it here, before any request is made.
   const { loaded, done } = useOnboarding();
   const openLearn = useOpenLearn();
   useEffect(() => {
@@ -77,10 +73,9 @@ function MatchSession({
     secondsLeft,
     selectOption,
     nextQuestion,
-    acceptBot,
-    keepWaiting,
     leave,
     playAgain,
+    retry,
     dismissReconnectBanner,
   } = useDuelMatch({ category, mode, reloadMatchId });
 
@@ -100,109 +95,59 @@ function MatchSession({
     });
   }
 
+  // The account owns the avatar; the match card is the fallback while it loads.
+  const { account } = useAccount();
+  const youAvatar = account?.avatar ?? state.you?.avatar ?? 'm1';
+
   if (state.error && state.phase !== 'result') {
     return (
-      <SafeAreaView style={styles.errorScreen} testID="duel-error">
-        <StatusBar style="dark" />
-        <View style={styles.errorIcon}>
-          <Icon name="wifi-off" size={28} color={colors.feedbackDanger} />
-        </View>
-        <Text style={type.titleSection}>Something went wrong</Text>
-        <Text style={[type.bodyDefault, styles.errorDetail]}>{state.error.message}</Text>
-        <View style={styles.errorActions}>
-          <Button label="Try again" onPress={playAgain} variant="primary" testID="duel-error-retry" />
-          <Button
-            label="Back to lobby"
-            onPress={exitToLobby}
-            variant="secondary"
-            testID="duel-error-lobby"
-          />
-        </View>
-      </SafeAreaView>
+      <DuelPage testID="duel-error" centered>
+        <EmptyState icon="wifi-off" tone="danger" title="Something went wrong" body={state.error.message}>
+          <Button label="Try again" onPress={retry} testID="duel-error-retry" />
+          <Button label="Back to lobby" variant="secondary" onPress={exitToLobby} testID="duel-error-lobby" />
+        </EmptyState>
+      </DuelPage>
     );
   }
 
   if (state.phase === 'matchmaking') {
     return (
-      <>
-        <StatusBar style="light" />
-        <MatchmakingView
-          state={state}
-          initialElo={Number.isFinite(initialElo) ? initialElo : undefined}
-          initialCalibrated={initialCalibrated}
-          onAcceptBot={acceptBot}
-          onKeepWaiting={keepWaiting}
-          onCancel={exitToLobby}
-        />
-      </>
+      <MatchmakingView
+        state={state}
+        youAvatar={youAvatar}
+        initialElo={initialElo}
+        initialCalibrated={initialCalibrated}
+        onCancel={exitToLobby}
+      />
     );
   }
 
   if (state.phase === 'waiting') {
-    return (
-      <>
-        <StatusBar style="dark" />
-        <WaitingView state={state} onBackToLobby={exitToLobby} />
-      </>
-    );
+    return <WaitingView state={state} youAvatar={youAvatar} onBackToLobby={exitToLobby} />;
   }
 
   if (state.phase === 'result' && state.result) {
     return (
-      <>
-        <StatusBar style="dark" />
-        <ResultView
-          result={state.result}
-          youName={state.you?.name}
-          youAvatar={state.you?.avatar}
-          onPlayAgain={playAgain}
-          onSeeRankings={openRankings}
-          onBackToLobby={exitToLobby}
-        />
-      </>
+      <ResultView
+        result={state.result}
+        youName={account?.firstName ?? state.you?.name}
+        youAvatar={youAvatar}
+        onPlayAgain={playAgain}
+        onSeeRankings={openRankings}
+        onBackToLobby={exitToLobby}
+      />
     );
   }
 
   return (
-    <>
-      <StatusBar style="dark" />
-      <QuestionView
-        state={state}
-        secondsLeft={secondsLeft}
-        onSelectOption={selectOption}
-        onNextQuestion={nextQuestion}
-        onDismissReconnect={dismissReconnectBanner}
-        onExit={exitToLobby}
-      />
-    </>
+    <QuestionView
+      state={state}
+      youAvatar={youAvatar}
+      secondsLeft={secondsLeft}
+      onSelectOption={selectOption}
+      onNextQuestion={nextQuestion}
+      onDismissReconnect={dismissReconnectBanner}
+      onExit={exitToLobby}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  errorScreen: {
-    flex: 1,
-    backgroundColor: colors.bgCanvas,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xxl,
-    gap: spacing.md,
-  },
-  errorIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.feedbackDangerSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
-  errorDetail: {
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-  errorActions: {
-    width: '100%',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-});

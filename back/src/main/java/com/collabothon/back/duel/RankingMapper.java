@@ -12,9 +12,6 @@ import com.collabothon.back.duel.RankingService.Ranking;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 interface RankingMapper {
 
-	@Mapping(target = "userId", source = "player.userId")
-	@Mapping(target = "name", source = "player.displayName")
-	@Mapping(target = "avatar", source = "player.avatar")
 	RankingRowDto toRow(RankedEntry entry);
 
 	RankingsDto toDto(Ranking ranking);

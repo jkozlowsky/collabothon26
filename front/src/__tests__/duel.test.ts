@@ -1,5 +1,3 @@
-import { Client, ReconnectionTimeMode, type IMessage, type StompConfig } from '@stomp/stompjs';
-
 import {
   createInitialDuelState,
   duelReducer,
@@ -9,70 +7,11 @@ import {
   type DuelAction,
   type DuelMatchState,
 } from '@/lib/duel/reducer';
-import {
-  createDuelSocket,
-  decodeUtf8,
-  DUEL_SUBSCRIBE_DESTINATION,
-  duelSendDestination,
-  encodeUtf8,
-  resolveDuelWsUrl,
-} from '@/lib/duel/socket';
 import type { MatchEnd, PlayerCard, ReviewItem } from '@/types/duel';
 
-type MockSub = {
-  destination: string;
-  callback: (msg: IMessage) => void;
-  unsubscribe: jest.Mock;
-};
-
-type MockPublishCall = {
-  destination: string;
-  body?: string;
-  headers?: Record<string, string>;
-};
-
-const mockStompClients: {
-  config: StompConfig;
-  connected: boolean;
-  activate: jest.Mock;
-  deactivate: jest.Mock;
-  publish: jest.Mock<void, [MockPublishCall]>;
-  subscribe: jest.Mock;
-  subscriptions: MockSub[];
-}[] = [];
-
-jest.mock('@stomp/stompjs', () => {
-  const actual = jest.requireActual('@stomp/stompjs');
-  class MockClient {
-    config: StompConfig;
-    connected = false;
-    subscriptions: MockSub[] = [];
-    activate = jest.fn();
-    deactivate = jest.fn(() => {
-      this.connected = false;
-      return Promise.resolve();
-    });
-    publish = jest.fn<void, [MockPublishCall]>();
-    subscribe = jest.fn((destination: string, callback: (msg: IMessage) => void) => {
-      const sub: MockSub = { destination, callback, unsubscribe: jest.fn() };
-      this.subscriptions.push(sub);
-      return { id: `sub-${this.subscriptions.length}`, unsubscribe: sub.unsubscribe };
-    });
-
-    constructor(config: StompConfig) {
-      this.config = config;
-      mockStompClients.push(this);
-    }
-  }
-  return {
-    ...actual,
-    Client: MockClient,
-  };
-});
-
-const YOU: PlayerCard = { name: 'Alex', level: 12, elo: 1084, avatar: 2, isBot: false };
-const RIVAL: PlayerCard = { name: 'Marek', level: 15, elo: 1120, avatar: 3, isBot: false };
-const BOT_RIVAL: PlayerCard = { name: 'Bella the Bot', level: 11, elo: null, avatar: 2, isBot: true };
+const YOU: PlayerCard = { name: 'Alex', level: 12, elo: 1084, avatar: 'm1', isBot: false };
+const RIVAL: PlayerCard = { name: 'Marek', level: 15, elo: 1120, avatar: 'm2', isBot: false };
+const BOT_RIVAL: PlayerCard = { name: 'Bella the Bot', level: 11, elo: null, avatar: 'm1', isBot: true };
 
 function q(index: number) {
   return {
@@ -102,17 +41,9 @@ describe('duelReducer', () => {
   test('replays a normal human win from matchmaking through waiting to result', () => {
     const start = createInitialDuelState('psychology', 'HUMAN');
 
-    // Matchmaking widens after 5 s, then match starts.
-    let state = replay(start, [
-      { type: 'socket.status', status: 'open' },
-      { type: 'queue.waiting', elapsedSec: 3, widened: false },
-      { type: 'queue.waiting', elapsedSec: 6, widened: true },
-    ]);
-    expect(state.phase).toBe('matchmaking');
-    expect(state.widened).toBe(true);
-    expect(state.elapsedSec).toBe(6);
+    expect(start.phase).toBe('matchmaking');
 
-    state = replay(state, [
+    let state = replay(start, [
       {
         type: 'match.start',
         matchId: 42,
@@ -231,7 +162,7 @@ describe('duelReducer', () => {
     expect(state.feedback).toBeNull();
   });
 
-  test('recovers after a disconnect via match.state, flagging missed questions and rival offline', () => {
+  test('resumes via match.state after a reload, flagging the questions that ran out meanwhile', () => {
     const start = createInitialDuelState('psychology', 'HUMAN');
 
     // Player answers Q1 right, Q2 wrong, Q3 wrong, reaches Q4, then disconnects.
@@ -258,15 +189,13 @@ describe('duelReducer', () => {
       { type: 'answer.result', index: 2, correct: false, timedOut: false },
       q(3),
       { type: 'ui.advance' },
-      { type: 'socket.status', status: 'reconnecting' },
     ]);
 
     expect(state.phase).toBe('question');
     expect(state.question?.index).toBe(3);
 
-    // Reconnected: Q4 timed out while offline, now on Q5, and rival is offline.
+    // Reloaded: Q4 ran out while away, now on Q5.
     state = replay(state, [
-      { type: 'socket.status', status: 'open' },
       {
         type: 'match.state',
         matchId: 99,
@@ -285,8 +214,9 @@ describe('duelReducer', () => {
         rivalProgress: {
           answered: 3,
           results: [true, true, false, null, null, null],
-          connected: false,
+          connected: true,
         },
+        finished: false,
       },
     ]);
 
@@ -295,9 +225,9 @@ describe('duelReducer', () => {
     // Q2 & Q3 stay 'wrong', Q4 becomes 'timeout' (grey dot).
     expect(state.yourDots).toEqual(['correct', 'wrong', 'wrong', 'timeout', null, null]);
     expect(state.reconnectedNotice).toEqual({ missedQuestions: [4], resumeQuestion: 5 });
-    expect(state.rivalProgress?.connected).toBe(false);
+    expect(state.rivalProgress?.answered).toBe(3);
 
-    // Reconnecting when already finished all 6 questions lands on waiting.
+    // Resuming when already finished all 6 questions lands on waiting.
     state = duelReducer(state, {
       type: 'match.state',
       matchId: 99,
@@ -313,6 +243,7 @@ describe('duelReducer', () => {
         results: [true, true, false, false, true, null],
         connected: true,
       },
+      finished: false,
     });
     expect(state.phase).toBe('waiting');
     expect(state.question).toBeNull();
@@ -381,19 +312,9 @@ describe('duelReducer', () => {
     expect(state.result?.eloAfter).toBeNull();
   });
 
-  test('handles bot offer during matchmaking and dismissing with keep waiting', () => {
-    const start = createInitialDuelState('risk', 'HUMAN');
-    let state = replay(start, [
-      { type: 'queue.waiting', elapsedSec: 10, widened: true },
-      { type: 'queue.botOffer' },
-    ]);
-    expect(state.botOffer).toBe(true);
-    expect(state.botOfferDismissed).toBe(false);
-
-    state = duelReducer(state, { type: 'ui.dismissBotOffer' });
-    expect(state.botOfferDismissed).toBe(true);
-
-    // Accepting bot starts a BOT match cleanly.
+  test('starts a BOT match cleanly after a reset', () => {
+    const start = createInitialDuelState('risk', 'BOT');
+    let state = start;
     state = duelReducer(state, {
       type: 'match.start',
       matchId: 55,
@@ -408,111 +329,30 @@ describe('duelReducer', () => {
   });
 });
 
-describe('resolveDuelWsUrl', () => {
-  test('derives the URL from API_URL (http -> ws, https -> wss, same host and port)', () => {
-    expect(resolveDuelWsUrl(undefined, 'http://localhost:8081')).toBe('ws://localhost:8081/ws/duel');
-    expect(resolveDuelWsUrl(undefined, 'http://192.168.1.42:8081/')).toBe('ws://192.168.1.42:8081/ws/duel');
-    expect(resolveDuelWsUrl(undefined, 'https://abc-123.exp.direct')).toBe('wss://abc-123.exp.direct/ws/duel');
+describe('error handling', () => {
+  test('clearError drops the error and the pending selection so the player can retry', () => {
+    let state = replay(createInitialDuelState('risk', 'SOLO'), [
+      { type: 'match.start', matchId: 7, mode: 'SOLO', category: 'risk', you: YOU, rival: null, questionCount: 6 },
+      q(0),
+      { type: 'ui.selectOption', option: 1 },
+      { type: 'error', code: 'REQUEST_FAILED', message: 'API 500' },
+    ]);
+    expect(state.error?.code).toBe('REQUEST_FAILED');
+    state = duelReducer(state, { type: 'ui.clearError' });
+    expect(state.error).toBeNull();
+    expect(state.selectedOption).toBeNull();
+    expect(state.matchId).toBe(7);
   });
 
-  test('uses EXPO_PUBLIC_WS_URL when provided', () => {
-    expect(resolveDuelWsUrl('wss://api.example.com/ws/duel')).toBe('wss://api.example.com/ws/duel');
-    expect(resolveDuelWsUrl('wss://api.example.com/')).toBe('wss://api.example.com/ws/duel');
-  });
-});
-
-describe('STOMP duel socket client', () => {
-  beforeEach(() => {
-    mockStompClients.length = 0;
-  });
-
-  test('maps every ClientMessage type to its /app/duel/* destination', () => {
-    expect(duelSendDestination('queue.join')).toBe('/app/duel/queue.join');
-    expect(duelSendDestination('queue.leave')).toBe('/app/duel/queue.leave');
-    expect(duelSendDestination('queue.acceptBot')).toBe('/app/duel/queue.acceptBot');
-    expect(duelSendDestination('answer')).toBe('/app/duel/answer');
-    expect(duelSendDestination('match.resume')).toBe('/app/duel/match.resume');
-  });
-
-  test('connects with userId/lang headers, subscribes to /user/queue/duel, publishes, and reconnects', () => {
-    const onOpen = jest.fn();
-    const onMessage = jest.fn();
-    const onDisconnect = jest.fn();
-    const onError = jest.fn();
-
-    const socket = createDuelSocket({
-      url: 'ws://localhost:8080/ws/duel',
-      userId: 'alice',
-      lang: 'pl',
-      onOpen,
-      onMessage,
-      onDisconnect,
-      onError,
-    });
-
-    expect(Client).toBeDefined();
-    expect(mockStompClients).toHaveLength(1);
-    const stomp = mockStompClients[0];
-    expect(stomp.activate).toHaveBeenCalledTimes(1);
-    expect(stomp.config.brokerURL).toBe('ws://localhost:8080/ws/duel');
-    expect(stomp.config.connectHeaders).toEqual({ userId: 'alice', lang: 'pl' });
-    expect(stomp.config.reconnectDelay).toBe(500);
-    expect(stomp.config.maxReconnectDelay).toBe(5000);
-    expect(stomp.config.reconnectTimeMode).toBe(ReconnectionTimeMode.EXPONENTIAL);
-
-    // Sending before connect returns false.
-    expect(socket.send({ type: 'queue.join', category: 'risk', mode: 'BOT' })).toBe(false);
-
-    // Initial CONNECT -> subscribes to /user/queue/duel and notifies onOpen(false).
-    stomp.connected = true;
-    stomp.config.onConnect?.({} as never);
-    expect(stomp.subscribe).toHaveBeenCalledWith(DUEL_SUBSCRIBE_DESTINATION, expect.any(Function));
-    expect(onOpen).toHaveBeenCalledWith(false);
-
-    // Publishes JSON message to /app/duel/<type>.
-    expect(socket.send({ type: 'queue.join', category: 'risk', mode: 'BOT' })).toBe(true);
-    expect(stomp.publish).toHaveBeenCalledWith({
-      destination: '/app/duel/queue.join',
-      body: JSON.stringify({ type: 'queue.join', category: 'risk', mode: 'BOT' }),
-      headers: { 'content-type': 'application/json' },
-    });
-
-    // Delivers valid ServerMessage frames and ignores malformed JSON.
-    stomp.subscriptions[0].callback({
-      body: JSON.stringify({ type: 'queue.waiting', elapsedSec: 2, widened: false }),
-    } as IMessage);
-    stomp.subscriptions[0].callback({ body: 'not-json' } as IMessage);
-    expect(onMessage).toHaveBeenCalledTimes(1);
-    expect(onMessage).toHaveBeenCalledWith({
-      type: 'queue.waiting',
-      elapsedSec: 2,
-      widened: false,
-    });
-
-    // Disconnect notifies caller; subsequent STOMP reconnect re-subscribes and passes isReconnect=true.
-    stomp.connected = false;
-    stomp.config.onWebSocketClose?.({} as never);
-    expect(onDisconnect).toHaveBeenCalledTimes(1);
-
-    stomp.connected = true;
-    stomp.config.onConnect?.({} as never);
-    expect(stomp.subscribe).toHaveBeenCalledTimes(2);
-    expect(onOpen).toHaveBeenLastCalledWith(true);
-
-    // Closing unsubscribes, deactivates, and suppresses further callbacks.
-    socket.close();
-    expect(stomp.subscriptions[1].unsubscribe).toHaveBeenCalledTimes(1);
-    expect(stomp.deactivate).toHaveBeenCalledTimes(1);
-    stomp.config.onWebSocketClose?.({} as never);
-    stomp.config.onStompError?.({} as never);
-    expect(onDisconnect).toHaveBeenCalledTimes(1);
-    expect(onError).not.toHaveBeenCalled();
-  });
-
-  test('UTF-8 fallback round-trips ASCII, Polish diacritics, and emoji', () => {
-    const sample = 'Inflacja i procent składany — żółć Źdźbło ✓ 🎯';
-    const bytes = encodeUtf8(sample);
-    expect(decodeUtf8(bytes)).toBe(sample);
-    expect(decodeUtf8(bytes.buffer)).toBe(sample);
+  test('a poll that finds the next question while feedback is shown buffers it', () => {
+    const state = replay(createInitialDuelState('risk', 'SOLO'), [
+      { type: 'match.start', matchId: 7, mode: 'SOLO', category: 'risk', you: YOU, rival: null, questionCount: 6 },
+      q(0),
+      { type: 'ui.selectOption', option: 1 },
+      { type: 'answer.result', index: 0, correct: true, timedOut: false },
+      q(1),
+    ]);
+    expect(state.phase).toBe('feedback');
+    expect(state.pendingQuestion?.index).toBe(1);
   });
 });

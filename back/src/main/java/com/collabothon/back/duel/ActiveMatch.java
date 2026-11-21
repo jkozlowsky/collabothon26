@@ -1,24 +1,20 @@
 package com.collabothon.back.duel;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
 
 import com.collabothon.back.duel.QuestionSelectionService.SelectedQuestion;
 
 import lombok.Getter;
+import lombok.Setter;
 
 /**
- * In-memory state for a single live duel match.
- *
- * <p>Thread-safety: every mutable field on this instance and its {@link PlayerSlot}s is
- * guarded by the per-match {@link #lock}. Callers must acquire {@link #lock} around state
- * transitions and release it BEFORE performing STOMP network sends so slow clients cannot
- * stall timers or concurrent match updates.
+ * In-memory state of one match from the player's side, plus the simulated rival's schedule. Callers synchronise on the
+ * instance; nothing here reads a clock, the service passes {@code now} in.
  */
 @Getter
 final class ActiveMatch {
-
-	private final ReentrantLock lock = new ReentrantLock();
 
 	private final long matchId;
 
@@ -28,53 +24,101 @@ final class ActiveMatch {
 
 	private final List<SelectedQuestion> questions;
 
-	private final PlayerSlot slotA;
+	private final String userId;
 
-	private final PlayerSlot slotB;
+	private final PlayerCard you;
+
+	/** Null in solo matches. */
+	private final PlayerCard rivalCard;
+
+	/** Null in solo matches. */
+	private final RivalPlan rival;
+
+	private final long startedAtMs;
+
+	private final Boolean[] results;
+
+	private final boolean[] timedOut;
+
+	private final Integer[] chosenDisplayOptions;
+
+	@Setter
+	private DuelLang lang;
+
+	private int currentIndex;
+
+	private long questionStartedAt;
+
+	private long questionDeadline;
+
+	private int score;
 
 	private boolean ended;
 
-	ActiveMatch(long matchId, DuelMode mode, DuelCategory category, List<SelectedQuestion> questions, PlayerSlot slotA,
-			PlayerSlot slotB) {
+	private long endedAtMs;
+
+	ActiveMatch(long matchId, DuelMode mode, DuelCategory category, List<SelectedQuestion> questions, String userId,
+			PlayerCard you, PlayerCard rivalCard, RivalPlan rival, DuelLang lang, long startedAtMs, long timeoutMs) {
 		this.matchId = matchId;
 		this.mode = mode;
 		this.category = category;
 		this.questions = List.copyOf(questions);
-		this.slotA = slotA;
-		this.slotB = slotB;
+		this.userId = userId;
+		this.you = you;
+		this.rivalCard = rivalCard;
+		this.rival = rival;
+		this.lang = lang;
+		this.startedAtMs = startedAtMs;
+		this.results = new Boolean[questions.size()];
+		this.timedOut = new boolean[questions.size()];
+		this.chosenDisplayOptions = new Integer[questions.size()];
+		startQuestion(startedAtMs, timeoutMs);
 	}
 
-	PlayerSlot findHumanSlot(String userId) {
-		if (slotA.getUserId().equals(userId)) {
-			return slotA;
+	boolean isFinished() {
+		return currentIndex >= questions.size();
+	}
+
+	List<Boolean> resultsCopy() {
+		return new ArrayList<>(Arrays.asList(results));
+	}
+
+	/** The current question was answered at {@code at}; the next one starts then. */
+	void recordAnswer(boolean correct, Integer displayOption, long at, long timeoutMs) {
+		store(correct, displayOption, false);
+		advance(at, timeoutMs);
+	}
+
+	/** The current question ran out at its deadline; the next one starts at that deadline. */
+	void recordTimeout(long timeoutMs) {
+		store(false, null, true);
+		advance(questionDeadline, timeoutMs);
+	}
+
+	void end(long at) {
+		ended = true;
+		endedAtMs = at;
+	}
+
+	private void store(boolean correct, Integer displayOption, boolean timeout) {
+		results[currentIndex] = correct;
+		timedOut[currentIndex] = timeout;
+		chosenDisplayOptions[currentIndex] = displayOption;
+		if (correct) {
+			score++;
 		}
-		if (slotB != null && !slotB.isBot() && slotB.getUserId().equals(userId)) {
-			return slotB;
+	}
+
+	private void advance(long at, long timeoutMs) {
+		currentIndex++;
+		if (!isFinished()) {
+			startQuestion(at, timeoutMs);
 		}
-		return null;
 	}
 
-	PlayerSlot rivalOf(PlayerSlot slot) {
-		return slot == slotA ? slotB : slotA;
-	}
-
-	boolean isComplete() {
-		if (mode == DuelMode.SOLO) {
-			return slotA.isFinished();
-		}
-		return slotA.isFinished() && slotB != null && slotB.isFinished();
-	}
-
-	boolean hasAnyConnectedHuman() {
-		return slotA.isConnected() || (mode == DuelMode.HUMAN && slotB != null && slotB.isConnected());
-	}
-
-	void markEndedAndCancelTimers() {
-		this.ended = true;
-		slotA.cancelTimer();
-		if (slotB != null) {
-			slotB.cancelTimer();
-		}
+	private void startQuestion(long at, long timeoutMs) {
+		questionStartedAt = at;
+		questionDeadline = at + timeoutMs;
 	}
 
 }

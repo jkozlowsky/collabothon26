@@ -5,6 +5,8 @@ import java.util.random.RandomGenerator;
 
 import org.springframework.stereotype.Service;
 
+import com.collabothon.back.duel.QuestionSelectionService.SelectedQuestion;
+
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 
@@ -16,28 +18,16 @@ import lombok.RequiredArgsConstructor;
 class BotService {
 
 	static final List<BotPersona> PERSONAS = List.of(
-			new BotPersona("Bella the Bot", 2),
-			new BotPersona("Max the Bot", 3),
-			new BotPersona("Clara the Bot", 1),
-			new BotPersona("Otto the Bot", 4));
+			new BotPersona("Bella the Bot"),
+			new BotPersona("Max the Bot"),
+			new BotPersona("Clara the Bot"),
+			new BotPersona("Otto the Bot"));
 
 	private final DuelProperties properties;
 
 	/** Picks a random named bot persona. */
 	BotPersona pickPersona(RandomGenerator rng) {
 		return PERSONAS.get(rng.nextInt(PERSONAS.size()));
-	}
-
-	/** Resolves the Explorer Avatar rank (1..4) for a stored bot name. */
-	int avatarForName(String botName) {
-		if (botName != null) {
-			for (BotPersona persona : PERSONAS) {
-				if (persona.name().equals(botName)) {
-					return persona.avatar();
-				}
-			}
-		}
-		return 1;
 	}
 
 	/** Returns the synthetic user id stored in {@code duel_answer} for a bot. */
@@ -99,8 +89,28 @@ class BotService {
 		return (correctOriginalIndex + offset) % 4;
 	}
 
-	/** Named bot persona with an Explorer Avatar rank (1..4). */
-	record BotPersona(String name, int avatar) {
+	/**
+	 * Draws a simulated rival's whole match: a pick for every question (right with the accuracy of
+	 * {@code level}) and cumulative answer times, each answer taking a delay from the configured range.
+	 */
+	RivalPlan planMatch(String userId, int level, List<SelectedQuestion> questions, RandomGenerator rng) {
+		int count = questions.size();
+		int[] chosen = new int[count];
+		boolean[] correct = new boolean[count];
+		long[] at = new long[count];
+		long elapsed = 0;
+		for (int i = 0; i < count; i++) {
+			int correctIndex = questions.get(i).question().getCorrectIndex();
+			chosen[i] = chooseOriginalOption(correctIndex, level, rng);
+			correct[i] = chosen[i] == correctIndex;
+			elapsed += answerDelayMs(rng);
+			at[i] = elapsed;
+		}
+		return new RivalPlan(userId, level, chosen, correct, at);
+	}
+
+	/** Named bot persona; bots have no avatar (the UI shows the bot icon). */
+	record BotPersona(String name) {
 	}
 
 }

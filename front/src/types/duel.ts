@@ -1,6 +1,8 @@
-// Contract for F8 duel mode. Mirrors the backend package com.collabothon.back.duel,
-// the STOMP transport in .plans/workers/stomp-contract.md, and .plans/duel-mode-spec.md §12.
+// Contract for F8 duel mode. Mirrors the backend package com.collabothon.back.duel and
+// .plans/duel-mode-spec.md §12 (REST + polling; the rival is simulated server-side).
 // Change both sides together.
+
+import type { AvatarId } from '@/types/account';
 
 export type DuelMode = 'HUMAN' | 'BOT' | 'SOLO';
 export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
@@ -9,7 +11,6 @@ export type CategoryIcon = 'trend' | 'pie' | 'percent' | 'coins' | 'brain';
 export type Lang = 'en' | 'pl';
 /** Player avatar from the bank account (GET /api/users/{id}/account): m1–m3, f1–f3. */
 export type { AvatarId } from '@/types/account';
-import type { AvatarId } from '@/types/account';
 
 // ---------- REST ----------
 
@@ -34,8 +35,7 @@ export type RankingRow = {
   rank: number;
   userId: string;
   name: string;
-  /** null for bots (the UI shows the bot icon). */
-  avatar: AvatarId | null;
+  avatar: AvatarId;
   level: number;
   elo: number;
   /** Elo for category/overall/friends; Elo gained this week for weekly. */
@@ -58,21 +58,30 @@ export type DuelProgress = {
   accuracyLast30d: number | null;
 }[];
 
-// ---------- STOMP over WebSocket: ws(s)://<backend>/ws/duel (CONNECT headers: userId, lang; SEND /app/duel/<type>; SUB /user/queue/duel) ----------
+// ---------- REST: a match is played with plain requests ----------
 
-export type ClientMessage =
-  | { type: 'queue.join'; category: CategorySlug; mode: DuelMode }
-  | { type: 'queue.leave' }
-  | { type: 'queue.acceptBot' }
-  | { type: 'answer'; matchId: number; index: number; option: number }
-  | { type: 'match.resume'; matchId: number };
+/** POST /api/duel/matches */
+export type StartMatchRequest = {
+  userId: string;
+  category: CategorySlug;
+  mode: DuelMode;
+  lang: Lang;
+};
+
+/** POST /api/duel/matches/{id}/answers; option is the index in the order the player saw. */
+export type AnswerRequest = {
+  userId: string;
+  index: number;
+  option: number;
+};
 
 export type PlayerCard = {
   name: string;
   level: number;
   /** null for bots */
   elo: number | null;
-  avatar: AvatarId;
+  /** null for bots (the UI shows the bot icon). */
+  avatar: AvatarId | null;
   isBot: boolean;
 };
 
@@ -111,9 +120,57 @@ export type MatchEnd = {
   review: ReviewItem[];
 };
 
+/** deadline is epoch ms; the client draws its countdown from it. */
+export type Question = { index: number; prompt: string; options: string[]; deadline: number };
+
+/** The rival's answers so far; the rival is simulated, so `connected` is always true. */
+export type RivalSnapshot = { answered: number; results: DotResult[]; connected: boolean };
+
+/** POST /api/duel/matches response: the match and its first question. */
+export type MatchStart = {
+  matchId: number;
+  mode: DuelMode;
+  category: CategorySlug;
+  you: PlayerCard;
+  /** null in solo */
+  rival: PlayerCard | null;
+  questionCount: number;
+  question: Question;
+};
+
+/** POST /api/duel/matches/{id}/answers response. */
+export type AnswerResult = {
+  index: number;
+  correct: boolean;
+  timedOut: boolean;
+  /** null once you answered everything */
+  nextQuestion: Question | null;
+  /** null in solo */
+  rivalProgress: RivalSnapshot | null;
+  /** true when the match is settled and GET /api/duel/matches/{id} returns the result */
+  finished: boolean;
+};
+
+/** GET /api/duel/matches/{id}/state?userId=&lang= */
+export type MatchState = {
+  matchId: number;
+  mode: DuelMode;
+  category: CategorySlug;
+  you: PlayerCard;
+  rival: PlayerCard | null;
+  questionCount: number;
+  yourResults: DotResult[];
+  /** null when you already finished all questions */
+  question: Question | null;
+  rivalProgress: RivalSnapshot | null;
+  finished: boolean;
+};
+
+/**
+ * What the match reducer consumes. The hook turns each REST response into these events
+ * (a start response becomes match.start + question, an answer response answer.result + question, ...).
+ */
 export type ServerMessage =
-  | { type: 'queue.waiting'; elapsedSec: number; widened: boolean }
-  | { type: 'queue.botOffer' }
   | {
       type: 'match.start';
       matchId: number;
@@ -123,23 +180,10 @@ export type ServerMessage =
       rival: PlayerCard | null;
       questionCount: number;
     }
-  /** deadline is epoch ms; the client draws its countdown from it. */
-  | { type: 'question'; index: number; prompt: string; options: string[]; deadline: number }
+  | ({ type: 'question' } & Question)
   | { type: 'answer.result'; index: number; correct: boolean; timedOut: boolean }
-  | { type: 'rival.progress'; answered: number; results: DotResult[]; connected: boolean }
-  | {
-      type: 'match.state';
-      matchId: number;
-      mode: DuelMode;
-      category: CategorySlug;
-      you: PlayerCard;
-      rival: PlayerCard | null;
-      questionCount: number;
-      yourResults: DotResult[];
-      /** null when you already finished all questions */
-      question: { index: number; prompt: string; options: string[]; deadline: number } | null;
-      rivalProgress: { answered: number; results: DotResult[]; connected: boolean } | null;
-    }
+  | ({ type: 'rival.progress' } & RivalSnapshot)
+  | ({ type: 'match.state' } & MatchState)
   | { type: 'match.waiting' }
   | ({ type: 'match.end' } & MatchEnd)
   | { type: 'error'; code: string; message: string };

@@ -18,7 +18,7 @@ import com.collabothon.back.duel.QuestionSelectionService.SelectedQuestion;
 
 class DuelDomainServicesTest {
 
-	private static final DuelProperties DEFAULTS = new DuelProperties(6, 40_000L, 5, 10, 1_000L, 150, 8_000L, 30_000L);
+	private static final DuelProperties DEFAULTS = new DuelProperties(6, 40_000L, 8_000L, 30_000L);
 
 	private final LevelCurve levelCurve = new LevelCurve();
 	private final ScoringService scoringService = new ScoringService();

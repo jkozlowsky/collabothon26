@@ -4,6 +4,7 @@ import { positionCount } from '@/lib/bank/selectors';
 import { USER_ID } from '@/lib/user';
 import type { BankState } from '@/types/bank';
 import type { Categorization, Facts } from '@/types/categorization';
+import type { CheckAnswer } from '@/types/quickCheck';
 
 const CATEGORIZATION_PATH = `/api/users/${encodeURIComponent(USER_ID)}/categorization`;
 
@@ -42,17 +43,17 @@ function profileSaved(signal: AbortSignal) {
 }
 
 /**
- * Whether this user already has a categorisation. A failed check throws: the caller may retry or skip, but never
+ * The categorisation this user already has, or null. A failed check throws: the caller may retry or skip, but never
  * POST, because a POST could overwrite a stored consent.
  */
-export async function isCategorized(signal: AbortSignal): Promise<boolean> {
+export async function existingCategorization(signal: AbortSignal): Promise<Categorization | null> {
   await profileSaved(signal);
-  return (await api<Categorization>(CATEGORIZATION_PATH, { signal }).catch(nullOn404)) !== null;
+  return api<Categorization>(CATEGORIZATION_PATH, { signal }).catch(nullOn404);
 }
 
 /** `facts` only with consent: the backend refuses account data the user did not agree to share. */
-export async function categorize(facts: Facts | null, signal: AbortSignal): Promise<Categorization> {
-  const body = JSON.stringify(facts ? { consent: true, facts } : { consent: false });
+export async function categorize(facts: Facts | null, signal: AbortSignal, answers: CheckAnswer[] = []): Promise<Categorization> {
+  const body = JSON.stringify({ consent: facts !== null, ...(facts && { facts }), ...(answers.length ? { answers } : {}) });
   await profileSaved(signal);
   for (let attempt = 1; ; attempt++) {
     try {

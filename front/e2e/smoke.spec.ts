@@ -24,6 +24,7 @@ test('app opens on the bank; Learn runs onboarding and the consent card, then Ma
   // The consent card previews the facts from the bank on screen; sharing them sends exactly those.
   await expect(page.getByTestId('consent-slip')).toContainText('Over 6 months of spending covered');
   await page.getByTestId('consent-accept').click();
+  await page.getByTestId('summary-all').click();
   await expect(page.getByTestId('screen-learn')).toBeVisible({ timeout: 15_000 });
   const categorization = await (await request.get('/api/users/demo-user/categorization')).json();
   expect(categorization).toMatchObject({ consent: true, bankData: true, lifeStage: null });

@@ -7,11 +7,15 @@ import { FlowMessage } from '@/components/categorizing/FlowMessage';
 import { FlowPage } from '@/components/categorizing/FlowPage';
 import { LockedLessons } from '@/components/categorizing/LockedLessons';
 import { PathSteps, type Step } from '@/components/categorizing/PathSteps';
+import { QuickCheckPage } from '@/components/categorizing/QuickCheckPage';
 import { Button } from '@/components/Button';
 import { colors } from '@/constants/theme';
 import { useBank } from '@/hooks/useBank';
 import { continueToLearn } from '@/hooks/useOpenLearn';
-import { categorize, factLabels, factsFrom, isCategorized, isRetryable, withTimeout } from '@/lib/categorization';
+import { categorize, existingCategorization, factLabels, factsFrom, isRetryable, withTimeout } from '@/lib/categorization';
+import { openSummary, unseen } from '@/lib/learningPath';
+import { drawQuestions, fetchCheckQuestions, promptParts, quizRng, toPayload, type Drawn } from '@/lib/quickCheck';
+import type { CheckAnswer, CheckQuestion } from '@/types/quickCheck';
 
 const STEP_MS = 800;
 const MIN_MS = 2400;
@@ -28,9 +32,9 @@ const ANSWERS_ONLY: StepId[] = ['answers', 'picking'];
 const ERROR_TITLE = 'Your path stopped halfway';
 const CHECK_ERROR_TITLE = "Your learning path didn't load";
 
-type Phase = 'consent' | 'loading' | 'error';
+type Phase = 'consent' | 'quick' | 'loading' | 'error';
 
-/** After a fresh onboarding: ask whether account data may be used, then build the learning path. */
+/** After a fresh onboarding: ask whether account data may be used, the Quick check, then build the learning path. */
 export default function CategorizingScreen() {
   const { state: bank } = useBank();
   // Computed once per visit, so the facts sent are exactly the ones the card previewed.
@@ -40,6 +44,12 @@ export default function CategorizingScreen() {
   const [checkAttempt, setCheckAttempt] = useState(0);
   const [phase, setPhase] = useState<Phase>('consent');
   const [consent, setConsent] = useState(false);
+  const [pool, setPool] = useState<CheckQuestion[]>([]);
+  const [drawn, setDrawn] = useState<{ consent: boolean; items: Drawn[] } | null>(null);
+  // The raw answer text lives only here, on this screen, until the one POST; null = "Not sure".
+  const [answers, setAnswers] = useState<(string | null)[]>([]);
+  const [index, setIndex] = useState(0);
+  const sent = useRef<CheckAnswer[]>([]);
   const [step, setStep] = useState(0);
   const [retryable, setRetryable] = useState(true);
   const inFlight = useRef(false);
@@ -53,11 +63,17 @@ export default function CategorizingScreen() {
 
   useEffect(() => {
     const ctrl = new AbortController();
-    withTimeout(ctrl.signal, isCategorized).then(
-      (categorized) => {
+    withTimeout(ctrl.signal, async (signal) => {
+      const existing = await existingCategorization(signal);
+      return { existing, pool: existing ? [] : await fetchCheckQuestions(signal) };
+    }).then(
+      ({ existing, pool }) => {
         if (ctrl.signal.aborted) return;
-        if (categorized) continueToLearn();
-        else setCheck('ask');
+        if (!existing) {
+          setPool(pool);
+          setCheck('ask');
+        } else if (unseen(existing)) openSummary(existing, false);
+        else continueToLearn();
       },
       (e: unknown) => {
         if (ctrl.signal.aborted) return;
@@ -96,23 +112,61 @@ export default function CategorizingScreen() {
     if (Platform.OS !== 'web' && message) AccessibilityInfo.announceForAccessibility(message);
   }, [status, alert]);
 
-  const start = async (withConsent: boolean) => {
+  const start = async (withConsent: boolean, checkAnswers: CheckAnswer[]) => {
     const outer = visit.current?.signal;
     if (inFlight.current || !outer) return;
     inFlight.current = true;
+    sent.current = checkAnswers;
     setConsent(withConsent);
     setStep(0);
     setPhase('loading');
     const [result] = await Promise.allSettled([
-      withTimeout(outer, (signal) => categorize(withConsent ? facts : null, signal)),
+      withTimeout(outer, (signal) => categorize(withConsent ? facts : null, signal, checkAnswers)),
       new Promise((r) => setTimeout(r, MIN_MS)),
     ]);
     if (outer.aborted) return;
-    if (result.status === 'fulfilled') return continueToLearn();
+    if (result.status === 'fulfilled') return openSummary(result.value, checkAnswers.length > 0);
     inFlight.current = false;
     setRetryable(isRetryable(result.reason));
     setPhase('error');
   };
+
+  /** Consent given or declined: draw the questions (or skip them) and move on. */
+  const decide = (withConsent: boolean) => {
+    const items = drawn?.consent === withConsent ? drawn.items : drawQuestions(pool, bank, withConsent, quizRng());
+    if (!items.length) return void start(withConsent, []);
+    if (drawn?.consent !== withConsent) {
+      setDrawn({ consent: withConsent, items });
+      setAnswers([]);
+    }
+    setConsent(withConsent);
+    setIndex(0);
+    setPhase('quick');
+  };
+
+  if (phase === 'quick' && drawn) {
+    const item = drawn.items[index];
+    const answer = (text: string | null) => {
+      const next = answers.slice();
+      next[index] = text;
+      setAnswers(next);
+      if (index < drawn.items.length - 1) setIndex(index + 1);
+      else void start(consent, toPayload(drawn.items, next));
+    };
+    return (
+      <QuickCheckPage
+        key={index}
+        index={index}
+        total={drawn.items.length}
+        parts={promptParts(item, bank)}
+        account={item.account}
+        initial={answers[index] ?? ''}
+        onNext={answer}
+        onUnsure={() => answer(null)}
+        onBack={() => (index > 0 ? setIndex(index - 1) : setPhase('consent'))}
+      />
+    );
+  }
 
   if (phase === 'consent') {
     if (check === 'failed') {
@@ -128,7 +182,7 @@ export default function CategorizingScreen() {
               <Button
                 label="Skip for now"
                 variant={retryable ? 'ghost' : 'primary'}
-                onPress={continueToLearn}
+                onPress={() => continueToLearn()}
                 testID="categorizing-check-skip"
               />
             </>
@@ -153,12 +207,12 @@ export default function CategorizingScreen() {
         testID="categorizing-consent"
         footer={
           <>
-            <Button label="Use my account data" onPress={() => void start(true)} testID="consent-accept" />
-            <Button label="Continue without" variant="secondary" onPress={() => void start(false)} testID="consent-decline" />
+            <Button label="Use my account data" onPress={() => decide(true)} testID="consent-accept" />
+            <Button label="Continue without" variant="secondary" onPress={() => decide(false)} testID="consent-decline" />
           </>
         }
       >
-        <ConsentCard facts={labels} />
+        <ConsentCard facts={labels} quickCheck={pool.length > 0} />
       </FlowPage>
     );
   }
@@ -190,11 +244,11 @@ export default function CategorizingScreen() {
       note="You'll start with the general lessons."
       footer={
         <>
-          {retryable && <Button label="Retry" onPress={() => void start(consent)} testID="categorizing-retry" />}
+          {retryable && <Button label="Retry" onPress={() => void start(consent, sent.current)} testID="categorizing-retry" />}
           <Button
             label="Skip for now"
             variant={retryable ? 'ghost' : 'primary'}
-            onPress={continueToLearn}
+            onPress={() => continueToLearn()}
             testID="categorizing-skip"
           />
         </>

@@ -14,6 +14,7 @@ import DuelMatchScreen from '@/app/duel/match';
 import DuelRankingsScreen from '@/app/duel/rankings';
 import RootLayout from '@/app/_layout';
 import CategorizingScreen from '@/app/categorizing';
+import LearningPathScreen from '@/app/learning-path';
 import LessonScreen from '@/app/lesson/[id]';
 import OnboardingScreen from '@/app/onboarding';
 
@@ -21,6 +22,7 @@ export const appRoutes = {
   _layout: RootLayout,
   onboarding: OnboardingScreen,
   categorizing: CategorizingScreen,
+  'learning-path': LearningPathScreen,
   'lesson/[id]': LessonScreen,
   '(main)/_layout': MainLayout,
   '(main)/(bank)/_layout': BankLayout,

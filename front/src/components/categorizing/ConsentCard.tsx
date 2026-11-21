@@ -7,10 +7,12 @@ import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 type Props = {
   /** The account facts in plain words, exactly what a consent sends. */
   facts: string[];
+  /** The Quick check follows, so its answers are part of what the card promises. */
+  quickCheck?: boolean;
 };
 
 /** The bank's boundary: what stays inside above the dashed line, the slip of summaries that crosses it below. */
-export function ConsentCard({ facts }: Props) {
+export function ConsentCard({ facts, quickCheck }: Props) {
   return (
     <>
       <View style={styles.head}>
@@ -53,6 +55,12 @@ export function ConsentCard({ facts }: Props) {
           ))}
         </View>
       </View>
+      {quickCheck && (
+        <Text style={styles.note} testID="consent-quickcheck-note">
+          Your answers to the next questions go to the lesson picker as you type them, so leave out exact amounts. Only the
+          judgement is stored, never your words.
+        </Text>
+      )}
     </>
   );
 }
@@ -102,6 +110,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderDefault,
     ...elevation.low,
   },
+  note: { ...type.labelDefault, color: colors.textMuted },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   pill: {
     ...type.labelDefault,

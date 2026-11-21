@@ -1,3 +1,4 @@
+import type { Check } from '@/types/quickCheck';
 import type { Experience, Goal, LifeStage } from '@/types/onboarding';
 
 /** What `factsFrom` computes on the device from the bank: the only bank data that may leave it. */
@@ -44,6 +45,9 @@ export type Categorization = {
     probabilities: Record<string, number>;
     because: string[];
   }[];
+  /** Quick check judgements (docs/specs/F1b-quick-check.md); [] when it was skipped. */
+  checks: Check[];
+  startLesson: { lessonId: number; title: string } | null;
   sharedWithModel: { facts: Facts | null; answers: SharedAnswers } | null;
   source: 'jev' | 'fallback';
   model: string | null;

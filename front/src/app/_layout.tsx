@@ -68,6 +68,7 @@ function RootStack() {
       <Stack.Protected guard={done}>
         {/* A fresh onboarding (finished or skipped) continues here; useResumeLearnAfterOnboarding opens it. */}
         <Stack.Screen name="categorizing" options={{ animation: 'fade' }} />
+        <Stack.Screen name="learning-path" options={{ animation: 'fade' }} />
         <Stack.Screen
           name="lesson/[id]"
           options={{

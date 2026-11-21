@@ -49,9 +49,10 @@ export async function goToInvite(page: Page) {
   await expect(page.getByTestId('onboarding-invite')).toBeVisible();
 }
 
-/** A fresh onboarding continues to the consent card; continuing without account data then lands on Learn. */
+/** A fresh onboarding continues to the consent card, then the summary; continuing without account data ends on Learn. */
 export async function passConsent(page: Page) {
   await tap(page, 'consent-decline');
+  await tap(page, 'summary-all');
   await expect(page.getByTestId('screen-learn')).toBeVisible({ timeout: 15_000 });
 }
 

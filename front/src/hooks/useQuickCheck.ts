@@ -1,21 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { ANSWER_DELAY_MS, AREAS, AREA_LABEL, DONE_MS, MAX_QUESTIONS, STEP_TIMEOUT_MS } from '@/constants/quickCheck';
-import {
-  accountUsable,
-  answerCounts,
-  areaMarks,
-  confidenceByArea,
-  postStep,
-  profileRequired,
-  profileToAsk,
-  promptParts,
-} from '@/lib/quickCheck';
+import { AREA_LABEL, DONE_MS, MAX_QUESTIONS, STEP_TIMEOUT_MS, type Feedback } from '@/constants/quickCheck';
+import { accountUsable, confidenceOf, feedbackFor, postStep, promptParts } from '@/lib/quickCheck';
 import type { BankState } from '@/types/bank';
-import type { Facts } from '@/types/categorization';
+import type { Facts, FocusArea } from '@/types/categorization';
 import type {
   CheckQuestion,
-  Confidence,
+  ConfidenceRating,
   HistoryEntry,
   Mastery,
   ProfileRanges,
@@ -26,7 +17,7 @@ import type {
 export type QuestionView = {
   /** Changes with every question, so the screen can start it fresh. */
   key: string;
-  kind: 'profile' | 'knowledge';
+  area: FocusArea;
   prompt: string;
   /** The prompt in pieces; `filled` ones come from the user's account. */
   parts: { text: string; filled: boolean }[];
@@ -34,18 +25,27 @@ export type QuestionView = {
   why: string;
   /** The question quotes the account, so the slip line says the numbers stay on the phone. */
   account: boolean;
+  correctIndex: number;
+  /** Set once the answer is committed: the pick (null = "Not sure") and what to say about it. */
+  result: { picked: number | null; feedback: Feedback } | null;
 };
 
-type Stage = 'idle' | 'profile' | 'knowledge' | 'waiting' | 'done';
+/** `first`: the first step runs. `answered`: the reveal is on screen. `waiting`: "Continue" came before the step's answer. */
+type Stage = 'idle' | 'first' | 'question' | 'answered' | 'waiting' | 'done';
+
+/** What a step decided: the next question, the end of the test, or a failure that ends it with the history so far. */
+type Outcome = { next: string } | 'done' | 'failed';
 
 type Run = {
   stage: Stage;
-  profile: ProfileRanges;
+  /** The question bank this test draws from. */
+  pool: CheckQuestion[];
   history: HistoryEntry[];
   mastery: Mastery;
-  /** The knowledge question on screen; still the answered one while its step runs. */
   currentId: string | null;
-  /** No model at all: the user's opt-out, or no key. Goes to the final POST. */
+  /** The answered question's step has decided, and waits for "Continue". */
+  outcome: Outcome | null;
+  /** No model at all (no key): the backend said so, and the final POST repeats it. */
   useRules: boolean;
   /** A step's model call failed: the rest of the steps run on the rule, the final call still runs. */
   fellBack: boolean;
@@ -53,27 +53,28 @@ type Run = {
   calls: number;
 };
 
-const EMPTY_PROFILE: ProfileRanges = { ageBand: null, savingsCover: null, horizon: null };
-const INITIAL: Run = { stage: 'idle', profile: EMPTY_PROFILE, history: [], mastery: {}, currentId: null, useRules: false, fellBack: false, calls: 0 };
+const INITIAL: Run = { stage: 'idle', pool: [], history: [], mastery: {}, currentId: null, outcome: null, useRules: false, fellBack: false, calls: 0 };
+const RUNNING: Stage[] = ['first', 'answered', 'waiting'];
 
 type Props = {
-  pool: CheckQuestion[];
   bank: BankState;
   consent: boolean;
   /** Sent with every step when `consent`. */
   facts: Facts | null;
-  lifeStageSkipped: boolean;
+  /** The ranges and the self-rating the survey collected. */
+  profile: ProfileRanges;
+  rating: ConfidenceRating;
   /** The test ended (done, or a step failed twice): send the final POST. */
   onFinish: (result: QuickResult) => void;
-  /** The first step failed: the Quick check is skipped and F1 applies; `useRules` after an opt-out, `calls` the model calls made before a restart. */
-  onSkip: (useRules: boolean, calls: number) => void;
+  /** The first step failed: the Quick check is skipped and F1 applies. */
+  onSkip: () => void;
 };
 
 /**
- * The Quick check's state machine: the profile tiles, then one Jev-or-rule step per knowledge answer (docs/specs/F1b-quick-check.md,
- * "Front flow and errors"). The raw history lives only here until the final POST.
+ * The Quick check's state machine: one Jev-or-rule step per answer, started at the tap and applied at "Continue"
+ * (docs/specs/F1b-quick-check.md, "Front flow and errors"). The raw history lives only here until the final POST.
  */
-export function useQuickCheck({ pool, bank, consent, facts, lifeStageSkipped, onFinish, onSkip }: Props) {
+export function useQuickCheck({ bank, consent, facts, profile, rating, onFinish, onSkip }: Props) {
   const [run, setRun] = useState(INITIAL);
   // Async steps read the latest run here: a response is applied only while the history it was sent with is still current.
   const latest = useRef(INITIAL);
@@ -91,29 +92,37 @@ export function useQuickCheck({ pool, bank, consent, facts, lifeStageSkipped, on
   useEffect(() => stop, []);
 
   const stale = (history: HistoryEntry[]) =>
-    latest.current.stage !== 'waiting' || latest.current.history.length !== history.length;
+    !RUNNING.includes(latest.current.stage) || latest.current.history.length !== history.length;
 
   const send = async (history: HistoryEntry[], useRules: boolean, stepFellBack: boolean): Promise<StepResponse> => {
     const ctrl = new AbortController();
     request.current = ctrl;
     const timer = setTimeout(() => ctrl.abort(), STEP_TIMEOUT_MS);
     try {
-      const body = { consent, ...(consent && { facts }), profile: latest.current.profile, history, useRules, stepFellBack };
-      return await postStep(body, ctrl.signal);
+      return await postStep({ consent, ...(consent && { facts }), profile, history, useRules, stepFellBack }, ctrl.signal);
     } finally {
       clearTimeout(timer);
     }
   };
 
   const finish = () => {
-    const { profile, history, mastery, useRules, calls } = latest.current;
+    const { history, mastery, useRules, calls } = latest.current;
     update({ stage: 'idle' });
     onFinish({ profile, history, mastery, useRules, stepCallsMade: calls });
   };
 
+  const apply = (outcome: Outcome) => {
+    if (outcome === 'failed') return finish();
+    if (outcome === 'done') {
+      update({ stage: 'done', outcome: null });
+      doneTimer.current = setTimeout(finish, DONE_MS);
+      return;
+    }
+    update({ stage: 'question', currentId: outcome.next, outcome: null });
+  };
+
   /** One step for `history`; a failure retries once with `stepFellBack`, a second failure ends the test (the first step skips it). */
   const step = async (history: HistoryEntry[]) => {
-    update({ stage: 'waiting', history });
     const first = history.length === 0;
     let { calls, useRules, fellBack } = latest.current;
     let result: StepResponse | null = null;
@@ -129,92 +138,82 @@ export function useQuickCheck({ pool, bank, consent, facts, lifeStageSkipped, on
       }
     }
     if (stale(history)) return;
-    const next = pool.find((q) => q.id === result?.nextQuestionId);
-    if (!result || (!result.done && !next)) {
-      update({ calls });
-      if (!first) return finish();
+    const next = latest.current.pool.find((q) => q.id === result?.nextQuestionId);
+    const outcome: Outcome = !result || (!result.done && !next) ? 'failed' : result.done ? 'done' : { next: next!.id };
+    if (outcome === 'failed' && first) {
       update({ stage: 'idle' });
-      return onSkip(useRules, calls);
+      return onSkip();
     }
-    update({ mastery: result.mastery, useRules, fellBack, calls, currentId: next?.id ?? latest.current.currentId });
-    if (!result.done) return update({ stage: 'knowledge' });
-    update({ stage: 'done' });
-    doneTimer.current = setTimeout(finish, DONE_MS);
+    update({ calls, ...(result && outcome !== 'failed' && { mastery: result.mastery, useRules, fellBack }) });
+    // While the reveal is on screen the outcome waits for "Continue".
+    if (latest.current.stage === 'answered') update({ outcome });
+    else apply(outcome);
   };
 
-  const advance = (profile: ProfileRanges) => {
-    if (profileToAsk(profile, consent, lifeStageSkipped).length) return update({ stage: 'profile', profile });
-    update({ profile });
+  const begin = (pool: CheckQuestion[]) => {
+    stop();
+    update({ ...INITIAL, pool, stage: 'first' });
     void step([]);
   };
 
-  /** Starts (or restarts, D3) with an empty knowledge history; the profile answers are kept. */
-  const begin = (useRules = false) => {
+  /** Leaves the test: nothing in flight survives. */
+  const close = () => {
     stop();
-    // Turning account access on drops the savings cover (it is only asked without consent).
-    const kept = latest.current.profile;
-    latest.current = { ...INITIAL, useRules, calls: latest.current.calls };
-    advance(consent ? { ...kept, savingsCover: null } : kept);
+    update(INITIAL);
   };
 
-  /** Back to the "What we know" card: nothing in flight survives, the profile answers do. */
-  const back = () => {
-    stop();
-    update({ ...INITIAL, profile: latest.current.profile, calls: latest.current.calls });
+  /** Commits the answer and shows the right one at once; its step runs while the user reads. `optionIndex` null = "Not sure". */
+  const answer = (optionIndex: number | null) => {
+    const { stage, history, currentId } = latest.current;
+    if (stage !== 'question' || !currentId) return;
+    const confidence = optionIndex === null ? null : confidenceOf(rating);
+    const answered = [...history, { questionId: currentId, optionIndex, confidence }];
+    update({ stage: 'answered', history: answered, outcome: null });
+    void step(answered);
   };
 
-  const answer = (optionIndex: number | null, confidence: Confidence | null = null) => {
-    const { stage, profile, history, currentId } = latest.current;
-    if (stage === 'profile') {
-      const asked = profileToAsk(profile, consent, lifeStageSkipped)[0];
-      advance({ ...profile, [asked.key]: asked.options[optionIndex!].value });
-    } else if (stage === 'knowledge') {
-      void step([...history, { questionId: currentId!, optionIndex, confidence }]);
-    }
+  /** "Continue": on to what the step decided, or to the status line until it has. */
+  const proceed = () => {
+    const { stage, outcome } = latest.current;
+    if (stage !== 'answered') return;
+    if (outcome) apply(outcome);
+    else update({ stage: 'waiting' });
   };
 
-  const { stage, profile, history, mastery, currentId } = run;
-  const asked = stage === 'profile' ? profileToAsk(profile, consent, lifeStageSkipped)[0] : null;
-  const question = stage === 'idle' || stage === 'profile' ? null : (pool.find((q) => q.id === currentId) ?? null);
-  const key = asked ? `profile-${asked.key}` : `question-${currentId}`;
-  const [readyKey, setReadyKey] = useState('');
-  useEffect(() => {
-    const id = setTimeout(() => setReadyKey(key), ANSWER_DELAY_MS);
-    return () => clearTimeout(id);
-  }, [key]);
-
-  const required = profileRequired(consent, lifeStageSkipped);
-  const answered = required.filter((q) => profile[q.key] !== null).length + history.length;
-  const atQuestion = stage === 'profile' || stage === 'knowledge';
+  const { stage, pool, history, currentId } = run;
+  const answered = stage === 'answered';
+  const question = stage === 'question' || answered ? (pool.find((q) => q.id === currentId) ?? null) : null;
+  const before = answered ? history.slice(0, -1) : history;
+  const picked = answered ? history.at(-1)!.optionIndex : null;
   const account = !!question && accountUsable(question, bank, consent);
   const parts = question ? promptParts(question, bank, account) : [];
-  const seenAreaBefore = !!question && history.slice(0, atQuestion ? undefined : -1).some((h) => pool.find((q) => q.id === h.questionId)?.area === question.area);
+  const seenAreaBefore = !!question && before.some((h) => pool.find((q) => q.id === h.questionId)?.area === question.area);
 
-  const view: QuestionView | null = asked
-    ? { key, kind: 'profile', prompt: asked.prompt, parts: [{ text: asked.prompt, filled: false }], options: asked.options.map((o) => o.label), why: asked.why, account: false }
-    : question && {
-        key,
-        kind: 'knowledge',
-        prompt: parts.map((p) => p.text).join(''),
-        parts,
-        options: question.options,
-        why: seenAreaBefore
-          ? `Picked to look at ${AREA_LABEL[question.area]} from another angle`
-          : `Picked to learn more about ${AREA_LABEL[question.area]}`,
-        account,
-      };
+  const view: QuestionView | null = question && {
+    key: `${before.length}-${question.id}`,
+    area: question.area,
+    prompt: parts.map((p) => p.text).join(''),
+    parts,
+    options: question.options,
+    why: seenAreaBefore
+      ? `Picked to look at ${AREA_LABEL[question.area]} from another angle`
+      : `Picked to learn more about ${AREA_LABEL[question.area]}`,
+    account,
+    correctIndex: question.correctIndex,
+    result: answered ? { picked, feedback: feedbackFor(picked, question.correctIndex, rating) } : null,
+  };
 
-  const areas = AREAS.filter((area) => pool.some((q) => q.area === area));
+  const status: 'waiting' | 'done' | null = stage === 'first' || stage === 'waiting' ? 'waiting' : stage === 'done' ? 'done' : null;
   return {
-    stage,
     view,
-    ready: atQuestion && readyKey === key,
-    /** "Question {position} of up to {total}": the shown question, which is the answered one while its step runs. */
-    position: Math.max(1, atQuestion ? answered + 1 : answered),
-    total: MAX_QUESTIONS + required.length,
-    dock: areaMarks(areas, mastery, confidenceByArea(history, pool), answerCounts(history, pool)),
+    /** The line shown in place of the question while a step decides or the test is done. */
+    status,
+    /** "Question {position} of up to {total}": the shown question, or the last answered one under a status line. */
+    position: stage === 'question' ? history.length + 1 : Math.max(1, history.length),
+    total: MAX_QUESTIONS,
     begin,
     answer,
-    back,
+    proceed,
+    close,
   };
 }

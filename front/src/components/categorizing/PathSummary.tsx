@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AreaMap } from '@/components/categorizing/AreaMap';
-import { IconTile } from '@/components/onboarding/ui';
+import { IconTile, type as text } from '@/components/onboarding/ui';
 import { RULE } from '@/constants/path';
 import { AREAS, AREA_LABEL, SOLID_MIN_ANSWERS } from '@/constants/quickCheck';
 import { colors, radii, spacing, type } from '@/constants/theme';
@@ -19,17 +19,17 @@ const BULLET_TOP = 6;
 const ROLE: Record<Role, string> = { novice: 'a beginner', intermediate: 'an intermediate', advanced: 'an advanced' };
 const GAP_TITLE = { under: 'You know more than you think', over: 'There is more to explore here' };
 const ALIGNED = {
-  title: 'How sure you felt matches your answers',
+  title: 'Your confidence matches your answers',
   body: 'On the areas we checked, your confidence and your answers line up.',
 };
 
-export function PathSummary({ categorization: c, chipped, counts = {} }: Summary) {
+export function PathSummary({ categorization: c, chipped, counts = {}, savingFor }: Summary) {
   const start = c.startLesson;
   const { data: stories } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(USER_ID)}`);
   const lessons = start && stories?.find((s) => s.id === start.storyId)?.lessons;
   const stop = lessons ? lessons.findIndex((l) => l.id === start!.lessonId) + 1 : 0;
   const roleLines = c.explanation.find((e) => e.output === 'role')?.because ?? [];
-  // A reload has no history, so the stored confidence stands in for "an answer carried a chip".
+  // A reload has no history, so the stored confidence stands in for "an answer carried the user's confidence".
   const hasChip = chipped ?? Object.values(c.confidence).some((v) => v != null);
   const showAligned = c.profile !== null && !c.confidenceGaps.length && hasChip;
   const usedModel = c.sharedWithModel !== null;
@@ -62,12 +62,17 @@ export function PathSummary({ categorization: c, chipped, counts = {} }: Summary
           <Text style={styles.heroBody}>{ALIGNED.body}</Text>
         </View>
       )}
-      <Text style={type.displayLarge} accessibilityRole="header" testID="summary-role">
+      {savingFor && (
+        <Text style={text.strong} testID="summary-saving-for">
+          {savingFor}
+        </Text>
+      )}
+      <Text style={text.display} accessibilityRole="header" testID="summary-role">
         You&apos;re {ROLE[c.role]} learner
       </Text>
       {c.answerCount > 0 ? (
-        <Text style={styles.body} testID="summary-based-on">
-          Based on {c.answerCount} answers and how sure you felt about each.
+        <Text style={text.body} testID="summary-based-on">
+          Based on {c.answerCount} answers and how confident you said you feel.
         </Text>
       ) : (
         roleLines.map((line) => (
@@ -107,7 +112,7 @@ export function PathSummary({ categorization: c, chipped, counts = {} }: Summary
 }
 
 const styles = StyleSheet.create({
-  overline: { ...type.overline, color: colors.textMuted },
+  overline: { ...text.overline, textTransform: 'uppercase' },
   muted: { ...type.labelDefault, color: colors.textMuted },
   body: { ...type.bodyDefault, color: colors.textMuted },
   hero: { backgroundColor: colors.brandPrimary, borderRadius: radii.card, padding: spacing.lg, gap: spacing.sm },

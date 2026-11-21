@@ -1,6 +1,6 @@
 import type { CheckQuestion } from '@/types/quickCheck';
 
-/** The starter bank of docs/specs/F1b-quick-check.md as GET /api/check-questions returns it (no answer key). */
+/** The starter bank of docs/specs/F1b-quick-check.md as GET /api/check-questions returns it (with the correct option). */
 export const POOL: CheckQuestion[] = [
   {
     id: 'emergency-cushion-purpose',
@@ -16,6 +16,7 @@ export const POOL: CheckQuestion[] = [
       'Pay for planned purchases such as a holiday or a new phone',
       'Earn as high a return as possible while it waits for you',
     ],
+    correctIndex: 0,
   },
   {
     id: 'inflation-real-value',
@@ -31,6 +32,7 @@ export const POOL: CheckQuestion[] = [
       'It stays the same, because the money is safe in the bank',
       'It depends on the bank, not on prices',
     ],
+    correctIndex: 1,
   },
   {
     id: 'inflation-grocery-bill',
@@ -45,6 +47,7 @@ export const POOL: CheckQuestion[] = [
       'It rises, because the same things cost more',
       'It falls, because money is worth more when prices rise',
     ],
+    correctIndex: 1,
   },
   {
     id: 'time-in-market',
@@ -59,6 +62,7 @@ export const POOL: CheckQuestion[] = [
       'Compounding only works in the first ten years of any investment',
       'The early money has more years in which gains earn further gains',
     ],
+    correctIndex: 2,
   },
   {
     id: 'short-term-fall',
@@ -73,6 +77,7 @@ export const POOL: CheckQuestion[] = [
       'The investment has failed, because a fall means it will not come back',
       'It is one month out of 20 years, and what is left keeps compounding',
     ],
+    correctIndex: 2,
   },
   {
     id: 'compound-rate-vs-time',
@@ -86,5 +91,6 @@ export const POOL: CheckQuestion[] = [
       'Saver A, because ten more years of compounding outweigh one point',
       'It cannot be told without knowing the exact starting amount',
     ],
+    correctIndex: 1,
   },
 ];

@@ -202,15 +202,14 @@ class QuickCheckCategorizationTests {
 					+ stories("berlin", "sao-paulo", "tokyo")), MediaType.APPLICATION_JSON));
 
 		// The rule would start in São Paulo (sv-b, the weakest area's lowest score); Jev's Berlin wins.
+		// Jev's "under" for investing is dropped: that answer was fairly sure, and one was "Not sure".
 		categorize(QUICK_CHECK).andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"source": "jev", "role": "intermediate", "profile": %s,
 					 "mastery": {"saving": 0.425, "investing": 0.5}, "answerCount": 4,
 					 "confidenceGaps": [
-					   {"area": "investing", "direction": "under",
-					    "because": "On Investing you said “Fairly sure”, yet your answers show you already understand how it works."},
 					   {"area": "saving", "direction": "over",
-					    "because": "On Saving you said “Sure”. Your answers leave a few things open, which is where your first lesson starts."}],
+					    "because": "You rated your confidence high. Your Saving answers leave a few things open, which is where your first lesson starts."}],
 					 "startLesson": {"lessonId": "berlin-1", "title": "%2$s", "area": "saving", "storyId": "berlin",
 					                 "storyCity": "Berlin"},
 					 "readyForNext": false, "pathStoryIds": ["berlin", "sao-paulo", "tokyo"],
@@ -276,13 +275,12 @@ class QuickCheckCategorizationTests {
 			.andRespond(withSuccess(jevFinal(choice("gap_saving", "over", "under", "over", "aligned")
 					+ stories("sao-paulo", "berlin", "tokyo")), MediaType.APPLICATION_JSON));
 
-		// The rule: saving has a wrong Sure answer (over); investing's right fairly-sure answer at 0.5 is under.
+		// The rule: saving has a wrong Sure answer (over); investing's right answer was fairly sure, so no gap.
 		categorize(QUICK_CHECK).andExpect(status().isOk())
 			.andExpect(jsonPath("$.source").value("fallback"))
-			.andExpect(jsonPath("$.confidenceGaps[0].area").value("investing"))
-			.andExpect(jsonPath("$.confidenceGaps[0].direction").value("under"))
-			.andExpect(jsonPath("$.confidenceGaps[1].area").value("saving"))
-			.andExpect(jsonPath("$.confidenceGaps[1].direction").value("over"))
+			.andExpect(jsonPath("$.confidenceGaps.length()").value(1))
+			.andExpect(jsonPath("$.confidenceGaps[0].area").value("saving"))
+			.andExpect(jsonPath("$.confidenceGaps[0].direction").value("over"))
 			.andExpect(jsonPath("$.startLesson.lessonId").value("sao-paulo-1"))
 			.andExpect(jsonPath("$.sharedWithModel.stepCallsMade").value(3));
 	}
@@ -427,7 +425,7 @@ class QuickCheckCategorizationTests {
 	@Test
 	void anAnsweredAreaWithoutAMasteryValueIsStoredWithTheRuleMean() throws Exception {
 		categorize(onRules(QUICK_CHECK.replace("\"investing\": 0.5", "\"investing\": null"))).andExpect(status().isOk());
-		stored().andExpect(content().json("{\"mastery\": {\"saving\": 0.425, \"investing\": 0.5}}",
+		stored().andExpect(content().json("{\"mastery\": {\"saving\": 0.425, \"investing\": 0.55}}",
 				JsonCompareMode.LENIENT));
 
 		categorize(onRules(QUICK_CHECK.replace(HISTORY, "[{\"questionId\": \"sv-a\", \"optionIndex\": 1, \"confidence\": \"sure\"}]")
@@ -593,6 +591,34 @@ class QuickCheckCategorizationTests {
 			.andExpect(jsonPath("$.source").value("jev"))
 			.andExpect(jsonPath("$.role").value(role));
 		stored().andExpect(jsonPath("$.role").value(role));
+	}
+
+	/** Two right answers per area, all rated low: both areas are Solid. */
+	private static final String ALL_RIGHT = """
+			[{"questionId": "sv-a", "optionIndex": 0, "confidence": "guessing"},
+			 {"questionId": "sv-b", "optionIndex": 0, "confidence": "guessing"},
+			 {"questionId": "in-a", "optionIndex": 0, "confidence": "guessing"},
+			 {"questionId": "short-term-fall", "optionIndex": 0, "confidence": "guessing"}]""";
+
+	@ParameterizedTest(name = "experience {0}, {1} Solid areas -> {2}")
+	@CsvSource({ "null, 2, advanced", "null, 1, intermediate", "null, 0, novice", "'\"occasional\"', 2, novice",
+			"'\"regular\"', 0, intermediate" })
+	void onRulesTheRoleComesFromTheAnswersOnlyWithoutADeclaredExperience(String experience, int solidAreas,
+			String role) throws Exception {
+		onboard("{\"goals\": [\"start-saving\"], \"experience\": %s, \"skipped\": false}".formatted(experience));
+		// One wrong answer leaves an area at Building.
+		String history = ALL_RIGHT;
+		if (solidAreas < 2) {
+			history = history.replace("\"short-term-fall\", \"optionIndex\": 0", "\"short-term-fall\", \"optionIndex\": 1");
+		}
+		if (solidAreas < 1) {
+			history = history.replace("\"sv-b\", \"optionIndex\": 0", "\"sv-b\", \"optionIndex\": 1");
+		}
+
+		categorize(onRules(QUICK_CHECK.replace(HISTORY, history)
+			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{}"))).andExpect(status().isOk())
+			.andExpect(jsonPath("$.source").value("fallback"))
+			.andExpect(jsonPath("$.role").value(role));
 	}
 
 	@Test

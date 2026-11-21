@@ -10,7 +10,7 @@ import type { AreaMark } from '@/lib/quickCheck';
 
 const TRACK = 10;
 
-/** One area: its level in words, the bar for what the answers show and the diamond for how sure the user felt. */
+/** One area: its level in words, the bar for what the answers show and the diamond for how confident the user said they feel. */
 export function AreaRow({ mark }: { mark: AreaMark }) {
   const reduced = useReducedMotion();
   const { area, mastery, confidence, level } = mark;

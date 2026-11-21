@@ -2,7 +2,7 @@ import type { CSSStyle } from 'react-native-reanimated';
 
 import { EASE_OUT } from '@/components/onboarding/ui';
 
-/** The dock's two markers: the diamond moves first, the bar rises after it (mockup C). Not applied under reduced motion. */
+/** The area map's two markers: the diamond moves first, the bar rises after it (mockup C). Not applied under reduced motion. */
 export const diamondMotion = {
   transitionProperty: ['bottom', 'left'],
   transitionDuration: 350,

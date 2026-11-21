@@ -5,7 +5,7 @@ import { MapLegend } from '@/components/categorizing/MapLegend';
 import { spacing } from '@/constants/theme';
 import type { AreaMark } from '@/lib/quickCheck';
 
-/** Both markers for every area, with their legend: the dock's detail sheet and the summary. */
+/** Both markers for every area, with their legend, on the summary. */
 export function AreaMap({ marks, testID }: { marks: AreaMark[]; testID?: string }) {
   return (
     <View style={styles.map} testID={testID}>

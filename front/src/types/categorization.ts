@@ -51,7 +51,7 @@ export type Categorization = {
   /** Set when the Quick check ran (docs/specs/F1b-quick-check.md); the rest reads {} / 0 / [] / false without it. */
   profile: ProfileRanges | null;
   mastery: Mastery;
-  /** Per-area mean of the chips the user tapped, 0-1. */
+  /** Per-area mean of the confidence the answers carried, 0-1. */
   confidence: Mastery;
   answerCount: number;
   startLesson: StartLesson | null;

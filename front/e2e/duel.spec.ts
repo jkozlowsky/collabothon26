@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 
-import { resetOnboarding, skipQuickCheck } from './app';
+import { openApp, resetOnboarding } from './app';
 
 const CATEGORY_SLUGS = ['instruments', 'risk', 'costs', 'money-basics', 'psychology'] as const;
 
@@ -14,9 +14,7 @@ test.afterAll(async ({ request }) => {
 
 /** Open the app and navigate from Bank to Learn, complete/skip onboarding if prompted, then open Duel. */
 async function openDuelLobby(page: Page) {
-  await skipQuickCheck(page);
-  await page.goto('/');
-  await page.getByTestId('nav-learn').click();
+  await openApp(page);
 
   const welcome = page.getByTestId('onboarding-welcome');
   const learn = page.getByTestId('screen-learn');
@@ -27,10 +25,7 @@ async function openDuelLobby(page: Page) {
   ]);
 
   if (await welcome.isVisible()) {
-    await page.getByTestId('onboarding-start').click();
-    await page.getByTestId('onboarding-next').click();
-    await page.getByTestId('onboarding-skip-all').click();
-    await page.getByTestId('consent-decline').click();
+    await page.getByTestId('onboarding-skip-intro').click();
     await page.getByTestId('summary-start').click();
     await expect(learn).toBeVisible({ timeout: 15000 });
   }

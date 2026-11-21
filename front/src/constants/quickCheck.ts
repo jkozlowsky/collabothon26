@@ -1,11 +1,9 @@
 import type { IconName } from '@/constants/onboarding';
 import type { FocusArea } from '@/types/categorization';
-import type { Confidence, ProfileRanges } from '@/types/quickCheck';
+import type { ConfidenceRating, ProfileRanges } from '@/types/quickCheck';
 
 /** Knowledge questions per test: the backend's `MAX_QUESTIONS`. */
 export const MAX_QUESTIONS = 6;
-/** Tiles stay disabled this long after a question appears, so a double tap cannot skip one unseen. */
-export const ANSWER_DELAY_MS = 400;
 /** "All set" stays on screen this long before the final call. */
 export const DONE_MS = 900;
 /** A step that takes longer fails (and falls back to rules); the backend's own limit is 3 s. */
@@ -13,7 +11,7 @@ export const STEP_TIMEOUT_MS = 5_000;
 
 export const STATUS_TEXT = { waiting: 'Choosing your next question', done: 'All set · That is enough to place you' } as const;
 
-/** The five areas in the order the dock and the summary draw them. */
+/** The five areas in the order the summary draws them. */
 export const AREAS: FocusArea[] = ['saving', 'debt', 'investing', 'risk', 'retirement'];
 export const AREA_LABEL: Record<FocusArea, string> = {
   saving: 'Saving',
@@ -30,42 +28,43 @@ export const AREA_ICON: Record<FocusArea, IconName> = {
   retirement: 'sunrise',
 };
 
-export const CONFIDENCE: { value: Confidence; label: string; bars: 1 | 2 | 3; chip: number }[] = [
-  { value: 'guessing', label: 'Guessing', bars: 1, chip: 0.25 },
-  { value: 'fairly-sure', label: 'Fairly sure', bars: 2, chip: 0.6 },
-  { value: 'sure', label: 'Sure', bars: 3, chip: 0.9 },
-];
+/** The survey's confidence step: the caption under the scale for each number. */
+export const CONFIDENCE_CAPTION: Record<ConfidenceRating, string> = {
+  1: 'I avoid these decisions',
+  2: 'I know a bit, but I hesitate to act',
+  3: 'I manage, with some doubts',
+  4: 'I usually feel sure',
+  5: 'I decide with confidence',
+};
+
+export type FeedbackTone = 'right' | 'wrong' | 'unsure';
+export type Feedback = { tone: FeedbackTone; title: string; body: string };
+
+const MARKED = 'The right answer is marked above.';
+/** After each answer; the right and wrong lines depend on how the user rated their confidence. */
+export const FEEDBACK = {
+  rightLow: { tone: 'right', title: 'Right', body: 'You rated yourself low, yet you got this one. You may know more than you think.' },
+  right: { tone: 'right', title: 'Right', body: 'That matches how confident you said you feel.' },
+  wrongHigh: { tone: 'wrong', title: 'Not quite', body: `You said you feel confident, so this one is worth a closer look. ${MARKED}` },
+  wrong: { tone: 'wrong', title: 'Not quite', body: `${MARKED} Your lessons cover this.` },
+  unsure: { tone: 'unsure', title: 'Good to know', body: `${MARKED} Your lessons cover this.` },
+} as const satisfies Record<string, Feedback>;
 
 /** Mastery levels (spec Q16, D7); never shown as a number. */
 export const JUST_STARTING_BELOW = 0.4;
 export const SOLID_ABOVE = 0.75;
 export const SOLID_MIN_ANSWERS = 2;
 export const LEVEL_LABEL = { none: 'Not checked yet', starting: 'Just starting', building: 'Building', solid: 'Solid' } as const;
-export const LEVEL_SHORT = { none: 'Not yet', starting: 'Starting', building: 'Building', solid: 'Solid' } as const;
 
-type ProfileKey = keyof ProfileRanges;
-type ProfileQuestion = {
-  key: ProfileKey;
+type ProfileQuestion<K extends keyof ProfileRanges> = {
   prompt: string;
   why: string;
-  options: { label: string; value: string }[];
+  options: { label: string; value: NonNullable<ProfileRanges[K]> }[];
 };
 
-/** Asked in this order (spec Q10), each only when its answer is missing. */
-export const PROFILE_QUESTIONS: ProfileQuestion[] = [
-  {
-    key: 'ageBand',
-    prompt: 'Which age band are you in?',
-    why: 'So examples fit your stage of life',
-    options: [
-      { label: '18–25', value: '18-25' },
-      { label: '26–40', value: '26-40' },
-      { label: '41–59', value: '41-59' },
-      { label: '60+', value: '60+' },
-    ],
-  },
-  {
-    key: 'savingsCover',
+/** The survey's two range questions; the age band comes from the account or the life stage. */
+export const PROFILE_QUESTIONS: { [K in 'savingsCover' | 'horizon']: ProfileQuestion<K> } = {
+  savingsCover: {
     prompt: 'How many months of spending could your savings cover?',
     why: 'So examples fit your savings',
     options: [
@@ -75,8 +74,7 @@ export const PROFILE_QUESTIONS: ProfileQuestion[] = [
       { label: '6 months or more', value: '6+' },
     ],
   },
-  {
-    key: 'horizon',
+  horizon: {
     prompt: 'When might you need the money you save or invest?',
     why: 'So examples match your time frame',
     options: [
@@ -86,4 +84,4 @@ export const PROFILE_QUESTIONS: ProfileQuestion[] = [
       { label: 'Not sure', value: 'not-sure' },
     ],
   },
-];
+};

@@ -25,6 +25,7 @@ import com.collabothon.back.categorization.dto.ProfileRangesDto;
 import com.collabothon.back.categorization.dto.SharedWithModelDto;
 import com.collabothon.back.categorization.dto.StartLessonDto;
 import com.collabothon.back.categorization.enums.CategorizationSource;
+import com.collabothon.back.categorization.enums.Experience;
 import com.collabothon.back.categorization.enums.ExplanationOutput;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.GapDirection;
@@ -128,8 +129,10 @@ public class CategorizationService {
 		LifeStage lifeStage = answers.lifeStage() == null && ran ? LifeStage.fromAgeBand(profile.ageBand())
 				: LifeStage.fromAnswer(answers.lifeStage());
 		String savingsCover = ran ? profile.savingsCover() : null;
+		Role measured = ran && Experience.fromWire(answers.experience()) == null
+				? QuickCheckRules.measuredRole(mastery, history) : null;
 		Judgement j = fromJev.judgement()
-			.orElseGet(() -> CategorizationRules.fallback(answers, facts, lifeStage, savingsCover));
+			.orElseGet(() -> CategorizationRules.fallback(answers, facts, lifeStage, savingsCover, measured));
 		Role role = ran ? QuickCheckRules.cappedRole(j.role(), mastery, history) : j.role();
 		// Without the Quick check nothing was measured, so the judged focus leads the path.
 		List<FocusArea> pathOrder = ran ? order
@@ -141,7 +144,7 @@ public class CategorizationService {
 		StartLessonDto startLesson = plan.start() == null ? null : startLesson(plan.start(), plan.area(), completed);
 		FocusArea startArea = startLesson == null ? null : startLesson.area();
 		List<ConfidenceGapDto> gaps = ran
-				? QuickCheckRules.gapCards(gaps(order, history, mastery, fromJev.judgement()), history, startArea)
+				? QuickCheckRules.gapCards(gaps(order, history, mastery, fromJev.judgement()), startArea)
 				: CategorizationRules.confidenceGaps(answers, facts);
 		SharedWithModelDto shared = fromJev.sent() || request.stepCallsMade() > 0
 				? new SharedWithModelDto(facts, fromJev.sent() ? answers : null, answers.goals(),

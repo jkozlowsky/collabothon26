@@ -12,7 +12,7 @@ export function MapLegend() {
         <View style={styles.swatch}>
           <Diamond style={styles.diamond} />
         </View>
-        <Text style={styles.text}>How sure you felt</Text>
+        <Text style={styles.text}>How confident you said you feel</Text>
       </View>
       <View style={styles.item}>
         <View style={styles.pill} />

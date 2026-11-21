@@ -27,11 +27,8 @@ public final class CategorizationConsts {
 
 	public static final double RULE_START = 0.5;
 
-	public static final double SCORE_CORRECT_SURE = 0.85;
-
-	public static final double SCORE_CORRECT_FAIRLY_SURE = 0.75;
-
-	public static final double SCORE_CORRECT_GUESSING = 0.6;
+	/** One self-rating covers every answer, so a right answer scores the same whatever the confidence. */
+	public static final double SCORE_CORRECT = 0.85;
 
 	public static final double SCORE_WRONG = 0.25;
 

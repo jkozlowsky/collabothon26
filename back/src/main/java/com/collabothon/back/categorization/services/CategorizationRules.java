@@ -60,9 +60,13 @@ final class CategorizationRules {
 
 	private static final Set<Experience> SAYS_INVESTING = EnumSet.of(Experience.INVESTING, Experience.PLANNING);
 
-	/** {@code savingsCover}, picked in the Quick check, stands in for the buffer fact without bank data. */
-	static Judgement fallback(OnboardingAnswersDto a, FactsDto f, LifeStage lifeStage, String savingsCover) {
-		Role role = fallbackRole(a, f);
+	/**
+	 * {@code savingsCover}, picked in the survey, stands in for the buffer fact without bank data. {@code measured}
+	 * is the role the Quick check showed for a user who declared no experience, null otherwise.
+	 */
+	static Judgement fallback(OnboardingAnswersDto a, FactsDto f, LifeStage lifeStage, String savingsCover,
+			Role measured) {
+		Role role = measured != null ? measured : fallbackRole(a, f);
 		return new Judgement(role, Map.of(), fallbackFocus(a, f, role, lifeStage, savingsCover), Map.of(), null,
 				Map.of(), null);
 	}

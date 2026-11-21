@@ -14,7 +14,7 @@ type Props = {
 const SIZE = 10;
 export const DIAMOND_HALF = SIZE / 2;
 
-/** The hollow marker for "how sure you felt"; the filled bar is what the answers show. */
+/** The hollow marker for how confident the user said they feel; the filled bar is what the answers show. */
 export function Diamond({ testID, style }: Props) {
   return <Animated.View testID={testID} aria-hidden style={[styles.diamond, style]} />;
 }

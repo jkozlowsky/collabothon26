@@ -1,17 +1,21 @@
 import { seedAccount } from '@/lib/bank/seed';
 import { slotValues } from '@/lib/bank/selectors';
+import { PURPOSES } from '@/constants/onboarding';
+import { FEEDBACK } from '@/constants/quickCheck';
+import { ageBandOf, ageLabel } from '@/lib/categorization';
 import {
   accountUsable,
   answerCounts,
-  confidenceByArea,
+  confidenceOf,
+  feedbackFor,
   fetchCheckQuestions,
   levelOf,
-  profileToAsk,
   promptParts,
+  savingForLine,
 } from '@/lib/quickCheck';
 import { POOL } from '@/test-utils/checkPool';
 import type { BankState } from '@/types/bank';
-import type { CheckQuestion, HistoryEntry, ProfileRanges } from '@/types/quickCheck';
+import type { CheckQuestion, ConfidenceRating, HistoryEntry } from '@/types/quickCheck';
 
 const question = (id: string) => POOL.find((q) => q.id === id)!;
 const text = (q: CheckQuestion, account: boolean) =>
@@ -91,6 +95,10 @@ test('pool items the front cannot use are skipped and a repeated id keeps its fi
     { ...good, id: 'no-options', options: undefined },
     { ...good, id: 'one-option', options: ['only'] },
     { ...good, id: 'option-not-text', options: ['a', 2] },
+    { ...good, id: 'no-correct-option', correctIndex: undefined },
+    { ...good, id: 'correct-option-past-the-end', correctIndex: good.options.length },
+    { ...good, id: 'correct-option-negative', correctIndex: -1 },
+    { ...good, id: 'correct-option-not-whole', correctIndex: 0.5 },
     { ...good },
     { ...POOL[1] },
     { ...POOL[1], genericPrompt: 'a second question with the same id' },
@@ -112,18 +120,6 @@ const entry = (questionId: string, confidence: HistoryEntry['confidence']): Hist
   confidence,
 });
 
-test('confidence per area is the mean of the chips, "Not sure" counts as Guessing, no answer is null', () => {
-  const history = [
-    entry('inflation-real-value', 'sure'),
-    entry('emergency-cushion-purpose', 'guessing'),
-    entry('time-in-market', null),
-  ];
-  const mean = confidenceByArea(history, POOL);
-  expect(mean.saving).toBeCloseTo((0.9 + 0.25) / 2);
-  expect(mean.investing).toBeCloseTo(0.25);
-  expect(mean.debt).toBeUndefined();
-});
-
 test('answers are counted per area', () => {
   const history = [entry('inflation-real-value', 'sure'), entry('time-in-market', null), entry('emergency-cushion-purpose', 'fairly-sure')];
   expect(answerCounts(history, POOL)).toEqual({ saving: 2, investing: 1 });
@@ -139,12 +135,52 @@ test('levels: no answer, under 0.4, up to 0.75, and above 0.75 only with two ans
   expect(levelOf(0.76, 2)).toBe('solid');
 });
 
-test('the profile questions come in a fixed order, each only where the answer is missing', () => {
-  const empty: ProfileRanges = { ageBand: null, savingsCover: null, horizon: null };
-  const keys = (profile: ProfileRanges, consent: boolean, lifeStageSkipped: boolean) =>
-    profileToAsk(profile, consent, lifeStageSkipped).map((q) => q.key);
-  expect(keys(empty, true, false)).toEqual(['horizon']);
-  expect(keys(empty, false, false)).toEqual(['savingsCover', 'horizon']);
-  expect(keys(empty, false, true)).toEqual(['ageBand', 'savingsCover', 'horizon']);
-  expect(keys({ ageBand: '26-40', savingsCover: '1-3', horizon: 'not-sure' }, false, true)).toEqual([]);
+test('the 1–5 rating maps to the confidence every answered option carries', () => {
+  const ratings: ConfidenceRating[] = [1, 2, 3, 4, 5];
+  expect(ratings.map(confidenceOf)).toEqual(['guessing', 'guessing', 'fairly-sure', 'sure', 'sure']);
+});
+
+test('the feedback depends on the answer and on how the user rated their confidence', () => {
+  const CORRECT = 1;
+  const WRONG = 0;
+  expect([1, 2].map((r) => feedbackFor(CORRECT, CORRECT, r as ConfidenceRating))).toEqual([FEEDBACK.rightLow, FEEDBACK.rightLow]);
+  expect([3, 4, 5].map((r) => feedbackFor(CORRECT, CORRECT, r as ConfidenceRating))).toEqual(Array(3).fill(FEEDBACK.right));
+  expect([4, 5].map((r) => feedbackFor(WRONG, CORRECT, r as ConfidenceRating))).toEqual([FEEDBACK.wrongHigh, FEEDBACK.wrongHigh]);
+  expect([1, 2, 3].map((r) => feedbackFor(WRONG, CORRECT, r as ConfidenceRating))).toEqual(Array(3).fill(FEEDBACK.wrong));
+  expect(feedbackFor(null, CORRECT, 5)).toBe(FEEDBACK.unsure);
+
+  expect(FEEDBACK.rightLow).toMatchObject({ title: 'Right', body: 'You rated yourself low, yet you got this one. You may know more than you think.' });
+  expect(FEEDBACK.right).toMatchObject({ title: 'Right', body: 'That matches how confident you said you feel.' });
+  expect(FEEDBACK.wrongHigh).toMatchObject({
+    title: 'Not quite',
+    body: 'You said you feel confident, so this one is worth a closer look. The right answer is marked above.',
+  });
+  expect(FEEDBACK.wrong).toMatchObject({ title: 'Not quite', body: 'The right answer is marked above. Your lessons cover this.' });
+  expect(FEEDBACK.unsure).toMatchObject({ title: 'Good to know', body: 'The right answer is marked above. Your lessons cover this.' });
+});
+
+test('each purpose is saved as the goals of its area', () => {
+  expect(Object.fromEntries(PURPOSES.map((p) => [p.title, p.goals]))).toEqual({
+    'A home of my own': ['start-saving', 'inflation'],
+    'A safety net': ['emergency-fund'],
+    Retirement: ['retirement'],
+    'Growing it long term': ['start-investing'],
+    'No plan yet': [],
+  });
+});
+
+test('the summary line names the purpose and, when known, the time frame', () => {
+  expect(savingForLine('A home of my own', '1-5y')).toBe('Saving for: A home of my own · needed in 1–5 years');
+  expect(savingForLine('A safety net', 'within-1y')).toBe('Saving for: A safety net · needed within a year');
+  expect(savingForLine('Retirement', '5y+')).toBe('Saving for: Retirement · needed in 5+ years');
+  expect(savingForLine('Retirement', 'not-sure')).toBe('Saving for: Retirement');
+  expect(savingForLine('Retirement', null)).toBe('Saving for: Retirement');
+  expect(savingForLine(null, '5y+')).toBeUndefined();
+});
+
+test('the age band is computed from the owner\'s age', () => {
+  expect([18, 25, 26, 40, 41, 59, 60, 83].map(ageBandOf)).toEqual(['18-25', '18-25', '26-40', '26-40', '41-59', '41-59', '60+', '60+']);
+  expect(ageBandOf(seedAccount().owner.age)).toBe('26-40');
+  expect(ageLabel('26-40')).toBe('Age 26–40');
+  expect(ageLabel('60+')).toBe('Age 60+');
 });

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { goToInvite, openApp, resetOnboarding, tap } from './app';
+import { answerSurvey, expectDisabled, openApp, resetOnboarding, tap, WITHOUT_ACCOUNT, type Survey } from './app';
 import { categorization } from '../src/test-utils/categorization';
 import { POOL } from '../src/test-utils/checkPool';
 
@@ -24,7 +24,7 @@ const stepper =
 
 const ran = (patch: object = {}) =>
   categorization({
-    profile: { ageBand: null, savingsCover: null, horizon: '1-5y' },
+    profile: { ageBand: '26-40', savingsCover: null, horizon: '1-5y' },
     mastery: MASTERY,
     confidence: { saving: 0.9, investing: 0.25 },
     answerCount: 3,
@@ -62,81 +62,88 @@ async function stubQuickCheck(page: Page, { step = stepper(), reply = ran(), sto
   return { steps, finals };
 }
 
-/** Registered after openApp, so these stubs win over its empty bank. */
-async function toConsentCard(page: Page, options: Parameters<typeof stubQuickCheck>[1] & { lifeStage?: boolean } = {}) {
+const byId = (id: string) => POOL.find((q) => q.id === id)!;
+const CORRECT = ORDER.map((id) => byId(id).correctIndex);
+const FIRST = byId(ORDER[0]);
+
+/** A fresh onboarding up to "Start the quick check"; registered after openApp, so these stubs win over its empty bank. */
+async function toCheck(page: Page, options: Parameters<typeof stubQuickCheck>[1] & { survey?: Survey } = {}) {
   await openApp(page);
   const calls = await stubQuickCheck(page, options);
-  await goToInvite(page);
-  if (options.lifeStage) {
-    await tap(page, 'onboarding-personalise');
-    await tap(page, 'option-building');
-    await tap(page, 'onboarding-continue');
-    await tap(page, 'goal-start-saving');
-    await tap(page, 'onboarding-continue');
-    await tap(page, 'option-regular');
-    await tap(page, 'onboarding-continue');
-  } else {
-    await tap(page, 'onboarding-skip-all');
-  }
+  await answerSurvey(page, options.survey);
+  await tap(page, 'check-start');
   return calls;
 }
-
-/** Answers the question on screen: a tile, then a chip. */
-async function answer(page: Page, option: number, chip = 'sure') {
+const question = (page: Page, n: number) => expect(page.getByText(`Question ${n} of up to 6`)).toBeVisible();
+/** Taps an option, then "Continue". */
+async function answer(page: Page, option: number) {
   await tap(page, `quick-check-option-${option}`);
-  await tap(page, `confidence-${chip}`);
+  await tap(page, 'quick-check-continue');
 }
-const toKnowCard = async (page: Page, consent: boolean) => {
-  await tap(page, consent ? 'consent-accept' : 'consent-decline');
-  await expect(page.getByTestId('categorizing-know')).toBeVisible();
-};
+const summary = (page: Page) => expect(page.getByTestId('learning-path')).toBeVisible({ timeout: 15_000 });
 
-test('consent, what we know, the time frame, three questions with chips, the summary, then the map', async ({ page }) => {
-  const { steps, finals } = await toConsentCard(page, { lifeStage: true });
-  await expect(page.getByTestId('consent-quickcheck-note')).toBeVisible();
-  await toKnowCard(page, true);
-  await expect(page.getByTestId('know-life-stage')).toContainText('Building my life');
-  await expect(page.getByTestId('know-goals')).toContainText('Start saving');
-  await expect(page.getByTestId('know-facts')).toContainText('From your accounts');
-  await tap(page, 'know-start');
+test('three questions with the right answer shown after each, the summary, then the map', async ({ page }) => {
+  const { steps, finals } = await toCheck(page);
 
-  await expect(page.getByText('Question 1 of up to 7')).toBeVisible();
+  await question(page, 1);
   await expect(page.getByTestId('quick-check-prompt')).toBeFocused();
-  await expect(page.getByText('Not scored')).toBeVisible();
-  await tap(page, 'quick-check-option-1');
-
-  await expect(page.getByText('Question 2 of up to 7')).toBeVisible();
+  await expect(page.getByText('QUICK CHECK · SAVING')).toBeVisible();
   await expect(page.getByTestId('quick-check-why')).toContainText('Picked to learn more about Saving');
   await expect(page.getByText('Only your answer is sent, never these numbers.')).toBeVisible();
-  await tap(page, 'quick-check-option-1');
-  await expect(page.getByText('How sure are you?')).toBeVisible();
-  await tap(page, 'confidence-guessing');
-  await expect(page.getByText('Question 3 of up to 7')).toBeVisible();
+  await expect(page.getByTestId('quick-check-unsure')).toContainText('That is fine. Your lessons cover it.');
+  await expectDisabled(page, 'quick-check-continue');
+  await expect(page.getByTestId('map-dock')).toHaveCount(0);
+
+  // Right, after a self-rating of 2 out of 5.
+  await tap(page, `quick-check-option-${CORRECT[0]}`);
+  await expect(page.getByTestId(`quick-check-option-${CORRECT[0]}-correct`)).toBeVisible();
+  await expect(page.getByTestId('quick-check-feedback')).toContainText('Right');
+  await expect(page.getByTestId('quick-check-feedback')).toContainText('You rated yourself low, yet you got this one. You may know more than you think.');
+  await expect(page.getByTestId('quick-check-feedback')).toBeInViewport();
+  await expectDisabled(page, `quick-check-option-${CORRECT[0]}`);
+  await tap(page, 'quick-check-continue');
+
+  await question(page, 2);
+  await expect(page.getByTestId('quick-check-prompt')).toBeFocused();
   await tap(page, 'quick-check-unsure');
-  await expect(page.getByText('Question 4 of up to 7')).toBeVisible();
-  await answer(page, 2, 'fairly-sure');
+  await expect(page.getByTestId('quick-check-unsure-selected')).toBeVisible();
+  await expect(page.getByTestId(`quick-check-option-${CORRECT[1]}-correct`)).toBeVisible();
+  await expect(page.getByTestId('quick-check-feedback')).toContainText('Good to know');
+  await tap(page, 'quick-check-continue');
+
+  await question(page, 3);
+  const wrong = (CORRECT[2] + 2) % byId(ORDER[2]).options.length;
+  await tap(page, `quick-check-option-${wrong}`);
+  await expect(page.getByTestId(`quick-check-option-${wrong}-wrong`)).toBeVisible();
+  await expect(page.getByTestId(`quick-check-option-${CORRECT[2]}-correct`)).toBeVisible();
+  await expect(page.getByTestId('quick-check-feedback')).toContainText('Not quite');
+  await expect(page.getByTestId('quick-check-feedback')).toContainText('The right answer is marked above. Your lessons cover this.');
+  await tap(page, 'quick-check-continue');
 
   // done after three answers, before the maximum of six
   await expect(page.getByTestId('quick-check-status')).toHaveText('All set · That is enough to place you');
-  await expect(page.getByTestId('learning-path')).toBeVisible({ timeout: 15_000 });
+  await summary(page);
+  await expect(page.getByTestId('summary-saving-for')).toHaveText('Saving for: A home of my own · needed in 1–5 years');
   await expect(page.getByTestId('summary-role')).toHaveText("You're an intermediate learner");
+  await expect(page.getByTestId('summary-based-on')).toHaveText('Based on 3 answers and how confident you said you feel.');
   await expect(page.getByTestId('summary-first-lesson')).toContainText('Emergency fund');
   await expect(page.getByTestId('summary-first-lesson')).toContainText('Berlin · stop 3 of 5');
+  await expect(page.getByText('How confident you said you feel', { exact: true })).toBeVisible();
   await expect(page.getByTestId('summary-disclaimer')).toHaveText('This picks lessons for you. It is not investment advice.');
 
   expect(steps.map((s) => s.history.length)).toEqual([0, 1, 2, 3]);
   expect(finals).toHaveLength(1);
   expect(finals[0]).toMatchObject({
     consent: true,
-    profile: { ageBand: null, savingsCover: null, horizon: '1-5y' },
+    profile: { ageBand: '26-40', savingsCover: null, horizon: '1-5y' },
     mastery: MASTERY,
     useRules: false,
     stepCallsMade: 3,
   });
   expect(finals[0].history).toEqual([
-    { questionId: ORDER[0], optionIndex: 1, confidence: 'guessing' },
+    { questionId: ORDER[0], optionIndex: CORRECT[0], confidence: 'guessing' },
     { questionId: ORDER[1], optionIndex: null, confidence: null },
-    { questionId: ORDER[2], optionIndex: 2, confidence: 'fairly-sure' },
+    { questionId: ORDER[2], optionIndex: wrong, confidence: 'guessing' },
   ]);
   expect(JSON.stringify(finals[0])).not.toMatch(/12,?500|1,?268/);
 
@@ -144,60 +151,41 @@ test('consent, what we know, the time frame, three questions with chips, the sum
   await expect(page.getByTestId('screen-learn')).toBeVisible();
 });
 
-test('without consent the savings cover is asked and the questions use example numbers', async ({ page }) => {
-  const { steps } = await toConsentCard(page, { lifeStage: true });
-  await toKnowCard(page, false);
-  await expect(page.getByTestId('know-facts')).toContainText('Account access is off');
-  await tap(page, 'know-start');
+test('without account access the survey\'s ranges are sent and the questions use example numbers', async ({ page }) => {
+  const { steps } = await toCheck(page, { survey: { consent: false, horizon: 'within-1y', rating: 5 } });
 
-  await expect(page.getByText('Question 1 of up to 8')).toBeVisible();
-  await expect(page.getByTestId('quick-check-prompt')).toHaveText('How many months of spending could your savings cover?');
-  await tap(page, 'quick-check-option-2');
-  await expect(page.getByTestId('quick-check-prompt')).toHaveText(/When might you need the money/);
-  await tap(page, 'quick-check-option-0');
-
-  await expect(page.getByText('Question 3 of up to 8')).toBeVisible();
-  await expect(page.getByTestId('quick-check-prompt')).toHaveText(POOL[1].genericPrompt);
+  await question(page, 1);
+  await expect(page.getByTestId('quick-check-prompt')).toHaveText(FIRST.genericPrompt);
   await expect(page.getByText('Example numbers')).toBeVisible();
-  expect(steps[0]).toMatchObject({ consent: false, profile: { savingsCover: '3-6', horizon: 'within-1y' } });
+  expect(steps[0]).toMatchObject({ consent: false, profile: { ageBand: null, savingsCover: WITHOUT_ACCOUNT.savingsCover, horizon: 'within-1y' } });
   expect(steps[0]).not.toHaveProperty('facts');
+
+  // Wrong, after a self-rating of 5 out of 5.
+  const wrong = (CORRECT[0] + 1) % FIRST.options.length;
+  await tap(page, `quick-check-option-${wrong}`);
+  await expect(page.getByTestId('quick-check-feedback')).toContainText('You said you feel confident, so this one is worth a closer look.');
+  await expect.poll(() => steps.length).toBe(2);
+  expect(steps[1].history).toEqual([{ questionId: ORDER[0], optionIndex: wrong, confidence: 'sure' }]);
 });
 
-test('with the life stage skipped the age band comes first', async ({ page }) => {
-  const { steps } = await toConsentCard(page);
-  await toKnowCard(page, true);
-  await expect(page.getByTestId('know-life-stage')).toContainText('Life stage not shared');
-  await tap(page, 'know-start');
+test('the next question waits for "Continue", even when its step has answered', async ({ page }) => {
+  const { steps } = await toCheck(page);
+  await question(page, 1);
+  await tap(page, `quick-check-option-${CORRECT[0]}`);
+  await expect.poll(() => steps.length).toBe(2);
+  await page.waitForTimeout(1_500);
 
-  await expect(page.getByTestId('quick-check-prompt')).toHaveText('Which age band are you in?');
-  await tap(page, 'quick-check-option-1');
-  await expect(page.getByTestId('quick-check-prompt')).toHaveText(/When might you need the money/);
-  await tap(page, 'quick-check-option-2');
-  await expect(page.getByText('Question 3 of up to 8')).toBeVisible();
-  expect(steps[0].profile).toEqual({ ageBand: '26-40', savingsCover: null, horizon: '5y+' });
-});
-
-test('"Use simple check instead" runs the whole test on rules', async ({ page }) => {
-  const { steps, finals } = await toConsentCard(page, { lifeStage: true, step: (b) => ({ ...stepper(1)(b) as object, useRules: true }) });
-  await toKnowCard(page, true);
-  await tap(page, 'know-simple');
-  await tap(page, 'quick-check-option-1');
-  await expect(page.getByText('Question 2 of up to 7')).toBeVisible();
-  await answer(page, 0);
-
-  await expect(page.getByTestId('learning-path')).toBeVisible({ timeout: 15_000 });
-  expect(steps.map((s) => s.useRules)).toEqual([true, true]);
-  expect(finals[0]).toMatchObject({ useRules: true, stepCallsMade: 0 });
+  await question(page, 1);
+  await expect(page.getByTestId('quick-check-feedback')).toBeVisible();
+  await tap(page, 'quick-check-continue');
+  await question(page, 2);
+  await expect(page.getByTestId('quick-check-feedback')).toHaveCount(0);
 });
 
 test('a first step that fails skips the Quick check and the F1 path runs', async ({ page }) => {
-  const { finals } = await toConsentCard(page, { lifeStage: true, step: () => 'fail', reply: categorization({ source: 'fallback', startLesson: null }) });
-  await toKnowCard(page, false);
-  await tap(page, 'know-start');
-  await tap(page, 'quick-check-option-2');
-  await tap(page, 'quick-check-option-1');
+  const { finals } = await toCheck(page, { survey: { consent: false }, step: () => 'fail', reply: categorization({ source: 'fallback', startLesson: null }) });
 
-  await expect(page.getByTestId('learning-path')).toBeVisible({ timeout: 15_000 });
+  await summary(page);
   expect(finals).toHaveLength(1);
   expect(Object.keys(finals[0]).sort()).toEqual(['consent']);
   await expect(page.getByTestId('summary-simple')).toHaveCount(0);
@@ -205,38 +193,28 @@ test('a first step that fails skips the Quick check and the F1 path runs', async
 
 test('a later step that fails is retried with stepFellBack and the test goes on', async ({ page }) => {
   const step: Step = (body) => (body.history.length === 1 && !body.stepFellBack ? 'fail' : stepper(2)(body));
-  const { steps, finals } = await toConsentCard(page, { lifeStage: true, step });
-  await toKnowCard(page, true);
-  await tap(page, 'know-start');
-  await tap(page, 'quick-check-option-1');
+  const { steps, finals } = await toCheck(page, { step });
   await answer(page, 0);
 
-  await expect(page.getByText('Question 3 of up to 7')).toBeVisible();
+  await question(page, 2);
   expect(steps.slice(1).map((s) => [s.history.length, s.useRules, s.stepFellBack])).toEqual([
     [1, false, false],
     [1, false, true],
   ]);
   await answer(page, 1);
-  await expect(page.getByTestId('learning-path')).toBeVisible({ timeout: 15_000 });
+  await summary(page);
   expect(steps.at(-1)).toMatchObject({ useRules: false, stepFellBack: true });
   expect(finals[0]).toMatchObject({ useRules: false });
 });
 
-test('Back returns to the card and the quick check restarts with no history and the answers to the profile kept', async ({ page }) => {
-  const { steps } = await toConsentCard(page, { lifeStage: true });
-  await toKnowCard(page, true);
-  await tap(page, 'know-start');
-  await tap(page, 'quick-check-option-1');
-  await answer(page, 0);
-  await expect(page.getByText('Question 3 of up to 7')).toBeVisible();
+test('Close leaves the test for Learn without building a path from it', async ({ page }) => {
+  const { finals } = await toCheck(page);
+  await question(page, 1);
+  await tap(page, 'quick-check-option-0');
+  await tap(page, 'onboarding-close');
 
-  await tap(page, 'quick-check-back');
-  await expect(page.getByTestId('categorizing-know')).toBeVisible();
-  await tap(page, 'know-start');
-  // The time frame is kept, so the first question comes straight back.
-  await expect(page.getByText('Question 2 of up to 7')).toBeVisible();
-  expect(steps.at(-1)).toMatchObject({ history: [], profile: { horizon: '1-5y' } });
-  await expect(page.getByTestId('quick-check-prompt')).toBeFocused();
+  await expect(page.getByTestId('screen-learn')).toBeVisible();
+  expect(finals).toHaveLength(0);
 });
 
 test('the line "We used a simpler check this time" shows when the model was asked and then failed', async ({ page }) => {
@@ -244,44 +222,33 @@ test('the line "We used a simpler check this time" shows when the model was aske
     source: 'fallback',
     sharedWithModel: { facts: null, answers: { lifeStage: null, goals: [], experience: null, skipped: true }, profile: null, answerCount: 1, stepCallsMade: 1 },
   });
-  await toConsentCard(page, { lifeStage: true, step: stepper(1), reply });
-  await toKnowCard(page, true);
-  await tap(page, 'know-start');
-  await tap(page, 'quick-check-option-1');
+  await toCheck(page, { step: stepper(1), reply });
   await answer(page, 0);
 
   await expect(page.getByTestId('summary-simple')).toHaveText('We used a simpler check this time', { timeout: 15_000 });
 });
 
-test('with no gap the aligned card shows; a gap shows its card instead', async ({ page }) => {
-  const gap = { area: 'saving', direction: 'under', because: 'On Saving you said “Guessing”, yet your answers show you already understand how it works.' };
-  await toConsentCard(page, { lifeStage: true, step: stepper(1), reply: ran({ confidenceGaps: [gap] }) });
-  await toKnowCard(page, true);
-  await tap(page, 'know-start');
-  await tap(page, 'quick-check-option-1');
+test('a gap shows its card instead of the aligned one', async ({ page }) => {
+  const gap = { area: 'saving', direction: 'under', because: 'You rated your confidence low, yet your Saving answers show you already understand how it works.' };
+  await toCheck(page, { step: stepper(1), reply: ran({ confidenceGaps: [gap] }) });
   await answer(page, 0);
 
   await expect(page.getByTestId('summary-gap-saving')).toContainText('You know more than you think', { timeout: 15_000 });
+  await expect(page.getByTestId('summary-gap-saving')).toContainText(gap.because);
   await expect(page.getByTestId('summary-aligned')).toHaveCount(0);
 });
 
 test('the aligned card shows when no gap was found', async ({ page }) => {
-  await toConsentCard(page, { lifeStage: true, step: stepper(1) });
-  await toKnowCard(page, true);
-  await tap(page, 'know-start');
-  await tap(page, 'quick-check-option-1');
+  await toCheck(page, { step: stepper(1) });
   await answer(page, 0);
 
-  await expect(page.getByTestId('summary-aligned')).toContainText('How sure you felt matches your answers', { timeout: 15_000 });
+  await expect(page.getByTestId('summary-aligned')).toContainText('Your confidence matches your answers', { timeout: 15_000 });
 });
 
 test('a reload of the summary rebuilds it from the stored row', async ({ page }) => {
-  await toConsentCard(page, { lifeStage: true, step: stepper(1) });
-  await toKnowCard(page, true);
-  await tap(page, 'know-start');
-  await tap(page, 'quick-check-option-1');
+  await toCheck(page, { step: stepper(1) });
   await answer(page, 0);
-  await expect(page.getByTestId('learning-path')).toBeVisible({ timeout: 15_000 });
+  await summary(page);
 
   const stored = ran();
   await page.route(CATEGORIZATION_URL, (route) => route.fulfill({ json: stored }));
@@ -290,73 +257,25 @@ test('a reload of the summary rebuilds it from the stored row', async ({ page })
   await expect(page.getByTestId('summary-based-on')).toContainText('3 answers');
 });
 
-/** On the first knowledge question, with the dock on screen. */
-async function toKnowledge(page: Page) {
-  const calls = await toConsentCard(page, { lifeStage: true, step: stepper(5) });
-  await toKnowCard(page, true);
-  await tap(page, 'know-start');
-  await tap(page, 'quick-check-option-1');
-  await expect(page.getByTestId('map-dock')).toBeVisible();
-  return calls;
-}
-
-test('the dock fills in as answers come: a screen-reader text per area, then the detail sheet closes by button, Escape and scrim', async ({ page }) => {
-  await toKnowledge(page);
-  await expect(page.getByTestId('dock-sr-saving')).toHaveText('Saving: Not checked yet');
-  await expect(page.getByTestId('dock-sr-investing')).toHaveText('Investing: Not checked yet');
-
-  await answer(page, 0, 'sure');
-  await expect(page.getByText('Question 3 of up to 7')).toBeVisible();
-  await expect(page.getByTestId('dock-sr-saving')).toHaveText('Saving: Building');
-  await expect(page.getByTestId('dock-sr-investing')).toHaveText('Investing: Just starting');
-
-  await tap(page, 'map-dock');
-  await expect(page.getByText('Your map in detail')).toBeVisible();
-  await expect(page.getByText('How sure you felt')).toBeVisible();
-  await expect(page.getByText('What your answers show')).toBeVisible();
-  await expect(page.getByTestId('area-level-saving')).toHaveText('Building');
-  await tap(page, 'sheet-close');
-  await expect(page.getByText('Your map in detail')).toHaveCount(0);
-
-  await tap(page, 'map-dock');
-  await expect(page.getByText('Your map in detail')).toBeVisible();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(page.getByText('Your map in detail')).toHaveCount(0);
-
-  await tap(page, 'map-dock');
-  await expect(page.getByText('Your map in detail')).toBeVisible();
-  await page.mouse.click(20, 20);
-  await expect(page.getByText('Your map in detail')).toHaveCount(0);
-});
-
-test('the bar rises over 700 ms and the diamond moves over 350 ms', async ({ page }) => {
-  await toKnowledge(page);
-  const transition = (id: string) => page.getByTestId(id).evaluate((el) => getComputedStyle(el).transitionDuration);
-  expect(await transition('dock-bar-saving')).toContain('0.7s');
-  expect(await transition('dock-diamond-saving')).toContain('0.35s');
-});
-
-test('with reduced motion the dock markers and the sheet appear in place', async ({ page }) => {
+test('with reduced motion the intro picture and the reveal show at once', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await toKnowledge(page);
-  const transition = (id: string) => page.getByTestId(id).evaluate((el) => getComputedStyle(el).transitionDuration);
-  expect(await transition('dock-bar-saving')).toBe('0s');
-  expect(await transition('dock-diamond-saving')).toBe('0s');
+  await openApp(page);
+  await stubQuickCheck(page);
+  await answerSurvey(page);
+  const animations = await page
+    .getByTestId('quick-check-hero')
+    .evaluate((hero) => [...hero.querySelectorAll('*')].map((el) => getComputedStyle(el).animationName));
+  expect(new Set(animations)).toEqual(new Set(['none']));
+  await expect(page.getByTestId('quick-check-hero').getByText('Right')).toBeVisible();
 
-  await tap(page, 'map-dock');
-  // The spring needs about half a second; 100 ms is enough for a sheet that does not animate.
-  await page.waitForTimeout(100);
-  const box = await page.getByTestId('map-sheet').boundingBox();
-  const viewport = page.viewportSize()!;
-  expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height + 1);
+  await tap(page, 'check-start');
+  await tap(page, `quick-check-option-${CORRECT[0]}`);
+  await expect(page.getByTestId(`quick-check-option-${CORRECT[0]}-correct`)).toBeVisible();
+  await expect(page.getByTestId('quick-check-feedback')).toBeVisible();
 });
 
 test('after a reload the summary draws both markers from the stored row', async ({ page }) => {
-  await toConsentCard(page, { lifeStage: true, step: stepper(1) });
-  await toKnowCard(page, true);
-  await tap(page, 'know-start');
-  await tap(page, 'quick-check-option-1');
+  await toCheck(page, { step: stepper(1) });
   await answer(page, 0);
   await expect(page.getByTestId('summary-map')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId('area-level-saving')).toHaveText('Building');

@@ -89,7 +89,7 @@ class CheckQuestionControllerTests {
 
 	@Test
 	@Transactional
-	void theBankComesOrderedByIdWithoutTheAnswerKey() throws Exception {
+	void theBankComesOrderedByIdWithTheCorrectOptionOnly() throws Exception {
 		questions.deleteAllInBatch();
 		CheckQuestion row = valid().toBuilder()
 			.accountPrompt("You hold €{savingsBalance}.")
@@ -104,9 +104,11 @@ class CheckQuestionControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					[{"id": "zz-first", "area": "saving", "accountPrompt": "You hold €{savingsBalance}.",
-					  "slots": ["savingsBalance"], "genericPrompt": "You hold €100.", "options": ["a", "b", "c"]},
+					  "slots": ["savingsBalance"], "genericPrompt": "You hold €100.", "options": ["a", "b", "c"],
+					  "correctIndex": 0},
 					 {"id": "zz-second", "area": "saving", "accountPrompt": "You hold €{savingsBalance}.",
-					  "slots": ["savingsBalance"], "genericPrompt": "You hold €100.", "options": ["a", "b", "c"]}]""",
+					  "slots": ["savingsBalance"], "genericPrompt": "You hold €100.", "options": ["a", "b", "c"],
+					  "correctIndex": 1}]""",
 					JsonCompareMode.STRICT));
 	}
 

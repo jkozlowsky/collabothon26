@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 import { api } from '@/lib/api';
 import { USER_ID } from '@/lib/user';
-import type { OnboardingAnswers, UserProfile } from '@/types/onboarding';
+import type { Intake, OnboardingAnswers, UserProfile } from '@/types/onboarding';
 
 type OnboardingState = {
   /** False until we know from the backend whether this user has been through onboarding. */
@@ -11,8 +11,10 @@ type OnboardingState = {
   done: boolean;
   /** Personalisation answers (empty when skipped). */
   answers: OnboardingAnswers;
-  /** Saves the answers on the user's profile. `skipped` = the user chose not to answer. */
-  complete: (answers: OnboardingAnswers, skipped: boolean) => void;
+  /** What the survey hands to /categorizing; null when it was skipped before the consent, edited from Profile, or reloaded. */
+  intake: Intake | null;
+  /** Saves the answers on the user's profile. `skipped` = the user chose not to answer. `intake` stays in memory. */
+  complete: (answers: OnboardingAnswers, skipped: boolean, intake?: Intake) => void;
   /** Demo helper: clears the saved answers and the completed flag so onboarding shows again. */
   reset: () => void;
 };
@@ -46,7 +48,7 @@ function toAnswers(p: UserProfile): OnboardingAnswers {
  * and from then on the app opens straight on Learn.
  */
 export function OnboardingProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState({ loaded: false, done: false, answers: EMPTY_ANSWERS });
+  const [state, setState] = useState<Omit<OnboardingState, 'complete' | 'reset'>>({ loaded: false, done: false, answers: EMPTY_ANSWERS, intake: null });
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +58,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
           !cancelled &&
           setState({
             loaded: true,
+            intake: null,
             // The profile's flag decides: onboarding shows until the user finished or skipped it once.
             done: p.onboardingCompleted,
             answers: p.onboardingCompleted ? toAnswers(p) : EMPTY_ANSWERS,
@@ -72,14 +75,14 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const complete = useCallback((answers: OnboardingAnswers, skipped: boolean) => {
+  const complete = useCallback((answers: OnboardingAnswers, skipped: boolean, intake: Intake | null = null) => {
     // Move on right away; the save runs in the background so a slow network never blocks the user.
-    setState({ loaded: true, done: true, answers });
+    setState({ loaded: true, done: true, answers, intake });
     writeProfile({ method: 'PUT', body: JSON.stringify({ ...answers, skipped }) }, 'Could not save onboarding answers');
   }, []);
 
   const reset = useCallback(() => {
-    setState({ loaded: true, done: false, answers: EMPTY_ANSWERS });
+    setState({ loaded: true, done: false, answers: EMPTY_ANSWERS, intake: null });
     writeProfile({ method: 'DELETE' }, 'Could not reset profile');
   }, []);
 

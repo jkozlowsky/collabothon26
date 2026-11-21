@@ -29,7 +29,7 @@ public record Answer(
 	}
 
 	public double score() {
-		return result() == AnswerResult.CORRECT ? confidence.getCorrectScore() : CategorizationConsts.SCORE_WRONG;
+		return result() == AnswerResult.CORRECT ? CategorizationConsts.SCORE_CORRECT : CategorizationConsts.SCORE_WRONG;
 	}
 
 	public double chip() {

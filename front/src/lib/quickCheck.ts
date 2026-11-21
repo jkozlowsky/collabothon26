@@ -1,4 +1,4 @@
-import { AREAS, CONFIDENCE, JUST_STARTING_BELOW, PROFILE_QUESTIONS, SOLID_ABOVE, SOLID_MIN_ANSWERS } from '@/constants/quickCheck';
+import { AREAS, FEEDBACK, JUST_STARTING_BELOW, PROFILE_QUESTIONS, SOLID_ABOVE, SOLID_MIN_ANSWERS, type Feedback } from '@/constants/quickCheck';
 import { api } from '@/lib/api';
 import { groupThousands } from '@/lib/bank/money';
 import { slotValues } from '@/lib/bank/selectors';
@@ -8,7 +8,10 @@ import type { Facts, FocusArea } from '@/types/categorization';
 import {
   SLOTS,
   type CheckQuestion,
+  type Confidence,
+  type ConfidenceRating,
   type HistoryEntry,
+  type Horizon,
   type Mastery,
   type ProfileRanges,
   type Slot,
@@ -24,7 +27,8 @@ function wellFormed(q: Partial<CheckQuestion> | null): q is CheckQuestion {
   if (!q || typeof q.id !== 'string' || !q.area || !AREAS.includes(q.area)) return false;
   const prompts = typeof q.genericPrompt === 'string' && (q.accountPrompt === null || typeof q.accountPrompt === 'string');
   const options = Array.isArray(q.options) && q.options.length >= MIN_OPTIONS && q.options.every((o) => typeof o === 'string');
-  return prompts && options && Array.isArray(q.slots);
+  const correct = options && Number.isInteger(q.correctIndex) && q.correctIndex! >= 0 && q.correctIndex! < q.options!.length;
+  return prompts && correct && Array.isArray(q.slots);
 }
 
 /** A failed GET counts as no questions and an unusable item as no item; an empty bank skips the Quick check. */
@@ -96,16 +100,22 @@ export function answerCounts(history: HistoryEntry[], pool: CheckQuestion[]) {
   return counts;
 }
 
-/** Per area, the mean of the chip values; "Not sure" counts as Guessing. The backend stores the same number. */
-export function confidenceByArea(history: HistoryEntry[], pool: CheckQuestion[]) {
-  const chip = (h: HistoryEntry) => CONFIDENCE.find((c) => c.value === (h.confidence ?? 'guessing'))!.chip;
-  const sums: Partial<Record<FocusArea, number>> = {};
-  const counts = answerCounts(history, pool);
-  for (const h of history) {
-    const area = areaOf(pool, h);
-    if (area) sums[area] = (sums[area] ?? 0) + chip(h);
-  }
-  return Object.fromEntries(Object.entries(sums).map(([area, sum]) => [area, sum / counts[area as FocusArea]!]));
+/** The 1–5 self-rating as the contract's confidence: every answered option carries it. */
+export const confidenceOf = (rating: ConfidenceRating): Confidence =>
+  rating <= 2 ? 'guessing' : rating === 3 ? 'fairly-sure' : 'sure';
+
+/** `picked` null = "Not sure". */
+export function feedbackFor(picked: number | null, correctIndex: number, rating: ConfidenceRating): Feedback {
+  if (picked === null) return FEEDBACK.unsure;
+  if (picked === correctIndex) return rating <= 2 ? FEEDBACK.rightLow : FEEDBACK.right;
+  return rating >= 4 ? FEEDBACK.wrongHigh : FEEDBACK.wrong;
+}
+
+/** The summary's "Saving for" line; a horizon of "Not sure" (or none) leaves only the purpose. */
+export function savingForLine(purpose: string | null, horizon: Horizon | null) {
+  if (!purpose) return undefined;
+  const when = horizon && horizon !== 'not-sure' && PROFILE_QUESTIONS.horizon.options.find((o) => o.value === horizon)?.label;
+  return `Saving for: ${purpose}${when ? ` · needed ${horizon === 'within-1y' ? '' : 'in '}${when.toLowerCase()}` : ''}`;
 }
 
 export type Level = 'none' | 'starting' | 'building' | 'solid';
@@ -117,19 +127,9 @@ export function levelOf(mastery: number | null | undefined, answers: number): Le
   return mastery > SOLID_ABOVE && answers >= SOLID_MIN_ANSWERS ? 'solid' : 'building';
 }
 
-/** The profile questions this run needs, in the spec's fixed order: age band only if life stage was skipped, cover only without consent. */
-export const profileRequired = (consent: boolean, lifeStageSkipped: boolean) => {
-  const needed = { ageBand: lifeStageSkipped, savingsCover: !consent, horizon: true };
-  return PROFILE_QUESTIONS.filter((q) => needed[q.key]);
-};
-
-/** The required profile questions with no answer yet. */
-export const profileToAsk = (profile: ProfileRanges, consent: boolean, lifeStageSkipped: boolean) =>
-  profileRequired(consent, lifeStageSkipped).filter((q) => profile[q.key] === null);
-
 export type AreaMark = { area: FocusArea; mastery: number | null; confidence: number | null; level: Level };
 
-/** One entry per area for the dock and the summary; `fallbackAnswers` stands in for areas missing in `answers`. */
+/** One entry per area for the summary; `fallbackAnswers` stands in for areas missing in `answers`. */
 export function areaMarks(
   areas: FocusArea[],
   mastery: Mastery,

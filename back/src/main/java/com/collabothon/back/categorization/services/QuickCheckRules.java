@@ -26,7 +26,6 @@ import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
-import java.util.stream.Stream;
 
 import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.ConfidenceGapDto;
@@ -40,8 +39,10 @@ import com.collabothon.back.categorization.repositories.projections.CheckQuestio
 
 final class QuickCheckRules {
 
+	/** Among equally easy questions, the one that quotes more of the user's own numbers goes first. */
 	private static final Comparator<CheckQuestionProjection> EASY_FIRST = Comparator
 		.comparing(CheckQuestionProjection::level, Comparator.comparing(level -> level != QuestionLevel.EASY))
+		.thenComparing(q -> q.slots().size(), Comparator.reverseOrder())
 		.thenComparing(CheckQuestionProjection::id);
 
 	/** Goal areas first, then the fixed order, only areas with bank questions; a short horizon puts saving first. */
@@ -103,6 +104,9 @@ final class QuickCheckRules {
 				.findFirst();
 		}
 		if (pick.isEmpty()) {
+			pick = oneShortOfSolid(order, unasked, answers).flatMap(area -> firstIn(unasked, area));
+		}
+		if (pick.isEmpty()) {
 			Map<FocusArea, Double> mastery = mastery(order, answers);
 			pick = order.stream()
 				.sorted(Comparator.comparing(area -> Objects.requireNonNullElse(mastery.get(area), RULE_START)))
@@ -133,7 +137,20 @@ final class QuickCheckRules {
 
 	static boolean ruleDone(List<FocusArea> order, List<CheckQuestionProjection> unasked, List<Answer> answers) {
 		return answers.size() >= RULE_MAX_QUESTIONS || unasked.isEmpty() || (answers.size() >= MIN_QUESTIONS
-				&& order.stream().noneMatch(area -> inArea(answers, area).isEmpty()));
+				&& order.stream().noneMatch(area -> inArea(answers, area).isEmpty())
+				&& oneShortOfSolid(order, unasked, answers).isEmpty());
+	}
+
+	/** In a run without a mistake, the first area one answer short of Solid that still has a question to ask. */
+	private static Optional<FocusArea> oneShortOfSolid(List<FocusArea> order, List<CheckQuestionProjection> unasked,
+			List<Answer> answers) {
+		if (answers.stream().anyMatch(a -> a.result() != AnswerResult.CORRECT)) {
+			return Optional.empty();
+		}
+		return order.stream()
+			.filter(area -> inArea(answers, area).size() == SOLID_MIN_ANSWERS - 1
+					&& unasked.stream().anyMatch(q -> q.area() == area))
+			.findFirst();
 	}
 
 	static boolean jevDone(List<CheckQuestionProjection> unasked, List<Answer> answers, double enough) {
@@ -158,6 +175,16 @@ final class QuickCheckRules {
 		return building ? role : Role.NOVICE;
 	}
 
+	/** The role the answers show, for a user who declared no experience: by how many answered areas are Solid. */
+	static Role measuredRole(Map<FocusArea, Double> mastery, List<Answer> answers) {
+		List<FocusArea> answered = answers.stream().map(Answer::area).distinct().toList();
+		long solid = answered.stream().filter(area -> solid(area, mastery, answers)).count();
+		if (solid == 0) {
+			return Role.NOVICE;
+		}
+		return solid == answered.size() ? Role.ADVANCED : Role.INTERMEDIATE;
+	}
+
 	/** Areas where at least one answer carries a chip: the only ones a gap can be about. */
 	static List<FocusArea> chipAreas(List<FocusArea> order, List<Answer> answers) {
 		return order.stream().filter(area -> inArea(answers, area).stream().anyMatch(a -> a.confidence() != null))
@@ -168,9 +195,10 @@ final class QuickCheckRules {
 		return inArea.stream().anyMatch(a -> a.result() == AnswerResult.WRONG && a.confidence() == Confidence.SURE);
 	}
 
+	/** Every answer in the area is right, and the user rated their confidence low. */
 	static boolean underHolds(List<Answer> inArea) {
-		return !overHolds(inArea) && inArea.stream()
-			.anyMatch(a -> a.result() == AnswerResult.CORRECT && a.confidence() != Confidence.SURE);
+		return !inArea.isEmpty() && inArea.stream()
+			.allMatch(a -> a.result() == AnswerResult.CORRECT && a.confidence() == Confidence.GUESSING);
 	}
 
 	static Optional<GapDirection> ruleGap(List<Answer> inArea, Double mastery) {
@@ -192,27 +220,22 @@ final class QuickCheckRules {
 	}
 
 	/** {@code gaps} in area order; under before over, at most MAX_GAP_CARDS cards. */
-	static List<ConfidenceGapDto> gapCards(Map<FocusArea, GapDirection> gaps, List<Answer> answers,
-			FocusArea startLessonArea) {
+	static List<ConfidenceGapDto> gapCards(Map<FocusArea, GapDirection> gaps, FocusArea startLessonArea) {
 		return gaps.entrySet().stream()
 			.sorted(Comparator.comparing(gap -> gap.getValue() != GapDirection.UNDER))
 			.limit(MAX_GAP_CARDS)
 			.map(gap -> new ConfidenceGapDto(gap.getKey(), gap.getValue(),
-					because(gap.getKey(), gap.getValue(), inArea(answers, gap.getKey()), startLessonArea)))
+				because(gap.getKey(), gap.getValue(), startLessonArea)))
 			.toList();
 	}
 
-	private static String because(FocusArea area, GapDirection direction, List<Answer> inArea,
-			FocusArea startLessonArea) {
-		Stream<Confidence> chips = inArea.stream().map(Answer::confidence).filter(Objects::nonNull);
+	private static String because(FocusArea area, GapDirection direction, FocusArea startLessonArea) {
 		if (direction == GapDirection.UNDER) {
-			String chip = chips.min(Comparator.naturalOrder()).orElseThrow().getLabel();
-			return "On %s you said “%s”, yet your answers show you already understand how it works."
-				.formatted(area.getLabel(), chip);
+			return "You rated your confidence low, yet your %s answers show you already understand how it works."
+				.formatted(area.getLabel());
 		}
-		String chip = chips.max(Comparator.naturalOrder()).orElseThrow().getLabel();
 		String end = area == startLessonArea ? "open, which is where your first lesson starts." : "open to explore.";
-		return "On %s you said “%s”. Your answers leave a few things %s".formatted(area.getLabel(), chip, end);
+		return "You rated your confidence high. Your %s answers leave a few things %s".formatted(area.getLabel(), end);
 	}
 
 	static List<BankLesson> lessons(List<CheckQuestionProjection> bank,

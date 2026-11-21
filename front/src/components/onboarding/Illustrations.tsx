@@ -4,8 +4,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useReducedMotion, type CSSAnimationKeyframes, type CSSAnimationProperties } from 'react-native-reanimated';
 
 import { Globe, GLOBE_PINS } from '@/components/onboarding/Globe';
-import { EASE_IN_OUT, EASE_OUT, motion } from '@/components/onboarding/ui';
-import { colors, radii, spacing } from '@/constants/theme';
+import { EASE_IN_OUT, EASE_OUT, motion, POP_IN } from '@/components/onboarding/ui';
+import { colors, elevation, fonts, radii, spacing } from '@/constants/theme';
 
 const FLOAT = { from: { transform: [{ translateY: 0 }] }, to: { transform: [{ translateY: -7 }] } };
 const SWAY = {
@@ -32,10 +32,16 @@ function loop(name: CSSAnimationKeyframes, duration: number, delay = 0, alternat
   };
 }
 
-/** Pops in once on mount, after `delay` ms. */
-function enter(delay: number): CSSAnimationProperties {
-  return { animationName: ENTER_POP, animationDuration: 520, animationDelay: delay, animationFillMode: 'backwards' as const, animationTimingFunction: EASE_OUT };
+const FADE_IN = { from: { opacity: 0 }, to: { opacity: 1 } };
+const RISE_IN = { from: { opacity: 0, transform: [{ translateY: 8 }] }, to: { opacity: 1, transform: [{ translateY: 0 }] } };
+
+/** Plays `name` once, `delay` ms after mount; until then the element holds the first keyframe. */
+function once(name: CSSAnimationKeyframes, duration: number, delay: number): CSSAnimationProperties {
+  return { animationName: name, animationDuration: duration, animationDelay: delay, animationFillMode: 'backwards' as const, animationTimingFunction: EASE_OUT };
 }
+
+/** Pops in once on mount, after `delay` ms. */
+const enter = (delay: number) => once(ENTER_POP, 520, delay);
 
 /**
  * Welcome hero: the brand tile and lesson/reward bubbles pop in one after another, then keep
@@ -71,6 +77,60 @@ export function WelcomeHero() {
         </Animated.View>
       ))}
     </View>
+  );
+}
+
+/** When each beat of the quick-check hero starts (ms): the rows 80 ms apart, the pick, the reveal, the bubble. */
+const BEAT = { card: 100, rows: 420, rowGap: 80, pick: 1100, reveal: 1600, bubble: 1750 };
+const ROW_BARS = ['62%', '74%', '48%'] as const;
+const PICKED_ROW = 1;
+
+/**
+ * Quick-check intro: a question card whose answers arrive one by one; one gets picked, turns out right, and a
+ * "Right" bubble pops in beside it. One sequence of about two seconds. Decorative only.
+ */
+export function QuickCheckHero() {
+  const reduced = useReducedMotion();
+  return (
+    <Animated.View
+      style={[check.stage, reduced && motion.fade]}
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
+      testID="quick-check-hero"
+    >
+      <Animated.View style={[check.card, !reduced && enter(BEAT.card)]}>
+        <View style={[check.bar, check.promptLong]} />
+        <View style={[check.bar, check.promptShort]} />
+        {ROW_BARS.map((width, i) => (
+          <Animated.View key={width} style={[check.row, !reduced && once(RISE_IN, 300, BEAT.rows + i * BEAT.rowGap)]}>
+            <View style={[check.skin, check.skinIdle]} />
+            {/* The colour change is two skins fading in over the idle one, so only opacity animates. */}
+            {i === PICKED_ROW && (
+              <>
+                <Animated.View style={[check.skin, check.skinPicked, !reduced && once(FADE_IN, 200, BEAT.pick)]} />
+                <Animated.View style={[check.skin, check.skinRight, !reduced && once(FADE_IN, 240, BEAT.reveal)]} />
+              </>
+            )}
+            <View style={[check.bar, { width }]} />
+            <View style={check.ring}>
+              {i === PICKED_ROW && (
+                <Animated.View style={[check.mark, !reduced && once(POP_IN, 260, BEAT.reveal)]}>
+                  <Feather name="check" size={11} color={colors.textOnBrand} />
+                </Animated.View>
+              )}
+            </View>
+          </Animated.View>
+        ))}
+      </Animated.View>
+      <Animated.View style={[check.bubbleSlot, !reduced && enter(BEAT.bubble)]}>
+        <Animated.View style={!reduced && loop(FLOAT, 2600, BEAT.bubble + 520)}>
+          <View style={[hero.bubble, check.bubble]}>
+            <Feather name="check" size={13} color={colors.textOnBrand} />
+            <Text style={hero.bubbleTextLight}>Right</Text>
+          </View>
+        </Animated.View>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
@@ -153,8 +213,8 @@ const hero = StyleSheet.create({
   },
   bubbleLight: { backgroundColor: colors.bgSurface, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)' },
   bubbleDark: { backgroundColor: 'rgba(255,255,255,0.12)' },
-  bubbleTextDark: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
-  bubbleTextLight: { fontSize: 12, fontWeight: '600', color: '#fff' },
+  bubbleTextDark: { fontFamily: fonts.semiBold, fontSize: 12, color: colors.textPrimary },
+  bubbleTextLight: { fontFamily: fonts.semiBold, fontSize: 12, color: '#fff' },
   check: {
     width: 18,
     height: 18,
@@ -163,6 +223,56 @@ const hero = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+});
+
+const RING = 18;
+
+const check = StyleSheet.create({
+  stage: { width: 280, height: 230, alignSelf: 'center' },
+  card: {
+    position: 'absolute',
+    left: 16,
+    top: 12,
+    width: 216,
+    padding: spacing.lg,
+    gap: spacing.smPlus,
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.card,
+    ...elevation.mid,
+  },
+  bar: { height: 8, borderRadius: radii.pill, backgroundColor: colors.borderStrong },
+  promptLong: { width: '86%' },
+  promptShort: { width: '58%', marginBottom: spacing.xs },
+  row: {
+    height: 36,
+    paddingHorizontal: spacing.smPlus,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  skin: { position: 'absolute', inset: 0, borderRadius: radii.button, borderWidth: 2 },
+  skinIdle: { borderColor: colors.borderDefault, backgroundColor: colors.bgSurface },
+  skinPicked: { borderColor: colors.brandPrimary, backgroundColor: colors.brandAccentSoft },
+  skinRight: { borderColor: colors.feedbackSuccess, backgroundColor: colors.bgSurface },
+  ring: {
+    width: RING,
+    height: RING,
+    borderRadius: RING / 2,
+    borderWidth: 2,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mark: {
+    width: RING,
+    height: RING,
+    borderRadius: RING / 2,
+    backgroundColor: colors.feedbackSuccess,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bubbleSlot: { position: 'absolute', right: 0, top: 118 },
+  bubble: { backgroundColor: colors.feedbackSuccess, ...elevation.mid },
 });
 
 const card = StyleSheet.create({
@@ -174,8 +284,8 @@ const card = StyleSheet.create({
     boxShadow: '0 6px 20px rgba(0, 46, 60, 0.08)',
   },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  overline: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: colors.feedbackXp },
-  meta: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
+  overline: { fontFamily: fonts.bold, fontSize: 10, letterSpacing: 1, color: colors.feedbackXp },
+  meta: { fontFamily: fonts.medium, fontSize: 12, color: colors.textMuted },
 });
 
 
@@ -215,7 +325,7 @@ const globe = StyleSheet.create({
     gap: 3,
     boxShadow: '0 8px 24px rgba(0, 46, 60, 0.16)',
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+  cardTitle: { fontFamily: fonts.bold, fontSize: 16, color: colors.textPrimary },
   cardButton: {
     marginTop: 6,
     flexDirection: 'row',
@@ -228,7 +338,7 @@ const globe = StyleSheet.create({
     paddingVertical: 7,
   },
   cityRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  cardButtonText: { fontSize: 13, fontWeight: '700', color: colors.brandPrimary },
+  cardButtonText: { fontFamily: fonts.bold, fontSize: 13, color: colors.brandPrimary },
   topics: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: spacing.lg },
   topic: {
     flexDirection: 'row',
@@ -242,7 +352,7 @@ const globe = StyleSheet.create({
     paddingVertical: 5,
   },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  topicText: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
+  topicText: { fontFamily: fonts.semiBold, fontSize: 12, color: colors.textPrimary },
 });
 
 

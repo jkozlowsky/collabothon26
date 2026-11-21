@@ -19,6 +19,20 @@ What the jury should see:
 Design source: direction C "Two markers on a dock", `docs/design/mockups/quick-check-v2-c.html` (dock with two markers, confidence chips inside the tapped tile, profile questions, "What we know about you" card, Learn map with "Start here").
 
 ## Jan's decisions
+v3 (21.11, Jan; overrides everything below where they differ):
+- Consent comes first, on one onboarding screen merged with "What we know": what the account already shows, what is still asked, the GDPR notice and "Your choices are checked by an AI service."
+- The profile questions leave the test and move into the survey. With consent the age band comes from the account; without it the survey asks life stage, experience and savings cover. The time frame is always a survey step.
+- A purpose question ("What are you saving for?") replaces the goals grid in a fresh onboarding and is saved as `goals`.
+- One 1–5 confidence rating in the survey replaces the chips: 1–2 → `guessing`, 3 → `fairly-sure`, 4–5 → `sure`, sent with every answered option.
+- `GET /api/check-questions` returns `correctIndex`; the right answer and a feedback line show after each question, and "Continue" moves on.
+- No dock during the test; the two-marker map stays on the summary.
+- No "Use simple check instead" (replaces D5); the app still sends back the `useRules` and `stepFellBack` the backend returns.
+- No back inside the test (replaces D3): Close leaves for Learn, hardware back does nothing.
+- Fallback role: when the test ran and no experience was declared, the role comes from the result: every answered area Solid → advanced, at least one → intermediate, else novice. A declared experience and the Jev path are unchanged.
+- Gaps: "under" needs every answer in the area right and the self-rating low (`guessing`); "over" still needs a wrong answer at `sure`. The cards say "You rated your confidence low/high" and name the area's answers, since there is one overall rating.
+- Scores: a right answer scores 0.85 whatever the confidence, so a low self-rating can still reach Solid; the confidence feeds only the confidence marker and the gaps.
+- Rule length: a run with every answer right goes on while an area with questions left has a single answer, and the next question comes from that area, still at most 4; so the rule can reach Solid in two areas and the advanced role. A run with a wrong or "Not sure" answer ends as before.
+
 v2 adversarial review (21.11, `.planning/reviews/F1b-v2-spec-adversarial-review.md`; binding over everything below):
 - D1 Age bands `18-25 | 26-40 | 41-59 | 60+`. With life stage skipped: `18-25` → student, `60+` → pre-retirement, `26-40` and `41-59` → null (GDPR art. 5(1)(d) accuracy: no inferred family status).
 - D2 Final-call fallback line: "We used a simpler check this time".

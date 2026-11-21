@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,6 +24,7 @@ import com.collabothon.back.categorization.enums.Confidence;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.QuestionLevel;
+import com.collabothon.back.categorization.enums.Role;
 import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 
 class QuickCheckRulesTests {
@@ -71,6 +73,11 @@ class QuickCheckRulesTests {
 				List.of("a", "b", "c"), 0, Arrays.asList(null, "m1-" + id, "m2-" + id), "Checks " + id);
 	}
 
+	private static CheckQuestionProjection withSlots(String id, QuestionLevel level, String... slots) {
+		return new CheckQuestionProjection(id, "s1-1", SAVING, level, "Account prompt " + id, List.of(slots),
+				"Prompt " + id, List.of("a", "b", "c"), 0, Arrays.asList(null, "m1-" + id, "m2-" + id), "Checks " + id);
+	}
+
 	private static Answer right(CheckQuestionProjection q, Confidence c) {
 		return new Answer(q, 0, c);
 	}
@@ -109,10 +116,13 @@ class QuickCheckRulesTests {
 	}
 
 	@Test
-	void eachAnswerScoresByResultAndChipAndAnAreaIsTheirMean() {
-		assertEquals(0.85, mastery(right(S_EASY_1, Confidence.SURE)).get(SAVING), EPSILON);
-		assertEquals(0.75, mastery(right(S_EASY_1, Confidence.FAIRLY_SURE)).get(SAVING), EPSILON);
-		assertEquals(0.6, mastery(right(S_EASY_1, Confidence.GUESSING)).get(SAVING), EPSILON);
+	void aRightAnswerScoresTheSameWhateverTheConfidenceAndAnAreaIsTheMean() {
+		for (Confidence confidence : Confidence.values()) {
+			assertEquals(0.85, mastery(right(S_EASY_1, confidence)).get(SAVING), EPSILON);
+		}
+		// With one self-rating on every answer, a low rating must still be able to reach Solid.
+		List<Answer> guessedRight = List.of(right(S_EASY_1, Confidence.GUESSING), right(S_EASY_2, Confidence.GUESSING));
+		assertTrue(QuickCheckRules.solid(SAVING, QuickCheckRules.mastery(ORDER, guessedRight), guessedRight));
 		assertEquals(0.25, mastery(wrong(S_EASY_1, Confidence.SURE)).get(SAVING), EPSILON);
 		assertEquals(0.25, mastery(notSure(S_EASY_1)).get(SAVING), EPSILON);
 		Map<FocusArea, Double> mixed = mastery(right(S_EASY_1, Confidence.SURE), wrong(S_EASY_2, Confidence.GUESSING));
@@ -145,6 +155,35 @@ class QuickCheckRulesTests {
 	}
 
 	@Test
+	void amongEasyQuestionsTheOneQuotingMoreOfTheUsersNumbersComesFirstThenTheId() {
+		CheckQuestionProjection oneSlot = withSlots("a-one-slot", QuestionLevel.EASY, "monthOut");
+		CheckQuestionProjection twoSlots = withSlots("b-two-slots", QuestionLevel.EASY, "savingsBalance", "savingsInterestRate");
+		CheckQuestionProjection alsoTwo = withSlots("c-two-slots", QuestionLevel.EASY, "savingsBalance", "monthOut");
+		CheckQuestionProjection hardThree = withSlots("d-hard", QuestionLevel.HARD, "savingsBalance", "monthOut", "depotTotal");
+		List<CheckQuestionProjection> bank = List.of(oneSlot, alsoTwo, hardThree, twoSlots);
+
+		List<String> asked = new ArrayList<>();
+		List<Answer> answers = new ArrayList<>();
+		for (int i = 0; i < bank.size(); i++) {
+			CheckQuestionProjection next = QuickCheckRules.next(List.of(SAVING), bank, answers, null).orElseThrow();
+			asked.add(next.id());
+			answers.add(right(next, Confidence.SURE));
+		}
+		assertEquals(List.of("b-two-slots", "c-two-slots", "a-one-slot", "d-hard"), asked);
+	}
+
+	@Test
+	void theShortHorizonSwapWinsOverTheSlotOrder() {
+		CheckQuestionProjection twoSlots = withSlots("two-slots", QuestionLevel.EASY, "savingsBalance", "savingsInterestRate");
+		CheckQuestionProjection fall = q(CategorizationConsts.SHORT_HORIZON_QUESTION_ID, "s1-1", SAVING, QuestionLevel.EASY);
+		List<CheckQuestionProjection> bank = List.of(twoSlots, fall);
+
+		assertEquals("two-slots", QuickCheckRules.next(List.of(SAVING), bank, List.of(), "1-5y").orElseThrow().id());
+		assertEquals(fall.id(),
+				QuickCheckRules.next(List.of(SAVING), bank, List.of(), CategorizationConsts.HORIZON_WITHIN_1Y).orElseThrow().id());
+	}
+
+	@Test
 	void aWrongOrNotSureAnswerStaysInTheAreaWithAnEasyQuestion() {
 		assertEquals(Optional.of("s-easy-2"), next(null, wrong(S_EASY_1, Confidence.SURE)));
 		assertEquals(Optional.of("s-easy-2"), next(null, notSure(S_EASY_1)));
@@ -163,11 +202,11 @@ class QuickCheckRulesTests {
 
 	@Test
 	void withEveryAreaAnsweredTheWeakestAreaGoesNextEasyBeforeHard() {
-		// Saving 0.85, investing 0.6: investing is weaker, its next easy question comes before the hard one.
+		// Saving 0.85, investing 0.25: investing is weaker, its next easy question comes before the hard one.
 		assertEquals(Optional.of(SHORT_FALL.id()),
-				next(null, right(S_EASY_1, Confidence.SURE), right(I_EASY, Confidence.GUESSING)));
-		assertEquals(Optional.of("i-hard"), next(null, right(S_EASY_1, Confidence.SURE),
-				right(I_EASY, Confidence.GUESSING), right(SHORT_FALL, Confidence.GUESSING)));
+				next(null, wrong(I_EASY, Confidence.GUESSING), right(S_EASY_1, Confidence.SURE)));
+		assertEquals(Optional.of("i-hard"), next(null, wrong(I_EASY, Confidence.GUESSING),
+				notSure(SHORT_FALL), right(S_EASY_1, Confidence.SURE)));
 	}
 
 	@Test
@@ -202,7 +241,7 @@ class QuickCheckRulesTests {
 		List<Answer> three = List.of(right(S_EASY_1, Confidence.SURE), right(S_EASY_2, Confidence.SURE),
 				right(S_HARD, Confidence.SURE));
 		assertFalse(QuickCheckRules.ruleDone(ORDER, QuickCheckRules.unasked(BANK, three), three));
-		List<Answer> covering = List.of(right(S_EASY_1, Confidence.SURE), right(S_EASY_2, Confidence.SURE),
+		List<Answer> covering = List.of(right(S_EASY_1, Confidence.SURE), notSure(S_EASY_2),
 				right(I_EASY, Confidence.SURE));
 		assertTrue(QuickCheckRules.ruleDone(ORDER, QuickCheckRules.unasked(BANK, covering), covering));
 		List<Answer> four = List.of(right(S_EASY_1, Confidence.SURE), right(S_EASY_2, Confidence.SURE),
@@ -210,6 +249,19 @@ class QuickCheckRulesTests {
 		assertTrue(QuickCheckRules.ruleDone(ORDER, QuickCheckRules.unasked(BANK, four), four));
 		List<Answer> one = List.of(right(S_EASY_1, Confidence.SURE));
 		assertTrue(QuickCheckRules.ruleDone(ORDER, List.of(), one));
+	}
+
+	@Test
+	void aRunWithoutAMistakeGoesOnWhileAnAreaIsOneAnswerShortOfSolid() {
+		List<Answer> allRight = List.of(right(S_EASY_1, Confidence.SURE), right(I_EASY, Confidence.SURE),
+				right(S_EASY_2, Confidence.SURE));
+		assertFalse(QuickCheckRules.ruleDone(ORDER, QuickCheckRules.unasked(BANK, allRight), allRight));
+		// Saving and investing tie at 0.85; the second investing question goes before a third saving one.
+		assertEquals(Optional.of(SHORT_FALL.id()), next(null, allRight.toArray(Answer[]::new)));
+		assertTrue(QuickCheckRules.ruleDone(ORDER, List.of(S_HARD), allRight));
+		List<Answer> oneWrong = List.of(wrong(S_EASY_1, Confidence.SURE), right(S_EASY_2, Confidence.SURE),
+				right(I_EASY, Confidence.SURE));
+		assertTrue(QuickCheckRules.ruleDone(ORDER, QuickCheckRules.unasked(BANK, oneWrong), oneWrong));
 	}
 
 	@Test
@@ -232,14 +284,34 @@ class QuickCheckRulesTests {
 	}
 
 	@Test
-	void underNeedsACorrectUnsureAnswerNoWrongSureAndMasteryFromJustStarting() {
+	void underNeedsEveryAnswerInTheAreaRightAndALowSelfRating() {
 		assertEquals(Map.of(SAVING, GapDirection.UNDER), ruleGaps(List.of(right(S_EASY_1, Confidence.GUESSING))));
+		assertEquals(Map.of(SAVING, GapDirection.UNDER),
+				ruleGaps(List.of(right(S_EASY_1, Confidence.GUESSING), right(S_EASY_2, Confidence.GUESSING))));
 		assertEquals(Map.of(), ruleGaps(List.of(right(S_EASY_1, Confidence.SURE))));
-		// 0.6, 0.25, 0.25: mastery 0.37 is below 0.4, so the rule keeps quiet although the chips would allow it.
-		List<Answer> weak = List.of(right(S_EASY_1, Confidence.GUESSING), wrong(S_EASY_2, Confidence.GUESSING),
-				notSure(S_HARD));
-		assertTrue(QuickCheckRules.underHolds(weak));
-		assertEquals(Map.of(), ruleGaps(weak));
+		// A self-rating of 3 out of 5 is not low.
+		assertEquals(Map.of(),
+				ruleGaps(List.of(right(S_EASY_1, Confidence.FAIRLY_SURE), right(S_EASY_2, Confidence.FAIRLY_SURE))));
+		assertEquals(Map.of(),
+				ruleGaps(List.of(wrong(S_EASY_1, Confidence.GUESSING), right(S_EASY_2, Confidence.GUESSING))));
+		assertEquals(Map.of(), ruleGaps(List.of(right(S_EASY_1, Confidence.GUESSING), notSure(S_EASY_2))));
+		assertFalse(QuickCheckRules.underHolds(List.of()));
+	}
+
+	@Test
+	void withoutADeclaredExperienceTheRoleFollowsHowManyAnsweredAreasAreSolid() {
+		List<Answer> bothSolid = List.of(right(S_EASY_1, Confidence.GUESSING), right(S_EASY_2, Confidence.GUESSING),
+				right(I_EASY, Confidence.GUESSING), right(SHORT_FALL, Confidence.GUESSING));
+		assertEquals(Role.ADVANCED, QuickCheckRules.measuredRole(QuickCheckRules.mastery(ORDER, bothSolid), bothSolid));
+		// An area nobody asked about does not hold the role back.
+		List<Answer> savingOnly = bothSolid.subList(0, 2);
+		assertEquals(Role.ADVANCED, QuickCheckRules.measuredRole(QuickCheckRules.mastery(ORDER, savingOnly), savingOnly));
+		// One right answer in investing is Building, not Solid.
+		List<Answer> oneSolid = bothSolid.subList(0, 3);
+		assertEquals(Role.INTERMEDIATE, QuickCheckRules.measuredRole(QuickCheckRules.mastery(ORDER, oneSolid), oneSolid));
+		List<Answer> noneSolid = List.of(right(S_EASY_1, Confidence.SURE), wrong(S_EASY_2, Confidence.SURE),
+				right(I_EASY, Confidence.SURE));
+		assertEquals(Role.NOVICE, QuickCheckRules.measuredRole(QuickCheckRules.mastery(ORDER, noneSolid), noneSolid));
 	}
 
 	@Test
@@ -255,35 +327,31 @@ class QuickCheckRulesTests {
 	}
 
 	@Test
-	void gapCardsPutUnderFirstQuoteTheRightChipAndNameTheFirstLesson() {
-		List<Answer> answers = List.of(wrong(S_EASY_1, Confidence.SURE), right(S_EASY_2, Confidence.GUESSING),
-				right(I_EASY, Confidence.FAIRLY_SURE), right(SHORT_FALL, Confidence.GUESSING));
+	void gapCardsPutUnderFirstAndNameTheFirstLesson() {
 		Map<FocusArea, GapDirection> gaps = new LinkedHashMap<>();
 		gaps.put(SAVING, GapDirection.OVER);
 		gaps.put(INVESTING, GapDirection.UNDER);
 
 		assertEquals(List.of(
 				new ConfidenceGapDto(INVESTING, GapDirection.UNDER,
-						"On Investing you said “Guessing”, yet your answers show you already understand how it works."),
+						"You rated your confidence low, yet your Investing answers show you already understand how it works."),
 				new ConfidenceGapDto(SAVING, GapDirection.OVER,
-						"On Saving you said “Sure”. Your answers leave a few things open, which is where your first"
-								+ " lesson starts.")),
-				QuickCheckRules.gapCards(gaps, answers, SAVING));
-		assertEquals("On Saving you said “Sure”. Your answers leave a few things open to explore.",
-				QuickCheckRules.gapCards(Map.of(SAVING, GapDirection.OVER), answers, INVESTING).getFirst().because());
+						"You rated your confidence high. Your Saving answers leave a few things open, which is"
+								+ " where your first lesson starts.")),
+				QuickCheckRules.gapCards(gaps, SAVING));
+		assertEquals("You rated your confidence high. Your Saving answers leave a few things open to explore.",
+				QuickCheckRules.gapCards(Map.of(SAVING, GapDirection.OVER), INVESTING).getFirst().because());
 	}
 
 	@Test
 	void atMostTwoGapCards() {
-		List<Answer> answers = List.of(right(S_EASY_1, Confidence.GUESSING), right(I_EASY, Confidence.GUESSING),
-				right(q("r", "s5-1", FocusArea.RISK, QuestionLevel.EASY), Confidence.GUESSING));
 		Map<FocusArea, GapDirection> gaps = new LinkedHashMap<>();
 		gaps.put(SAVING, GapDirection.UNDER);
 		gaps.put(INVESTING, GapDirection.UNDER);
 		gaps.put(FocusArea.RISK, GapDirection.UNDER);
 
 		assertEquals(List.of(SAVING, INVESTING),
-				QuickCheckRules.gapCards(gaps, answers, null).stream().map(ConfidenceGapDto::area).toList());
+				QuickCheckRules.gapCards(gaps, null).stream().map(ConfidenceGapDto::area).toList());
 	}
 
 	@Test

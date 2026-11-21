@@ -170,7 +170,7 @@ class QuickCheckStepTests {
 				{"questionId": "in-a", "optionIndex": 0, "confidence": "fairly-sure"}""", true))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"mastery": {"saving": 0.25, "investing": 0.75}, "nextQuestionId": null, "done": true,
+					{"mastery": {"saving": 0.25, "investing": 0.85}, "nextQuestionId": null, "done": true,
 					 "useRules": true, "stepFellBack": false}""", JsonCompareMode.STRICT));
 	}
 

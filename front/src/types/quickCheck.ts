@@ -15,7 +15,7 @@ export const SLOTS = [
 ] as const;
 export type Slot = (typeof SLOTS)[number];
 
-/** GET /api/check-questions item; the correct option never leaves the backend. */
+/** GET /api/check-questions item; `correctIndex` is shown after each answer. */
 export type CheckQuestion = {
   id: string;
   area: FocusArea;
@@ -23,9 +23,12 @@ export type CheckQuestion = {
   slots: Slot[];
   genericPrompt: string;
   options: string[];
+  correctIndex: number;
 };
 
 export type Confidence = 'guessing' | 'fairly-sure' | 'sure';
+/** The survey's one self-rating, "How confident do you feel making your own money decisions?". */
+export type ConfidenceRating = 1 | 2 | 3 | 4 | 5;
 
 /** `optionIndex` and `confidence` both null = "Not sure". */
 export type HistoryEntry = { questionId: string; optionIndex: number | null; confidence: Confidence | null };
@@ -41,7 +44,7 @@ export type ProfileRanges = {
 /** Per area with bank questions; null = no answer yet. */
 export type Mastery = Partial<Record<FocusArea, number | null>>;
 
-/** `useRules`: no model at all (the user opted out, or no key). `stepFellBack`: a step's model call failed, so only the later steps use the rule. */
+/** `useRules`: no model at all (no key). `stepFellBack`: a step's model call failed, so only the later steps use the rule. */
 export type StepResponse = {
   mastery: Mastery;
   nextQuestionId: string | null;
@@ -50,7 +53,7 @@ export type StepResponse = {
   stepFellBack: boolean;
 };
 
-/** What the final POST adds when the Quick check ran; the skip path after an opt-out sends only `useRules`. */
+/** What the final POST adds when the Quick check ran. */
 export type QuickResult = {
   profile: ProfileRanges;
   history: HistoryEntry[];

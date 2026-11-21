@@ -1,0 +1,93 @@
+{
+  "id": "tokyo-4",
+  "story": "tokyo",
+  "title": "The yen in your basket",
+  "place": "Narita · arrivals",
+  "topic": "Currency moves both ways",
+  "minutes": 3,
+  "xp": 50,
+  "concepts": ["currency-risk"],
+  "steps": [
+    {
+      "type": "chat",
+      "id": "c1",
+      "title": "Haruto, nephew from Toronto",
+      "messages": [
+        { "from": "Haruto", "text": "Landed! Auntie, how is your world fund doing?" },
+        { "from": "Michiko", "me": true, "text": "Strange. The fund says flat, but in yen I'm up a lot" },
+        { "from": "Haruto", "text": "That's the yen, not the fund" },
+        { "from": "Michiko", "me": true, "text": "So I made money without the shares going up?" }
+      ]
+    },
+    {
+      "type": "predict",
+      "id": "p1",
+      "concepts": ["currency-risk"],
+      "prompt": "In 2021 Michiko bought $10,000 of a fund at ¥110 per dollar. The fund is flat in dollars. Now a dollar costs ¥150. How much is it worth in yen, compared with what she paid?",
+      "input": { "kind": "slider", "min": -50, "max": 50, "step": 1, "unit": "%" },
+      "answer": 36,
+      "reveal": "+36%. She paid ¥1.1 million, and the same $10,000 is now ¥1.5 million. The shares didn't move; the yen got weaker. Simplified from real data."
+    },
+    {
+      "type": "text",
+      "id": "t1",
+      "title": "The same door swings both ways",
+      "body": "Owning things priced in another currency adds [[currency-risk]]. A weaker yen made Michiko's foreign shares worth more in yen. If the yen gets stronger again, the same shares are worth fewer yen, even if they don't move at all."
+    },
+    {
+      "type": "match",
+      "id": "m1",
+      "concepts": ["currency-risk", "home-bias"],
+      "prompt": "Match each idea from the Tokyo story with its meaning.",
+      "pairs": [
+        ["Currency risk", "Exchange rates change the value in your money"],
+        ["Home bias", "Holding mostly your own country"],
+        ["Tax-free account", "Gains inside are not taxed"],
+        ["Drawdown", "A fall from a previous high"]
+      ]
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["currency-risk"],
+      "prompt": "The yen gets 20% stronger against the dollar. Michiko's dollar fund doesn't move. What happens in yen?",
+      "options": [
+        "Her fund is worth fewer yen",
+        "Her fund is worth more yen",
+        "Nothing, the fund didn't move"
+      ],
+      "correctIndex": 0,
+      "explanation": "Each dollar now buys fewer yen. A flat fund in dollars becomes a loss in yen. Currency moves can help or hurt; they rarely stay still."
+    }
+  ],
+  "variants": {
+    "lang:plain": {
+      "c1": {
+        "messages": [
+          { "from": "Haruto", "text": "I'm here! Auntie, how is your world fund?" },
+          { "from": "Michiko", "me": true, "text": "Strange. The fund didn't change, but in yen I have more" },
+          { "from": "Haruto", "text": "That's because of the yen, not the fund" },
+          { "from": "Michiko", "me": true, "text": "So I won money but the shares didn't go up?" }
+        ]
+      },
+      "p1": {
+        "prompt": "In 2021 Michiko bought $10,000 of a fund. One dollar cost ¥110. The fund is still $10,000. Now one dollar costs ¥150. How much more or less is it in yen? Guess.",
+        "reveal": "+36%. She paid ¥1.1 million. Now the same $10,000 is ¥1.5 million. The shares stayed the same. The yen became weaker."
+      },
+      "t1": {
+        "title": "It can go both ways",
+        "body": "If you own things in another currency, the exchange rate changes their value in your money. This is [[currency-risk]]. A weak yen helped Michiko. A strong yen would hurt her, even if the shares stay the same."
+      },
+      "m1": { "prompt": "Match each word with what it means." },
+      "q1": {
+        "prompt": "The yen gets 20% stronger. Michiko's dollar fund stays the same. What happens in yen?",
+        "options": [
+          "Her fund is worth fewer yen",
+          "Her fund is worth more yen",
+          "Nothing changes"
+        ],
+        "explanation": "One dollar now gives fewer yen. So the same fund is worth less in yen."
+      }
+    }
+  }
+}

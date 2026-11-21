@@ -15,11 +15,13 @@ import DuelRankingsScreen from '@/app/duel/rankings';
 import RootLayout from '@/app/_layout';
 import LessonScreen from '@/app/lesson/[id]';
 import OnboardingScreen from '@/app/onboarding';
+import StoryScreen from '@/app/story/[id]';
 
 export const appRoutes = {
   _layout: RootLayout,
   onboarding: OnboardingScreen,
   'lesson/[id]': LessonScreen,
+  'story/[id]': StoryScreen,
   '(main)/_layout': MainLayout,
   '(main)/(bank)/_layout': BankLayout,
   '(main)/(bank)/index': OverviewScreen,

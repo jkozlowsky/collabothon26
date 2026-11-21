@@ -73,6 +73,14 @@ export const tints = {
   accent: 'rgba(255, 204, 0, 0.16)',
 } as const;
 
+/** `story/*` colours by key, as stories name them in their data (`color: 'rose'`). */
+export const storyColors = {
+  rose: colors.storyRose,
+  violet: colors.storyViolet,
+  teal: colors.storyTeal,
+  orange: colors.storyOrange,
+  slate: colors.storySlate,
+} as const;
 
 export const spacing = {
   xxs: 2,

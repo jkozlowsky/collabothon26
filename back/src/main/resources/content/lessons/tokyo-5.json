@@ -1,0 +1,99 @@
+{
+  "id": "tokyo-5",
+  "story": "tokyo",
+  "title": "Your own mix",
+  "place": "Your stop · today",
+  "topic": "Check your spread with your bank data",
+  "minutes": 3,
+  "xp": 70,
+  "concepts": ["home-bias", "concentration-risk"],
+  "steps": [
+    {
+      "type": "text",
+      "id": "t1",
+      "kicker": "Michiko's notebook",
+      "title": "\"No country gets more than 30%. The first retirement years stay in the bank.\"",
+      "body": "Michiko's rule after the farewell party, the bookshop and her father's story. It caps her [[home-bias]] and keeps the money she needs soon out of falls. Her rule, not a recipe: sized by her 7 years to retirement."
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["concentration-risk"],
+      "prompt": "Michiko's rule is \"max 30% in one country\". Japan falls 50%. What happens to her investments at most?",
+      "options": ["They fall about 15% from Japan", "They fall 50%", "Nothing, the rule prevents losses"],
+      "correctIndex": 0,
+      "explanation": "30% × −50% = −15%. The rule doesn't stop the fall. It limits how much one country can take, before the rest of the world moves at all."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "concepts": ["home-bias"],
+      "prompt": "Why does Michiko keep her first retirement years out of the market?",
+      "options": [
+        "So a fall right before or after retiring doesn't force her to sell low",
+        "Because shares are forbidden after 65",
+        "Because bank deposits beat shares in the long run"
+      ],
+      "correctIndex": 0,
+      "explanation": "Money needed in the next few years has no time to recover. Keeping it apart lets the rest wait out a bad market."
+    },
+    {
+      "type": "action",
+      "id": "a1",
+      "title": "Your turn",
+      "body": "**{largestPositionShare}** of your depot sits in your largest single position. **{largestRegionShare}** of it is in one region: {largestRegionName}.",
+      "bodyNoData": "Think about your own investments: how much of them depends on one country or one company?",
+      "rule": {
+        "label": "Max in one country or region",
+        "min": 10,
+        "max": 100,
+        "step": 5,
+        "value": 30,
+        "unit": "%",
+        "appliesTo": "depotTotal",
+        "result": "= at most {amount} of your depot in one country or region"
+      },
+      "cta": "Set my rule"
+    }
+  ],
+  "variants": {
+    "persona:student": {
+      "a1": {
+        "body": "**{largestPositionShare}** of your depot sits in your largest position, and **{largestRegionShare}** in one region: {largestRegionName}. You have decades ahead, but one country can still have a lost decade."
+      }
+    },
+    "persona:family": {
+      "a1": {
+        "body": "**{largestPositionShare}** of your depot sits in your largest position, and **{largestRegionShare}** in one region: {largestRegionName}. Family goals come at fixed dates, whatever one market is doing then."
+      }
+    },
+    "persona:pre-retirement": {
+      "a1": {
+        "body": "**{largestPositionShare}** of your depot sits in your largest position, and **{largestRegionShare}** in one region: {largestRegionName}. Close to retirement, a long slump in one market has less time to heal."
+      }
+    },
+    "lang:plain": {
+      "t1": {
+        "title": "\"Max 30% in one country. Money for my first years without work stays in the bank.\"",
+        "body": "Michiko made a rule. Not too much money in one country, because of [[home-bias]]. And money she needs soon stays safe. This is her rule, not a rule for everyone."
+      },
+      "q1": {
+        "prompt": "Michiko's rule: max 30% in one country. Japan goes down 50%. How much does she lose from Japan at most?",
+        "options": ["About 15%", "50%", "Nothing"],
+        "explanation": "30% × 50% = 15%. The rule doesn't stop the loss. It makes it smaller."
+      },
+      "q2": {
+        "prompt": "Why does Michiko keep money for her first years without work in the bank?",
+        "options": [
+          "So she doesn't have to sell when prices are low",
+          "Shares are not allowed after 65",
+          "The bank always pays more than shares"
+        ],
+        "explanation": "Money you need soon has no time to come back after a fall."
+      },
+      "a1": {
+        "bodyNoData": "Think about your investments: how much depends on one country or one company?"
+      }
+    }
+  }
+}

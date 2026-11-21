@@ -1,0 +1,148 @@
+{
+  "id": "seoul-2",
+  "story": "seoul",
+  "title": "Pulling everything in",
+  "place": "Gangnam · after work",
+  "topic": "Borrowing to invest",
+  "minutes": 4,
+  "xp": 60,
+  "concepts": ["leverage", "risk-capacity"],
+  "steps": [
+    {
+      "type": "chat",
+      "id": "c1",
+      "title": "Min-jun",
+      "messages": [
+        { "from": "Min-jun", "text": "XYZ dipped today. Perfect time to buy more" },
+        { "from": "Min-jun", "text": "I'm doing 영끌 this time. Loan + savings, all in" },
+        { "from": "Ji-woo", "me": true, "text": "All in? With a loan?" },
+        { "from": "Min-jun", "text": "The bank charges 6% a year. XYZ makes that in a week" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t1",
+      "kicker": "Word from Seoul",
+      "title": "영끌 · yeongkkeul",
+      "body": "Short for “pulling in everything, even your soul”. Korean media used it in 2020–21, when many young people borrowed all they could to buy homes and shares. Investing with borrowed money is called [[leverage]]."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s1",
+      "concepts": ["leverage"],
+      "prompt": "Ji-woo invests her ₩10M and borrows more on top. Move the price: what happens to her own money? Find a fall that wipes out everything she had.",
+      "model": "leverage",
+      "params": {
+        "move": { "label": "Price change", "min": -60, "max": 60, "step": 5, "value": 20, "unit": "%" },
+        "borrowed": { "label": "Borrowed, as % of her own money", "min": 0, "max": 200, "step": 50, "value": 100, "unit": "%" }
+      },
+      "output": { "label": "Result on her own ₩10M", "unit": "%" },
+      "goal": { "condition": { "of": "output", "max": -100 }, "hint": "With as much borrowed as she owns, the price only has to halve." },
+      "note": "Simplified: no interest or fees."
+    },
+    {
+      "type": "scenario",
+      "id": "sc1",
+      "concepts": ["leverage", "risk-capacity"],
+      "prompt": "XYZ is all over the chat. What does Ji-woo do with her ₩10M? Pick one and jump 6 months ahead.",
+      "unit": "₩M",
+      "periodLabel": "6 months",
+      "choices": [
+        {
+          "label": "All in, plus a ₩10M loan",
+          "series": [10, 13, 16, 20, 24, 18, 10, 4, 0, -2, -3, -4, -4],
+          "ending": "XYZ was pumped and dumped. Her shares are now worth ₩6M, but she still owes ₩10M. Ji-woo is ₩4M in debt and repays it for the next two years."
+        },
+        {
+          "label": "Only ₩1M she can afford to lose",
+          "series": [10, 10.2, 10.3, 10.5, 10.7, 10.4, 10, 9.7, 9.5, 9.4, 9.4, 9.3, 9.3],
+          "ending": "She lost ₩700,000. It stings, but her savings are safe, and she saw how a hype room works for the price of a nice dinner."
+        },
+        {
+          "label": "Skip it",
+          "series": [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+          "ending": "Her friends teased her in March. By June nobody in the chat talked about XYZ any more. Her ₩10M is still there."
+        }
+      ]
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["leverage"],
+      "prompt": "Ji-woo invests ₩10M of her own and ₩10M borrowed. The price falls 30%. What happens to her own money?",
+      "options": ["It falls 30%", "It falls 60%", "It falls 15%"],
+      "correctIndex": 1,
+      "explanation": "She holds ₩20M of shares. A 30% fall is ₩6M, and all of it comes out of her own ₩10M, because the loan still has to be repaid in full: −60%."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "concepts": ["risk-capacity"],
+      "prompt": "Which money can Ji-woo put into a risky bet without hurting her life?",
+      "options": [
+        "Money she could lose completely and still pay rent and bills",
+        "Her rent for next month",
+        "Money borrowed at a low rate"
+      ],
+      "correctIndex": 0,
+      "explanation": "Your [[risk-capacity]] is what you could lose without it changing your daily life. Rent money and borrowed money are not part of it."
+    }
+  ],
+  "variants": {
+    "level:beginner": {
+      "s1": { "goal": { "hint": "Leave “Borrowed” at 100% and set the price change to −50%." } }
+    },
+    "lang:plain": {
+      "c1": {
+        "messages": [
+          { "from": "Min-jun", "text": "XYZ went down a bit today. Good time to buy more" },
+          { "from": "Min-jun", "text": "This time I'm doing 영끌. I'll borrow and put in everything" },
+          { "from": "Ji-woo", "me": true, "text": "Everything? And borrow too?" },
+          { "from": "Min-jun", "text": "The loan costs 6% a year. XYZ makes that in a week" }
+        ]
+      },
+      "t1": {
+        "body": "It means “pull in everything, even your soul”. In 2020–21 many young Koreans borrowed as much as they could to buy homes and shares. Buying with borrowed money is called [[leverage]]."
+      },
+      "s1": {
+        "prompt": "Ji-woo uses her ₩10M and borrows more. Move the price. Watch what happens to her own money. Find a drop where she loses all of it.",
+        "params": { "borrowed": { "label": "How much she borrows" } },
+        "output": { "label": "What happens to her ₩10M" },
+        "note": "Simple example: no interest or fees."
+      },
+      "sc1": {
+        "prompt": "Everyone in the chat talks about XYZ. What should Ji-woo do with her ₩10M? Choose, then see 6 months later.",
+        "choices": [
+          {
+            "label": "Put in everything and borrow ₩10M",
+            "series": [10, 13, 16, 20, 24, 18, 10, 4, 0, -2, -3, -4, -4],
+            "ending": "The price was pushed up and then fell hard. Her shares are worth ₩6M, but she must pay back ₩10M. She owes ₩4M and pays it back for two years."
+          },
+          {
+            "label": "Put in only ₩1M she can lose",
+            "series": [10, 10.2, 10.3, 10.5, 10.7, 10.4, 10, 9.7, 9.5, 9.4, 9.4, 9.3, 9.3],
+            "ending": "She lost ₩700,000. Not nice, but her savings are fine. Now she knows how these chats work."
+          },
+          {
+            "label": "Do nothing",
+            "series": [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+            "ending": "Her friends laughed at her in March. In June nobody talked about XYZ any more. She still has her ₩10M."
+          }
+        ]
+      },
+      "q1": {
+        "prompt": "Ji-woo puts in ₩10M of her own and ₩10M borrowed. The price drops 30%. How much of her own money does she lose?",
+        "explanation": "She has ₩20M in shares. 30% of that is ₩6M. She still owes the full loan, so the ₩6M comes from her own ₩10M. That is −60%."
+      },
+      "q2": {
+        "prompt": "Which money can Ji-woo risk without hurting her life?",
+        "options": [
+          "Money she can lose and still pay rent and bills",
+          "Next month's rent",
+          "Cheap borrowed money"
+        ],
+        "explanation": "Only risk money you can lose without trouble. That is your [[risk-capacity]]. Rent money and loans are not."
+      }
+    }
+  }
+}

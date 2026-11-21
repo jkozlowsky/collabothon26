@@ -1,0 +1,76 @@
+{
+  "id": "seoul-5",
+  "story": "seoul",
+  "title": "Your own rule",
+  "place": "Your stop · today",
+  "topic": "Set a limit with your bank data",
+  "minutes": 3,
+  "xp": 70,
+  "concepts": ["concentration-risk", "risk-capacity"],
+  "steps": [
+    {
+      "type": "text",
+      "id": "t1",
+      "kicker": "Ji-woo's sticky note",
+      "title": "“No single bet gets more than 10%”",
+      "body": "After the XYZ crash, Ji-woo wrote herself a rule. She sized it by her [[risk-capacity]]: money she needs in the next few years stays out of bets. A rule made on a calm day protects you on a loud one."
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["risk-capacity"],
+      "prompt": "Why decide the rule before the chat gets loud?",
+      "options": [
+        "Decisions made under hype and time pressure are often rushed",
+        "Banks require a written rule",
+        "A rule guarantees a profit"
+      ],
+      "correctIndex": 0,
+      "explanation": "“Only 3 seats left” and “everyone is buying” are built to rush you. A rule you set earlier gives you something to check against."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "concepts": ["concentration-risk"],
+      "prompt": "Ji-woo's rule is “max 10% in one bet”. Her single bet loses everything. What happens to her savings?",
+      "options": ["They fall by at most 10%", "They fall by half", "Nothing, the rule prevents losses"],
+      "correctIndex": 0,
+      "explanation": "The rule doesn't stop the loss. It limits how much one bad bet can take: at most 10% of her savings."
+    },
+    {
+      "type": "action",
+      "id": "a1",
+      "title": "Your turn",
+      "body": "You hold **{totalAssets}** with us. **{largestPlaceShare}** of it sits in one place: {largestPlaceName}.",
+      "bodyNoData": "Think about your own money: how much of it sits in one place?",
+      "rule": {
+        "label": "My max in any single bet",
+        "min": 5,
+        "max": 50,
+        "step": 5,
+        "value": 10,
+        "unit": "%",
+        "appliesTo": "savingsBalance",
+        "appliesToLabel": "of your savings"
+      },
+      "cta": "Set my rule"
+    }
+  ],
+  "variants": {
+    "persona:student": {
+      "a1": {
+        "body": "You hold **{totalAssets}** with us, and **{largestPlaceShare}** of it sits in {largestPlaceName}. At your stage, time is your biggest asset: one wiped-out bet costs you years of saving."
+      }
+    },
+    "persona:family": {
+      "a1": {
+        "body": "You hold **{totalAssets}** with us, and **{largestPlaceShare}** of it sits in {largestPlaceName}. With a family, part of that is everyday safety money, which stays out of any bet."
+      }
+    },
+    "persona:pre-retirement": {
+      "a1": {
+        "body": "You hold **{totalAssets}** with us, and **{largestPlaceShare}** of it sits in {largestPlaceName}. Close to retirement there is less time to recover from a [[drawdown]], so one bet weighs more."
+      }
+    }
+  }
+}

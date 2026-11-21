@@ -1,0 +1,98 @@
+{
+  "id": "sao-paulo-5",
+  "story": "sao-paulo",
+  "title": "Your own limit",
+  "place": "Your stop · today",
+  "topic": "Cap your repayments with your bank data",
+  "minutes": 3,
+  "xp": 70,
+  "concepts": ["committed-income", "revolving-credit"],
+  "steps": [
+    {
+      "type": "text",
+      "id": "t1",
+      "kicker": "Rafa's phone wallpaper",
+      "title": "\"Parcelas: max 20% of my pay. The card bill: always in full.\"",
+      "body": "After the fridge, the stack and the rotativo, Rafa set two rules. They don't stop him buying things. They keep his [[committed-income]] small enough that one bad month doesn't roll into the next. His rules, not a recipe."
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["committed-income"],
+      "prompt": "Rafa earns R$2,800. His rule is \"max 20% in installments\". How much can he commit each month?",
+      "options": ["R$560", "R$280", "R$1,400"],
+      "correctIndex": 0,
+      "explanation": "20% of R$2,800 is R$560. His four installments were R$710, so the rule would have said no to the last one."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "concepts": ["revolving-credit"],
+      "prompt": "Why does \"always pay the card bill in full\" matter more than the exact limit?",
+      "options": [
+        "Rolled-over card debt is usually the most expensive credit there is",
+        "Because the card stops working otherwise",
+        "Because paying in full earns interest"
+      ],
+      "correctIndex": 0,
+      "explanation": "The [[revolving-credit|rotativo]] grows on top of itself. Paying in full keeps the card a payment tool, not a loan."
+    },
+    {
+      "type": "action",
+      "id": "a1",
+      "title": "Your turn",
+      "body": "You owe **{creditOutstanding}** across your loan, card and Pay in 3. This month's repayments are **{monthlyRepayments}**, that is **{repaymentShareOfIncome}** of your income.",
+      "bodyNoData": "Think about your own month: how much of your pay is promised to repayments before it even arrives?",
+      "rule": {
+        "label": "Max of my income in repayments",
+        "min": 5,
+        "max": 50,
+        "step": 5,
+        "value": 20,
+        "unit": "%",
+        "appliesTo": "monthlyIncome",
+        "result": "= at most {amount} a month in repayments"
+      },
+      "cta": "Set my limit"
+    }
+  ],
+  "variants": {
+    "persona:student": {
+      "a1": {
+        "body": "You owe **{creditOutstanding}** across your loan, card and Pay in 3. This month's repayments are **{monthlyRepayments}**, **{repaymentShareOfIncome}** of your income. Early on, every installment you skip now is pay you can choose about later."
+      }
+    },
+    "persona:family": {
+      "a1": {
+        "body": "You owe **{creditOutstanding}** across your loan, card and Pay in 3. This month's repayments are **{monthlyRepayments}**, **{repaymentShareOfIncome}** of your income. With a family, surprises cost money, and committed income leaves less room for them."
+      }
+    },
+    "persona:pre-retirement": {
+      "a1": {
+        "body": "You owe **{creditOutstanding}** across your loan, card and Pay in 3. This month's repayments are **{monthlyRepayments}**, **{repaymentShareOfIncome}** of your income. When the salary turns into a pension, the same repayments take a bigger share."
+      }
+    },
+    "lang:plain": {
+      "t1": {
+        "title": "\"Payments: max 20% of my pay. The card bill: always all of it.\"",
+        "body": "Rafa made two rules. He can still buy things. But only a small part of his pay is promised before the month starts. This is his [[committed-income]]. These are Rafa's rules, not rules for everyone."
+      },
+      "q1": {
+        "prompt": "Rafa earns R$2,800. His rule: max 20% for payments. How much is that each month?",
+        "explanation": "20% of R$2,800 is R$560. His four payments were R$710. So his rule says no to one of them."
+      },
+      "q2": {
+        "prompt": "Why is \"always pay the full card bill\" so important?",
+        "options": [
+          "Card debt that moves to next month is very expensive",
+          "Otherwise the card stops working",
+          "Paying everything gives you interest"
+        ],
+        "explanation": "Card debt grows every month. This is [[revolving-credit]]. Paying all of it keeps the card from becoming a loan."
+      },
+      "a1": {
+        "bodyNoData": "Think about your month: how much of your pay is already promised to payments?"
+      }
+    }
+  }
+}

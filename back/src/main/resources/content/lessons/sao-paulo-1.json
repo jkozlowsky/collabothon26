@@ -1,0 +1,124 @@
+{
+  "id": "sao-paulo-1",
+  "story": "sao-paulo",
+  "title": "Twelve easy payments",
+  "place": "Brás · appliance store",
+  "topic": "The interest in \"no interest\"",
+  "minutes": 4,
+  "xp": 50,
+  "concepts": ["installments", "hidden-interest"],
+  "steps": [
+    {
+      "type": "chat",
+      "id": "c1",
+      "title": "Mãe",
+      "messages": [
+        { "from": "Rafa", "me": true, "text": "Found a fridge for the new flat. 12x de R$250, sem juros!" },
+        { "from": "Mãe", "text": "No interest? Ask what it costs if you pay today" },
+        { "from": "Rafa", "me": true, "text": "R$2,550 if I pay now. 15% off" },
+        { "from": "Mãe", "text": "So the 12x isn't really free, is it?" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t1",
+      "kicker": "Word from São Paulo",
+      "title": "parcelado sem juros",
+      "body": "\"Split, without interest.\" In Brazil, almost anything can be paid in [[installments]]: fridges, phones, even groceries. Rafa, 22, just started his first job at **R$2,800** a month (about €450). The price tag says R$3,000 in 12 parts. The cash price says something else."
+    },
+    {
+      "type": "predict",
+      "id": "p1",
+      "concepts": ["hidden-interest"],
+      "prompt": "Pay R$2,550 today, or 12 × R$250 = R$3,000 \"without interest\". What yearly interest rate is hidden in the 12 payments?",
+      "input": { "kind": "slider", "min": 0, "max": 60, "step": 1, "unit": "%" },
+      "answer": 36,
+      "reveal": "About 36% a year, roughly 2.6% a month. Choosing the 12 payments is borrowing R$2,550 and paying back R$3,000. The interest is hidden in the discount Rafa gives up: [[hidden-interest]]."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s1",
+      "concepts": ["hidden-interest"],
+      "prompt": "Change the cash discount and the number of payments. How small must the discount be before the payments cost less than 10% a year?",
+      "model": "installmentCost",
+      "params": {
+        "discount": { "label": "Discount for paying now", "min": 0, "max": 30, "step": 1, "value": 15, "unit": "%" },
+        "months": { "label": "Payments", "min": 2, "max": 24, "step": 1, "value": 12 }
+      },
+      "output": { "label": "Hidden yearly rate", "unit": "%" },
+      "goal": { "condition": { "of": "output", "max": 10 }, "hint": "A discount of about 5% over 12 payments." },
+      "note": "Simplified: the first payment is due after one month."
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["installments"],
+      "prompt": "When is \"12x sem juros\" really without interest?",
+      "options": [
+        "When paying at once gets no discount at all",
+        "Whenever the store says so",
+        "When the payments are small"
+      ],
+      "correctIndex": 0,
+      "explanation": "If the cash price is the same as the total of the payments, the split is free. Any cash discount is the price of waiting."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "concepts": ["hidden-interest"],
+      "prompt": "A shop gives 15% off for cash. What is Rafa really doing if he picks 12 payments?",
+      "options": [
+        "Borrowing the cash price and paying back more",
+        "Getting the fridge cheaper",
+        "Saving money for later"
+      ],
+      "correctIndex": 0,
+      "explanation": "He gets the fridge now and pays R$450 more over a year. That is a loan, whatever the label says."
+    }
+  ],
+  "variants": {
+    "level:beginner": {
+      "s1": { "goal": { "hint": "Keep 12 payments and lower the discount to 5%." } }
+    },
+    "lang:plain": {
+      "c1": {
+        "messages": [
+          { "from": "Rafa", "me": true, "text": "I found a fridge. 12 payments of R$250, no interest!" },
+          { "from": "Mãe", "text": "No interest? Ask the price if you pay today" },
+          { "from": "Rafa", "me": true, "text": "R$2,550 if I pay now. 15% less" },
+          { "from": "Mãe", "text": "So the 12 payments are not free" }
+        ]
+      },
+      "t1": {
+        "body": "It means \"split, without interest\". In Brazil you can pay for almost anything in parts. These parts are called [[installments]]. Rafa is 22. He just started his first job and earns **R$2,800** a month (about €450)."
+      },
+      "p1": {
+        "prompt": "Pay R$2,550 now, or 12 × R$250 = R$3,000 \"without interest\". How much interest is hidden in the 12 payments, per year? Guess.",
+        "reveal": "About 36% a year. If Rafa takes the 12 payments, he borrows R$2,550 and pays back R$3,000. The interest is hidden in the discount. This is [[hidden-interest]]."
+      },
+      "s1": {
+        "prompt": "Change the discount and the number of payments. Find a discount where the payments cost less than 10% a year.",
+        "output": { "label": "Hidden interest per year" },
+        "note": "Simple example: the first payment is after one month."
+      },
+      "q1": {
+        "prompt": "When are 12 payments really without interest?",
+        "options": [
+          "When paying now gives no discount",
+          "When the shop says so",
+          "When the payments are small"
+        ],
+        "explanation": "If the price now is the same as all the payments together, it is free. A discount for paying now is the cost of waiting."
+      },
+      "q2": {
+        "prompt": "The shop gives 15% less if you pay now. What does Rafa do if he takes 12 payments?",
+        "options": [
+          "He borrows money and pays back more",
+          "He pays less for the fridge",
+          "He saves money"
+        ],
+        "explanation": "He pays R$450 more in one year. That is a loan."
+      }
+    }
+  }
+}

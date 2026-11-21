@@ -43,6 +43,7 @@ export type BankIconName =
   | 'close'
   | 'check'
   | 'delete'
+  | 'lock'
   | 'swords'
   | 'trophy'
   | 'bot'

@@ -3,7 +3,9 @@ import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testin
 import { AccessibilityInfo, BackHandler, Platform, StyleSheet } from 'react-native';
 
 import { ANSWER_DELAY_MS } from '@/hooks/useQuickCheck';
+import { groupThousands } from '@/lib/bank/money';
 import { createRng, seedAccount } from '@/lib/bank/seed';
+import { slotValues } from '@/lib/bank/selectors';
 import { setSummary } from '@/lib/learningPath';
 import { accountUsable, drawQuestions, promptParts } from '@/lib/quickCheck';
 import { categorization } from '@/test-utils/categorization';
@@ -279,7 +281,11 @@ test('four answers go in one POST with "Not sure" as null and no account amounts
     { questionId: fourth, text: 'One failing hurts less.' },
   ]);
   const sent = JSON.stringify(body);
-  for (const amount of ['1,640', '1640', '12,500', '12500', '3,000', '3000']) expect(sent).not.toContain(amount);
+  const { positionCount, ...amounts } = slotValues(seedAccount());
+  for (const value of Object.values(amounts)) {
+    expect(sent).not.toContain(String(value));
+    expect(sent).not.toContain(groupThousands(value));
+  }
 });
 
 test('the summary leads with the gap, then the level and why, then up to three areas, then the first lesson', async () => {

@@ -1,5 +1,5 @@
 import { createRng, seedAccount } from '@/lib/bank/seed';
-import { depotTotal, positionCount, slotValues } from '@/lib/bank/selectors';
+import { slotValues } from '@/lib/bank/selectors';
 import { accountUsable, drawQuestions, fetchCheckQuestions, promptParts, quizRng } from '@/lib/quickCheck';
 import { POOL } from '@/test-utils/checkPool';
 import type { BankState } from '@/types/bank';
@@ -105,21 +105,20 @@ test('within an area, a question with a usable account version wins', () => {
 });
 
 test('the selectors read the slots from the bank; the monthly ETF is the depot standing order', () => {
-  const bank = seedAccount();
-  const eur = (cents: number) => Math.round(cents / 100);
-  const plan = bank.standingOrders.find((o) => o.recipient.startsWith('Depot'))!;
-  expect(slotValues(bank)).toEqual({
-    savingsBalance: eur(bank.savings.balance),
-    savingsInterestRate: bank.savings.rate,
-    monthOut: eur(bank.account.monthOut),
-    loanRemaining: eur(bank.loan.remaining),
-    loanApr: bank.loan.apr,
-    cardUsed: eur(bank.creditCard.used),
-    cardLimit: eur(bank.creditCard.limit),
-    etfMonthly: eur(Math.abs(plan.amount)),
-    depotTotal: eur(depotTotal(bank)),
-    positionCount: positionCount(bank),
+  expect(slotValues(seedAccount())).toEqual({
+    savingsBalance: 12500,
+    savingsInterestRate: 2.25,
+    monthOut: 1268,
+    loanRemaining: 8400,
+    loanApr: 5.9,
+    cardUsed: 1640,
+    cardLimit: 3000,
+    etfMonthly: 100,
+    depotTotal: 6940,
+    positionCount: 4,
   });
+  const bank = seedAccount();
+  const plan = bank.standingOrders.find((o) => o.recipient.startsWith('Depot'))!;
   const bigger = { ...bank, standingOrders: [{ ...plan, amount: -25000 }] };
   expect(slotValues(bigger).etfMonthly).toBe(250);
 });

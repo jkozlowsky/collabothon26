@@ -162,3 +162,18 @@ export function withLessons(stories: Story[], lessons: LessonSummary[] | undefin
     };
   });
 }
+
+/**
+ * Marks one story as current: the Quick check's "Start here" story, else the default story while it is not done,
+ * else the first story in progress, else the first not started. None when every story is done.
+ */
+export function withCurrent(stories: Story[], startId?: string): Story[] {
+  const pick =
+    startId ??
+    (
+      stories.find((s) => s.current && !isDone(s) && s.status === 'available') ??
+      stories.find((s) => calloutState(s) === 'inProgress') ??
+      stories.find((s) => calloutState(s) === 'notStarted')
+    )?.id;
+  return stories.map((s) => ({ ...s, current: s.id === pick }));
+}

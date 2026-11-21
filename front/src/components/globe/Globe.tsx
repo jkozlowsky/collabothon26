@@ -48,6 +48,8 @@ const GlobeScene = lazy(() => import('@/components/globe/GlobeScene').then((m) =
 export type GlobeHandle = {
   /** Same as tapping the story's pin: fly there and open its callout. `turnOnly`: never open the story itself (static picture). */
   flyTo: (id: string, turnOnly?: boolean) => void;
+  /** Face the story's pin at once, with no flight and no callout; a later `flyTo` takes off from there. */
+  face: (id: string) => void;
 };
 
 export type ArenaConfig = {
@@ -65,6 +67,8 @@ type Props = {
   arena?: ArenaConfig;
   /** The story the Quick check picked, with its "Why here" line; its callout carries the badge. */
   startHere?: { storyId: string; why: string } | null;
+  /** The story whose path was finished just now: its pin's check pops in. */
+  justDoneId?: string;
   ref?: Ref<GlobeHandle>;
 };
 
@@ -104,13 +108,16 @@ function viewCentre(yaw: number, pitch: number): Vec3 {
  * Orientation lives in Reanimated shared values, so dragging, inertia, flights and the overlay all run
  * on the UI thread without React re-renders. Without WebGL it shows a static picture with fixed pins.
  */
-export function Globe({ stories, onOpenStory, onSpin, arena, startHere, ref }: Props) {
+export function Globe({ stories, onOpenStory, onSpin, arena, startHere, justDoneId, ref }: Props) {
   const reduced = useReducedMotion();
   const focused = useIsFocused();
   const window = useWindowDimensions();
   // An estimate until onLayout measures the area (same aspect ratio as `styles.area`).
   const [area, setArea] = useState(() => ({ width: window.width, height: window.width / ASPECT }));
   const [fallback, setFallback] = useState(() => FORCE_FALLBACK || !webGLAvailable());
+  // The globe is drawn: the first GL frame, or the static picture when there is no GL.
+  const [drawn, setDrawn] = useState(false);
+  const markDrawn = useCallback(() => setDrawn(true), []);
   const showFallback = useCallback(() => setFallback(true), []);
 
   const current = stories.find((s) => s.current) ?? stories[0];
@@ -206,7 +213,20 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, ref }: P
     );
   };
 
-  useImperativeHandle(ref, () => ({ flyTo }));
+  const face = (id: string) => {
+    cancelAnimation(flightT);
+    cancelAnimation(yaw);
+    cancelAnimation(pitch);
+    flying.set(false);
+    setSelectedId(id);
+    setCalloutOpen(false);
+    if (fallback) return;
+    const o = orientationFacing(pins[id], yaw.value);
+    yaw.set(o.yaw);
+    pitch.set(o.pitch);
+  };
+
+  useImperativeHandle(ref, () => ({ flyTo, face }));
 
   const onRotateStart = () => {
     setCalloutOpen(false);
@@ -251,6 +271,8 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, ref }: P
     <GestureDetector gesture={pan}>
       <View style={styles.area} onLayout={onLayout} testID="globe">
         <>
+            {/* For e2e and the demo recordings: wait for this before filming or tapping the globe. */}
+            {drawn && <View testID="globe-ready" pointerEvents="none" />}
             <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
               <Ellipse cx={cx} cy={cy + radius + 18} rx={radius * 0.7} ry={10} fill={colors.brandPrimaryPressed} fillOpacity={0.12} />
               <Circle cx={cx} cy={cy} r={radius + 16} fill="none" stroke={colors.borderStrong} strokeWidth={1} strokeDasharray="3 6" />
@@ -258,13 +280,14 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, ref }: P
             <View style={StyleSheet.absoluteFill} pointerEvents="none" importantForAccessibility="no-hide-descendants">
               {fallback ? (
                 <Image
+                  onLoad={markDrawn}
                   source={FALLBACK_IMAGE}
                   style={{ position: 'absolute', left: cx - radius, top: cy - radius, width: radius * 2, height: radius * 2 }}
                 />
               ) : (
                 <GlBoundary onError={showFallback}>
                   <Suspense fallback={null}>
-                    <GlobeScene radius={radius} yaw={yaw} pitch={pitch} active={focused} onFail={showFallback} />
+                    <GlobeScene radius={radius} yaw={yaw} pitch={pitch} active={focused} onFail={showFallback} onReady={markDrawn} />
                   </Suspense>
                 </GlBoundary>
               )}
@@ -272,7 +295,7 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, ref }: P
             <Pressable style={StyleSheet.absoluteFill} onPress={onBackgroundPress} accessible={false} />
             {stories.map((s) => (
               <Slot key={s.id} v={pins[s.id]} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius}>
-                <GlobePin story={s} state={storyState(s)} onPress={() => flyTo(s.id)} />
+                <GlobePin story={s} state={storyState(s)} justDone={s.id === justDoneId} onPress={() => flyTo(s.id)} />
               </Slot>
             ))}
             {arena && (

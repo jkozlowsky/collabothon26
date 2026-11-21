@@ -12,6 +12,9 @@ type Props = { id: SpotId; children: ReactNode; style?: StyleProp<ViewStyle> };
 /** Wait for the tab switch to settle, and then for the scroll to settle, before measuring. */
 const SETTLE_MS = 450;
 const TOP_ROOM = 140;
+/** Re-measure this often until the box stops moving, for at most MAX_TRIES × POLL_MS. */
+const POLL_MS = 120;
+const MAX_TRIES = 25;
 
 /** Marks a bank feature the spotlight can point at. When its spot is shown, it scrolls into view and reports its box. */
 export function SpotTarget({ id, children, style }: Props) {
@@ -30,11 +33,19 @@ export function SpotTarget({ id, children, style }: Props) {
       ref.current?.measureInWindow((x, y, width, h) => {
         if (width && h) then(y, h);
       });
+    // A smooth scroll can take longer than any fixed wait, so report the box once it stops moving.
+    const settle = (last: string | null, tries: number) => {
+      ref.current?.measureInWindow((x, y, width, h) => {
+        const box = `${x},${y},${width},${h}`;
+        if (box === last || tries >= MAX_TRIES) setRect({ x, y, width, height: h });
+        else timer = setTimeout(() => settle(box, tries + 1), POLL_MS);
+      });
+    };
     timer = setTimeout(() => {
       measure((y, h) => {
         const visible = y >= TOP_ROOM / 2 && y + h <= height - nav.clearance;
         if (!visible) scroll?.scrollBy(y - TOP_ROOM);
-        timer = setTimeout(() => ref.current?.measureInWindow((x, y2, width, h2) => setRect({ x, y: y2, width, height: h2 })), visible ? 0 : SETTLE_MS);
+        timer = setTimeout(() => settle(null, 0), POLL_MS);
       });
     }, SETTLE_MS);
     return () => clearTimeout(timer);

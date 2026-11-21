@@ -201,10 +201,5 @@ export function seedAccount(seed: number = DEFAULT_SEED): BankState {
     savings: { balance: 1250000, rate: 2.25, interestYtd: 2340 },
     holdings,
     depotSeries: depotSeries(rng, depotTotal),
-    teasers: {
-      home: { title: 'Start: Safe money that shrinks', meta: 'Saving · Mission 1 of 5 · 5 min', progress: 0, focus: 'berlin' },
-      credits: { title: 'The real price of a loan', meta: 'Atlas · Borrowing · 5 missions', progress: 0, focus: 'sao-paulo' },
-      invest: { title: 'Lend it or own it', meta: 'Atlas · Investing · 5 missions · no advice', progress: 0, focus: 'tokyo' },
-    },
   };
 }

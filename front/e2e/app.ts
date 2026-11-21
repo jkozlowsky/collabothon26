@@ -20,6 +20,12 @@ export async function resetOnboarding(request: APIRequestContext) {
   expect(res.status()).toBe(204);
 }
 
+/** Mark onboarding as skipped through the API, for specs that start on the map and don't test onboarding. */
+export async function skipOnboarding(request: APIRequestContext) {
+  const res = await request.put(ONBOARDING_URL, { data: { goals: [], skipped: true } });
+  expect(res.ok()).toBe(true);
+}
+
 export async function getProfile(request: APIRequestContext): Promise<SavedProfile> {
   const res = await request.get(PROFILE_URL);
   expect(res.ok()).toBe(true);

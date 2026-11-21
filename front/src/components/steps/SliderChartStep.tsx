@@ -10,6 +10,7 @@ import { StepLayout } from '@/components/lesson/StepLayout';
 import { haptic } from '@/components/onboarding/ui';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import { formatValue, MODELS, sweep } from '@/lib/models';
+import { playSfx } from '@/lib/sfx';
 import type { GoalCondition, SliderChartStep as SliderChartStepData, StepOutcome } from '@/types/lessons';
 
 type Props = { step: SliderChartStepData; onDone: (outcome: StepOutcome) => void };
@@ -37,6 +38,7 @@ export function SliderChartStep({ step, onDone }: Props) {
   useEffect(() => {
     if (reached) {
       haptic('success');
+      playSfx('correct');
       return;
     }
     const t = setTimeout(() => setHint(true), HINT_AFTER_MS);

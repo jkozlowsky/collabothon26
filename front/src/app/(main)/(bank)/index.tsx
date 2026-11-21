@@ -7,7 +7,7 @@ import { BankScreen } from '@/components/bank/BankScreen';
 import { CommerzbankLogo } from '@/components/bank/CommerzbankLogo';
 import { DepotCard } from '@/components/bank/DepotCard';
 import { DetailSheet } from '@/components/bank/DetailSheet';
-import { FqTeaserCard } from '@/components/bank/FqTeaserCard';
+import { AtlasNudge } from '@/components/bank/AtlasNudge';
 import { HeroCard } from '@/components/bank/HeroCard';
 import { ListCard } from '@/components/bank/ListCard';
 import { ListRow } from '@/components/bank/ListRow';
@@ -19,7 +19,7 @@ import { ProfileButton } from '@/components/profile/ProfileButton';
 import { colors, spacing, type } from '@/constants/theme';
 import { useAccount } from '@/hooks/useAccount';
 import { useBank } from '@/hooks/useBank';
-import { useOpenLearnFocus } from '@/hooks/useOpenLearn';
+import { useBankTeasers, useOpenTeaser } from '@/hooks/useBankTeasers';
 import { useToast } from '@/hooks/useToast';
 import { useTransferSheet } from '@/hooks/useTransferSheet';
 import { cardDetail, creditProductDetail, dayLabel, loanDetail, savingsDetail, transactionDetail } from '@/lib/bank/details';
@@ -40,7 +40,8 @@ export default function OverviewScreen() {
   const { state, money, amountsHidden, toggleAmountsHidden } = useBank();
   const { demoOnly } = useToast();
   const { openTransfer } = useTransferSheet();
-  const openLearnFocus = useOpenLearnFocus();
+  const { teasers, ready } = useBankTeasers();
+  const openTeaser = useOpenTeaser();
   const { account: customer, stats } = useAccount();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [allActivity, setAllActivity] = useState(false);
@@ -51,7 +52,10 @@ export default function OverviewScreen() {
   const cardLimit = creditProducts.find((p) => p.id === 'credit-card')!;
 
   return (
-    <BankScreen testID="screen-overview">
+    <BankScreen
+      testID="screen-overview"
+      overlay={<AtlasNudge placement="home" teaser={teasers.home} ready={ready} streak={stats?.currentStreak} onOpen={openTeaser} testID="fq-teaser-home" />}
+    >
       {/* Commerzbank emblem top left; the greeting sits by the profile avatar on the right. */}
       <View style={styles.header}>
         <CommerzbankLogo height={32} />
@@ -83,8 +87,6 @@ export default function OverviewScreen() {
         <QuickAction icon="plus" label="Top up" onPress={demoOnly} />
         <QuickAction icon="more" label="More" onPress={demoOnly} />
       </View>
-
-      <FqTeaserCard teaser={state.teasers.home} streak={stats?.currentStreak} onPress={() => openLearnFocus(state.teasers.home.focus)} testID="fq-teaser-home" />
 
       <Section title="Cards" action={{ label: 'Manage', onPress: demoOnly }}>
         <ScrollView

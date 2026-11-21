@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
 import { goToInvite, openApp, resetOnboarding, tap } from './app';
 import { categorization } from '../src/test-utils/categorization';

@@ -10,12 +10,14 @@ type Props = {
   title?: string;
   /** Round buttons right of the title. */
   actions?: ReactNode;
+  /** Floats over the page and does not scroll with it (the Atlas popup). */
+  overlay?: ReactNode;
   children: ReactNode;
   testID?: string;
 };
 
 /** Scrolling bank page: 20 px sides, 24 px between sections, room at the bottom for the floating nav. */
-export function BankScreen({ title, actions, children, testID }: Props) {
+export function BankScreen({ title, actions, overlay, children, testID }: Props) {
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const offset = useRef(0);
   const scroll = useMemo(
@@ -45,6 +47,7 @@ export function BankScreen({ title, actions, children, testID }: Props) {
         {children}
       </ScrollView>
       </BankScrollContext.Provider>
+      {overlay}
     </SafeAreaView>
   );
 }

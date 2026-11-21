@@ -4,7 +4,7 @@ import { AllocationCard } from '@/components/bank/AllocationCard';
 import { BankScreen } from '@/components/bank/BankScreen';
 import { DepotCard } from '@/components/bank/DepotCard';
 import { DetailSheet } from '@/components/bank/DetailSheet';
-import { FqTeaserCard } from '@/components/bank/FqTeaserCard';
+import { AtlasNudge } from '@/components/bank/AtlasNudge';
 import { IconButton } from '@/components/bank/IconButton';
 import { ListCard } from '@/components/bank/ListCard';
 import { ListRow } from '@/components/bank/ListRow';
@@ -12,7 +12,7 @@ import { ProductSection } from '@/components/bank/ProductSection';
 import { Section } from '@/components/bank/Section';
 import { TradeSheet } from '@/components/bank/TradeSheet';
 import { useBank } from '@/hooks/useBank';
-import { useOpenLearnFocus } from '@/hooks/useOpenLearn';
+import { useBankTeasers, useOpenTeaser } from '@/hooks/useBankTeasers';
 import { useToast } from '@/hooks/useToast';
 import { holdingDetail } from '@/lib/bank/details';
 import { formatPercent } from '@/lib/bank/money';
@@ -22,7 +22,8 @@ import type { Holding } from '@/types/bank';
 export default function InvestScreen() {
   const { state, money } = useBank();
   const { demoOnly } = useToast();
-  const openLearnFocus = useOpenLearnFocus();
+  const { teasers, ready } = useBankTeasers();
+  const openTeaser = useOpenTeaser();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tradeId, setTradeId] = useState<string | null>(null);
   // New key per Buy, so the trade sheet starts at the nudge; closing keeps the key so it can slide out.
@@ -31,7 +32,7 @@ export default function InvestScreen() {
   // Look holdings up by id so open sheets show values updated by an order.
   const selected = state.holdings.find((h) => h.id === selectedId) ?? null;
   const trading = state.holdings.find((h) => h.id === tradeId) ?? null;
-  const teaser = state.teasers.invest;
+  const teaser = teasers.invest;
 
   const buy = (h: Holding) => {
     setSelectedId(null);
@@ -40,10 +41,14 @@ export default function InvestScreen() {
   };
 
   return (
-    <BankScreen title="Invest" actions={<IconButton icon="search" label="Search investments" onPress={demoOnly} />} testID="screen-invest">
+    <BankScreen
+      title="Invest"
+      actions={<IconButton icon="search" label="Search investments" onPress={demoOnly} />}
+      overlay={<AtlasNudge placement="invest" teaser={teaser} ready={ready} onOpen={openTeaser} testID="fq-teaser-invest" />}
+      testID="screen-invest"
+    >
       <DepotCard />
       <AllocationCard />
-      <FqTeaserCard teaser={teaser} onPress={() => openLearnFocus(teaser.focus)} testID="fq-teaser-invest" />
 
       <ProductSection title="Start investing" tab="invest" />
 
@@ -76,7 +81,7 @@ export default function InvestScreen() {
         onClose={() => setTradeId(null)}
         onLearn={() => {
           setTradeId(null);
-          openLearnFocus(teaser.focus);
+          openTeaser(teaser);
         }}
       />
     </BankScreen>

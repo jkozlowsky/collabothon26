@@ -29,6 +29,8 @@ async function openDuelLobby(page: Page) {
     await page.getByTestId('onboarding-start').click();
     await page.getByTestId('onboarding-next').click();
     await page.getByTestId('onboarding-skip-all').click();
+    await page.getByTestId('consent-decline').click();
+    await page.getByTestId('summary-all').click();
     await expect(learn).toBeVisible({ timeout: 15000 });
   }
 

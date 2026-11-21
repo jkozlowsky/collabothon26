@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { resetOnboarding } from './app';
+import { resetOnboarding, skipQuickCheck } from './app';
 
 // The test needs a user who has not been through onboarding yet, and leaves it that way for the next run.
 test.beforeEach(async ({ request }) => {
@@ -12,6 +12,7 @@ test.afterAll(async ({ request }) => {
 });
 
 test('app opens on the bank; Learn runs onboarding and the consent card, then Map; Bank comes back; a transfer lowers the balance', async ({ page, request }) => {
+  await skipQuickCheck(page);
   await page.goto('/');
   await expect(page.getByTestId('owner-name')).toHaveText('Alex Krause');
   await expect(page.getByTestId('main-balance')).toHaveText('€ 4,280.52');

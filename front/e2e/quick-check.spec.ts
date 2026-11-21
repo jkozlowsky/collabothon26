@@ -27,16 +27,18 @@ async function stubQuickCheck(page: Page, pool: unknown[], reply: unknown) {
   return posts;
 }
 
-async function toConsentCard(page: Page) {
+/** Registered after openApp, so these stubs win over its empty pool. */
+async function toConsentCard(page: Page, pool: unknown[], reply: unknown) {
   await openApp(page);
+  const posts = await stubQuickCheck(page, pool, reply);
   await goToInvite(page);
   await tap(page, 'onboarding-skip-all');
+  return posts;
 }
 
 test('consent, four questions, the summary, then the first lesson', async ({ page }) => {
   const reply = categorization({ startLesson: { lessonId: 1, title: 'Emergency fund' } });
-  const posts = await stubQuickCheck(page, POOL, reply);
-  await toConsentCard(page);
+  const posts = await toConsentCard(page, POOL, reply);
   await expect(page.getByTestId('consent-quickcheck-note')).toBeVisible();
   await tap(page, 'consent-accept');
 
@@ -51,6 +53,8 @@ test('consent, four questions, the summary, then the first lesson', async ({ pag
   await tap(page, 'quick-check-back');
   await expect(page.getByTestId('quick-check-input')).toHaveValue('Interest keeps growing.');
   await tap(page, 'quick-check-next');
+  // "Not sure" ignores taps for 400 ms after a question appears.
+  await page.waitForTimeout(500);
   await tap(page, 'quick-check-unsure');
   await page.getByTestId('quick-check-input').fill('One failing hurts less.');
   await tap(page, 'quick-check-next');
@@ -60,7 +64,8 @@ test('consent, four questions, the summary, then the first lesson', async ({ pag
   await expect(page.getByTestId('learning-path')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('You know more than you think')).toBeVisible();
   await expect(page.getByText("You're an intermediate learner")).toBeVisible();
-  await expect(page.getByTestId('summary-start')).toHaveText('Start learning: Emergency fund');
+  await expect(page.getByTestId('summary-start')).toHaveText('Start learning');
+  await expect(page.getByTestId('learning-path').getByText('Emergency fund')).toBeVisible();
 
   expect(posts).toHaveLength(1);
   expect(posts[0].consent).toBe(true);
@@ -79,8 +84,7 @@ test('consent, four questions, the summary, then the first lesson', async ({ pag
 
 test('without a Jev key the questions are skipped and consent leads straight to the summary', async ({ page }) => {
   const fallback = categorization({ source: 'fallback', checks: [], startLesson: null, confidenceGaps: [] });
-  const posts = await stubQuickCheck(page, [], fallback);
-  await toConsentCard(page);
+  const posts = await toConsentCard(page, [], fallback);
   await expect(page.getByTestId('consent-quickcheck-note')).toHaveCount(0);
   await tap(page, 'consent-decline');
 

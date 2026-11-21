@@ -563,7 +563,7 @@ class QuickCheckTests {
 			.andExpect(MockMvcResultMatchers.jsonPath("$.confidenceGaps[0].area").value("saving"))
 			.andExpect(MockMvcResultMatchers.jsonPath("$.confidenceGaps[0].direction").value("under"))
 			.andExpect(MockMvcResultMatchers.jsonPath("$.confidenceGaps[0].because")
-				.value("You said: I save now and then, and your answer about saving shows you understand it."));
+				.value("You said: I save now and then. Your answer about saving shows you understand it."));
 	}
 
 	private String sentinelBody() {

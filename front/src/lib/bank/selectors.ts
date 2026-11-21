@@ -55,11 +55,13 @@ export function depotChart(s: BankState, range: ChartRange): { points: number[];
   return { points: points.map((p) => p * scale), change };
 }
 
+const DEPOT_RECIPIENT = 'Depot';
+
 const euros = (cents: number) => Math.round(cents / 100);
 
 /** What a Quick check account prompt may quote, in the units it prints (whole euros, percent, a count). */
 export function slotValues(s: BankState): Record<Slot, number> {
-  const etfPlan = s.standingOrders.find((o) => o.recipient.startsWith('Depot'));
+  const etfPlan = s.standingOrders.find((o) => o.recipient.startsWith(DEPOT_RECIPIENT));
   return {
     savingsBalance: euros(s.savings.balance),
     savingsInterestRate: s.savings.rate,

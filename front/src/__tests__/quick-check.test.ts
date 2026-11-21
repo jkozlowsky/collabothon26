@@ -1,9 +1,9 @@
 import { createRng, seedAccount } from '@/lib/bank/seed';
 import { depotTotal, positionCount, slotValues } from '@/lib/bank/selectors';
-import { accountUsable, drawQuestions, promptParts, quizRng } from '@/lib/quickCheck';
+import { accountUsable, drawQuestions, fetchCheckQuestions, promptParts, quizRng } from '@/lib/quickCheck';
 import { POOL } from '@/test-utils/checkPool';
 import type { BankState } from '@/types/bank';
-import type { Drawn } from '@/types/quickCheck';
+import type { CheckQuestion, Drawn } from '@/types/quickCheck';
 
 const SEEDS = Array.from({ length: 40 }, (_, i) => i);
 const draw = (seed: number, consent = true, bank: BankState = seedAccount(), pool = POOL) =>
@@ -114,4 +114,39 @@ test('the selectors read the slots from the bank; the monthly ETF is the depot s
   });
   const bigger = { ...bank, standingOrders: [{ ...plan, amount: -25000 }] };
   expect(slotValues(bigger).etfMonthly).toBe(250);
+});
+
+test('the seeded draw sorts the pool by code unit, not by locale', () => {
+  const finance = (id: string, area: CheckQuestion['area']): CheckQuestion => ({ ...POOL[0], id, area, accountPrompt: null, slots: [] });
+  const pool = [finance('a-first', 'saving'), finance('B-first', 'saving'), finance('x', 'debt'), ...POOL.slice(4)];
+  const first = drawQuestions(pool, seedAccount(), false, () => 0)[0].question.id;
+  expect(first).toBe('B-first');
+});
+
+test('a question whose account prompt quotes an unknown or undeclared slot only has its generic version', () => {
+  const bank = seedAccount();
+  const withPrompt = (accountPrompt: string, slots: CheckQuestion['slots']) => ({ ...POOL[2], accountPrompt, slots });
+  expect(accountUsable(withPrompt('Your loan is {loanRemaining}.', ['loanRemaining']), bank, true)).toBe(true);
+  expect(accountUsable(withPrompt('Your {mystery} is {loanRemaining}.', ['loanRemaining']), bank, true)).toBe(false);
+  expect(accountUsable(withPrompt('Your loan is {loanRemaining}.', []), bank, true)).toBe(false);
+  expect(accountUsable(withPrompt('Your loan is {loanRemaining}.', ['loanRemaining', 'unknown' as never]), bank, true)).toBe(false);
+});
+
+test('pool items the front cannot use are skipped, the rest are kept', async () => {
+  const good = POOL[0];
+  const items = [
+    good,
+    null,
+    'text',
+    { ...good, id: 7 },
+    { ...good, id: 'bad-category', category: 'other' },
+    { ...good, id: 'area-of-the-other-category', area: 'risk' },
+    { ...good, id: 'no-slots', slots: undefined },
+    { ...good, id: 'no-prompt', genericPrompt: undefined },
+  ];
+  globalThis.fetch = jest.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(items) })) as jest.Mock;
+  expect(await fetchCheckQuestions(new AbortController().signal)).toEqual([good]);
+
+  globalThis.fetch = jest.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ not: 'a list' }) })) as jest.Mock;
+  expect(await fetchCheckQuestions(new AbortController().signal)).toEqual([]);
 });

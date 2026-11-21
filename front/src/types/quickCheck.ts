@@ -1,17 +1,19 @@
 import type { FocusArea } from '@/types/categorization';
 
 /** Bank numbers an account prompt can quote; filled in on the device only (docs/specs/F1b-quick-check.md). */
-export type Slot =
-  | 'savingsBalance'
-  | 'savingsInterestRate'
-  | 'monthOut'
-  | 'loanRemaining'
-  | 'loanApr'
-  | 'cardUsed'
-  | 'cardLimit'
-  | 'etfMonthly'
-  | 'depotTotal'
-  | 'positionCount';
+export const SLOTS = [
+  'savingsBalance',
+  'savingsInterestRate',
+  'monthOut',
+  'loanRemaining',
+  'loanApr',
+  'cardUsed',
+  'cardLimit',
+  'etfMonthly',
+  'depotTotal',
+  'positionCount',
+] as const;
+export type Slot = (typeof SLOTS)[number];
 
 /** GET /api/check-questions item; the judge's `criterion` never leaves the backend. */
 export type CheckQuestion = {

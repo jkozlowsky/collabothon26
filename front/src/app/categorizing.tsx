@@ -176,7 +176,7 @@ export default function CategorizingScreen() {
           <FlowPage
             testID="categorizing-check-error"
             center
-              note="You'll start with the general lessons."
+            note="You'll start with the general lessons."
             footer={
               <>
                 {retryable && <Button label="Retry" onPress={recheck} testID="categorizing-check-retry" />}
@@ -246,7 +246,7 @@ export default function CategorizingScreen() {
       <FlowPage
         testID="categorizing-error"
         center
-          note="You'll start with the general lessons."
+        note="You'll start with the general lessons."
         footer={
           <>
             {retryable && (

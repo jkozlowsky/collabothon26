@@ -47,9 +47,12 @@ export default function LearningPathScreen() {
         </>
       }
     >
-      <PathSummary categorization={categorization} unchecked={unchecked}
+      <PathSummary
+        categorization={categorization}
+        unchecked={unchecked}
         answered={answered}
-        goalAreas={goalAreas(answers.goals)} />
+        goalAreas={goalAreas(answers.goals)}
+      />
     </FlowPage>
   );
 }

@@ -205,25 +205,49 @@ final class QuickCheckRules {
 
 	static List<BankLesson> lessons(List<CheckQuestionProjection> bank,
 			Function<CheckQuestionProjection, BankLesson> toLesson) {
-		Map<Long, BankLesson> lessons = new LinkedHashMap<>();
+		Map<String, BankLesson> lessons = new LinkedHashMap<>();
 		bank.stream()
 			.sorted(Comparator.comparing(CheckQuestionProjection::id))
 			.forEach(q -> lessons.putIfAbsent(q.lessonId(), toLesson.apply(q)));
 		return lessons.values().stream().sorted(Comparator.comparing(BankLesson::id)).toList();
 	}
 
-	/** Uncompleted lessons of non-Solid areas in path order: answered areas weakest first, then unanswered ones. */
-	static List<BankLesson> candidates(List<BankLesson> lessons, List<FocusArea> order, Map<FocusArea, Double> mastery,
-			List<Answer> answers, Set<Long> completed) {
+	static Optional<Story> storyOf(String lessonId, List<Story> stories) {
+		return stories.stream().filter(s -> s.lessonIds().contains(lessonId)).findFirst();
+	}
+
+	/** The story's first lesson in story order that is not completed; empty when all are done. */
+	static Optional<String> startLesson(Story story, Set<String> completed) {
+		return story.lessonIds().stream().filter(id -> !completed.contains(id)).findFirst();
+	}
+
+	/** The start lesson's area, else the area of the story's first lesson with bank questions. */
+	static FocusArea area(Story story, String lessonId, List<BankLesson> lessons) {
+		return Stream.concat(Stream.of(lessonId), story.lessonIds().stream())
+			.flatMap(id -> lessons.stream().filter(l -> l.id().equals(id)))
+			.map(BankLesson::area)
+			.findFirst()
+			.orElse(null);
+	}
+
+	/** Lessons of non-Solid areas whose story has a lesson left, in path order: answered areas weakest first. */
+	static List<BankLesson> candidates(List<BankLesson> lessons, List<Story> stories, List<FocusArea> order,
+			Map<FocusArea, Double> mastery, List<Answer> answers, Set<String> completed) {
 		Comparator<BankLesson> pathOrder = Comparator
 			.comparing((BankLesson l) -> inArea(answers, l.area()).isEmpty())
 			.thenComparing(l -> inArea(answers, l.area()).isEmpty() ? 0 : masteryOrStart(mastery, l.area()))
 			.thenComparing(l -> order.indexOf(l.area()))
 			.thenComparing(BankLesson::id);
 		return lessons.stream()
-			.filter(l -> order.contains(l.area()) && !solid(l.area(), mastery, answers) && !completed.contains(l.id()))
+			.filter(l -> order.contains(l.area()) && !solid(l.area(), mastery, answers)
+					&& storyOf(l.id(), stories).flatMap(s -> startLesson(s, completed)).isPresent())
 			.sorted(pathOrder)
 			.toList();
+	}
+
+	/** The candidates' stories, each once, in candidate order. */
+	static List<Story> stories(List<BankLesson> candidates, List<Story> stories) {
+		return candidates.stream().flatMap(l -> storyOf(l.id(), stories).stream()).distinct().toList();
 	}
 
 	/** Jev and the rule pick from answered areas when any have a candidate. */
@@ -247,21 +271,21 @@ final class QuickCheckRules {
 			.orElse(inWeakest.getFirst());
 	}
 
-	static LessonPlan plan(List<BankLesson> lessons, List<BankLesson> candidates, BankLesson picked,
-			List<FocusArea> order, Map<FocusArea, Double> mastery, List<Answer> answers, Set<Long> completed) {
+	static StoryPlan plan(List<Story> stories, List<BankLesson> candidates, Story picked, List<FocusArea> order,
+			Map<FocusArea, Double> mastery, List<Answer> answers, Set<String> completed) {
 		if (candidates.isEmpty()) {
-			Optional<BankLesson> next = lessons.stream()
-				.filter(l -> !completed.contains(l.id()))
-				.max(Comparator.comparing(BankLesson::position));
-			return new LessonPlan(next.orElse(null), order.stream().allMatch(area -> solid(area, mastery, answers)),
-					next.map(l -> List.of(l.id())).orElse(List.of()));
+			Optional<Story> next = stories.stream().filter(s -> startLesson(s, completed).isPresent()).findFirst();
+			return new StoryPlan(next.orElse(null), order.stream().allMatch(area -> solid(area, mastery, answers)),
+					next.map(s -> List.of(s.id())).orElse(List.of()));
 		}
 		List<BankLesson> pool = pool(candidates, answers);
-		BankLesson start = pool.size() < JevConsts.MIN_CHOICE_LABELS ? pool.getFirst()
-				: Objects.requireNonNullElseGet(picked, () -> ruleFirstLesson(pool, order, mastery, answers));
-		List<Long> path = new ArrayList<>(List.of(start.id()));
-		candidates.stream().map(BankLesson::id).filter(id -> !id.equals(start.id())).forEach(path::add);
-		return new LessonPlan(start, false, path);
+		List<Story> poolStories = stories(pool, stories);
+		Story start = poolStories.size() < JevConsts.MIN_CHOICE_LABELS ? poolStories.getFirst()
+				: Objects.requireNonNullElseGet(picked,
+						() -> storyOf(ruleFirstLesson(pool, order, mastery, answers).id(), stories).orElseThrow());
+		List<String> path = new ArrayList<>(List.of(start.id()));
+		stories(candidates, stories).stream().map(Story::id).filter(id -> !id.equals(start.id())).forEach(path::add);
+		return new StoryPlan(start, false, path);
 	}
 
 	private static double masteryOrStart(Map<FocusArea, Double> mastery, FocusArea area) {

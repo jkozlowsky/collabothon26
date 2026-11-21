@@ -46,6 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
+import com.collabothon.back.lesson.LessonContent;
 
 import tools.jackson.databind.json.JsonMapper;
 
@@ -94,6 +95,9 @@ class CategorizationControllerTests {
 	JsonMapper json;
 
 	@Autowired
+	LessonContent lessonContent;
+
+	@Autowired
 	MockMvc mvc;
 
 	@Autowired
@@ -130,12 +134,9 @@ class CategorizationControllerTests {
 	@Transactional
 	void alexIsCategorisedByJev() throws Exception {
 		TestBank bank = new TestBank(jdbc);
-		long emergency = bank.lesson("Emergency fund", "Rainy days.", 1);
-		long compound = bank.lesson("Compound interest", "Time works.", 2);
-		long inflation = bank.lesson("Inflation", "Prices rise.", 3);
-		bank.question("sv-a", emergency, "saving", "easy");
-		bank.question("sv-b", inflation, "saving", "easy");
-		bank.question("in-a", compound, "investing", "easy");
+		bank.question("sv-a", "berlin-1", "saving", "easy");
+		bank.question("sv-b", "sao-paulo-1", "saving", "easy");
+		bank.question("in-a", "tokyo-1", "investing", "easy");
 		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(method(HttpMethod.POST))
@@ -164,12 +165,14 @@ class CategorizationControllerTests {
 				                "You are paying off a loan with us.",
 				                "Your accounts with us include investment products."]}],
 				 "profile": null, "mastery": {}, "confidence": {}, "answerCount": 0,
-				 "startLesson": {"lessonId": %1$d, "title": "Compound interest", "area": "investing"},
-				 "readyForNext": false, "pathLessonIds": [%1$d, %2$d, %3$d],
-				 "startHere": {"lessonId": %1$d, "title": "Compound interest", "area": "investing"},
-				 "sharedWithModel": {"facts": %4$s, "answers": %5$s, "goals": ["start-saving", "stocks-etfs"], "profile": null, "answerCount": 0, "stepCallsMade": 0},
+				 "startLesson": {"lessonId": "tokyo-1", "title": "%1$s", "area": "investing", "storyId": "tokyo",
+				                 "storyCity": "Tokyo"},
+				 "readyForNext": false, "pathStoryIds": ["tokyo", "berlin", "sao-paulo"],
+				 "startHere": {"lessonId": "tokyo-1", "title": "%1$s", "area": "investing", "storyId": "tokyo",
+				               "storyCity": "Tokyo"},
+				 "sharedWithModel": {"facts": %2$s, "answers": %3$s, "goals": ["start-saving", "stocks-etfs"], "profile": null, "answerCount": 0, "stepCallsMade": 0},
 				 "source": "jev", "model": "jev-2026-05", "categorizedAt": "2026-06-15T10:00:00Z"}"""
-			.formatted(compound, emergency, inflation, FACTS, ANSWERS);
+			.formatted(lessonContent.lesson("tokyo-1").orElseThrow().path("title").asString(), FACTS, ANSWERS);
 
 		categorize("alex", WITH_FACTS).andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json(expected, JsonCompareMode.STRICT));

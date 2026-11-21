@@ -22,7 +22,7 @@ public class CheckQuestion {
 	@Id
 	private String id;
 
-	private Long lessonId;
+	private String lessonId;
 
 	@Convert(converter = FocusAreaConverter.class)
 	private FocusArea area;

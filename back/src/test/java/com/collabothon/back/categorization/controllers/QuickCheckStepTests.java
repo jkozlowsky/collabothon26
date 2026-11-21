@@ -93,20 +93,15 @@ class QuickCheckStepTests {
 
 	private TestBank bank;
 
-	private long emergency;
-
 	@BeforeEach
 	void ownBankAndUser() throws Exception {
 		bank = new TestBank(jdbc);
-		emergency = bank.lesson("Emergency fund", "Rainy days.", 1);
-		long compound = bank.lesson("Compound interest", "Time works.", 2);
-		long inflation = bank.lesson("Inflation", "Prices rise.", 3);
-		bank.question("sv-a", emergency, "saving", "easy");
-		bank.question("sv-b", inflation, "saving", "easy");
-		bank.question("sv-hard", emergency, "saving", "hard");
-		bank.question("in-a", compound, "investing", "easy");
-		bank.question("short-term-fall", compound, "investing", "easy");
-		bank.question("in-hard", compound, "investing", "hard");
+		bank.question("sv-a", "berlin-3", "saving", "easy");
+		bank.question("sv-b", "berlin-1", "saving", "easy");
+		bank.question("sv-hard", "berlin-3", "saving", "hard");
+		bank.question("in-a", "berlin-2", "investing", "easy");
+		bank.question("short-term-fall", "berlin-4", "investing", "easy");
+		bank.question("in-hard", "berlin-2", "investing", "hard");
 		userId = "step-" + UUID.randomUUID();
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
 			.content("{\"lifeStage\": \"building\", \"goals\": [\"start-saving\"], \"experience\": \"occasional\","
@@ -156,7 +151,7 @@ class QuickCheckStepTests {
 
 	@Test
 	void aShortHorizonGetsTheFallBeforeYouNeedItAndNeverTheShortTermFallOnTheRulePath() throws Exception {
-		bank.question("fall-before-you-need-it", emergency, "saving", "easy");
+		bank.question("fall-before-you-need-it", "berlin-3", "saving", "easy");
 
 		step(body("within-1y", "", true)).andExpect(status().isOk())
 			.andExpect(content().json("{\"nextQuestionId\": \"fall-before-you-need-it\"}", JsonCompareMode.LENIENT));
@@ -379,7 +374,7 @@ class QuickCheckStepTests {
 
 	@Test
 	void aShortHorizonReplacesJevsSavingPickAndHidesTheShortTermFallFromJev() throws Exception {
-		bank.question("fall-before-you-need-it", emergency, "saving", "easy");
+		bank.question("fall-before-you-need-it", "berlin-3", "saving", "easy");
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(jsonPath("$.questions.next.criteria.short-term-fall").doesNotExist())
 			.andRespond(jevReplies(jevStep("\"mastery_saving\": {\"type\": \"noul\", \"noul\": 0.9}", "sv-b",
@@ -415,8 +410,7 @@ class QuickCheckStepTests {
 
 	@Test
 	void anAnsweredAreaWithoutAMasteryQuestionTakesTheRuleMean() throws Exception {
-		long budget = bank.lesson("Budget", "Plan.", 9);
-		bank.question("db-a", budget, "debt", "easy");
+		bank.question("db-a", "sao-paulo-1", "debt", "easy");
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(jsonPath("$.questions.mastery_debt").doesNotExist())
 			.andRespond(jevReplies(jevStep("\"mastery_saving\": {\"type\": \"noul\", \"noul\": 0.8}", "sv-b",
@@ -446,8 +440,7 @@ class QuickCheckStepTests {
 
 	@Test
 	void sevenDistinctAnswersAre400() throws Exception {
-		long lesson = bank.lesson("Extra", "More.", 9);
-		bank.question("sv-c", lesson, "saving", "easy");
+		bank.question("sv-c", "berlin-5", "saving", "easy");
 		StringBuilder seven = new StringBuilder();
 		for (String id : List.of("sv-a", "sv-b", "sv-c", "sv-hard", "in-a", "in-hard", "short-term-fall")) {
 			seven.append(seven.isEmpty() ? "" : ", ").append("{\"questionId\": \"%s\"}".formatted(id));

@@ -7,11 +7,11 @@ import com.collabothon.back.categorization.dto.JevAnswerDto;
 import com.collabothon.back.categorization.dto.ProfileRangesDto;
 import com.collabothon.back.categorization.enums.FocusArea;
 
-/** What the final call adds when the Quick check ran; {@code lessons} (id to summary) is empty below two candidates. */
+/** What the final call adds when the Quick check ran; {@code stories} (id to topic) is empty below two candidates. */
 record JevQuickCheck(
 		ProfileRangesDto profile,
 		List<String> goals,
 		List<JevAnswerDto> answers,
 		List<FocusArea> gapAreas,
-		Map<Long, String> lessons
+		Map<String, String> stories
 ) {}

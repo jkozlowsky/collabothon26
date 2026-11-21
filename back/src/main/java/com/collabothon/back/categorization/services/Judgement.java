@@ -14,5 +14,5 @@ record Judgement(
 		Map<String, Double> focusProbabilities,
 		String model,
 		Map<FocusArea, GapDirection> gaps,
-		Long firstLesson
+		String firstStory
 ) {}

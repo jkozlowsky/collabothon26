@@ -15,14 +15,7 @@ final class TestBank {
 		jdbc.sql("DELETE FROM check_question").update();
 	}
 
-	long lesson(String title, String summary, int position) {
-		return jdbc.sql("INSERT INTO lesson (position, emoji, title, summary, xp) VALUES (?, 'x', ?, ?, 10) RETURNING id")
-			.params(position, title, summary)
-			.query(Long.class)
-			.single();
-	}
-
-	void question(String id, long lessonId, String area, String level) {
+	void question(String id, String lessonId, String area, String level) {
 		jdbc.sql("""
 				INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, generic_prompt, options,
 				                            correct_index, misconceptions, checks)

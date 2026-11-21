@@ -13,7 +13,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -44,6 +43,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.lesson.LessonContent;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -107,28 +107,23 @@ class QuickCheckCategorizationTests {
 	@Autowired
 	Clock clock;
 
+	@Autowired
+	LessonContent lessonContent;
+
 	private String userId;
 
 	private TestBank bank;
 
-	private long emergency;
-
-	private long compound;
-
-	private long inflation;
-
 	@BeforeEach
 	void ownBankAndUser() throws Exception {
+		// One story per lesson, so the path has three stories to order.
 		bank = new TestBank(jdbc);
-		emergency = bank.lesson("Emergency fund", "Rainy days.", 1);
-		compound = bank.lesson("Compound interest", "Time works.", 2);
-		inflation = bank.lesson("Inflation", "Prices rise.", 3);
-		bank.question("sv-a", emergency, "saving", "easy");
-		bank.question("sv-b", inflation, "saving", "easy");
-		bank.question("sv-hard", emergency, "saving", "hard");
-		bank.question("in-a", compound, "investing", "easy");
-		bank.question("short-term-fall", compound, "investing", "easy");
-		bank.question("in-hard", compound, "investing", "hard");
+		bank.question("sv-a", "berlin-1", "saving", "easy");
+		bank.question("sv-b", "sao-paulo-1", "saving", "easy");
+		bank.question("sv-hard", "berlin-1", "saving", "hard");
+		bank.question("in-a", "tokyo-1", "investing", "easy");
+		bank.question("short-term-fall", "tokyo-1", "investing", "easy");
+		bank.question("in-hard", "tokyo-1", "investing", "hard");
 		userId = "final-" + UUID.randomUUID();
 		onboard(ONBOARDING);
 	}
@@ -150,10 +145,25 @@ class QuickCheckCategorizationTests {
 			.content(body));
 	}
 
-	private void complete(long lessonId) {
-		jdbc.sql("INSERT INTO lesson_completion (user_id, lesson_id, completed_on, xp) VALUES (?, ?, ?, 10)")
-			.params(userId, lessonId, LocalDate.now(clock))
-			.update();
+	private void complete(String... lessonIds) {
+		for (String lessonId : lessonIds) {
+			jdbc.sql("INSERT INTO lesson_completion (user_id, lesson_id, xp) VALUES (?, ?, 10) ON CONFLICT DO NOTHING")
+				.params(userId, lessonId)
+				.update();
+		}
+	}
+
+	private void completeStory(String storyId) {
+		complete(lessonContent.lessonIdsOf(story(storyId)).toArray(String[]::new));
+	}
+
+	private JsonNode story(String storyId) {
+		return lessonContent.stories().stream().filter(s -> s.path("id").asString().equals(storyId)).findFirst()
+			.orElseThrow();
+	}
+
+	private String title(String lessonId) {
+		return lessonContent.lesson(lessonId).orElseThrow().path("title").asString();
 	}
 
 	private ResultActions stored() throws Exception {
@@ -178,8 +188,8 @@ class QuickCheckCategorizationTests {
 		return "{\"model\": \"jev-2026-05\", \"answers\": {" + F1_ANSWERS + extra + "}}";
 	}
 
-	private String lessons(long first, long second, long third) {
-		return choice("first_lesson", "lesson_" + first, "lesson_" + first, "lesson_" + second, "lesson_" + third);
+	private static String stories(String first, String second, String third) {
+		return choice("first_lesson", "story_" + first, "story_" + first, "story_" + second, "story_" + third);
 	}
 
 	@Test
@@ -189,9 +199,9 @@ class QuickCheckCategorizationTests {
 			.andExpect(request -> sent.set(json.readTree(((MockClientHttpRequest) request).getBodyAsString())))
 			.andRespond(withSuccess(jevFinal(choice("gap_saving", "over", "under", "over", "aligned")
 					+ choice("gap_investing", "under", "under", "over", "aligned")
-					+ lessons(emergency, inflation, compound)), MediaType.APPLICATION_JSON));
+					+ stories("berlin", "sao-paulo", "tokyo")), MediaType.APPLICATION_JSON));
 
-		// The rule would start at inflation (sv-b, the weakest area's lowest score); Jev's emergency wins.
+		// The rule would start in São Paulo (sv-b, the weakest area's lowest score); Jev's Berlin wins.
 		categorize(QUICK_CHECK).andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"source": "jev", "role": "intermediate", "profile": %s,
@@ -201,11 +211,13 @@ class QuickCheckCategorizationTests {
 					    "because": "On Investing you said “Fairly sure”, yet your answers show you already understand how it works."},
 					   {"area": "saving", "direction": "over",
 					    "because": "On Saving you said “Sure”. Your answers leave a few things open, which is where your first lesson starts."}],
-					 "startLesson": {"lessonId": %d, "title": "Emergency fund", "area": "saving"}, "readyForNext": false,
-					 "pathLessonIds": [%d, %d, %d],
-					 "startHere": {"lessonId": %d, "title": "Emergency fund", "area": "saving"},
-					 "sharedWithModel": {"facts": null, "answers": %s, "profile": %s, "answerCount": 4, "stepCallsMade": 3}}"""
-				.formatted(PROFILE, emergency, emergency, inflation, compound, emergency, ONBOARDING, PROFILE),
+					 "startLesson": {"lessonId": "berlin-1", "title": "%2$s", "area": "saving", "storyId": "berlin",
+					                 "storyCity": "Berlin"},
+					 "readyForNext": false, "pathStoryIds": ["berlin", "sao-paulo", "tokyo"],
+					 "startHere": {"lessonId": "berlin-1", "title": "%2$s", "area": "saving", "storyId": "berlin",
+					               "storyCity": "Berlin"},
+					 "sharedWithModel": {"facts": null, "answers": %3$s, "profile": %1$s, "answerCount": 4, "stepCallsMade": 3}}"""
+				.formatted(PROFILE, title("berlin-1"), ONBOARDING),
 					JsonCompareMode.LENIENT));
 
 		assertEquals(json.readTree("""
@@ -220,10 +232,10 @@ class QuickCheckCategorizationTests {
 		expected.set("gap_saving", block.get("gap_<area>"));
 		expected.set("gap_investing", block.get("gap_<area>"));
 		ObjectNode firstLesson = (ObjectNode) block.get("first_lesson").deepCopy();
-		firstLesson.putObject("criteria")
-			.put("lesson_" + emergency, "Rainy days.")
-			.put("lesson_" + inflation, "Prices rise.")
-			.put("lesson_" + compound, "Time works.");
+		ObjectNode criteria = firstLesson.putObject("criteria");
+		for (String storyId : List.of("berlin", "sao-paulo", "tokyo")) {
+			criteria.put("story_" + storyId, story(storyId).path("topic").asString());
+		}
 		expected.set("first_lesson", firstLesson);
 		assertEquals(expected, sent.get().get("questions"));
 	}
@@ -233,7 +245,7 @@ class QuickCheckCategorizationTests {
 		jev.expect(requestTo(JEV_URL))
 			.andRespond(withSuccess(jevFinal(choice("gap_saving", "under", "under", "over", "aligned")
 					+ choice("gap_investing", "over", "under", "over", "aligned")
-					+ lessons(emergency, inflation, compound)), MediaType.APPLICATION_JSON));
+					+ stories("berlin", "sao-paulo", "tokyo")), MediaType.APPLICATION_JSON));
 		// Sure and right on saving, fairly sure and right on investing: neither label has its precondition.
 		String history = """
 				[{"questionId": "sv-a", "optionIndex": 0, "confidence": "sure"},
@@ -248,7 +260,7 @@ class QuickCheckCategorizationTests {
 	void aBrokenGapAnswerPutsTheWholeCategorisationOnRules() throws Exception {
 		jev.expect(requestTo(JEV_URL))
 			.andRespond(withSuccess(jevFinal(choice("gap_saving", "over", "under", "over", "aligned")
-					+ lessons(inflation, emergency, compound)), MediaType.APPLICATION_JSON));
+					+ stories("sao-paulo", "berlin", "tokyo")), MediaType.APPLICATION_JSON));
 
 		// The rule: saving has a wrong Sure answer (over); investing's right fairly-sure answer at 0.5 is under.
 		categorize(QUICK_CHECK).andExpect(status().isOk())
@@ -257,7 +269,7 @@ class QuickCheckCategorizationTests {
 			.andExpect(jsonPath("$.confidenceGaps[0].direction").value("under"))
 			.andExpect(jsonPath("$.confidenceGaps[1].area").value("saving"))
 			.andExpect(jsonPath("$.confidenceGaps[1].direction").value("over"))
-			.andExpect(jsonPath("$.startLesson.lessonId").value(inflation))
+			.andExpect(jsonPath("$.startLesson.lessonId").value("sao-paulo-1"))
 			.andExpect(jsonPath("$.sharedWithModel.stepCallsMade").value(3));
 	}
 
@@ -316,31 +328,38 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void startHereMovesOnAfterACompletionAndSkipsADeletedLesson() throws Exception {
+	void startHereMovesThroughTheStoryThenToTheNextStoryAndSkipsAStoryThatIsGone() throws Exception {
 		String path = categorize(onRules(QUICK_CHECK)).andExpect(status().isOk())
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		assertEquals(json.readTree("[%d, %d, %d]".formatted(inflation, emergency, compound)),
-				json.readTree(path).get("pathLessonIds"));
-		stored().andExpect(jsonPath("$.startHere.lessonId").value(inflation));
+		assertEquals(json.readTree("[\"sao-paulo\", \"berlin\", \"tokyo\"]"), json.readTree(path).get("pathStoryIds"));
+		stored().andExpect(jsonPath("$.startHere.lessonId").value("sao-paulo-1"));
 
-		complete(inflation);
+		// sao-paulo-2 has no bank questions, so it takes the area of the story's first bank lesson.
+		complete("sao-paulo-1");
 		stored().andExpect(content().json("""
-				{"startHere": {"lessonId": %d, "title": "Emergency fund", "area": "saving"}}""".formatted(emergency),
-				JsonCompareMode.LENIENT));
+				{"startHere": {"lessonId": "sao-paulo-2", "title": "%s", "area": "saving", "storyId": "sao-paulo",
+				               "storyCity": "São Paulo"}}""".formatted(title("sao-paulo-2")), JsonCompareMode.LENIENT));
 
-		jdbc.sql("DELETE FROM lesson WHERE id = ?").param(emergency).update();
-		stored().andExpect(jsonPath("$.startHere.lessonId").value(compound));
+		completeStory("sao-paulo");
+		stored().andExpect(jsonPath("$.startHere.lessonId").value("berlin-1"));
+
+		jdbc.sql("UPDATE categorization SET data = jsonb_set(data, '{pathStoryIds}', '[\"gone\", \"tokyo\"]') WHERE user_id = ?")
+			.param(userId)
+			.update();
+		stored().andExpect(jsonPath("$.startHere.storyId").value("tokyo"));
 	}
 
 	@Test
-	void aLessonCompletedBeforeTheTestIsNotOnThePath() throws Exception {
-		complete(inflation);
+	void aStoryWithEveryLessonDoneIsNotOnThePathAndTheStartLessonIsTheFirstNotDone() throws Exception {
+		completeStory("sao-paulo");
+		complete("berlin-1");
 
 		categorize(onRules(QUICK_CHECK)).andExpect(status().isOk())
-			.andExpect(jsonPath("$.startLesson.lessonId").value(emergency))
-			.andExpect(jsonPath("$.pathLessonIds.length()").value(2));
+			.andExpect(jsonPath("$.startLesson.lessonId").value("berlin-2"))
+			.andExpect(jsonPath("$.startLesson.storyId").value("berlin"))
+			.andExpect(jsonPath("$.pathStoryIds.length()").value(2));
 	}
 
 	@Test
@@ -349,7 +368,7 @@ class QuickCheckCategorizationTests {
 		for (int i = 0; i < 2; i++) {
 			jev.expect(requestTo(JEV_URL))
 				.andRespond(withSuccess(jevFinal(choice("gap_saving", "aligned", "under", "over", "aligned")
-						+ choice("first_lesson", "lesson_" + emergency, "lesson_" + emergency, "lesson_" + inflation)),
+						+ choice("first_lesson", "story_berlin", "story_berlin", "story_sao-paulo")),
 						MediaType.APPLICATION_JSON));
 		}
 
@@ -364,7 +383,7 @@ class QuickCheckCategorizationTests {
 					{"userId": "%s", "consent": false, "bankData": false, "role": "novice", "lifeStage": null,
 					 "focusAreas": ["saving"], "confidenceGaps": [], "checks": [],
 					 "lessonVariant": {"persona": null, "level": "beginner", "lang": "plain"}, "explanation": [],
-					 "startLesson": {"lessonId": 1, "title": "Emergency fund"},
+					 "startLesson": {"lessonId": 1, "title": "Emergency fund"}, "pathLessonIds": [1],
 					 "sharedWithModel": null, "source": "fallback", "model": null,
 					 "categorizedAt": "%s"}""".formatted(userId, Instant.now(clock)))
 			.update();
@@ -372,7 +391,7 @@ class QuickCheckCategorizationTests {
 		stored().andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"profile": null, "mastery": {}, "confidence": {}, "answerCount": 0, "readyForNext": false,
-					 "pathLessonIds": [], "startHere": null}""", JsonCompareMode.LENIENT));
+					 "pathStoryIds": [], "startHere": null}""", JsonCompareMode.LENIENT));
 	}
 
 	private JsonNode categorized(String body) throws Exception {
@@ -412,7 +431,7 @@ class QuickCheckCategorizationTests {
 			jev.expect(requestTo(JEV_URL))
 				.andRespond(withSuccess(jevFinal(choice("gap_saving", "over", "under", "over", "aligned")
 						+ choice("gap_investing", "under", "under", "over", "aligned")
-						+ lessons(emergency, inflation, compound)), MediaType.APPLICATION_JSON));
+						+ stories("berlin", "sao-paulo", "tokyo")), MediaType.APPLICATION_JSON));
 		}
 
 		categorize(QUICK_CHECK).andExpect(status().isOk()).andExpect(jsonPath("$.answerCount").value(4));
@@ -461,8 +480,8 @@ class QuickCheckCategorizationTests {
 		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(jevFinal(""), MediaType.APPLICATION_JSON));
 
 		categorize(NO_QUICK_CHECK).andExpect(status().isOk())
-			.andExpect(jsonPath("$.startLesson.lessonId").value(compound))
-			.andExpect(jsonPath("$.pathLessonIds[0]").value(compound));
+			.andExpect(jsonPath("$.startLesson.lessonId").value("tokyo-1"))
+			.andExpect(jsonPath("$.pathStoryIds[0]").value("tokyo"));
 	}
 
 	@Test
@@ -477,7 +496,7 @@ class QuickCheckCategorizationTests {
 			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": null, \"investing\": 0.85}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.source").value("jev"))
-			.andExpect(jsonPath("$.startLesson.lessonId").value(compound));
+			.andExpect(jsonPath("$.startLesson.lessonId").value("tokyo-1"));
 	}
 
 	@Test
@@ -487,7 +506,7 @@ class QuickCheckCategorizationTests {
 				.value("2-3.5k"))
 			.andRespond(withSuccess(jevFinal(choice("gap_saving", "aligned", "under", "over", "aligned")
 					+ choice("gap_investing", "aligned", "under", "over", "aligned")
-					+ lessons(inflation, emergency, compound)), MediaType.APPLICATION_JSON));
+					+ stories("sao-paulo", "berlin", "tokyo")), MediaType.APPLICATION_JSON));
 
 		// F1's facts table would give two "under" cards for this onboarding and these facts.
 		categorize(QUICK_CHECK.replace("\"consent\": false", "\"consent\": true, \"facts\": " + FACTS)
@@ -511,7 +530,7 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void everyAreaSolidIsReadyForNextAndStartHereEndsWhenItIsDone() throws Exception {
+	void everyAreaSolidStartsTheFirstStoryWithALessonLeftAndStartHereEndsWhenItIsDone() throws Exception {
 		String history = """
 				[{"questionId": "sv-a", "optionIndex": 0, "confidence": "sure"},
 				 {"questionId": "sv-b", "optionIndex": 0, "confidence": "sure"},
@@ -522,16 +541,16 @@ class QuickCheckCategorizationTests {
 			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": 0.9, \"investing\": 0.9}")))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"readyForNext": true, "startLesson": {"lessonId": %1$d}, "pathLessonIds": [%1$d],
-					 "startHere": {"lessonId": %1$d}}""".formatted(inflation), JsonCompareMode.LENIENT));
+					{"readyForNext": true, "startLesson": {"lessonId": "seoul-1", "storyId": "seoul"},
+					 "pathStoryIds": ["seoul"], "startHere": {"lessonId": "seoul-1"}}""", JsonCompareMode.LENIENT));
 
-		complete(inflation);
+		completeStory("seoul");
 		stored().andExpect(status().isOk()).andExpect(jsonPath("$.startHere").isEmpty());
 	}
 
 	@Test
 	void sevenDistinctAnswersAre400() throws Exception {
-		bank.question("sv-c", inflation, "saving", "easy");
+		bank.question("sv-c", "sao-paulo-1", "saving", "easy");
 		StringBuilder seven = new StringBuilder();
 		for (String id : List.of("sv-a", "sv-b", "sv-c", "sv-hard", "in-a", "in-hard", "short-term-fall")) {
 			seven.append(seven.isEmpty() ? "" : ", ").append("{\"questionId\": \"%s\"}".formatted(id));

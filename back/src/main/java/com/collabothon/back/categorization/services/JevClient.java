@@ -251,10 +251,10 @@ public class JevClient {
 			for (FocusArea area : quickCheck.gapAreas()) {
 				asked.set(gapKey(area), finalQuestions.get("gap_<area>").deepCopy());
 			}
-			if (!quickCheck.lessons().isEmpty()) {
+			if (!quickCheck.stories().isEmpty()) {
 				ObjectNode firstLesson = (ObjectNode) finalQuestions.get("first_lesson").deepCopy();
 				ObjectNode criteria = firstLesson.putObject("criteria");
-				quickCheck.lessons().forEach((id, summary) -> criteria.put(lessonLabel(id), summary));
+				quickCheck.stories().forEach((id, topic) -> criteria.put(storyLabel(id), topic));
 				asked.set("first_lesson", firstLesson);
 			}
 		}
@@ -288,8 +288,8 @@ public class JevClient {
 		return "gap_" + area.wire();
 	}
 
-	private static String lessonLabel(Long lessonId) {
-		return "lesson_" + lessonId;
+	private static String storyLabel(String storyId) {
+		return "story_" + storyId;
 	}
 
 	private static Optional<Judgement> parse(JsonNode response, JevQuickCheck quickCheck) {
@@ -312,7 +312,7 @@ public class JevClient {
 			return Optional.empty();
 		}
 		Map<FocusArea, GapDirection> gaps = new EnumMap<>(FocusArea.class);
-		Long firstLesson = null;
+		String firstStory = null;
 		if (quickCheck != null) {
 			for (FocusArea area : quickCheck.gapAreas()) {
 				JevChoice<GapDirection> gap = choice(answers.path(gapKey(area)), GapDirection.values());
@@ -321,20 +321,20 @@ public class JevClient {
 				}
 				gaps.put(area, gap.value());
 			}
-			if (!quickCheck.lessons().isEmpty()) {
-				Map<String, Long> byLabel = new LinkedHashMap<>();
-				quickCheck.lessons().keySet().forEach(id -> byLabel.put(lessonLabel(id), id));
-				JevChoice<Long> lesson = choice(answers.path("first_lesson"), byLabel);
-				if (lesson == null) {
+			if (!quickCheck.stories().isEmpty()) {
+				Map<String, String> byLabel = new LinkedHashMap<>();
+				quickCheck.stories().keySet().forEach(id -> byLabel.put(storyLabel(id), id));
+				JevChoice<String> story = choice(answers.path("first_lesson"), byLabel);
+				if (story == null) {
 					return Optional.empty();
 				}
-				firstLesson = lesson.value();
+				firstStory = story.value();
 			}
 		}
 		JsonNode model = response.path("model");
 		boolean validModel = model.isString() && MODEL_ID.matcher(model.stringValue()).matches();
 		return Optional.of(new Judgement(role.value(), role.probabilities(), CategorizationRules.focusFromNoul(noul),
-				focus, validModel ? model.stringValue() : null, gaps, firstLesson));
+				focus, validModel ? model.stringValue() : null, gaps, firstStory));
 	}
 
 	private static <E extends Enum<E>> JevChoice<E> choice(JsonNode answer, E[] values) {

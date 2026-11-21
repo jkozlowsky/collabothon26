@@ -11,9 +11,6 @@ import com.collabothon.back.categorization.services.BankLesson;
 public interface BankLessonMapper {
 
 	@Mapping(target = "id", source = "lessonId")
-	@Mapping(target = "title", source = "lessonTitle")
-	@Mapping(target = "summary", source = "lessonSummary")
-	@Mapping(target = "position", source = "lessonPosition")
 	BankLesson toLesson(CheckQuestionProjection question);
 
 }

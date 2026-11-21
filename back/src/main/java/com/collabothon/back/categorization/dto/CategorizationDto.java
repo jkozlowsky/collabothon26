@@ -28,7 +28,7 @@ public record CategorizationDto(
 		Integer answerCount,
 		StartLessonDto startLesson,
 		Boolean readyForNext,
-		List<Long> pathLessonIds,
+		List<String> pathStoryIds,
 		@With
 		StartLessonDto startHere,
 		SharedWithModelDto sharedWithModel,
@@ -42,7 +42,7 @@ public record CategorizationDto(
 		confidence = confidence == null ? Map.of() : confidence;
 		answerCount = answerCount == null ? 0 : answerCount;
 		readyForNext = Boolean.TRUE.equals(readyForNext);
-		pathLessonIds = pathLessonIds == null ? List.of() : pathLessonIds;
+		pathStoryIds = pathStoryIds == null ? List.of() : pathStoryIds;
 	}
 
 }

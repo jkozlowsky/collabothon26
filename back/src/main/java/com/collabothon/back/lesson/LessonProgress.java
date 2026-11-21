@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 
 /** Per-user lesson progress (V4 tables). Plain SQL: the upserts are one statement each. */
 @Repository
-class LessonProgress {
+public class LessonProgress {
 
 	private final JdbcClient jdbc;
 
@@ -18,7 +18,7 @@ class LessonProgress {
 		this.jdbc = jdbc;
 	}
 
-	Set<String> completed(String userId) {
+	public Set<String> completed(String userId) {
 		if (userId == null) {
 			return Set.of();
 		}

@@ -2,8 +2,8 @@ package com.collabothon.back.categorization.services;
 
 import java.util.List;
 
-record LessonPlan(
-		BankLesson start,
+record StoryPlan(
+		Story start,
 		boolean readyForNext,
-		List<Long> pathLessonIds
+		List<String> pathStoryIds
 ) {}

@@ -12,9 +12,9 @@ public interface CheckQuestionRepository extends Repository<CheckQuestion, Strin
 
 	@Query("""
 			select new com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection(
-			       q.id, q.lessonId, l.title, l.summary, l.position, q.area, q.level, q.accountPrompt, q.slots,
-			       q.genericPrompt, q.options, q.correctIndex, q.misconceptions, q.checks)
-			from CheckQuestion q join com.collabothon.back.lesson.Lesson l on l.id = q.lessonId
+			       q.id, q.lessonId, q.area, q.level, q.accountPrompt, q.slots, q.genericPrompt, q.options,
+			       q.correctIndex, q.misconceptions, q.checks)
+			from CheckQuestion q
 			order by q.id""")
 	List<CheckQuestionProjection> findBank();
 

@@ -1,7 +1,7 @@
 -- Quick check question bank: single-choice questions tied to lessons. correct_index is 0-based; the Postgres arrays are 1-based.
 CREATE TABLE check_question (
     id              VARCHAR(64) PRIMARY KEY CHECK (id ~ '^[a-z0-9-]+$'),
-    lesson_id       BIGINT      NOT NULL REFERENCES lesson (id) ON DELETE CASCADE,
+    lesson_id       VARCHAR(64) NOT NULL,  -- a lesson in resources/content, so no foreign key
     area            VARCHAR(16) NOT NULL CHECK (area IN ('saving', 'debt', 'investing', 'risk', 'retirement')),
     level           VARCHAR(8)  NOT NULL CHECK (level IN ('easy', 'hard')),
     account_prompt  TEXT,
@@ -23,7 +23,7 @@ CREATE TABLE check_question (
 );
 
 INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, generic_prompt, options, correct_index, misconceptions, checks) VALUES
-    ('emergency-cushion-purpose', 1, 'saving', 'easy',
+    ('emergency-cushion-purpose', 'berlin-3', 'saving', 'easy',
      'Your accounts show about €{monthOut} going out each month. If your income stopped for two months, what would an emergency fund be there to do?',
      ARRAY['monthOut'],
      'You spend about €1,500 a month. If your income stopped for two months, what would an emergency fund be there to do?',
@@ -38,7 +38,7 @@ INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, g
            'Thinks an emergency fund is there for a high return, not to be at hand when needed.'],
      'Whether the person sees an emergency fund as a short-term cushion for unexpected costs, not as income or a savings goal.'),
 
-    ('inflation-real-value', 3, 'saving', 'easy',
+    ('inflation-real-value', 'berlin-1', 'saving', 'easy',
      'Your savings account holds €{savingsBalance} at {savingsInterestRate}% a year. Imagine prices rise by one percentage point more than that each year. Over a year, what happens to what that money can buy?',
      ARRAY['savingsBalance', 'savingsInterestRate'],
      'Your savings account holds €10,000 at 2% a year. Inflation runs at about 3%. Over a year, what happens to what that money can buy?',
@@ -53,7 +53,7 @@ INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, g
            'Thinks the bank, not prices, decides what money can buy.'],
      'Whether the person sees that buying power falls when prices rise faster than the interest.'),
 
-    ('inflation-grocery-bill', 3, 'saving', 'easy',
+    ('inflation-grocery-bill', 'berlin-1', 'saving', 'easy',
      'Your accounts show about €{monthOut} going out each month. Over the next year prices rise by about 4% and you buy exactly the same things. What happens to your monthly spending?',
      ARRAY['monthOut'],
      'You spend about €1,500 a month. Over the next year prices rise by about 4% and you buy exactly the same things. What happens to your monthly spending?',
@@ -66,7 +66,7 @@ INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, g
            'Mixes up rising prices with money gaining value.'],
      'Whether the person sees that rising prices make the same purchases cost more.'),
 
-    ('fall-before-you-need-it', 1, 'saving', 'easy',
+    ('fall-before-you-need-it', 'berlin-3', 'saving', 'easy',
      NULL,
      ARRAY[]::TEXT[],
      'Imagine you will need some money within a year and it is held in shares. Next month the share market falls by 15%. What is the main risk for that money?',
@@ -81,7 +81,7 @@ INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, g
            'Thinks a fall makes money that is needed soon safer.'],
      'Whether the person sees that money needed within a year has little time to recover from a market fall.'),
 
-    ('emergency-lock-in', 1, 'saving', 'hard',
+    ('emergency-lock-in', 'berlin-3', 'saving', 'hard',
      'Your savings account pays {savingsInterestRate}% a year and you can reach the money any day. Another account pays more but locks the money for five years. For an emergency fund, what does that lock-in take away?',
      ARRAY['savingsInterestRate'],
      'Your savings account pays 2% a year and you can reach the money any day. Another account pays more but locks the money for five years. For an emergency fund, what does that lock-in take away?',
@@ -94,7 +94,7 @@ INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, g
            NULL],
      'Whether the person sees that an emergency fund needs instant access, so a higher rate does not make up for a lock-in.'),
 
-    ('compound-extra-year', 2, 'investing', 'easy',
+    ('compound-extra-year', 'berlin-2', 'investing', 'easy',
      'Your investments are worth about €{depotTotal} today. Imagine they grow 5% in year one and 5% in year two, and the gains stay in. After two years, how does the result compare with adding 5% of today''s amount twice?',
      ARRAY['depotTotal'],
      'Your investments are worth about €2,000 today. Imagine they grow 5% in year one and 5% in year two, and the gains stay in. After two years, how does the result compare with adding 5% of today''s amount twice?',
@@ -107,7 +107,7 @@ INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, g
            'Thinks a later gain shrinks, rather than growing on a larger base.'],
      'Whether the person sees that gains left in also earn gains in the later years.'),
 
-    ('time-in-market', 2, 'investing', 'easy',
+    ('time-in-market', 'berlin-4', 'investing', 'easy',
      'You put about €{etfMonthly} a month into investments. Two people do the same at the same yearly return, but one starts 20 years earlier. Why does the early starter end up with far more?',
      ARRAY['etfMonthly'],
      'You put about €100 a month into investments. Two people do the same at the same yearly return, but one starts 20 years earlier. Why does the early starter end up with far more?',
@@ -120,7 +120,7 @@ INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, g
            NULL],
      'Whether the person sees time as what drives compounding when the return is the same.'),
 
-    ('short-term-fall', 2, 'investing', 'easy',
+    ('short-term-fall', 'berlin-4', 'investing', 'easy',
      'Your investments are worth about €{depotTotal}. Imagine their value drops by 15% next month and you would not need the money for 20 years. What does that drop mean for the long run?',
      ARRAY['depotTotal'],
      'Your investments are worth about €10,000. Imagine their value drops by 15% next month and you would not need the money for 20 years. What does that drop mean for the long run?',
@@ -133,7 +133,7 @@ INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, g
            NULL],
      'Whether the person sees a short-term fall as a small part of a long compounding period, not the end of it.'),
 
-    ('compound-rate-vs-time', 2, 'investing', 'hard',
+    ('compound-rate-vs-time', 'berlin-2', 'investing', 'hard',
      NULL,
      ARRAY[]::TEXT[],
      'Saver A earns 5% a year for 30 years. Saver B earns 6% a year for 20 years. Both start with the same amount and leave all gains in. Who ends up with more?',

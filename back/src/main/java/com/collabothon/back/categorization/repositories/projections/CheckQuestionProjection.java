@@ -7,10 +7,7 @@ import com.collabothon.back.categorization.enums.QuestionLevel;
 
 public record CheckQuestionProjection(
 		String id,
-		Long lessonId,
-		String lessonTitle,
-		String lessonSummary,
-		int lessonPosition,
+		String lessonId,
 		FocusArea area,
 		QuestionLevel level,
 		String accountPrompt,

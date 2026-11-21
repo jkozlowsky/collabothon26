@@ -63,7 +63,7 @@ class CategorizationWithoutKeyTests {
 	@Test
 	void theBankIsServedWithoutAKey() throws Exception {
 		TestBank bank = new TestBank(jdbc);
-		bank.question("only-one", bank.lesson("Emergency fund", "Rainy days.", 1), "saving", "easy");
+		bank.question("only-one", "berlin-3", "saving", "easy");
 
 		mvc.perform(get("/api/check-questions")).andExpect(status().isOk())
 			.andExpect(jsonPath("$.length()").value(1))
@@ -73,9 +73,8 @@ class CategorizationWithoutKeyTests {
 	@Test
 	void aStepWithoutAKeyRunsOnTheRuleAndSaysSo() throws Exception {
 		TestBank bank = new TestBank(jdbc);
-		long emergency = bank.lesson("Emergency fund", "Rainy days.", 1);
-		bank.question("sv-a", emergency, "saving", "easy");
-		bank.question("sv-b", emergency, "saving", "easy");
+		bank.question("sv-a", "berlin-3", "saving", "easy");
+		bank.question("sv-b", "berlin-3", "saving", "easy");
 		String userId = "keyless-" + UUID.randomUUID();
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
 			.content("{\"goals\": [\"start-saving\"], \"experience\": \"occasional\", \"skipped\": false}"))

@@ -111,6 +111,9 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, ref }: P
   // An estimate until onLayout measures the area (same aspect ratio as `styles.area`).
   const [area, setArea] = useState(() => ({ width: window.width, height: window.width / ASPECT }));
   const [fallback, setFallback] = useState(() => FORCE_FALLBACK || !webGLAvailable());
+  // The globe is drawn: the first GL frame, or the static picture when there is no GL.
+  const [drawn, setDrawn] = useState(false);
+  const markDrawn = useCallback(() => setDrawn(true), []);
   const showFallback = useCallback(() => setFallback(true), []);
 
   const current = stories.find((s) => s.current) ?? stories[0];
@@ -251,6 +254,8 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, ref }: P
     <GestureDetector gesture={pan}>
       <View style={styles.area} onLayout={onLayout} testID="globe">
         <>
+            {/* For e2e and the demo recordings: wait for this before filming or tapping the globe. */}
+            {drawn && <View testID="globe-ready" pointerEvents="none" />}
             <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
               <Ellipse cx={cx} cy={cy + radius + 18} rx={radius * 0.7} ry={10} fill={colors.brandPrimaryPressed} fillOpacity={0.12} />
               <Circle cx={cx} cy={cy} r={radius + 16} fill="none" stroke={colors.borderStrong} strokeWidth={1} strokeDasharray="3 6" />
@@ -258,13 +263,14 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, ref }: P
             <View style={StyleSheet.absoluteFill} pointerEvents="none" importantForAccessibility="no-hide-descendants">
               {fallback ? (
                 <Image
+                  onLoad={markDrawn}
                   source={FALLBACK_IMAGE}
                   style={{ position: 'absolute', left: cx - radius, top: cy - radius, width: radius * 2, height: radius * 2 }}
                 />
               ) : (
                 <GlBoundary onError={showFallback}>
                   <Suspense fallback={null}>
-                    <GlobeScene radius={radius} yaw={yaw} pitch={pitch} active={focused} onFail={showFallback} />
+                    <GlobeScene radius={radius} yaw={yaw} pitch={pitch} active={focused} onFail={showFallback} onReady={markDrawn} />
                   </Suspense>
                 </GlBoundary>
               )}

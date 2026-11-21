@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 public interface LessonActivityRepository extends JpaRepository<LessonActivity, LessonActivityId> {
@@ -13,6 +14,8 @@ public interface LessonActivityRepository extends JpaRepository<LessonActivity, 
 
 	boolean existsByUserId(String userId);
 
+	@Modifying
+	@Query("delete from LessonActivity a where a.userId = :userId")
 	void deleteByUserId(String userId);
 
 }

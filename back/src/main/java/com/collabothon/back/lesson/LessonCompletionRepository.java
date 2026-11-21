@@ -3,6 +3,7 @@ package com.collabothon.back.lesson;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 public interface LessonCompletionRepository extends JpaRepository<LessonCompletion, LessonCompletionId> {
@@ -15,6 +16,8 @@ public interface LessonCompletionRepository extends JpaRepository<LessonCompleti
 
 	long countByUserId(String userId);
 
+	@Modifying
+	@Query("delete from LessonCompletion c where c.userId = :userId")
 	void deleteByUserId(String userId);
 
 }

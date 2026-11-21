@@ -87,7 +87,8 @@ front/src/
 ├── app/                  # routes only (file = screen)
 │   ├── _layout.tsx       # root Stack + providers (onboarding, mock bank, toast, transfer sheet)
 │   ├── onboarding.tsx    # intro + optional personalisation questions; opened by the first Learn tap
-│   ├── categorizing.tsx  # after a fresh onboarding: account-data consent card, then the loading steps
+│   ├── categorizing.tsx  # after a fresh onboarding: account-data consent card, Quick check questions, loading steps
+│   ├── learning-path.tsx # the summary after categorising: gap, level, focus areas, first lesson
 │   ├── (main)/           # bank + Finance Quest, one floating nav (components/bank/FloatingNav) that morphs between them
 │   │   ├── _layout.tsx
 │   │   ├── (bank)/       # mock banking app, the first screen: index (/) · payments · credits · invest
@@ -95,7 +96,7 @@ front/src/
 │   ├── lesson/[id].tsx   # /lesson/1, pushed over the tabs
 │   └── duel/             # match.tsx · rankings.tsx: full-screen duel flow, pushed over the tabs
 ├── components/           # reusable UI (Screen, Button, AsyncContent)
-│   └── categorizing/     # consent card, path steps and page layout of /categorizing
+│   └── categorizing/     # consent card, Quick check page, path steps and summary of /categorizing and /learning-path
 ├── hooks/                # custom hooks (useXxx.ts)
 ├── lib/                  # non-UI code: api.ts (backend client), bank/ (seeded mock bank data, pure logic), utils
 ├── constants/            # theme.ts (colors, spacing), config

@@ -113,3 +113,13 @@ Simplest working solution, no code or tests for later.
 - Exact account amounts sent by the app, or raw answer text stored or logged.
 
 ## Review triage
+
+## To confirm
+Forks Q-F settled with the simplest option; Jan decides.
+- **Per-area "why" on the summary.** The contract's `explanation[focusAreas].because` is one flat list, not per area, so the front derives each area's line: the Quick check result for that area ("Your answer about borrowing shows where to start."), else "You picked {area} as a goal." when the list holds it, else "It fits the answers you gave.". Option: the backend returns `because` per area (contract change, Q-B).
+- **`summarySeenAt` is in memory.** The summary shows once per app run; after a restart an unseen stored categorisation shows it again. Option: AsyncStorage (new native dependency) for a true local store.
+- **Draw does not force `retirement`.** Investing draws 2 of its 3 areas at random, so a pre-retirement user may not get the retirement question. Option: force it when the onboarding life stage is `later-life` (the draw then needs the profile).
+- **Title for an `over` gap.** The spec fixes only "You know more than you think" (an `under` gap); an `over` gap gets "There is more to explore here". Option: another wording, or no card for `over`.
+- **Consent line shown when the pool is non-empty**, even if a category has fewer than 2 areas and the draw skips the questions. Option: compute the draw before the card.
+- **No separate "POST in flight" state on the last question.** Next leads to the loading screen at once; a double tap is stopped by the in-flight guard, so the spec's "last Next disabled while the POST is in flight" holds by the screen change.
+- **`e2e/duel.spec.ts`** (other topic) still expects Learn right after skipping onboarding and fails on the consent card since before this branch; untouched.

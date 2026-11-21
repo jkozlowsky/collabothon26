@@ -3,6 +3,7 @@
   "story": "seoul",
   "title": "One basket",
   "place": "Jongno · family dinner",
+  "topic": "Spreading risk",
   "minutes": 4,
   "xp": 50,
   "concepts": ["diversification", "concentration-risk"],
@@ -15,7 +16,7 @@
         { "from": "Dad", "text": "Is it true Min-jun lost his money on that stock?" },
         { "from": "Ji-woo", "me": true, "text": "Most of it. He put everything into one company" },
         { "from": "Dad", "text": "When I retired, I spread my savings over many companies and some bonds" },
-        { "from": "Mom", "text": "One of them went bankrupt last year. Your dad barely noticed 😄" }
+        { "from": "Mom", "text": "One of them went bankrupt last year. Your dad barely noticed" }
       ]
     },
     {

@@ -32,7 +32,8 @@ final class LessonRules {
 	private static final List<String> VARIANT_ORDER = List.of("level:", "persona:", "lang:");
 
 	/** slider-chart models implemented in front/src/lib/models.ts. */
-	static final Set<String> MODELS = Set.of("drawdownRecovery", "leverage", "oneCompanyCrash");
+	static final Set<String> MODELS = Set.of("drawdownRecovery", "leverage", "oneCompanyCrash", "realValue",
+			"installmentCost", "countryMix");
 
 	/** [[concept]] or [[concept|shown text]] inside any text field. */
 	private static final Pattern CONCEPT_REF = Pattern.compile("\\[\\[([a-z0-9-]+)(?:\\|[^\\]]*)?]]");

@@ -198,13 +198,13 @@ class LessonController {
 			JsonNode l = content.lesson(lessonId).orElseThrow();
 			String status = done.contains(lessonId) ? "done" : previousDone ? "available" : "locked";
 			out.add(new LessonSummary(lessonId, l.path("story").asString(), l.path("title").asString(),
-					l.path("place").asString(), l.path("minutes").asInt(), l.path("xp").asInt(), status));
+					l.path("place").asString(), l.path("topic").asString(null), l.path("minutes").asInt(), l.path("xp").asInt(), status));
 			previousDone = done.contains(lessonId);
 		}
 		return out;
 	}
 
-	record LessonSummary(String id, String story, String title, String place, int minutes, int xp, String status) {
+	record LessonSummary(String id, String story, String title, String place, String topic, int minutes, int xp, String status) {
 	}
 
 	record StepResult(@NotBlank String stepId, boolean correctFirstTry) {

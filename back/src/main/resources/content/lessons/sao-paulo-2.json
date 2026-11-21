@@ -1,0 +1,108 @@
+{
+  "id": "sao-paulo-2",
+  "story": "sao-paulo",
+  "title": "The stack",
+  "place": "República · payday",
+  "topic": "Small payments that add up",
+  "minutes": 3,
+  "xp": 50,
+  "concepts": ["installments", "committed-income"],
+  "steps": [
+    {
+      "type": "chat",
+      "id": "c1",
+      "title": "Bank notifications",
+      "messages": [
+        { "from": "Bank", "text": "Salary received: R$2,800" },
+        { "from": "Bank", "text": "Phone, installment 4 of 10: R$180" },
+        { "from": "Bank", "text": "Fridge, installment 1 of 12: R$250" },
+        { "from": "Bank", "text": "Design course, installment 3 of 6: R$200" },
+        { "from": "Bank", "text": "Sneakers, installment 1 of 5: R$80" },
+        { "from": "Rafa", "me": true, "text": "Wait. Where did my salary go?" }
+      ]
+    },
+    {
+      "type": "predict",
+      "id": "p1",
+      "concepts": ["committed-income"],
+      "prompt": "Add up Rafa's four installments. What share of his R$2,800 salary is gone before the month starts?",
+      "input": { "kind": "slider", "min": 0, "max": 60, "step": 1, "unit": "%" },
+      "answer": 25,
+      "reveal": "R$710 of R$2,800, about 25%. Each one felt small at the till. Together they are a quarter of his pay, every month, for most of the year: [[committed-income]]."
+    },
+    {
+      "type": "sort",
+      "id": "so1",
+      "concepts": ["committed-income"],
+      "prompt": "Swipe each item: is this month's money already promised, or still free?",
+      "buckets": ["Already promised", "Still free"],
+      "items": [
+        { "text": "Phone, installment 4 of 10", "bucket": 0 },
+        { "text": "Cinema with friends on Saturday", "bucket": 1 },
+        { "text": "Fridge, installment 1 of 12", "bucket": 0 },
+        { "text": "Lunch out on Friday", "bucket": 1 },
+        { "text": "Design course, installment 3 of 6", "bucket": 0 },
+        { "text": "Sneakers, installment 1 of 5", "bucket": 0 }
+      ],
+      "explanation": "Every installment is a decision made in an earlier month. The more of them stack up, the less of today's salary is really free."
+    },
+    {
+      "type": "match",
+      "id": "m1",
+      "concepts": ["installments"],
+      "prompt": "Counting from next month: match each purchase with the month of its last payment.",
+      "pairs": [
+        ["Sneakers, 4 payments left", "Month 4"],
+        ["Course, 3 payments left", "Month 3"],
+        ["Phone, 6 payments left", "Month 6"],
+        ["Fridge, 11 payments left", "Month 11"]
+      ]
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["installments", "committed-income"],
+      "prompt": "Why do stacked installments feel smaller than they are?",
+      "options": [
+        "Each one is judged alone, but they are paid together, every month",
+        "Because installments are always without interest",
+        "Because the salary rises every month"
+      ],
+      "correctIndex": 0,
+      "explanation": "R$80 looks harmless. R$710 a month for most of a year is a quarter of Rafa's pay. The pile is what matters, not one part."
+    }
+  ],
+  "variants": {
+    "lang:plain": {
+      "c1": {
+        "messages": [
+          { "from": "Bank", "text": "Salary received: R$2,800" },
+          { "from": "Bank", "text": "Phone, payment 4 of 10: R$180" },
+          { "from": "Bank", "text": "Fridge, payment 1 of 12: R$250" },
+          { "from": "Bank", "text": "Course, payment 3 of 6: R$200" },
+          { "from": "Bank", "text": "Sneakers, payment 1 of 5: R$80" },
+          { "from": "Rafa", "me": true, "text": "Where did my salary go?" }
+        ]
+      },
+      "p1": {
+        "prompt": "Add up Rafa's four payments. How much of his R$2,800 salary is gone at the start of the month? Guess.",
+        "reveal": "R$710, about 25%. Each one looked small. Together they take a quarter of his pay every month. This is [[committed-income]]."
+      },
+      "so1": {
+        "prompt": "Swipe each item: is this money already promised, or can Rafa still choose?",
+        "buckets": ["Already promised", "Can still choose"],
+        "explanation": "Each payment was decided in an earlier month. The more payments, the less money Rafa can really choose about."
+      },
+      "m1": { "prompt": "From next month: when is the last payment for each thing?" },
+      "q1": {
+        "prompt": "Why do many small payments feel smaller than they are?",
+        "options": [
+          "We look at each one alone, but we pay them all every month",
+          "Payments never have interest",
+          "The salary goes up every month"
+        ],
+        "explanation": "R$80 looks small. R$710 every month is a quarter of Rafa's pay."
+      }
+    }
+  }
+}

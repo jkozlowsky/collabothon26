@@ -13,8 +13,8 @@ jest.mock('@/components/globe/GlobeScene', () => ({
 }));
 
 const summaries: LessonSummary[] = [
-  { id: 'seoul-1', story: 'seoul', title: 'The chat that always knows', place: 'Yeouido', minutes: 4, xp: 50, status: 'available' },
-  { id: 'seoul-2', story: 'seoul', title: 'Pulling everything in', place: 'Gangnam', minutes: 4, xp: 60, status: 'locked' },
+  { id: 'seoul-1', story: 'seoul', title: 'The chat that always knows', place: 'Yeouido', topic: null, minutes: 4, xp: 50, status: 'available' },
+  { id: 'seoul-2', story: 'seoul', title: 'Pulling everything in', place: 'Gangnam', topic: null, minutes: 4, xp: 60, status: 'locked' },
 ];
 
 function lesson(lang: 'standard' | 'plain'): Lesson {
@@ -68,7 +68,16 @@ beforeEach(() => {
         ? { xpAwarded: 50, firstCompletion: true, totalXp: 50, next: 'seoul-2' }
         : url.includes('/api/lessons?')
           ? summaries
-          : lesson(url.includes('lang=plain') ? 'plain' : 'standard');
+          : url.includes('/api/stories?')
+            ? [{
+              id: 'seoul', city: 'Seoul', topic: 'Hype & borrowed money', color: 'violet',
+              character: { name: 'Ji-woo', age: 27, role: 'Office worker' },
+              lessons: posted
+                ? summaries.map((summary, index) => ({ ...summary, status: index === 0 ? 'done' : 'available' }))
+                : summaries,
+              progress: { done: posted ? 1 : 0, total: summaries.length },
+            }]
+            : lesson(url.includes('lang=plain') ? 'plain' : 'standard');
     return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
   }) as jest.Mock;
 });
@@ -77,11 +86,12 @@ test('plays a lesson: glossary sheet, plain toggle, a missed quiz comes back, so
   await renderRouter(appRoutes, { initialUrl: '/map' });
 
   // Without GL (Jest) the globe is a static picture where Seoul is out of view, so its card opens
-  // the story screen directly; that screen is a placeholder listing the backend lessons.
+  // the story screen directly.
   await fireEvent.press(await screen.findByTestId('story-card-seoul'));
 
   // The user already has a saved profile, so the Learn tabs are open to them.
-  expect(await screen.findByText('Finish the previous lesson first', { exact: false })).toBeOnTheScreen();
+  expect(await screen.findByText('0 of 2 stamps')).toBeOnTheScreen();
+  expect(screen.queryByTestId('lesson-seoul-2')).toBeNull();
   await fireEvent.press(await screen.findByTestId('lesson-seoul-1'));
 
   // Text step: a [[concept]] opens its definition over the lesson.
@@ -125,6 +135,10 @@ test('plays a lesson: glossary sheet, plain toggle, a missed quiz comes back, so
     completedOn: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
   });
   expect(screen.getByText('↻ Drawdown')).toBeOnTheScreen();
+
+  await fireEvent.press(screen.getByTestId('back-to-list'));
+  expect(await screen.findByText('1 of 2 stamps')).toBeOnTheScreen();
+  expect(screen.getByTestId('lesson-seoul-2')).toBeOnTheScreen();
 });
 
 test('"Your turn" fills metrics from the mock bank, or falls back when one is unknown', () => {

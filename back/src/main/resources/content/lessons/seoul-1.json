@@ -3,6 +3,7 @@
   "story": "seoul",
   "title": "The chat that always knows",
   "place": "Yeouido · office chat",
+  "topic": "Hype and drawdowns",
   "minutes": 4,
   "xp": 50,
   "concepts": ["volatility", "drawdown"],
@@ -12,11 +13,11 @@
       "id": "c1",
       "title": "Team chat · 4 people",
       "messages": [
-        { "from": "Min-jun", "text": "Did you see? XYZ is up 40% this week 🚀" },
+        { "from": "Min-jun", "text": "Did you see? XYZ is up 40% this week" },
         { "from": "Soo-ah", "text": "My cousin's leading room says it doubles by June" },
         { "from": "Min-jun", "text": "I'm putting my whole bonus in" },
         { "from": "Ji-woo", "me": true, "text": "I have ₩10M saved… should I?" },
-        { "from": "Soo-ah", "text": "What's there to lose? It only goes up 😎" }
+        { "from": "Soo-ah", "text": "What's there to lose? It only goes up" }
       ]
     },
     {

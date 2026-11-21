@@ -30,5 +30,57 @@
   "concentration-risk": {
     "term": "Concentration risk",
     "definition": "The risk of having a large share of your money in one place: one company, one sector or one bet."
+  },
+  "inflation": {
+    "term": "Inflation",
+    "definition": "Prices rising over time. With 3% inflation, something that costs €100 today costs €103 next year, so the same money buys less."
+  },
+  "real-return": {
+    "term": "Real return",
+    "definition": "What your money earns after inflation. 0.5% interest with 3% inflation is a real return of about −2.5% a year."
+  },
+  "compound-interest": {
+    "term": "Compound interest",
+    "definition": "Earning interest on earlier interest too. Over long periods it makes growth (and debt) speed up."
+  },
+  "emergency-fund": {
+    "term": "Emergency fund",
+    "definition": "Money kept safe and reachable at once for surprises like a broken machine or a lost job. Often counted in months of costs."
+  },
+  "time-horizon": {
+    "term": "Time horizon",
+    "definition": "How long until you need the money. The longer it can wait, the more time it has to recover from a fall."
+  },
+  "installments": {
+    "term": "Installments",
+    "definition": "Paying for something in equal parts over several months instead of all at once."
+  },
+  "hidden-interest": {
+    "term": "Hidden interest",
+    "definition": "A cost of borrowing that isn't called interest, such as a cash discount you give up or fees added to a loan."
+  },
+  "committed-income": {
+    "term": "Committed income",
+    "definition": "The part of your pay already promised to repayments before the month starts."
+  },
+  "revolving-credit": {
+    "term": "Revolving credit",
+    "definition": "Card debt you roll over from month to month by paying only part of the bill. Interest is charged on what is left."
+  },
+  "total-cost-of-credit": {
+    "term": "Total cost of credit",
+    "definition": "The full yearly or monthly cost of a loan with interest, fees and insurance included. In Brazil it is called CET."
+  },
+  "home-bias": {
+    "term": "Home bias",
+    "definition": "Investing mostly in your own country because it feels familiar, even when it is a small part of the world."
+  },
+  "tax-free-account": {
+    "term": "Tax-free account",
+    "definition": "An account from the state where gains are not taxed, up to a limit. It changes the tax, not the risk of what is inside."
+  },
+  "currency-risk": {
+    "term": "Currency risk",
+    "definition": "When you own something priced in another currency, exchange-rate moves change its value in your money, up or down."
   }
 }

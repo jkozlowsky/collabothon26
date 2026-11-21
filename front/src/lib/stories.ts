@@ -2,7 +2,7 @@ import type { LessonSummary } from '@/types/lessons';
 import type { Learner, Story } from '@/types/stories';
 
 // ponytail: local mock, replaced by `GET /api/stories` (f4-f5-lessons-spec.md §6) once the backend has it.
-// Cities are spread out so pins never overlap (globe-home-spec.md §9); only Seoul and Berlin have content.
+// Cities are spread out so pins never overlap (globe-home-spec.md §9); Seoul, Berlin, São Paulo and Tokyo have content.
 export const STORIES: Story[] = [
   {
     id: 'seoul',
@@ -12,7 +12,7 @@ export const STORIES: Story[] = [
     status: 'available',
     pin: { lat: 37.57, lng: 126.98 },
     icon: 'message-circle',
-    color: 'rose',
+    color: 'violet',
     progress: { done: 0, total: 5 },
     nextLesson: { id: 'seoul-1', title: 'The chat that always knows', minutes: 4 },
     current: true,
@@ -21,13 +21,39 @@ export const STORIES: Story[] = [
     id: 'berlin',
     city: 'Berlin',
     title: 'Safe, but not free',
-    topic: 'Cash & inflation',
-    status: 'coming-soon',
+    topic: 'Safe money that shrinks',
+    status: 'available',
     pin: { lat: 52.52, lng: 13.4 },
     icon: 'shield',
     color: 'teal',
-    progress: { done: 0, total: 0 },
-    nextLesson: null,
+    progress: { done: 0, total: 5 },
+    nextLesson: { id: 'berlin-1', title: 'Safe, but not free', minutes: 4 },
+    current: false,
+  },
+  {
+    id: 'sao-paulo',
+    city: 'São Paulo',
+    title: 'Twelve easy payments',
+    topic: 'Twelve easy payments',
+    status: 'available',
+    pin: { lat: -23.55, lng: -46.63 },
+    icon: 'credit-card',
+    color: 'orange',
+    progress: { done: 0, total: 5 },
+    nextLesson: { id: 'sao-paulo-1', title: 'Twelve easy payments', minutes: 4 },
+    current: false,
+  },
+  {
+    id: 'tokyo',
+    city: 'Tokyo',
+    title: 'Buy what you know',
+    topic: 'One country or the world',
+    status: 'available',
+    pin: { lat: 35.68, lng: 139.69 },
+    icon: 'globe',
+    color: 'rose',
+    progress: { done: 0, total: 5 },
+    nextLesson: { id: 'tokyo-1', title: 'Buy what you know', minutes: 3 },
     current: false,
   },
   {

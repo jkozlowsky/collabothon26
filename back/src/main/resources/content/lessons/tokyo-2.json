@@ -1,0 +1,103 @@
+{
+  "id": "tokyo-2",
+  "story": "tokyo",
+  "title": "One country of many",
+  "place": "Shinjuku · bookshop",
+  "topic": "Spreading across countries",
+  "minutes": 4,
+  "xp": 60,
+  "concepts": ["home-bias", "diversification"],
+  "steps": [
+    {
+      "type": "chat",
+      "id": "c1",
+      "title": "Yuki",
+      "messages": [
+        { "from": "Yuki", "text": "Mum, I'm looking at investing books for you" },
+        { "from": "Yuki", "text": "This one has a map of the world's stock markets" },
+        { "from": "Michiko", "me": true, "text": "Japan must be a big part of it, right?" },
+        { "from": "Yuki", "text": "Guess" }
+      ]
+    },
+    {
+      "type": "predict",
+      "id": "p1",
+      "concepts": ["home-bias"],
+      "prompt": "All the world's listed companies together are worth a certain amount. What share of that is Japanese companies?",
+      "input": { "kind": "slider", "min": 0, "max": 50, "step": 1, "unit": "%" },
+      "answer": 5,
+      "reveal": "About 5%. Japan is a big economy, but a small slice of the world market. Putting everything at home is betting on one slice. Simplified from real data."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s1",
+      "concepts": ["diversification"],
+      "prompt": "Imagine a bad year: Japan falls 40%, the rest of the world falls 10%. Change how much of Michiko's money is in Japan. Keep her total fall to 15% or less.",
+      "model": "countryMix",
+      "params": {
+        "homeShare": { "label": "Share in Japan", "min": 0, "max": 100, "step": 5, "value": 100, "unit": "%" },
+        "homeMove": { "label": "Japan's move", "min": -60, "max": 0, "step": 5, "value": -40, "unit": "%" },
+        "worldMove": { "label": "Rest of the world's move", "min": -60, "max": 0, "step": 5, "value": -10, "unit": "%" }
+      },
+      "output": { "label": "Michiko's total change", "unit": "%" },
+      "goal": { "condition": { "of": "output", "min": -15 }, "hint": "Japan is about 5% of the world. What if her mix looked more like the world?" },
+      "note": "Illustration only. Real years can hit every country at once."
+    },
+    {
+      "type": "text",
+      "id": "t1",
+      "title": "Home is a choice, not a default",
+      "body": "Most people hold far more of their own country than its share of the world. That's [[home-bias]]. Spreading across countries is [[diversification]] on a bigger scale: when one market has a bad decade, it's only part of the picture."
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["diversification"],
+      "prompt": "Why can spreading money across countries soften a bad year at home?",
+      "options": [
+        "Different markets don't always fall at the same time or by the same amount",
+        "Foreign markets never fall",
+        "Foreign shares are guaranteed by their governments"
+      ],
+      "correctIndex": 0,
+      "explanation": "Countries move differently. Sometimes they all fall together, but rarely by the same amount, so a spread usually falls less than its worst part."
+    }
+  ],
+  "variants": {
+    "level:beginner": {
+      "s1": { "goal": { "hint": "Leave the moves as they are and set the share in Japan to 15% or less." } }
+    },
+    "lang:plain": {
+      "c1": {
+        "messages": [
+          { "from": "Yuki", "text": "Mum, I'm looking for an investing book for you" },
+          { "from": "Yuki", "text": "This one has a map of all stock markets" },
+          { "from": "Michiko", "me": true, "text": "Japan is a big part, right?" },
+          { "from": "Yuki", "text": "Guess" }
+        ]
+      },
+      "p1": {
+        "prompt": "Take all companies in the world that sell shares. How much of their value is Japanese companies? Guess.",
+        "reveal": "About 5%. Japan is big, but only a small part of the world market. Putting all money in Japan is a bet on one small part."
+      },
+      "s1": {
+        "prompt": "A bad year: Japan goes down 40%, the rest of the world goes down 10%. How much of Michiko's money is in Japan? Change it so she loses 15% or less.",
+        "output": { "label": "What Michiko loses or wins" },
+        "note": "Only an example. Sometimes all countries fall together."
+      },
+      "t1": {
+        "title": "Your country is a choice",
+        "body": "Most people own much more of their own country than its part of the world. This is [[home-bias]]. Spreading money over many countries is [[diversification]]. If one country has a bad time, it's only a part of your money."
+      },
+      "q1": {
+        "prompt": "Why can money in many countries make a bad year at home less bad?",
+        "options": [
+          "Countries don't always go down at the same time or by the same amount",
+          "Other countries never go down",
+          "Other governments promise the money"
+        ],
+        "explanation": "Countries move in different ways. So money spread over many countries usually falls less than the worst country."
+      }
+    }
+  }
+}

@@ -9,6 +9,8 @@ export type LessonSummary = {
   title: string;
   /** "Yeouido · office chat" */
   place: string;
+  /** Short subject of the stop, "Hype and drawdowns"; null when the lesson has none. */
+  topic: string | null;
   minutes: number;
   xp: number;
   status: LessonStatus;
@@ -55,7 +57,7 @@ export type PredictStep = StepBase & {
   reveal: string;
 };
 
-export type SliderModel = 'drawdownRecovery' | 'leverage' | 'oneCompanyCrash';
+export type SliderModel = 'drawdownRecovery' | 'leverage' | 'oneCompanyCrash' | 'realValue' | 'installmentCost' | 'countryMix';
 
 export type SliderParam = { label: string; min: number; max: number; step: number; value: number; unit?: string };
 
@@ -89,7 +91,14 @@ export type ActionStep = StepBase & {
   /** Shown when a metric in `body` has no data. */
   bodyNoData: string;
   /** Optional personal rule set with a slider, shown against an amount from the bank. */
-  rule?: SliderParam & { appliesTo?: string; appliesToLabel?: string };
+  rule?: SliderParam & {
+    appliesTo?: string;
+    appliesToLabel?: string;
+    /** `share` (default): the value is a percent of the amount. `multiple`: the amount times the value (3 months × spending). */
+    kind?: 'share' | 'multiple';
+    /** Line under the slider; {amount} is the computed amount. Default: "= at most {amount} {appliesToLabel} on one bet". */
+    result?: string;
+  };
   cta?: string;
 };
 

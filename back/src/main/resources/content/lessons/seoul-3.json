@@ -3,6 +3,7 @@
   "story": "seoul",
   "title": "Spot the red flags",
   "place": "Hongdae · paid tip room",
+  "topic": "Sort the messages",
   "minutes": 3,
   "xp": 50,
   "concepts": ["leading-room", "pump-and-dump"],
@@ -10,14 +11,14 @@
     {
       "type": "chat",
       "id": "c1",
-      "title": "VIP Room 💎 · 1,284 members",
+      "title": "VIP Room · 1,284 members",
       "messages": [
         { "from": "Room leader", "text": "Welcome! Our members made 300% last month" },
         { "from": "Room leader", "text": "Guaranteed 2x in a month. VIP only" },
-        { "from": "Room leader", "text": "VIP fee ₩990,000. Only 3 seats left ⏳" },
+        { "from": "Room leader", "text": "VIP fee ₩990,000. Only 3 seats left" },
         { "from": "Room leader", "text": "Everyone buys XYZ at 9:00 sharp. Tell no one" },
         { "from": "Ji-woo", "me": true, "text": "How do you know it will go up?" },
-        { "from": "Room leader", "text": "Trust the process 🙏" }
+        { "from": "Room leader", "text": "Trust the process" }
       ]
     },
     {

@@ -2,6 +2,7 @@ import type Feather from '@expo/vector-icons/Feather';
 import type { ComponentProps } from 'react';
 
 import type { storyColors } from '@/constants/theme';
+import type { LessonSummary } from '@/types/lessons';
 
 /** Key of a `story/*` colour in the Design Kit. */
 export type StoryColor = keyof typeof storyColors;
@@ -27,3 +28,23 @@ export type Story = {
 
 /** Header data from the learner profile (topic C). */
 export type Learner = { name: string; profileLabel: string; streak: number; xp: number };
+
+/** Landmark shapes the story hero can draw, one per city with content: tower (Seoul), gate (Berlin), raised (São Paulo), lattice (Tokyo). */
+export type LandmarkKind = 'tower' | 'gate' | 'raised' | 'lattice';
+
+/** One item of GET /api/stories as the story screen reads it: content from stories.json plus the user's lessons. */
+export type StoryPage = {
+  id: string;
+  city: string;
+  topic: string;
+  color: StoryColor;
+  character: { name: string; age: number; role: string; place?: string; savings?: string } | null;
+  /** The city's landmark drawn over the hero skyline; `at` is its horizontal position, 0–1. */
+  landmark?: { kind: LandmarkKind; at: number };
+  /** The situation the story starts from, shown on the character card. */
+  intro?: string;
+  /** "Words from {city}": local terms the lessons explain. */
+  words?: { native: string; meaning: string }[];
+  lessons: LessonSummary[];
+  progress: { done: number; total: number };
+};

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Animated,
+  Easing,
   Modal,
   Platform,
   Pressable,
@@ -8,6 +9,7 @@ import {
   Text,
   View,
   useWindowDimensions,
+  type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
@@ -35,6 +37,18 @@ const CLOSE_DISTANCE = 120;
 const CLOSE_VELOCITY = 900;
 /** The JS driver on web (no native animated module there). */
 const NATIVE = Platform.OS !== 'web';
+/** iOS-style sheet curve: quick start, long soft landing. One curve for open, close and snap-back. */
+const SHEET_EASING = Easing.bezier(0.32, 0.72, 0, 1);
+const OPEN_MS = 380;
+const CLOSE_MS = 260;
+const SNAP_MS = 260;
+
+/** Moves the sheet; `done` runs only if the animation was not interrupted. */
+function slide(offset: Animated.Value, toValue: number, duration: number, done?: () => void) {
+  Animated.timing(offset, { toValue, duration, easing: SHEET_EASING, useNativeDriver: NATIVE }).start(({ finished }) => {
+    if (finished) done?.();
+  });
+}
 
 /**
  * Figma bottom sheet: 28 px top corners, 40 × 5 handle, 16 px side padding, sheet elevation.
@@ -49,28 +63,43 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
   const [rendered, setRendered] = useState(visible);
   if (visible && !rendered) setRendered(true);
 
-  // 0 = fully open; screenHeight = below the screen.
+  // translateY of the sheet: 0 = fully open; sheetHeight = just below the screen edge.
+  // Starts far below so nothing flashes before the sheet has been measured.
   const [offset] = useState(() => new Animated.Value(screenHeight));
+  // Measured height. Animating exactly this far (not the whole screen) means the sheet is moving
+  // on screen for the whole animation, with no dead time at the start or the end.
+  const [sheetHeight, setSheetHeight] = useState(0);
+  const opened = useRef(false);
 
-  useEffect(() => {
-    if (visible) {
-      Animated.spring(offset, {
-        toValue: 0,
-        damping: 26,
-        stiffness: 260,
-        mass: 1,
-        useNativeDriver: NATIVE,
-      }).start();
-    } else {
-      Animated.timing(offset, {
-        toValue: screenHeight,
-        duration: 220,
-        useNativeDriver: NATIVE,
-      }).start(({ finished }) => {
-        if (finished) setRendered(false);
-      });
+  // First layout: start the slide-in only now, once the Modal window and content exist, so the
+  // first frames are not dropped while Android builds the window.
+  const onSheetLayout = (e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    if (h !== sheetHeight) setSheetHeight(h);
+    if (visible && !opened.current) {
+      opened.current = true;
+      offset.setValue(h);
+      slide(offset, 0, OPEN_MS);
     }
-  }, [visible, offset, screenHeight]);
+  };
+
+  // Opening is started by onSheetLayout; this effect handles closing and re-opening mid-close.
+  // It acts only when `visible` flips, so a height change (e.g. the next transfer step) never
+  // restarts a running animation.
+  const lastVisible = useRef(visible);
+  useEffect(() => {
+    if (visible === lastVisible.current) return;
+    lastVisible.current = visible;
+    if (visible) {
+      if (opened.current) slide(offset, 0, OPEN_MS);
+      return;
+    }
+    if (!opened.current) return;
+    slide(offset, sheetHeight || screenHeight, CLOSE_MS, () => {
+      opened.current = false;
+      setRendered(false);
+    });
+  }, [visible, offset, sheetHeight, screenHeight]);
 
   // Drag down to close, with Gesture Handler so it works on Android, where the native scroll view
   // would otherwise take the vertical drag. The pan runs alongside the content's scroll view and
@@ -97,13 +126,7 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
     onDeactivate: (e) => {
       const dy = e.translationY - dragBase.current;
       if (scrollTop.current <= 0 && (dy > CLOSE_DISTANCE || e.velocityY > CLOSE_VELOCITY)) onClose();
-      else
-        Animated.spring(offset, {
-          toValue: 0,
-          damping: 24,
-          stiffness: 300,
-          useNativeDriver: NATIVE,
-        }).start();
+      else slide(offset, 0, SNAP_MS);
     },
   });
 
@@ -113,7 +136,7 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
 
   // The backdrop fades with the sheet's position, so it lightens while you drag.
   const backdropOpacity = offset.interpolate({
-    inputRange: [0, screenHeight * 0.6],
+    inputRange: [0, sheetHeight || screenHeight],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
@@ -121,7 +144,7 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
   if (!rendered) return null;
 
   return (
-    <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent hardwareAccelerated>
       {/* A Modal is a separate native root, so gestures inside it need their own root view. */}
       <GestureHandlerRootView style={styles.root}>
         <Animated.View style={[StyleSheet.absoluteFill, styles.scrim, { opacity: backdropOpacity }]}>
@@ -137,6 +160,7 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
               },
             ]}
             testID={testID}
+            onLayout={onSheetLayout}
           >
             <View style={styles.handleArea} accessibilityLabel="Drag down to close">
               <View style={styles.handle} />

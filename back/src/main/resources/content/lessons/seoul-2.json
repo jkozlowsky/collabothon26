@@ -3,6 +3,7 @@
   "story": "seoul",
   "title": "Pulling everything in",
   "place": "Gangnam · after work",
+  "topic": "Borrowing to invest",
   "minutes": 4,
   "xp": 60,
   "concepts": ["leverage", "risk-capacity"],
@@ -15,7 +16,7 @@
         { "from": "Min-jun", "text": "XYZ dipped today. Perfect time to buy more" },
         { "from": "Min-jun", "text": "I'm doing 영끌 this time. Loan + savings, all in" },
         { "from": "Ji-woo", "me": true, "text": "All in? With a loan?" },
-        { "from": "Min-jun", "text": "The bank charges 6% a year. XYZ makes that in a week 🚀" }
+        { "from": "Min-jun", "text": "The bank charges 6% a year. XYZ makes that in a week" }
       ]
     },
     {
@@ -97,7 +98,7 @@
           { "from": "Min-jun", "text": "XYZ went down a bit today. Good time to buy more" },
           { "from": "Min-jun", "text": "This time I'm doing 영끌. I'll borrow and put in everything" },
           { "from": "Ji-woo", "me": true, "text": "Everything? And borrow too?" },
-          { "from": "Min-jun", "text": "The loan costs 6% a year. XYZ makes that in a week 🚀" }
+          { "from": "Min-jun", "text": "The loan costs 6% a year. XYZ makes that in a week" }
         ]
       },
       "t1": {

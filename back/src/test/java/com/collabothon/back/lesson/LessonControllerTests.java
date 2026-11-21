@@ -31,12 +31,14 @@ class LessonControllerTests {
 			.andExpect(jsonPath("$[0].id").value("seoul-1"))
 			.andExpect(jsonPath("$[0].status").value("available"))
 			.andExpect(jsonPath("$[1].status").value("locked"))
-			.andExpect(jsonPath("$.length()").value(5));
+			.andExpect(jsonPath("$.length()").value(20));
 		mvc.perform(get("/api/stories"))
 			.andExpect(jsonPath("$[0].id").value("seoul"))
 			.andExpect(jsonPath("$[0].current").value(true))
 			.andExpect(jsonPath("$[0].nextLesson.id").value("seoul-1"))
-			.andExpect(jsonPath("$[1].status").value("coming-soon"));
+			.andExpect(jsonPath("$[1].id").value("berlin"))
+			.andExpect(jsonPath("$[1].status").value("available"))
+			.andExpect(jsonPath("$[1].current").value(false));
 	}
 
 	@Test

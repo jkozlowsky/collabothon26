@@ -22,6 +22,8 @@ export function ActionStep({ step, onDone }: Props) {
   const rule = step.rule;
   const [ruleValue, setRuleValue] = useState(rule?.value ?? 0);
   const amount = rule?.appliesTo ? AMOUNTS[rule.appliesTo]?.(state) : undefined;
+  const ruleAmount = amount === undefined ? undefined : rule?.kind === 'multiple' ? amount * ruleValue : (amount * ruleValue) / 100;
+  const result = rule?.result ?? `= at most {amount} ${rule?.appliesToLabel ?? ''} on one bet`;
 
   return (
     <StepLayout
@@ -50,9 +52,9 @@ export function ActionStep({ step, onDone }: Props) {
             accessibilityLabel={`${rule.label}, ${ruleValue}${rule.unit ?? ''}`}
             testID="rule-slider"
           />
-          {amount !== undefined && (
+          {ruleAmount !== undefined && (
             <Text style={styles.amount} testID="rule-amount">
-              = at most {money(Math.round((amount * ruleValue) / 100), { whole: true })} {rule.appliesToLabel} on one bet
+              {result.replace('{amount}', money(Math.round(ruleAmount), { whole: true }))}
             </Text>
           )}
         </View>

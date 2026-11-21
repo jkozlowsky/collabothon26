@@ -1,0 +1,97 @@
+{
+  "id": "tokyo-1",
+  "story": "tokyo",
+  "title": "Buy what you know",
+  "place": "Marunouchi · farewell party",
+  "topic": "A tax-free account and a familiar feeling",
+  "minutes": 3,
+  "xp": 50,
+  "concepts": ["tax-free-account", "home-bias"],
+  "steps": [
+    {
+      "type": "chat",
+      "id": "c1",
+      "title": "Office group · 5 people",
+      "messages": [
+        { "from": "Kenji", "text": "Opened my new NISA. Only Japanese companies" },
+        { "from": "Kenji", "text": "I know them. I use their products every day" },
+        { "from": "Aya", "text": "Foreign shares are a gamble anyway" },
+        { "from": "Michiko", "me": true, "text": "I have ¥12 million on deposit doing nothing. Maybe it's time" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t1",
+      "kicker": "Meet Michiko",
+      "title": "58 · school administrator in Tokyo",
+      "body": "Michiko retires at 65. She has saved **¥12,000,000** (about €72,700), almost all of it in a bank deposit, like many Japanese households. Her colleagues are starting to invest. Their first instinct: stay at home."
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "kicker": "Word from Tokyo",
+      "title": "新NISA · new NISA",
+      "body": "Since 2024, a bigger version of Japan's [[tax-free-account]]: gains inside it are not taxed. The state promotes it with the slogan \"from savings to investment\". The account decides the tax. What goes inside decides the risk."
+    },
+    {
+      "type": "sort",
+      "id": "so1",
+      "concepts": ["home-bias"],
+      "prompt": "Swipe each sentence: a feeling or a fact?",
+      "buckets": ["Feeling", "Fact"],
+      "items": [
+        { "text": "I use their products every day, so they're safe", "bucket": 0 },
+        { "text": "Japan is about 5% of the world's stock market", "bucket": 1 },
+        { "text": "Foreign shares are a gamble", "bucket": 0 },
+        { "text": "Gains inside a NISA are not taxed", "bucket": 1 },
+        { "text": "I understand Japanese companies better", "bucket": 0 },
+        { "text": "A broad world fund holds thousands of companies in many countries", "bucket": 1 }
+      ],
+      "explanation": "Knowing a company's products doesn't make its shares less risky. Familiar feels safe: that pull is called [[home-bias]]."
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["tax-free-account"],
+      "prompt": "Michiko moves money into a NISA. What changes?",
+      "options": [
+        "Gains inside are not taxed; the risk depends on what she buys",
+        "Her money becomes guaranteed by the state",
+        "Her money can no longer fall"
+      ],
+      "correctIndex": 0,
+      "explanation": "A tax-free account is a wrapper. It changes the tax on gains, not how much the investments inside can rise or fall."
+    }
+  ],
+  "variants": {
+    "lang:plain": {
+      "c1": {
+        "messages": [
+          { "from": "Kenji", "text": "I opened a new NISA. Only Japanese companies" },
+          { "from": "Kenji", "text": "I know them. I use their products every day" },
+          { "from": "Aya", "text": "Foreign shares are just luck" },
+          { "from": "Michiko", "me": true, "text": "My ¥12 million just sits in the bank. Maybe I should do something" }
+        ]
+      },
+      "t1": {
+        "body": "Michiko will stop working at 65. She saved **¥12,000,000** (about €72,700). Almost all of it is in the bank, like for many people in Japan. Her friends at work start to invest. They want to buy only Japanese companies."
+      },
+      "t2": {
+        "body": "Since 2024 Japan has a bigger version of this account. You pay no tax on gains inside it. This is a [[tax-free-account]]. The account changes the tax. What you put inside it decides the risk."
+      },
+      "so1": {
+        "prompt": "Swipe each sentence: is it a feeling or a fact?",
+        "explanation": "Knowing a company's products doesn't make its shares safer. We like what we know. This is called [[home-bias]]."
+      },
+      "q1": {
+        "prompt": "Michiko puts money in a NISA. What changes?",
+        "options": [
+          "She pays no tax on gains. The risk depends on what she buys",
+          "The state promises her money",
+          "Her money can't go down any more"
+        ],
+        "explanation": "The account only changes the tax. The things inside can still go up and down."
+      }
+    }
+  }
+}

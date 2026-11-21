@@ -27,7 +27,7 @@ const MODE_OPTIONS: { mode: DuelMode; title: string; subtitle: string; icon: Ban
 const CATEGORIES_PATH = `/api/duel/categories?userId=${encodeURIComponent(USER_ID)}&lang=en`;
 const WEEKLY_PATH = `/api/duel/rankings?scope=weekly&userId=${encodeURIComponent(USER_ID)}`;
 
-/** Duel lobby, the "Duel" tab of the Finance Quest nav: league status, mode, category. */
+/** Duel lobby, the "Duel" tab of the Atlas nav: league status, mode, category. */
 export default function DuelLobbyScreen() {
   const [mode, setMode] = useState<DuelMode>('HUMAN');
   const { account, stats } = useAccount();

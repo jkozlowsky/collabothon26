@@ -46,7 +46,7 @@ export function ConsentCard({ facts, quickCheck }: Props) {
       </View>
 
       <View style={styles.slip} testID="consent-slip">
-        <Text style={type.labelStrong}>{"Shared with Finance Quest's lesson picker"}</Text>
+        <Text style={type.labelStrong}>{"Shared with Atlas's lesson picker"}</Text>
         <View style={styles.pills}>
           {facts.map((p) => (
             <Text key={p} style={styles.pill}>

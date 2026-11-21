@@ -229,7 +229,7 @@ export function StepHeader({ step, total, onBack, onSkip }: StepHeaderProps) {
   );
 }
 
-export function BackButton({ onPress }: { onPress: () => void }) {
+export function BackButton({ onPress, onDark }: { onPress: () => void; onDark?: boolean }) {
   return (
     <Tappable
       testID="onboarding-back"
@@ -238,9 +238,9 @@ export function BackButton({ onPress }: { onPress: () => void }) {
       onPress={onPress}
       hitSlop={8}
       pressedScale={0.9}
-      style={styles.back}
+      style={[styles.back, onDark && styles.closeOnDark]}
     >
-      <Feather name="chevron-left" size={20} color={colors.brandPrimary} />
+      <Feather name="chevron-left" size={20} color={onDark ? colors.textOnBrand : colors.brandPrimary} />
     </Tappable>
   );
 }
@@ -276,6 +276,29 @@ export function CloseButton({ onPress, onDark }: { onPress: () => void; onDark?:
 export function FadeIn({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const reduced = useReducedMotion();
   return <Animated.View style={[style, reduced ? motion.fade : motion.enter]}>{children}</Animated.View>;
+}
+
+/** Rises into place once on mount, after `delay` ms: staggers a headline block line by line. */
+export function Rise({ children, delay = 0, style }: { children: ReactNode; delay?: number; style?: StyleProp<ViewStyle> }) {
+  const reduced = useReducedMotion();
+  return (
+    <Animated.View
+      style={[
+        style,
+        reduced
+          ? motion.fade
+          : {
+              animationName: { from: { opacity: 0, transform: [{ translateY: 16 }] }, to: { opacity: 1, transform: [{ translateY: 0 }] } },
+              animationDuration: 560,
+              animationDelay: delay,
+              animationFillMode: 'backwards',
+              animationTimingFunction: EASE_OUT,
+            },
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
 }
 
 export const type = StyleSheet.create({

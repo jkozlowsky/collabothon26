@@ -18,12 +18,12 @@ import type { Holding } from '@/types/bank';
 type Props = {
   holding: Holding | null;
   onClose: () => void;
-  /** "Learn first": opens the diversification lesson in Finance Quest. */
+  /** "Learn first": opens the diversification lesson in Atlas. */
   onLearn: () => void;
 };
 
 /**
- * Buy flow with a Finance Quest nudge in front of it. The nudge explains, it does not advise:
+ * Buy flow with a Atlas nudge in front of it. The nudge explains, it does not advise:
  * it shows the user's own concentration and offers a short lesson before they decide.
  */
 /** The parent re-keys this per opening, so it always starts at the nudge. */
@@ -62,7 +62,7 @@ export function TradeSheet({ holding: next, onClose, onLearn }: Props) {
             <View style={styles.nudge}>
               <GlobeSphere size={56} />
               <View style={styles.nudgeBody}>
-                <Text style={styles.overline}>Finance Quest · 3 min</Text>
+                <Text style={styles.overline}>Atlas · 3 min</Text>
                 <Text style={styles.nudgeTitle}>Diversification, before you decide</Text>
               </View>
             </View>

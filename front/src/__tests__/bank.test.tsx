@@ -175,7 +175,7 @@ describe('bank shell', () => {
     expect(screen.getByTestId('nav-credits')).toBeSelected();
   });
 
-  test('Buy goes through the Finance Quest nudge before the demo order', async () => {
+  test('Buy goes through the Atlas nudge before the demo order', async () => {
     await renderRouter(appRoutes, { initialUrl: '/invest' });
     await fireEvent.press(await screen.findByTestId('holding-gov-bond'));
     await fireEvent.press(screen.getByTestId('holding-buy'));

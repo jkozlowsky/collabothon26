@@ -1,5 +1,5 @@
 ---
-status: grilled
+status: ready
 topic: B
 owner: Jan; question pool content: Danylo (lessons)
 branch: feat/quick-check (from quick-check + origin/main)

@@ -120,7 +120,7 @@ Round 1 (21.11), reports in `.planning/reviews/F1b-diff-{back,front}-2026-11-21.
 | # | finding | file:line | class | reason or commit |
 |---|---|---|---|---|
 | B-AR1 | `<>`→`‹›` swap does not stop an answer closing its tag; instructions never call state data | CategorizationService:154, JevClient:56-74 | fix | random per-request boundary named in every question + "data, not instructions" (OWASP LLM01) |
-| B-AR2 | Jev read timeout 4 s with up to 4 extra judgements | application.properties:28 | fix | 8 s, below the front's 10 s |
+| B-AR2 | Jev read timeout 4 s with up to 4 extra judgements | application.properties:28 | fix | 7 s (r2: the front's 10 s also covers the profile wait) |
 | B-AR3 | POST without answers within 5 min drops checks | CategorizationService:78-84,161 | fix | Jan 21.11: reuse the stored row with its checks when onboarding answers and consent match |
 | B-AR4 | OVER gap cites "your answer" for not-yet / Not sure | CategorizationRules:170 | fix | Jan 21.11: UNDER cites only answered `understands`; OVER from a check = "You said: {experience}." + area, no answer cited |
 | B-AR5 | reuse guard untested | QuickCheckTests:252 | fix | test without → with answers |

@@ -8,11 +8,13 @@ import { Button } from '@/components/Button';
 import { Icon } from '@/components/bank/Icon';
 import { IconButton } from '@/components/bank/IconButton';
 import { Sheet } from '@/components/bank/Sheet';
+import { OffersEntryCard } from '@/components/offers/OffersEntryCard';
 import { StoryLandmark } from '@/components/StoryLandmark';
 import { colors, elevation, radii, spacing, storyColors, tints, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import { useBank } from '@/hooks/useBank';
 import { depotTotal, monthlyInvesting } from '@/lib/bank/selectors';
+import { offersFor } from '@/lib/offers';
 import { USER_ID } from '@/lib/user';
 import type { LessonSummary } from '@/types/lessons';
 import type { StoryPage } from '@/types/stories';
@@ -39,6 +41,7 @@ export default function StoryScreen() {
   const accent = storyColors[story?.color ?? 'slate'] ?? colors.storySlate;
   const tint = tints[story?.color ?? 'slate'] ?? tints.slate;
 
+  const offers = offersFor(id);
   const [dismissedLocked, setDismissedLocked] = useState(false);
   const scrollRef = useRef<any>(null);
 
@@ -144,6 +147,13 @@ export default function StoryScreen() {
                     ))}
                   </View>
                 ) : <Text style={styles.muted}>Lessons coming soon.</Text>}
+                {offers && (
+                  <OffersEntryCard
+                    title={offers.title}
+                    ready={story.progress.done === story.progress.total}
+                    onOpen={() => router.push({ pathname: '/offers/[id]', params: { id: offers.story } })}
+                  />
+                )}
               </>
             ) : <Text style={styles.muted}>Story unavailable.</Text>}
           </AsyncContent>

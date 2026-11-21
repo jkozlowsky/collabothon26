@@ -11,6 +11,7 @@ import { FqTeaserCard } from '@/components/bank/FqTeaserCard';
 import { HeroCard } from '@/components/bank/HeroCard';
 import { ListCard } from '@/components/bank/ListCard';
 import { ListRow } from '@/components/bank/ListRow';
+import { ProductSection } from '@/components/bank/ProductSection';
 import { QuickAction } from '@/components/bank/QuickAction';
 import { Section } from '@/components/bank/Section';
 import { TransactionsSheet } from '@/components/bank/TransactionsSheet';
@@ -132,6 +133,8 @@ export default function OverviewScreen() {
           />
         </ListCard>
       </Section>
+
+      <ProductSection title="Save" tab="home" />
 
       <Section title="Recent activity" action={{ label: 'See all', onPress: () => setAllActivity(true), testID: 'activity-see-all' }}>
         <ListCard testID="recent-activity">

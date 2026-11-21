@@ -11,6 +11,7 @@ import { localDate, useAccount } from '@/hooks/useAccount';
 import { useApi } from '@/hooks/useApi';
 import { useLessonSession } from '@/hooks/useLessonSession';
 import { api } from '@/lib/api';
+import { offersFor } from '@/lib/offers';
 import { USER_ID } from '@/lib/user';
 import type { Lesson, LessonMode, LessonResultRequest, LessonResultResponse } from '@/types/lessons';
 
@@ -58,6 +59,7 @@ function LessonRun({ lesson }: { lesson: Lesson }) {
     onClose: close,
     onNext: (next: string) => router.replace({ pathname: '/lesson/[id]', params: { id: next } }),
     onOpenGlossary: () => router.navigate('/glossary'),
+    onOffers: !lesson.next && offersFor(lesson.story) ? () => router.replace({ pathname: '/offers/[id]', params: { id: lesson.story } }) : undefined,
   };
   const video = session.progress.mode === 'video' && lesson.video ? { ...lesson, video: lesson.video } : null;
 

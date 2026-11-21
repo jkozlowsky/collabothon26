@@ -1,0 +1,64 @@
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, type ComponentRef, type ReactNode } from 'react';
+import { useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
+
+import { nav } from '@/constants/theme';
+import { useBankScroll } from '@/hooks/useBankScroll';
+import { useSpotlightIfAny } from '@/hooks/useSpotlight';
+import type { SpotId } from '@/types/spotlight';
+
+type Props = { id: SpotId; children: ReactNode; style?: StyleProp<ViewStyle> };
+
+/** Wait for the tab switch to settle, and then for the scroll to settle, before measuring. */
+const SETTLE_MS = 450;
+const TOP_ROOM = 140;
+
+/** Marks a bank feature the spotlight can point at. When its spot is shown, it scrolls into view and reports its box. */
+export function SpotTarget({ id, children, style }: Props) {
+  const ref = useRef<ComponentRef<typeof View>>(null);
+  const spotlight = useSpotlightIfAny();
+  const scroll = useBankScroll();
+  const { height } = useWindowDimensions();
+  const active = spotlight?.active?.id === id;
+  const setRect = spotlight?.setRect;
+  const close = spotlight?.close;
+
+  useEffect(() => {
+    if (!active || !setRect) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const measure = (then: (y: number, h: number) => void) =>
+      ref.current?.measureInWindow((x, y, width, h) => {
+        if (width && h) then(y, h);
+      });
+    timer = setTimeout(() => {
+      measure((y, h) => {
+        const visible = y >= TOP_ROOM / 2 && y + h <= height - nav.clearance;
+        if (!visible) scroll?.scrollBy(y - TOP_ROOM);
+        timer = setTimeout(() => ref.current?.measureInWindow((x, y2, width, h2) => setRect({ x, y: y2, width, height: h2 })), visible ? 0 : SETTLE_MS);
+      });
+    }, SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [active, setRect, scroll, height]);
+
+  // Leaving the tab ends the spotlight: the hole would point at nothing.
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        if (active) close?.();
+      };
+    }, [active, close]),
+  );
+
+  return (
+    <View
+      ref={ref}
+      collapsable={false}
+      style={style}
+      // Using the feature ends the spotlight; the touch still reaches it.
+      onTouchEnd={active ? close : undefined}
+      onPointerUp={active ? close : undefined}
+    >
+      {children}
+    </View>
+  );
+}

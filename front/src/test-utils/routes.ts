@@ -20,6 +20,7 @@ import CategorizingScreen from '@/app/categorizing';
 import LearningPathScreen from '@/app/learning-path';
 import LessonScreen from '@/app/lesson/[id]';
 import OnboardingScreen from '@/app/onboarding';
+import OffersScreen from '@/app/offers/[id]';
 import StoryScreen from '@/app/story/[id]';
 
 export const appRoutes = {
@@ -29,6 +30,7 @@ export const appRoutes = {
   'learning-path': LearningPathScreen,
   'lesson/[id]': LessonScreen,
   'story/[id]': StoryScreen,
+  'offers/[id]': OffersScreen,
   '(main)/_layout': MainLayout,
   '(main)/(bank)/_layout': BankLayout,
   '(main)/(bank)/index': OverviewScreen,

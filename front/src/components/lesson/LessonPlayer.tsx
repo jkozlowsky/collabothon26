@@ -16,13 +16,15 @@ type Props = {
   onClose: () => void;
   onNext: (lessonId: string) => void;
   onOpenGlossary: () => void;
+  /** Set on the story's last lesson: what the bank offers in the story's area. */
+  onOffers?: () => void;
 };
 
 /**
  * Classic form of a lesson (the transcript of the video form): one step at a time, missed graded steps again
  * at the end, then the end screen. Progress lives in the session, so switching to video keeps the place.
  */
-export function LessonPlayer({ lesson, session, onClose, onNext, onOpenGlossary }: Props) {
+export function LessonPlayer({ lesson, session, onClose, onNext, onOpenGlossary, onOffers }: Props) {
   const { progress, xp, complete, switchTo } = session;
   const [concept, setConcept] = useState<string | null>(null);
   const step = progress.current === null ? undefined : lesson.steps.find((s) => s.id === progress.current);
@@ -48,6 +50,7 @@ export function LessonPlayer({ lesson, session, onClose, onNext, onOpenGlossary 
             concepts={lesson.concepts.map((key) => ({ key, term: lesson.glossary[key]?.term ?? key, weak: weak.has(key) }))}
             onConcept={setConcept}
             onNext={lesson.next ? () => onNext(lesson.next!) : undefined}
+            onOffers={onOffers}
             onClose={onClose}
           />
         )}

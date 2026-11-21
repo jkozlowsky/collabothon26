@@ -1,0 +1,65 @@
+{
+  "id": "seoul-4",
+  "story": "seoul",
+  "title": "One basket",
+  "place": "Jongno · family dinner",
+  "topic": "Spreading risk",
+  "minutes": 4,
+  "xp": 50,
+  "concepts": ["diversification", "concentration-risk"],
+  "steps": [
+    {
+      "type": "chat",
+      "id": "c1",
+      "title": "Dinner in Jongno",
+      "messages": [
+        { "from": "Dad", "text": "Is it true Min-jun lost his money on that stock?" },
+        { "from": "Ji-woo", "me": true, "text": "Most of it. He put everything into one company" },
+        { "from": "Dad", "text": "When I retired, I spread my savings over many companies and some bonds" },
+        { "from": "Mom", "text": "One of them went bankrupt last year. Your dad barely noticed" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t1",
+      "kicker": "Old rule, still true",
+      "title": "Not all eggs in one basket",
+      "body": "Spreading money over many investments is called [[diversification]]. If one company fails, it is only a small part of what you own. Putting a big share into one place is [[concentration-risk]]."
+    },
+    {
+      "type": "predict",
+      "id": "p1",
+      "concepts": ["diversification"],
+      "prompt": "Dad spread his money equally over 20 companies. One goes bankrupt and is worth nothing. How much of his money does he lose?",
+      "input": { "kind": "slider", "min": -100, "max": 0, "step": 1, "unit": "%" },
+      "answer": -5,
+      "reveal": "Each company was 1/20 of his money, so one bankruptcy costs 5%. Min-jun had 100% in one company: the same event took everything."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s1",
+      "concepts": ["concentration-risk"],
+      "prompt": "One company crashes 60%. Change how much of your money is in it. Keep the damage to 10% or less.",
+      "model": "oneCompanyCrash",
+      "params": {
+        "share": { "label": "Share in that one company", "min": 0, "max": 100, "step": 5, "value": 100, "unit": "%" }
+      },
+      "output": { "label": "Your total change", "unit": "%" },
+      "goal": { "condition": { "of": "output", "min": -10 }, "hint": "Bring the share in one company down to about one sixth." },
+      "note": "Illustration only. The rest of the money is assumed flat."
+    },
+    {
+      "type": "match",
+      "id": "m1",
+      "concepts": ["diversification", "concentration-risk"],
+      "prompt": "Match each idea from the Seoul story with its meaning.",
+      "pairs": [
+        ["Diversification", "Spreading money over many investments"],
+        ["Concentration risk", "A big share of your money in one place"],
+        ["Leverage", "Investing with borrowed money"],
+        ["Pump and dump", "Hype a price up, sell, let it crash"]
+      ]
+    }
+  ],
+  "variants": {}
+}

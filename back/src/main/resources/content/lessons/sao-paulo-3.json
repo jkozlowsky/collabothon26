@@ -1,0 +1,125 @@
+{
+  "id": "sao-paulo-3",
+  "story": "sao-paulo",
+  "title": "The rotativo",
+  "place": "Avenida Paulista · card bill",
+  "topic": "Card debt that rolls over",
+  "minutes": 4,
+  "xp": 60,
+  "concepts": ["revolving-credit", "compound-interest"],
+  "steps": [
+    {
+      "type": "chat",
+      "id": "c1",
+      "title": "Card app",
+      "messages": [
+        { "from": "Card", "text": "Your bill is ready: R$1,000. Due Friday" },
+        { "from": "Card", "text": "Minimum payment: R$150" },
+        { "from": "Rafa", "me": true, "text": "Only R$150? That's easy this month" },
+        { "from": "Card", "text": "The rest moves to the rotativo" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t1",
+      "kicker": "Word from São Paulo",
+      "title": "rotativo",
+      "body": "When you pay less than the full card bill, the rest rolls into the next month: [[revolving-credit]]. In Brazil its interest has often been above 10% a month. Since 2024 the law caps interest and fees at the size of the original debt. Simplified from real data."
+    },
+    {
+      "type": "scenario",
+      "id": "sc1",
+      "concepts": ["revolving-credit", "compound-interest"],
+      "prompt": "How does Rafa handle the R$1,000 bill? Pick one and see what's left to pay over a year.",
+      "unit": "R$",
+      "periodLabel": "12 months",
+      "choices": [
+        {
+          "label": "Pay it all now",
+          "series": [1000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+          "ending": "Done in one month, nothing extra paid. It meant skipping a concert and cooking at home for a few weeks."
+        },
+        {
+          "label": "Pay the minimum every month",
+          "series": [1000, 952, 906, 863, 821, 782, 744, 709, 675, 642, 611, 582, 554],
+          "ending": "After a year Rafa has paid about R$1,560 and still owes R$554. The interest on what's left almost eats each payment."
+        },
+        {
+          "label": "Switch to a 12-month payment plan",
+          "series": [1000, 937, 871, 802, 729, 653, 573, 489, 400, 307, 210, 108, 0],
+          "ending": "R$113 a month at about 5% a month. The debt is gone in a year, and he paid about R$1,350 for a R$1,000 bill."
+        }
+      ]
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["revolving-credit"],
+      "prompt": "Rafa pays the minimum for a year. Why is most of the bill still there?",
+      "options": [
+        "Interest is added to what's left each month, so most of each payment covers interest",
+        "The minimum payment is a fee, not a repayment",
+        "The card adds new purchases automatically"
+      ],
+      "correctIndex": 0,
+      "explanation": "At about 12% a month, the interest on R$1,000 is R$120. A R$150 payment barely gets past it: interest on interest, working against you."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "concepts": ["compound-interest"],
+      "prompt": "Which works the same way as compound growth on savings, but against you?",
+      "options": ["Card debt that rolls over", "A one-off fee", "A fixed monthly subscription"],
+      "correctIndex": 0,
+      "explanation": "[[compound-interest]] grows savings on top of earlier growth. Rolled-over debt grows on top of earlier interest, the same maths in reverse."
+    }
+  ],
+  "variants": {
+    "lang:plain": {
+      "c1": {
+        "messages": [
+          { "from": "Card", "text": "Your bill: R$1,000. Pay by Friday" },
+          { "from": "Card", "text": "You must pay at least R$150" },
+          { "from": "Rafa", "me": true, "text": "Only R$150? Easy" },
+          { "from": "Card", "text": "The rest goes to next month, with interest" }
+        ]
+      },
+      "t1": {
+        "body": "If you don't pay the full card bill, the rest moves to next month. This is [[revolving-credit]]. In Brazil the interest has often been more than 10% every month. Since 2024, interest and fees can't be more than the debt itself."
+      },
+      "sc1": {
+        "prompt": "What does Rafa do with the R$1,000 bill? Choose, then see how much he still owes during the year.",
+        "choices": [
+          {
+            "label": "Pay everything now",
+            "series": [1000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            "ending": "Done. No extra cost. He stayed home for a few weeks."
+          },
+          {
+            "label": "Pay the smallest amount every month",
+            "series": [1000, 952, 906, 863, 821, 782, 744, 709, 675, 642, 611, 582, 554],
+            "ending": "After a year he paid about R$1,560 and still owes R$554. Most of the money went to interest."
+          },
+          {
+            "label": "Pay in 12 equal parts",
+            "series": [1000, 937, 871, 802, 729, 653, 573, 489, 400, 307, 210, 108, 0],
+            "ending": "R$113 every month. After a year the debt is gone. He paid about R$1,350 in total."
+          }
+        ]
+      },
+      "q1": {
+        "prompt": "Rafa pays the smallest amount for a year. Why does he still owe so much?",
+        "options": [
+          "Every month interest is added, so most of his payment pays interest",
+          "The smallest payment is a fee",
+          "The card buys new things by itself"
+        ],
+        "explanation": "12% of R$1,000 is R$120 in one month. He pays R$150. Only R$30 makes the debt smaller."
+      },
+      "q2": {
+        "prompt": "What grows like savings with interest, but against you?",
+        "explanation": "Savings grow on top of earlier growth. Card debt grows on top of earlier interest. Same maths, other direction. This is [[compound-interest]]."
+      }
+    }
+  }
+}

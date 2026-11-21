@@ -1,0 +1,99 @@
+{
+  "id": "tokyo-3",
+  "story": "tokyo",
+  "title": "The 34-year wait",
+  "place": "Kabutocho · old exchange",
+  "topic": "Deep falls and little time",
+  "minutes": 4,
+  "xp": 60,
+  "concepts": ["drawdown", "time-horizon", "concentration-risk"],
+  "steps": [
+    {
+      "type": "chat",
+      "id": "c1",
+      "title": "Kenji",
+      "messages": [
+        { "from": "Kenji", "text": "Japanese shares only go up now. Look at the last two years" },
+        { "from": "Michiko", "me": true, "text": "My father bought in 1989. He talked about it until he died" },
+        { "from": "Kenji", "text": "That was a long time ago" },
+        { "from": "Michiko", "me": true, "text": "He waited 20 years and it still hadn't come back" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t1",
+      "kicker": "What happened",
+      "title": "December 1989 to February 2024",
+      "body": "Japan's main stock index peaked at the end of 1989. By 2009 it had fallen about 80%. It passed its old peak only in 2024: **34 years** later. Someone who put everything in at the top waited most of a working life. Simplified from real data."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s1",
+      "concepts": ["drawdown"],
+      "prompt": "How much must a price rise to get back after a fall? Find the fall that needs a +400% rise.",
+      "model": "drawdownRecovery",
+      "params": {
+        "loss": { "label": "Loss", "min": -90, "max": 0, "step": 5, "value": -20, "unit": "%" }
+      },
+      "output": { "label": "Rise needed to get back", "unit": "%" },
+      "goal": { "condition": { "of": "output", "min": 400, "max": 400 }, "hint": "It's the fall Japan's index had by 2009." }
+    },
+    {
+      "type": "predict",
+      "id": "p1",
+      "concepts": ["time-horizon"],
+      "prompt": "A portfolio falls 50%. Afterwards it grows 7% a year. How many years until it's back where it started?",
+      "input": { "kind": "slider", "min": 0, "max": 20, "step": 1, "unit": " years" },
+      "answer": 10,
+      "reveal": "About 10 years: −50% needs +100%, and 7% a year doubles money in about ten. Michiko retires in 7. A deep fall now could outlast her working years."
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["time-horizon", "concentration-risk"],
+      "prompt": "Why does the same −50% fall weigh more at 58 than at 27?",
+      "options": [
+        "There may not be enough years left to recover before the money is needed",
+        "Older people pay higher fees",
+        "Falls are deeper for older investors"
+      ],
+      "correctIndex": 0,
+      "explanation": "The fall is the same; the [[time-horizon]] isn't. At 27, ten years of recovery fit before most goals. At 58, they run into retirement."
+    }
+  ],
+  "variants": {
+    "level:beginner": {
+      "s1": { "goal": { "hint": "Try −80%: only a fifth is left." } }
+    },
+    "lang:plain": {
+      "c1": {
+        "messages": [
+          { "from": "Kenji", "text": "Japanese shares only go up now. Look at the last two years" },
+          { "from": "Michiko", "me": true, "text": "My father bought in 1989. He talked about it for years" },
+          { "from": "Kenji", "text": "That was long ago" },
+          { "from": "Michiko", "me": true, "text": "After 20 years his money still wasn't back" }
+        ]
+      },
+      "t1": {
+        "body": "Japan's main share index was highest at the end of 1989. By 2009 it was about 80% lower. It was higher than in 1989 again only in 2024: **34 years** later."
+      },
+      "s1": {
+        "prompt": "After a fall, how much must a price go up to get back? Find the fall that needs +400% to get back.",
+        "output": { "label": "How much it must go up" }
+      },
+      "p1": {
+        "prompt": "Money falls by half. Then it grows 7% every year. How many years until it is back? Guess.",
+        "reveal": "About 10 years. Half must double, and 7% a year doubles money in about ten years. Michiko stops working in 7 years."
+      },
+      "q1": {
+        "prompt": "Why is a −50% fall worse at 58 than at 27?",
+        "options": [
+          "There may not be enough years to get the money back before you need it",
+          "Older people pay more fees",
+          "Prices fall more for older people"
+        ],
+        "explanation": "The fall is the same. But at 58 there is less time before the money is needed. How long money can wait is the [[time-horizon]]."
+      }
+    }
+  }
+}

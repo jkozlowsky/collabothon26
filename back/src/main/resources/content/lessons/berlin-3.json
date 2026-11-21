@@ -1,0 +1,114 @@
+{
+  "id": "berlin-3",
+  "story": "berlin",
+  "title": "Word from Berlin: Notgroschen",
+  "place": "Kita · Monday morning",
+  "topic": "The emergency buffer",
+  "minutes": 3,
+  "xp": 50,
+  "concepts": ["emergency-fund", "time-horizon"],
+  "steps": [
+    {
+      "type": "chat",
+      "id": "c1",
+      "title": "Jonas",
+      "messages": [
+        { "from": "Jonas", "text": "The washing machine just died. Water everywhere" },
+        { "from": "Jonas", "text": "And my contract ends in March, they won't extend it" },
+        { "from": "Lena", "me": true, "text": "Okay. How long could we manage on one salary?" },
+        { "from": "Jonas", "text": "No idea. A few months?" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t1",
+      "kicker": "Word from Berlin",
+      "title": "Notgroschen",
+      "body": "The \"emergency penny\": money kept aside for when something breaks or a job ends. It's an [[emergency-fund]]. Its job isn't to grow. Its job is to be there at once, so nothing has to be sold or borrowed in a hurry."
+    },
+    {
+      "type": "predict",
+      "id": "p1",
+      "concepts": ["emergency-fund"],
+      "prompt": "The family's costs are €2,800 a month. How big is a buffer for 3 months?",
+      "input": { "kind": "slider", "min": 0, "max": 20000, "step": 400, "unit": "€" },
+      "answer": 8400,
+      "reveal": "3 × €2,800 = €8,400. A buffer is counted in months of costs, not in a round number. With one income gone, it buys time to find the next job."
+    },
+    {
+      "type": "sort",
+      "id": "so1",
+      "concepts": ["time-horizon"],
+      "prompt": "Swipe each item: when is the money needed?",
+      "buckets": ["Within a year", "Can wait 10+ years"],
+      "items": [
+        { "text": "Next month's rent", "bucket": 0 },
+        { "text": "A new washing machine", "bucket": 0 },
+        { "text": "Mia's money for when she's 18", "bucket": 1 },
+        { "text": "Three months of costs if a job ends", "bucket": 0 },
+        { "text": "Lena's pension", "bucket": 1 },
+        { "text": "A car repair", "bucket": 0 }
+      ],
+      "explanation": "Money needed soon has a short [[time-horizon]]: it has to be there, whatever markets do. Money that can wait decades has time to ride out falls."
+    },
+    {
+      "type": "match",
+      "id": "m1",
+      "concepts": ["emergency-fund", "real-return"],
+      "prompt": "Match each word from the Berlin story with its meaning.",
+      "pairs": [
+        ["Tagesgeld", "Savings account with access any day"],
+        ["Notgroschen", "Money kept aside for emergencies"],
+        ["Inflation", "Prices rising over time"],
+        ["Real return", "Interest minus inflation"]
+      ]
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["emergency-fund"],
+      "prompt": "Why does a buffer belong somewhere it can't fall, even if it earns little?",
+      "options": [
+        "It's needed exactly when things go wrong, maybe while markets are down too",
+        "Because savings accounts pay the most",
+        "Because a buffer should grow as fast as possible"
+      ],
+      "correctIndex": 0,
+      "explanation": "Job losses and market falls often come together. A buffer that has dropped 20% when you need it has failed at its one job."
+    }
+  ],
+  "variants": {
+    "lang:plain": {
+      "c1": {
+        "messages": [
+          { "from": "Jonas", "text": "The washing machine is broken. Water everywhere" },
+          { "from": "Jonas", "text": "And my job ends in March" },
+          { "from": "Lena", "me": true, "text": "Okay. How long can we live on one salary?" },
+          { "from": "Jonas", "text": "I don't know. A few months?" }
+        ]
+      },
+      "t1": {
+        "body": "It means \"emergency penny\": money for when something breaks or a job ends. In English: an [[emergency-fund]]. It doesn't need to grow. It needs to be there right away, so you don't have to sell or borrow in a hurry."
+      },
+      "p1": {
+        "prompt": "The family spends €2,800 every month. How much money is 3 months of costs? Guess.",
+        "reveal": "3 × €2,800 = €8,400. Count the buffer in months of costs. It gives time to find a new job."
+      },
+      "so1": {
+        "prompt": "Swipe each item: when do they need this money?",
+        "buckets": ["In the next year", "In 10 years or later"],
+        "explanation": "Money you need soon must be there, whatever happens. Money that can wait many years has time to recover. How long money can wait is the [[time-horizon]]."
+      },
+      "m1": { "prompt": "Match each word with what it means." },
+      "q1": {
+        "prompt": "Why keep the buffer somewhere it can't go down, even if it earns little?",
+        "options": [
+          "You need it when things go wrong, maybe when markets are down too",
+          "Savings accounts pay the most",
+          "A buffer should grow fast"
+        ],
+        "explanation": "Losing a job and falling markets often happen together. A buffer that lost 20% doesn't help."
+      }
+    }
+  }
+}

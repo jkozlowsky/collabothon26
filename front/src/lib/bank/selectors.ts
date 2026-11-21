@@ -75,3 +75,18 @@ export function slotValues(s: BankState): Record<Slot, number> {
     positionCount: positionCount(s),
   };
 }
+
+/** Everything the user holds here: main account + savings + depot. */
+export const totalAssets = (s: BankState) => s.account.balance + s.savings.balance + depotTotal(s);
+
+/** Which of account, savings and depot holds the most, and its share of `totalAssets` (0–1). */
+export function largestPlace(s: BankState): { place: 'account' | 'savings' | 'depot'; share: number } {
+  const total = totalAssets(s);
+  const places = [
+    { place: 'account' as const, value: s.account.balance },
+    { place: 'savings' as const, value: s.savings.balance },
+    { place: 'depot' as const, value: depotTotal(s) },
+  ];
+  const top = places.reduce((a, b) => (b.value > a.value ? b : a));
+  return { place: top.place, share: total ? top.value / total : 0 };
+}

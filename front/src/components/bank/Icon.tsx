@@ -50,6 +50,7 @@ const GLYPHS: Record<BankIconName, Glyph> = {
   close: { set: 'feather', name: 'x' },
   check: { set: 'feather', name: 'check' },
   delete: { set: 'feather', name: 'delete' },
+  lock: { set: 'feather', name: 'lock' },
   swords: { set: 'mci', name: 'sword-cross' },
   trophy: { set: 'ion', name: 'trophy-outline' },
   bot: { set: 'mci', name: 'robot-outline' },

@@ -1,0 +1,108 @@
+{
+  "id": "berlin-5",
+  "story": "berlin",
+  "title": "Your own split",
+  "place": "Your stop · today",
+  "topic": "Size your buffer with your bank data",
+  "minutes": 3,
+  "xp": 70,
+  "concepts": ["emergency-fund", "inflation"],
+  "steps": [
+    {
+      "type": "text",
+      "id": "t1",
+      "kicker": "Lena's fridge note",
+      "title": "\"Notgroschen first. Then let the rest wait.\"",
+      "body": "Lena's rule: three months of costs stay in Tagesgeld, ready any day. Money for Mia at 18 doesn't need to be reachable tomorrow. Her rule, not a recipe: a buffer sized by her [[emergency-fund|Notgroschen]] and her family."
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["emergency-fund"],
+      "prompt": "Why does Lena size her buffer in months of costs, not in a round amount?",
+      "options": [
+        "Because the buffer has to cover life while an income is missing",
+        "Because banks require it",
+        "Because round amounts earn less interest"
+      ],
+      "correctIndex": 0,
+      "explanation": "A buffer buys time. Months of costs tell you how much time, whatever the family spends."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "concepts": ["inflation"],
+      "prompt": "Lena keeps much more than her buffer in Tagesgeld for 20 years. What's the cost?",
+      "options": [
+        "If interest stays below inflation, it slowly buys less",
+        "None, the balance never falls",
+        "The bank charges a fee for large balances"
+      ],
+      "correctIndex": 0,
+      "explanation": "Safe money is safe from falls, not from [[inflation]]. Over long periods, the gap between interest and prices adds up."
+    },
+    {
+      "type": "action",
+      "id": "a1",
+      "title": "Your turn",
+      "body": "You hold **{totalAssets}** with us. **{savingsShareOfAssets}** of it sits in savings, at {savingsRate} a year. That covers about **{bufferMonths}** months of your spending.",
+      "bodyNoData": "Think about your own money: how many months of your costs could you cover if an income stopped tomorrow?",
+      "rule": {
+        "label": "My emergency buffer",
+        "min": 1,
+        "max": 12,
+        "step": 1,
+        "value": 3,
+        "unit": " months",
+        "appliesTo": "monthlySpending",
+        "kind": "multiple",
+        "result": "= {amount} kept ready any day"
+      },
+      "cta": "Set my buffer"
+    }
+  ],
+  "variants": {
+    "persona:student": {
+      "a1": {
+        "body": "You hold **{totalAssets}** with us, and **{savingsShareOfAssets}** of it sits in savings. Your costs are lower now, so even a small buffer covers **{bufferMonths}** months. That's room to try things without debt."
+      }
+    },
+    "persona:family": {
+      "a1": {
+        "body": "You hold **{totalAssets}** with us. **{savingsShareOfAssets}** of it sits in savings, at {savingsRate} a year. That covers about **{bufferMonths}** months of your family's spending, if one income stopped."
+      }
+    },
+    "persona:pre-retirement": {
+      "a1": {
+        "body": "You hold **{totalAssets}** with us, and **{savingsShareOfAssets}** of it sits in savings at {savingsRate}. That covers about **{bufferMonths}** months. Close to retirement, a buffer also covers the first years, so nothing has to be sold in a bad market."
+      }
+    },
+    "lang:plain": {
+      "t1": {
+        "title": "\"Emergency money first. The rest can wait.\"",
+        "body": "Lena's rule: money for three months of costs stays in the savings account. Mia's money is for when she is 18, so it doesn't need to be ready tomorrow. This is Lena's rule, not a rule for everyone."
+      },
+      "q1": {
+        "prompt": "Why does Lena count her emergency money in months?",
+        "options": [
+          "It must pay for life while one salary is missing",
+          "The bank says so",
+          "Round numbers get less interest"
+        ],
+        "explanation": "Emergency money buys time. Months tell you how much time."
+      },
+      "q2": {
+        "prompt": "Lena keeps a lot more than she needs in the savings account for 20 years. What does it cost?",
+        "options": [
+          "If interest is lower than price rises, it buys less over time",
+          "Nothing, the number never goes down",
+          "The bank takes a fee"
+        ],
+        "explanation": "Safe money doesn't go down, but [[inflation]] still makes it worth less."
+      },
+      "a1": {
+        "bodyNoData": "Think about your money: how many months could you live if your salary stopped tomorrow?"
+      }
+    }
+  }
+}

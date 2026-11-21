@@ -1,0 +1,135 @@
+{
+  "id": "berlin-1",
+  "story": "berlin",
+  "title": "Safe, but not free",
+  "place": "Kreuzberg · kitchen table",
+  "topic": "Inflation and real return",
+  "minutes": 4,
+  "xp": 50,
+  "concepts": ["inflation", "real-return"],
+  "steps": [
+    {
+      "type": "chat",
+      "id": "c1",
+      "title": "Family chat · 3 people",
+      "messages": [
+        { "from": "Jonas", "text": "Our €18k is still on the Tagesgeld, right?" },
+        { "from": "Lena", "me": true, "text": "Untouched. Safe, it can't go down" },
+        { "from": "Oma", "text": "The Sparbuch was good enough for us" },
+        { "from": "Jonas", "text": "Groceries cost way more than last year though" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "t1",
+      "kicker": "Meet Lena",
+      "title": "34 · project manager in Berlin",
+      "body": "Lena and Jonas have **€18,000** in an instant-access savings account (Tagesgeld). Their daughter Mia is two. The number on the account never falls. But prices keep rising: that is [[inflation]]."
+    },
+    {
+      "type": "predict",
+      "id": "p1",
+      "concepts": ["inflation"],
+      "prompt": "Prices rise 3% a year. The account pays 0.5% a year. After 10 years, how much less can Lena's €18,000 buy than today?",
+      "input": { "kind": "slider", "min": -50, "max": 0, "step": 1, "unit": "%" },
+      "answer": -22,
+      "reveal": "The account grows to about €18,900, but prices grow faster: it buys what about €14,000 buys today. Each year the money loses about 2.5% of what it can buy."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s1",
+      "concepts": ["real-return"],
+      "prompt": "The chart shows what the savings can buy over the years. Change the interest rate: find the rate that keeps buying power flat.",
+      "model": "realValue",
+      "params": {
+        "years": { "label": "Years", "min": 0, "max": 20, "step": 1, "value": 10 },
+        "interest": { "label": "Interest", "min": 0, "max": 5, "step": 0.5, "value": 0.5, "unit": "%" },
+        "inflation": { "label": "Inflation", "min": 0, "max": 8, "step": 0.5, "value": 3, "unit": "%" }
+      },
+      "output": { "label": "Change in buying power", "unit": "%" },
+      "goal": { "condition": { "of": "output", "min": 0 }, "hint": "Interest must at least match inflation." },
+      "note": "Simplified from real data. Rates stay the same every year."
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "title": "The number vs what it buys",
+      "body": "The balance is the **nominal** value. What it can buy is the **real** value. Interest minus inflation is the [[real-return]]: 0.5% − 3% is about −2.5% a year. A balance can grow while the money quietly shrinks."
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "concepts": ["real-return"],
+      "prompt": "Lena's account pays 1%. Inflation is 3%. What happens to her money?",
+      "options": [
+        "The balance grows, but it buys about 2% less each year",
+        "Nothing, the balance never falls",
+        "It loses 3% of its balance each year"
+      ],
+      "correctIndex": 0,
+      "explanation": "The balance rises 1%, prices rise 3%. In real terms the money loses about 2% a year, even though the number on the screen goes up."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "concepts": ["inflation"],
+      "prompt": "When does money on a savings account keep its buying power?",
+      "options": [
+        "When the interest is at least as high as inflation",
+        "Always, because the balance can't fall",
+        "Only when it's in a Sparbuch"
+      ],
+      "correctIndex": 0,
+      "explanation": "Buying power stays flat when interest matches inflation. Below that, safe money still loses value, just slowly."
+    }
+  ],
+  "variants": {
+    "level:beginner": {
+      "s1": { "goal": { "hint": "Leave inflation at 3% and move the interest up to 3%." } }
+    },
+    "lang:plain": {
+      "c1": {
+        "messages": [
+          { "from": "Jonas", "text": "Is our €18k still in the savings account?" },
+          { "from": "Lena", "me": true, "text": "Yes. It's safe, it can't go down" },
+          { "from": "Oma", "text": "A savings book was enough for us" },
+          { "from": "Jonas", "text": "But food costs a lot more than last year" }
+        ]
+      },
+      "t1": {
+        "body": "Lena and Jonas keep **€18,000** in a savings account. Their daughter Mia is two. The number on the account never goes down. But prices go up every year. This is called [[inflation]]."
+      },
+      "p1": {
+        "prompt": "Prices go up 3% every year. The bank pays 0.5% every year. In 10 years, how much less can Lena buy with her €18,000? Guess.",
+        "reveal": "The account grows to about €18,900. But prices grow faster. It buys only what €14,000 buys today."
+      },
+      "s1": {
+        "prompt": "The chart shows what the money can buy. Move the interest. Find the interest where the money keeps its value.",
+        "output": { "label": "What the money can buy" },
+        "note": "Simple example. Rates stay the same every year."
+      },
+      "t2": {
+        "title": "The number is not the whole story",
+        "body": "The number on the account can go up while it buys less. What matters is interest minus price rises. This is the [[real-return]]. 0.5% minus 3% is about −2.5% every year."
+      },
+      "q1": {
+        "prompt": "The bank pays 1%. Prices go up 3%. What happens?",
+        "options": [
+          "The number goes up, but it buys about 2% less each year",
+          "Nothing, the number never goes down",
+          "The number goes down 3% each year"
+        ],
+        "explanation": "The number goes up 1%. Prices go up 3%. So the money buys about 2% less each year."
+      },
+      "q2": {
+        "prompt": "When does money in a savings account keep its value?",
+        "options": [
+          "When the interest is as high as the price rises, or higher",
+          "Always, because the number can't go down",
+          "Only in a savings book"
+        ],
+        "explanation": "If interest is lower than price rises, safe money still loses value. Slowly, but every year."
+      }
+    }
+  }
+}

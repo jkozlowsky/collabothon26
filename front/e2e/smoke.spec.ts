@@ -11,7 +11,7 @@ test.afterAll(async ({ request }) => {
   await resetOnboarding(request);
 });
 
-test('app opens on the bank; Learn runs onboarding and the consent card, then Map; Bank comes back; a transfer lowers the balance', async ({ page, request }) => {
+test('app opens on the bank; Learn runs onboarding and the consent card, then the globe and a story; Bank comes back; a transfer lowers the balance', async ({ page, request }) => {
   await skipQuickCheck(page);
   await page.goto('/');
   await expect(page.getByTestId('owner-name')).toHaveText('Alex Krause');
@@ -29,7 +29,12 @@ test('app opens on the bank; Learn runs onboarding and the consent card, then Ma
   await expect(page.getByTestId('screen-learn')).toBeVisible({ timeout: 15_000 });
   const categorization = await (await request.get('/api/users/demo-user/categorization')).json();
   expect(categorization).toMatchObject({ consent: true, bankData: true, lifeStage: null });
+  await expect(page.getByTestId('globe')).toBeVisible();
+
+  // The globe opens on the current story with its callout; Continue leads to the story's lessons.
+  await page.getByTestId('pin-callout-open').click();
   await expect(page.getByTestId(/^lesson-/).first()).toBeVisible();
+  await page.goBack();
 
   // Back to the bank, then send Anna € 25.
   await page.getByTestId('nav-bank').click();

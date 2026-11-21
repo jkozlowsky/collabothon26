@@ -12,7 +12,7 @@ type AccountState = {
   streakBump: { from: number; to: number } | null;
   clearStreakBump: () => void;
   setAvatar: (avatar: AvatarId) => void;
-  recordCompletion: (lessonId: number) => void;
+  refreshStats: () => void;
   /** Demo helper: back to the seeded progress (4-day streak ending yesterday). */
   resetProgress: () => void;
 };
@@ -58,22 +58,16 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const recordCompletion = useCallback(
-    (lessonId: number) => {
-      const before = stats?.currentStreak ?? 0;
-      api<unknown>(`${userPath}/completions`, {
-        method: 'POST',
-        body: JSON.stringify({ lessonId, completedOn: localDate() }),
+  const refreshStats = useCallback(() => {
+    api<unknown>(`${userPath}/stats?today=${localDate()}`)
+      .then((updated) => {
+        if (!isStats(updated)) return;
+        const before = stats?.currentStreak ?? 0;
+        setStats(updated);
+        if (updated.currentStreak > before) setStreakBump({ from: before, to: updated.currentStreak });
       })
-        .then((s) => {
-          if (!isStats(s)) return;
-          setStats(s);
-          if (s.currentStreak > before) setStreakBump({ from: before, to: s.currentStreak });
-        })
-        .catch((e: unknown) => console.warn('Could not save lesson completion', e));
-    },
-    [stats],
-  );
+      .catch((e: unknown) => console.warn('Could not refresh stats', e));
+  }, [stats]);
 
   const resetProgress = useCallback(() => {
     setStreakBump(null);
@@ -85,8 +79,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const clearStreakBump = useCallback(() => setStreakBump(null), []);
 
   const value = useMemo(
-    () => ({ account, stats, streakBump, clearStreakBump, setAvatar, recordCompletion, resetProgress }),
-    [account, stats, streakBump, clearStreakBump, setAvatar, recordCompletion, resetProgress],
+    () => ({ account, stats, streakBump, clearStreakBump, setAvatar, refreshStats, resetProgress }),
+    [account, stats, streakBump, clearStreakBump, setAvatar, refreshStats, resetProgress],
   );
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;

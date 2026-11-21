@@ -29,7 +29,7 @@ v2 adversarial review (21.11, `.planning/reviews/F1b-v2-spec-adversarial-review.
 - D7 An area is Solid only with ≥ 2 answers; copy "You're ready for the next lesson".
 - D8 `short-term-fall` asks about a fall next month against 20 years of compounding (lesson 2); with `within-1y` our code serves it first for investing on both paths.
 - D9 Latency budget: Jev step p50 < 1.5 s with the key; the smoke records each step's time; a step over budget takes `next`/`done` from the rule and keeps Jev's mastery. The 3 s timeout stays the hard limit.
-- D10 No rate limit: no auth in the hackathon, `MAX_QUESTIONS` caps a test at 6 steps. A deliberate omission.
+- D10 No rate limit and no cap on Jev calls: the step endpoint is stateless, so every request with a non-empty history and Jev on is one Jev call, whatever `MAX_QUESTIONS` says about one test. No auth in the hackathon; acceptable only without a public deployment. A deliberate omission.
 - Review fixes 1–13 accepted; fix 2 changes Q22's order: bank content first.
 
 v2 (21.11, grilling rounds 1–3):
@@ -132,15 +132,16 @@ GET  /api/users/{userId}/categorization            → Categorization | 404     
     {"questionId": "inflation-real-value", "optionIndex": 1, "confidence": "guessing"},
     {"questionId": "compound-two-years", "optionIndex": null, "confidence": null}
   ],
-  "useRules": false
+  "useRules": false,
+  "stepFellBack": false
 }
 ```
 ```json
-{"mastery": {"saving": 0.6, "investing": 0.25}, "nextQuestionId": "time-in-market", "done": false, "useRules": false}
+{"mastery": {"saving": 0.6, "investing": 0.25}, "nextQuestionId": "time-in-market", "done": false, "useRules": false, "stepFellBack": false}
 ```
 - `optionIndex: null` with `confidence: null` = "Not sure". `history: []` returns the first question, picked by the rule (no Jev call: there is nothing to judge yet).
 - `mastery` has a key for every area that has bank questions; `null` = no answer yet. `done: true` comes with `nextQuestionId: null`.
-- `useRules` in the response is `true` when no key is configured (`JevProperties.callsJev()` false) or when this step's Jev call failed; the front sends the last response's value with the next step. With `useRules: true` the backend makes no Jev call. So every step sent with `useRules: false` and a non-empty history is one Jev call; the front counts them into `stepCallsMade`.
+- `useRules` means no Jev at all: the user's opt-out (D5) or no configured key (`JevProperties.callsJev()` false); the response returns `true` in either case. `stepFellBack` (default `false`) turns `true` in the response once a step's Jev call failed; it switches only the later steps to the rule, and the final Jev call still runs (Q12). The front sends the last response's `useRules` and `stepFellBack` with the next step, and `useRules` with the final POST. With either one `true` the step makes no Jev call. So every step sent with both `false` and a non-empty history is one Jev call; the front counts them on send into `stepCallsMade`.
 
 Final `POST /api/users/{userId}/categorization`:
 ```json
@@ -157,8 +158,9 @@ Final `POST /api/users/{userId}/categorization`:
   "stepCallsMade": 2
 }
 ```
-- `profile`, `history`, `mastery`, `useRules` and `stepCallsMade` are absent when the Quick check was skipped (empty or failed `GET`, or a failed first step); then F1 applies unchanged.
-- `mastery` is the last step response's `mastery` and is stored as is (D4). `useRules: true` → no final Jev call, the categorisation runs on rules.
+- `profile`, `history`, `mastery` and `stepCallsMade` are absent when the Quick check was skipped (empty or failed `GET`, or a failed first step); then F1 applies unchanged, and after the opt-out (D5) the front still sends `useRules: true`, which the backend honours without `profile`. The Quick check ran only with `profile` and a non-empty `history`; `profile` with an empty history is the skip path. Without `profile`, `history` and `mastery` are ignored and not validated.
+- `mastery` is the last step response's `mastery` (D4), stored with a key for every bank area; an answered area whose value is missing or null takes the rule mean. `useRules: true` → no final Jev call, the categorisation runs on rules; a step fallback (`stepFellBack`) does not stop the final call.
+- `stepCallsMade` is counted by the front on send and kept across D3 restarts; the backend clamps it to 0..`MAX_QUESTIONS`.
 - With life stage skipped in onboarding, the categorisation reads `lifeStage` from `ageBand` (D1: `18-25` → student, `60+` → pre-retirement, else null); the onboarding row is not changed.
 
 Value sets: `ageBand` `18-25` | `26-40` | `41-59` | `60+`; `savingsCover` = F1 `cashBufferMonths` values `<1` | `1-3` | `3-6` | `6+`; `horizon` `within-1y` | `1-5y` | `5y+` | `not-sure`; `confidence` `guessing` | `fairly-sure` | `sure`. Every profile field is nullable.
@@ -173,8 +175,8 @@ confidenceGaps: [{area, direction: "under" | "over", because}]   // ≤ 2, from 
 startLesson: {lessonId, title, area} | null              // null → the summary hides the first-lesson card
 readyForNext: boolean                                    // every area Solid (Q15, D7)
 pathLessonIds: number[]                                  // startLesson first, then the other candidates (Reference)
-startHere: {lessonId, title, area} | null                // not stored (Q18, Reference)
-sharedWithModel: {facts | null, answers, profile | null, answerCount, stepCallsMade} | null   // categories sent to Jev in steps or the final call; null = nothing was sent
+startHere: {lessonId, title, area} | null                // not stored: the key is absent from the row (Q18, Reference)
+sharedWithModel: {facts | null, answers | null, profile | null, answerCount, stepCallsMade} | null   // categories sent to Jev in steps or the final call; answers (onboarding) only when the final call was sent; null = nothing was sent
 v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / false.
 ```
 - The per-answer history is not stored (Q20: "We keep the result and the ranges"); the request history is used for the call and dropped.
@@ -182,7 +184,7 @@ v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / f
 - The summary decides the D2 line from the stored row alone: `source == "fallback"` and `sharedWithModel != null`.
 
 ### Jev step call
-`POST {jev.base-url}/v1/systemone` as in F1. Read timeout 3 s (`JevConsts.STEP_READ_TIMEOUT`, a second client built from the injected `RestClient.Builder`); the final call keeps the shared 7 s. `state`:
+`POST {jev.base-url}/v1/systemone` as in F1. 3 s limit (`JevConsts.STEP_READ_TIMEOUT`): the step waits 3 s on a `Future` over the shared client and then cancels it, because Boot binds `MockRestServiceServer` to one `RestClient.Builder` and a second client would reach the real API in tests. The abandoned HTTP read may run on to the shared 7 s read timeout. The final call keeps the shared 7 s. `state`:
 ```json
 {
   "profile": {"ageBand": null, "savingsCover": null, "horizon": "within-1y"},
@@ -208,14 +210,14 @@ v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / f
 }
 ```
 Step outcome, in this order:
-1. A response that fails F1's validation (missing question, label outside its set, `next` not among the unasked ids, probability outside [0, 1]), a timeout or any error → this step runs on the rule and returns `useRules: true`.
-2. `mastery` = the `mastery_<area>` probabilities.
-3. A response later than `JevConsts.STEP_BUDGET` (1.5 s, D9) → `next` and `done` from the rule; `useRules` stays `false`.
+1. A response that fails F1's validation (missing question, label outside its set, `next` not among the unasked ids, probability outside [0, 1]), a timeout or any error → this step runs on the rule and returns `stepFellBack: true`. After a fallback the rule recomputes mastery from all answers, so the dock's values can jump from Jev's to the rule's.
+2. `mastery` = the `mastery_<area>` probabilities; an answered area without a `mastery_<area>` question takes the rule mean.
+3. A response later than `JevConsts.STEP_BUDGET` (1.5 s, D9) → `next` from the rule, `done` as in outcome 4 with Jev's `enough`; `stepFellBack` stays `false`.
 4. `done` when answered ≥ `MAX_QUESTIONS`, when no unasked question is left, or when answered ≥ `MIN_QUESTIONS` and `enough` ≥ `ENOUGH_THRESHOLD`. Otherwise `nextQuestionId` = `next`, or the single unasked id when `next` was not asked.
 5. With `horizon` `within-1y`, a next question in `investing` is replaced by `short-term-fall` while it is unasked (D8, enforced like min/max).
 
 ### Jev final call
-F1's request (role and `focus_*` verbatim from F1's `jev-questions` block) plus `state.profile`, `state.goals` and `state.answers` as in the step call, plus these questions (`gap_<area>` only for areas with at least one answer that carries a chip; `first_lesson` only with 2+ candidates, Q15). No `mastery_*` (D4). Same per-key comparison as the step block.
+F1's request (role and `focus_*` verbatim from F1's `jev-questions` block) plus `state.profile`, `state.goals` and `state.checkAnswers` (the step call's `answers`; F1's `state.answers` already holds the onboarding answers), plus these questions (`gap_<area>` only for areas with at least one answer that carries a chip; `first_lesson` only with 2+ candidates, Q15). No `mastery_*` (D4). Same per-key comparison as the step block.
 
 <!-- jev-final-questions: the backend test compares the Jev request with this block -->
 ```json
@@ -238,7 +240,7 @@ F1 validation applies to the whole response; any failure → the whole categoris
 - F1 rules: malformed JSON, missing `consent`, `userId` blank or over 64 chars, a fact outside its set, `facts` with `consent: false` → 400; no onboarding row → 404 "Finish onboarding first". Skipped onboarding is allowed as in F1.
 - `profile` value outside its set, or `savingsCover` with `consent: true` (the card asks it only without consent) → 400.
 - `history`: more than `MAX_QUESTIONS` entries, an unknown or repeated `questionId`, `optionIndex` outside the question's options, `confidence` null with a non-null `optionIndex` (or the reverse), `confidence` outside its set → 400.
-- Final POST: a `mastery` key that is not a bank area, a value outside [0, 1], or `stepCallsMade` outside 0..`MAX_QUESTIONS` → 400. F1's 5-minute reuse of a recent categorisation is skipped when `history` is non-empty.
+- Final POST with `profile`: a `mastery` key that is not a bank area or a value outside [0, 1] → 400; `stepCallsMade` outside 0..`MAX_QUESTIONS` is clamped. F1's 5-minute reuse of a recent categorisation is skipped when `profile` is sent or `useRules` is true.
 - No rate limit (D10).
 
 ## Reference
@@ -264,7 +266,7 @@ F1 validation applies to the whole response; any failure → the whole categoris
 - **Next**: (1) after a wrong or "Not sure" answer, an unasked `easy` question from the same area; (2) otherwise the first area in order with no answer; (3) otherwise the areas by mastery ascending (ties: area order), the first with an unasked question; none → done. Within an area: `easy` before `hard`, then `id`; `short-term-fall` first as in step outcome 5. No unasked question in the chosen area → the next rule down.
 - **Done**: answered ≥ `RULE_MAX_QUESTIONS`, or answered ≥ `MIN_QUESTIONS` and every area has an answer, or no unasked question left.
 - **Gaps (Q14)**, per area, from the chips ("Not sure" carries no chip and is ignored). Preconditions: `over` needs ≥ 1 wrong answer with `sure`; `under` needs ≥ 1 correct answer with a chip other than `sure` and no wrong `sure`. Rule: `over` when its precondition holds; else `under` when its precondition holds and mastery ≥ `JUST_STARTING_BELOW`; else none. Jev labels pass only when their precondition holds, else `aligned`; `aligned` = none. At most `MAX_GAP_CARDS`: `under` before `over`, then area order. The quoted chip: `under` the lowest chip in the area, `over` the highest. `because` is built after `startLesson`, since the `over` template depends on it.
-- **First lesson (Q15)**: candidates = lessons with bank rows in non-Solid areas (no answer counts as non-Solid), minus lessons the user completed before the test. A lesson's area is the area of its lowest-id bank question; lessons without bank rows are skipped. Jev and the rule pick from candidates in answered areas when any exist, else from unanswered ones. One candidate → it, without a Jev question. Rule: the weakest area (lowest mastery, ties: area order); in it, the answered question with the lowest score (ties: earlier in the history) gives the lesson; an unanswered area gives its lowest `lessonId`. No candidates (every area Solid) → the uncompleted lesson with bank rows and the highest `position`, `readyForNext: true`; none left → `startLesson: null`.
+- **First lesson (Q15)**: candidates = lessons with bank rows in non-Solid areas (no answer counts as non-Solid), minus lessons the user completed before the test. A lesson's area is the area of its lowest-id bank question; lessons without bank rows are skipped. Jev and the rule pick from candidates in answered areas when any exist, else from unanswered ones. One candidate → it, without a Jev question. Rule: the weakest area (lowest mastery, ties: area order); in it, the answered question with the lowest score (ties: earlier in the history) gives the lesson; an unanswered area gives its lowest `lessonId`. No candidates → the uncompleted lesson with bank rows and the highest `position`; `readyForNext: true` only when every area is Solid; none left → `startLesson: null`. Without the Quick check the area order is F1's `focusAreas` first, then the other bank areas in area order, so the map's why line reads "{Area} is not checked yet".
 - **pathLessonIds**: `startLesson` first, then the other candidates: answered areas by mastery ascending, then unanswered areas, then lesson id; with `readyForNext` just `[startLesson.lessonId]`; `[]` when `startLesson` is null.
 - **F1 fallback inputs**: without bank data, `savingsCover` stands in for `cashBufferMonths` in F1's focus rule. F1's facts gap table applies only when the Quick check did not run.
 
@@ -286,7 +288,7 @@ Never a percentage or number on screen.
 
 ### Front flow and errors
 - The first step (`history: []`) fails → Quick check skipped: the F1 path, final POST without `profile`/`history`.
-- A later step fails → one retry with `useRules: true`; a second failure ends the test and sends the final POST with the history so far.
+- A later step fails → one retry with `stepFellBack: true`; a second failure ends the test and sends the final POST with the history so far.
 - The final POST fails → F1's "Your path stopped halfway" with Retry and "Skip for now".
 - While a step is in flight, tiles and chips are disabled. Each step has its own `AbortController` (client timeout 5 s), aborted on Back and unmount; a response is applied only when the history it was sent with still has the current length.
 - Back (D3): returns to the "What we know" card; "Start the quick check" restarts with an empty knowledge history and the kept profile answers. Turning account access on drops `savingsCover`; turning it off asks it.
@@ -335,6 +337,7 @@ Simplest working solution, no code or tests for later. Each task loads `ponytail
 - A seed or any other way to fix the question order.
 - A language-level output or language variants from the Quick check.
 - A right/wrong verdict per question, a percentage or a score shown as a grade.
+- A claim that the answer key is secret: `GET` leaves it out, but the step endpoint's rule mastery tells any caller right from wrong (no auth, D10). A known limit, not a security property.
 
 ## Review triage
 v1 "To confirm" and both v1 triage rounds: `.planning/reviews/F1b-v1-triage.md` (coordinator's checkout). v2 spec review: `.planning/reviews/F1b-v2-spec-adversarial-review.md` (D1–D10 and fixes 1–13 applied above).

@@ -208,7 +208,8 @@ class CategorizationRulesTests {
 	void fallbackFocusKeepsTheFixedOrder() {
 		OnboardingAnswersDto goals = new OnboardingAnswersDto(null, List.of("insurance", "budget"), "not-saving",
 				false);
-		assertEquals(List.of(FocusArea.DEBT, FocusArea.SAVING, FocusArea.RISK), fallbackFocus(goals, LENA, Role.NOVICE));
+		assertEquals(List.of(FocusArea.DEBT, FocusArea.SAVING, FocusArea.RISK),
+				fallbackFocus(goals, LENA, Role.NOVICE));
 		OnboardingAnswersDto laterLife = new OnboardingAnswersDto("later-life", List.of("stocks-etfs"), "planning",
 				false);
 		assertEquals(List.of(FocusArea.DEBT, FocusArea.RETIREMENT, FocusArea.INVESTING),
@@ -269,8 +270,9 @@ class CategorizationRulesTests {
 
 	@Test
 	void focusBecauseListsOnlySupportingLines() {
-		assertEquals(List.of("Your current account is below zero.", "Your accounts cover less than a month of spending.",
-				"You spent more than you earned this month.", NEUTRAL_LINE),
+		assertEquals(List.of("Your current account is below zero.",
+				"Your accounts cover less than a month of spending.", "You spent more than you earned this month.",
+				NEUTRAL_LINE),
 				focusBecause(List.of(FocusArea.DEBT, FocusArea.SAVING, FocusArea.RISK), SKIPPED, LENA));
 		OnboardingAnswersDto laterLife = new OnboardingAnswersDto("later-life", List.of("stocks-etfs"), null, false);
 		assertEquals(List.of("You said retirement is close or already here.",

@@ -148,7 +148,8 @@ public class JevClient {
 			question.put("instructions", CHECK_INSTRUCTIONS.formatted(check.questionId()) + " " + fence);
 			ObjectNode criteria = question.putObject("criteria");
 			criteria.put(WireNames.of(CheckResult.UNDERSTANDS), check.criterion());
-			criteria.put(WireNames.of(CheckResult.PARTLY), "Shows part of this, but misses or mixes up something important.");
+			criteria.put(WireNames.of(CheckResult.PARTLY),
+					"Shows part of this, but misses or mixes up something important.");
 			criteria.put(WireNames.of(CheckResult.NOT_YET), "Does not show this, or the answer is unrelated.");
 		}
 		return all;

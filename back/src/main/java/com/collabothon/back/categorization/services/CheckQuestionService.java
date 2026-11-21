@@ -67,7 +67,8 @@ public class CheckQuestionService {
 			throw new BadRequestException("Answer each known check question once");
 		}
 		boolean balanced = Arrays.stream(CheckCategory.values())
-			.allMatch(category -> picked.stream().filter(q -> q.category() == category).count() == CategorizationConsts.CHECKS_PER_CATEGORY);
+			.allMatch(category -> picked.stream().filter(q -> q.category() == category).count()
+					== CategorizationConsts.CHECKS_PER_CATEGORY);
 		if (!balanced) {
 			throw new BadRequestException("Answer " + CategorizationConsts.CHECKS_PER_CATEGORY
 					+ " finance and " + CategorizationConsts.CHECKS_PER_CATEGORY + " investing questions");

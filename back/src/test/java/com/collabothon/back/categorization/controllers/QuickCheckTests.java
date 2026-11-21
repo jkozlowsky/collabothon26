@@ -93,6 +93,9 @@ class QuickCheckTests {
 			 "focus_risk": {"type": "noul", "noul": 0.6},
 			 "focus_retirement": {"type": "noul", "noul": 0.1}""";
 
+	private static final String RUNWAY_PROMPT = "Imagine you keep €5,000 in savings and spend €1,500 a month."
+			+ " If your income stopped tomorrow, how long would your money last, and how did you work it out?";
+
 	private static final String RUNWAY_CRITERION = "Relates savings to monthly spending (roughly savings ÷ spending)"
 			+ " and sees the money as a safety net for emergencies.";
 
@@ -217,9 +220,7 @@ class QuickCheckTests {
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(jsonPath("$.state.checks.length()").value(3))
 			.andExpect(jsonPath("$.state.checks[0].questionId").value(RUNWAY))
-			.andExpect(jsonPath("$.state.checks[0].genericPrompt").value("Imagine you keep €5,000 in savings and spend"
-					+ " €1,500 a month. If your income stopped tomorrow, how long would your money last, and how did"
-					+ " you work it out?"))
+			.andExpect(jsonPath("$.state.checks[0].genericPrompt").value(RUNWAY_PROMPT))
 			.andExpect(jsonPath("$.state.checks[0].criterion").value(RUNWAY_CRITERION))
 			.andExpect(jsonPath("$.state.checks[1].questionId").value(TIME))
 			.andExpect(jsonPath("$.questions.check_savings_runway.type").value("choice"))
@@ -424,7 +425,8 @@ class QuickCheckTests {
 				Arguments.of("empty text", List.of(RUNWAY, s, LOAN, "", TIME, s, SPREAD, s)),
 				Arguments.of("text over 280 UTF-16 units", List.of(RUNWAY, s, LOAN, tooLong, TIME, s, SPREAD, s)),
 				Arguments.of("blank question id", List.of(RUNWAY, s, " ", s, TIME, s, SPREAD, s)),
-				Arguments.of("question id over 64 characters", List.of(RUNWAY, s, s + "x".repeat(60), s, TIME, s, SPREAD, s)));
+				Arguments.of("question id over 64 characters",
+						List.of(RUNWAY, s, s + "x".repeat(60), s, TIME, s, SPREAD, s)));
 	}
 
 	@ParameterizedTest(name = "{0}")
@@ -556,7 +558,8 @@ class QuickCheckTests {
 		jev.expect(requestTo(JEV_URL))
 			.andRespond(jevReplies(RUNWAY, "understands", LOAN, "partly", TIME, "partly", SPREAD, "partly"));
 
-		categorize(bodyWithConsent(false, RUNWAY, "an answer", LOAN, "a", TIME, "b", SPREAD, "c")).andExpect(status().isOk())
+		categorize(bodyWithConsent(false, RUNWAY, "an answer", LOAN, "a", TIME, "b", SPREAD, "c"))
+			.andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.jsonPath("$.consent").value(false))
 			.andExpect(MockMvcResultMatchers.jsonPath("$.bankData").value(false))
 			.andExpect(MockMvcResultMatchers.jsonPath("$.confidenceGaps.length()").value(1))

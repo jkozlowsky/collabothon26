@@ -221,7 +221,6 @@ mark.acct { background: var(--primary-soft); color: var(--primary); border-radiu
 .i.up { transform: rotate(90deg); }
 .ob .body > * { flex-shrink: 0; }
 .conf-slot .conf { margin-top: 8px; }
-
 /* C: dock + sheet, two markers */
 .foot.dockwrap { padding: 4px 20px 30px; }
 .dock { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 6px rgba(0, 31, 41, .08); }
@@ -263,6 +262,49 @@ mark.acct { background: var(--primary-soft); color: var(--primary); border-radiu
 .optwrap .conf-slot:not(:empty) { padding: 0 12px 12px; }
 .optwrap .chip { background: var(--surface); }
 .sumdual { display: flex; flex-direction: column; gap: 12px; }
+/* v2.1: toggles, "what we know" card, Learn map */
+.toggles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; max-width: 390px; }
+.tog { display: flex; align-items: center; gap: 6px; font: 600 12px/16px Inter; }
+.tog button { height: 32px; padding: 0 12px; border-radius: 999px; background: var(--surface); color: var(--primary); box-shadow: 0 0 0 1px var(--border-strong); font: 600 12px/16px Inter; }
+.tog button[aria-pressed="true"] { background: var(--primary); color: var(--on-brand); box-shadow: none; }
+.tog button[aria-pressed="true"]::before { content: "✓ "; }
+.klist { list-style: none; padding: 6px 14px; }
+.krow { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; }
+.krow + .krow { border-top: 1px solid var(--border); }
+.krow .tile { margin-top: 2px; }
+.kt { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.srctag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font: 600 11px/14px Inter; }
+.srctag .i { width: 12px; height: 12px; }
+.klock { display: flex; gap: 8px; align-items: flex-start; }
+.klock .i { margin-top: 1px; color: var(--primary); }
+/* Learn map */
+.body.lm { position: relative; padding-bottom: 16px; }
+.focuslist { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+.focuslist li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px 5px 6px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font: 600 12px/16px Inter; }
+.focuslist b, .fpill { font: 700 11px/14px Inter; }
+.focuslist b { width: 20px; height: 20px; border-radius: 10px; display: grid; place-items: center; background: var(--primary); color: var(--on-brand); }
+.fpill { color: var(--primary); background: var(--primary-soft); padding: 1px 7px; border-radius: 999px; }
+.path { position: relative; list-style: none; display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
+.path::before { content: ""; position: absolute; left: 23px; top: 24px; bottom: 24px; border-left: 2px dashed var(--border-strong); }
+.lrow { position: relative; display: flex; gap: 12px; align-items: center; }
+.ncol { width: 48px; flex: none; display: grid; place-items: center; }
+.lnode { width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--border-strong); color: var(--primary); }
+.lnode .i { width: 18px; height: 18px; }
+.lrow.focus .lnode { border-color: var(--primary); background: var(--primary-soft); }
+.lrow.start .lnode { width: 48px; height: 48px; border-radius: 24px; background: var(--accent); border: 2px solid var(--primary); color: var(--on-accent); }
+.lwrap { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.lcard { width: 100%; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; min-height: 56px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); }
+.lrow.focus .lcard { border: 1.5px solid var(--primary); background: var(--primary-soft); }
+.lrow.start .lcard { border: 2px solid var(--primary); background: var(--accent-soft); }
+.startpin { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px 3px 8px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font: 700 12px/16px Inter; border: 2px solid var(--primary); }
+.startpin .i { width: 12px; height: 12px; fill: currentColor; }
+.whyhere { padding-top: 6px; margin-top: 2px; border-top: 1px solid var(--border-strong); }
+.tabs { flex: none; display: flex; padding: 8px 12px 30px; background: var(--surface); border-top: 1px solid var(--border); }
+.tab { flex: 1; min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 12px; color: var(--muted); font: 500 11px/14px Inter; text-align: center; }
+.tab.on { color: var(--primary); font-weight: 600; background: var(--accent-soft); box-shadow: inset 0 -3px 0 var(--primary); }
+.tab .i { width: 22px; height: 22px; }
+.toast { position: absolute; left: 20px; right: 20px; bottom: 100px; padding: 12px 14px; border-radius: 12px; background: var(--primary); color: var(--on-brand); font: 600 13px/18px Inter; opacity: 0; transform: translateY(8px); transition: opacity 200ms, transform 200ms var(--ease-out); pointer-events: none; z-index: 7; }
+.toast.on { opacity: 1; transform: none; }
 
 </style>
 </head>
@@ -301,11 +343,15 @@ mark.acct { background: var(--primary-soft); color: var(--primary); border-radiu
 <main class="board">
 <header class="dir-head">
   <h1>C Two markers on a dock</h1>
-  <p>Quick check v2: no typing. An adaptive test with 3 to 6 single-choice questions, one confidence step per answer, and a live map of five areas. The map is a dock of five thermometer bars at the foot of the screen; tap it to open a sheet with labelled rows. The confidence chips grow inside the tapped tile. When you pick a chip, a hollow diamond for how sure you felt lands on the area first, then the filled bar for what your answers show rises. The gap between the two is the summary's story, built live. Trade-off: it sets up the confidence gap better than A or B, but it asks the user to read two markers, so the legend sits one tap away.</p>
-  <p class="motion"><b>Reduced motion:</b> Without reduced motion: the diamond moves in 350 ms, the bar rises over 700 ms, the sheet slides in 320 ms. With it: both jump and the sheet appears in place.</p>
+  <p>Quick check v2, direction C: no typing, an adaptive test where each answer is followed by a confidence step. The map is a dock of five bars at the foot (tap it for details). A hollow diamond marks how sure you felt and the filled bar what your answers show, so the confidence gap forms live. Profile questions (age band, savings cover, time frame) use the same tiles but skip the confidence step and the map. Flow: consent, "What we know about you", questions, summary, Learn map with a "Start here" lesson. Use the toggles to see both account paths and both life-stage paths.</p>
+  <p class="motion"><b>Reduced motion:</b> without it, the diamond moves in 350 ms, the bar rises over 700 ms, the sheet slides in 320 ms and the toast fades in 200 ms. With it, all of these appear in place.</p>
 </header>
 <div class="stage">
-  <div class="jump"><button data-jump="consent">1 Consent</button><button data-jump="question">2 Questions</button><button data-jump="summary">3 Summary (demo answers)</button></div>
+  <div class="toggles">
+    <div class="tog" role="group" aria-label="Account access"><span>Account access</span><button data-tog="acct" data-v="1" aria-pressed="true">yes</button><button data-tog="acct" data-v="0" aria-pressed="false">no</button></div>
+    <div class="tog" role="group" aria-label="Life stage skipped"><span>Life stage skipped</span><button data-tog="skip" data-v="1" aria-pressed="false">yes</button><button data-tog="skip" data-v="0" aria-pressed="true">no</button></div>
+  </div>
+  <div class="jump"><button data-jump="consent">1 Consent</button><button data-jump="know">2 What we know</button><button data-jump="question">3 Questions</button><button data-jump="summary">4 Summary</button><button data-jump="lesson">5 Learn map</button></div>
   <div class="phone ob" id="phone"></div>
 </div>
 </main>
@@ -325,8 +371,8 @@ const dual = () => `<div class="sumdual">${AREAS.map((a) => `<div class="drow" d
 const toggle = (open) => { const p = $('#phone'); p.classList.toggle('open', open); $('#dockbtn')?.setAttribute('aria-expanded', open); };
 const V = {
   foot: dock,
-  afterAnswer() { syncMaps(); setTimeout(think, 1100); },
-  thinkEnter(nxt, done) { if (!done) $(`.dcol[data-area="${nxt.area}"]`).classList.add('next'); },
+  afterAnswer() { syncMaps(); setTimeout(think, st.answered.at(-1).profile ? 500 : 1100); },
+  thinkEnter(nxt, done) { if (!done && nxt.area) $(`.dcol[data-area="${nxt.area}"]`).classList.add('next'); },
   summaryMap: () => `<div class="rise"><p class="t-over" style="margin-bottom:8px">Your map</p>${dual()}</div>`,
 };
 document.addEventListener('click', (e) => {
@@ -367,7 +413,29 @@ const Q = {
     text: 'The market falls 20% next month. Your savings plan puts [[€100|€100]] into a fund every month. What does the fall mean for the plan?',
     opts: ['Stop the plan until the market recovers', 'The next €100 gets more units at the lower price, and one fall says little about the long term', 'The plan locks in the loss, so the earlier money is gone', 'The bank pays back the difference'] },
 };
+const PROFILE = { profile: true, area: null, ok: -1 };
+Object.assign(Q, {
+  stage: { ...PROFILE, why: 'So examples fit your stage of life', text: 'Which age band are you in?', opts: ['18–25', '26–40', '41–60', '60+'] },
+  cover: { ...PROFILE, why: 'So examples fit your savings', text: 'How many months of spending could your savings cover?', opts: ['Less than 1 month', '1–3 months', '3–6 months', 'More than 6 months'] },
+  horizon: { ...PROFILE, why: 'So examples match your time frame', text: 'When might you need the money you save or invest?', opts: ['Within a year', '1–5 years', '5+ years', 'Not sure'] },
+});
+const PATH = [
+  { a: 'saving', t: 'Inflation and your savings', m: 4 },
+  { a: 'borrowing', t: 'Reading the APR', m: 4 },
+  { a: 'borrowing', t: 'Card minimums and interest', m: 3 },
+  { a: 'investing', t: 'Spreading your money', m: 4 },
+  { a: 'risk', t: 'Falling markets and long horizons', m: 5 },
+  { a: 'retirement', t: 'Time and compounding', m: 4 },
+];
 const st = {};
+// Profile questions are asked only where the data is missing: age band if life stage was skipped, savings cover without account access
+const buildQueue = () => ['infl', ...(st.skip ? ['stage'] : []), 'apr', ...(st.acct ? [] : ['cover']), 'div', 'horizon', 'risk'];
+const maxQ = () => 5 + st.queue.filter((id) => Q[id].profile).length;
+const focusAreas = () => {
+  const a = asked().sort((x, y) => (st.p[x.id] - st.p[y.id]) || (AI[x.id].i - AI[y.id].i));
+  const weak = a.filter((x) => st.p[x.id] < .7);
+  return (weak.length ? weak : a.slice(0, 1)).slice(0, 3);
+};
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const ico = (id, c = '') => `<svg class="i ${c}" aria-hidden="true"><use href="#${id}"/></svg>`;
@@ -380,15 +448,17 @@ const nextQ = () => Q[st.queue[st.answered.length]];
 const isDone = () => st.answered.length >= st.queue.length;
 
 function reset() {
-  Object.assign(st, { acct: true, queue: ['infl', 'apr', 'div', 'risk'], answered: [], p: {}, conf: {}, shown: {}, sel: -1, busy: false, last: null });
+  Object.assign(st, { acct: st.acct ?? true, skip: st.skip ?? false, answered: [], p: {}, conf: {}, shown: {}, profile: {}, sel: -1, busy: false, last: null });
+  st.queue = buildQueue();
 }
 function answer(id, i, conf) {
+  if (Q[id].profile) { st.profile[id] = i; st.answered.push({ id, i, profile: true }); st.last = null; return; }
   const q = Q[id], c = CONF[conf], a = q.area, correct = i >= 0 && i === q.ok;
   const d = i < 0 ? -.1 : correct ? .3 * c.w : -.25 * c.w;
   st.p[a] = Math.min(.95, Math.max(.05, (st.p[a] ?? .5) + d));
   (st.conf[a] ||= []).push(c.v);
   st.answered.push({ id, i, conf, correct });
-  if (id === 'apr' && !correct) st.queue.splice(2, 0, 'card');
+  if (id === 'apr' && !correct) st.queue.splice(st.queue.indexOf('apr') + 1, 0, 'card');
   st.last = a;
 }
 
@@ -397,7 +467,7 @@ function setScreen(html) {
   phone.classList.remove('open');
   phone.innerHTML = `<div class="status"><span>9:41</span><span class="batt"></span></div>${html}<span class="home-ind"></span>`;
 }
-function go(s) { st.screen = s; ({ consent, question: renderQuestion, summary, lesson })[s](); }
+function go(s) { st.screen = s; ({ consent, know, question: renderQuestion, summary, lesson: learnMap })[s](); }
 
 function consent() {
   setScreen(`<div class="body screen-in">
@@ -411,17 +481,18 @@ function consent() {
 }
 
 const qHead = (thinking) => {
-  const n = st.answered.length;
-  const segs = Array.from({ length: 6 }, (_, i) => `<i class="seg ${i < n ? 'done' : !thinking && i === n ? 'cur' : ''}"></i>`).join('');
-  const label = thinking ? `${n} of up to 6 done` : `Question ${n + 1} of up to 6`;
-  return `<div class="qrow"><span class="t-strong">${label}</span><span class="t-label">No wrong answers</span></div>
+  const n = st.answered.length, max = maxQ();
+  const segs = Array.from({ length: max }, (_, i) => `<i class="seg ${i < n ? 'done' : !thinking && i === n ? 'cur' : ''}"></i>`).join('');
+  const label = thinking ? `${n} of up to ${max} done` : `Question ${n + 1} of up to ${max}`;
+  const side = !thinking && nextQ().profile ? 'Not scored' : 'No wrong answers';
+  return `<div class="qrow"><span class="t-strong">${label}</span><span class="t-label">${side}</span></div>
     <div class="segs" role="img" aria-label="${label}. The check may end earlier.">${segs}</div>`;
 };
 const wrap = (i, t) => `<div class="optwrap ${i < 0 ? 'ns' : ''}" data-i="${i}"><button class="opt press" role="radio" aria-checked="false" data-i="${i}" data-testid="opt-${i}"><span class="r">${ico('check')}</span><span class="txt">${t}</span></button><div class="conf-slot"></div></div>`;
 const qBody = (q) => `<h2 class="t-section" id="qp">${fmt(q.text)}</h2>
-  <p class="why">${ico('search')}<span><span class="sr">Why this question: </span>${q.why}</span></p>
-  <div class="opts" role="radiogroup" aria-labelledby="qp">${q.opts.map((t, i) => wrap(i, t)).join('')}${wrap(-1, 'Not sure')}</div>
-  <p class="t-label src">${st.acct ? 'Your numbers, from your account on this phone' : 'Example numbers'}</p>`;
+  <p class="why">${ico(q.profile ? 'user' : 'search')}<span><span class="sr">Why this question: </span>${q.why}</span></p>
+  <div class="opts" role="radiogroup" aria-labelledby="qp">${q.opts.map((t, i) => wrap(i, t)).join('')}${q.profile ? '' : wrap(-1, 'Not sure')}</div>
+  <p class="t-label src">${q.profile ? 'A fact about you, not a test. It stays on this phone.' : st.acct ? 'Your numbers, from your account on this phone' : 'Example numbers'}</p>`;
 const chipsHtml = () => `<div class="conf screen-in" role="group" aria-label="How sure are you?"><p class="t-strong">How sure are you?</p><div class="chips">${Object.entries(CONF).map(([k, c]) =>
   `<button class="chip press" data-conf="${k}" data-testid="conf-${k}"><span class="bars b${c.bars}" aria-hidden="true"><i></i><i></i><i></i></span>${c.label}</button>`).join('')}</div></div>`;
 
@@ -436,6 +507,7 @@ function select(i) {
   if (st.busy) return;
   st.sel = i;
   $$('.optwrap').forEach((w) => { const on = +w.dataset.i === i; w.classList.toggle('sel', on); w.querySelector('.opt').setAttribute('aria-checked', on); w.querySelector('.conf-slot').innerHTML = ''; });
+  if (nextQ().profile) { setTimeout(() => commit(i), 350); return; }
   if (i < 0) { setTimeout(() => commit(-1, 'guess'), 350); return; }
   (V.slot ? V.slot(i) : $(`.optwrap[data-i="${i}"] .conf-slot`)).innerHTML = chipsHtml();
 }
@@ -448,7 +520,7 @@ function commit(i, conf) {
 }
 const thinkHtml = (done, nxt) => `<div class="think screen-in" role="status">
   <p class="t-over">${done ? 'All set' : `Question ${st.answered.length + 1} of up to 6`}</p>
-  <h2 class="t-section">${done ? 'That is enough to place you' : `Choosing a question about ${AI[nxt.area].name}`}</h2>
+  <h2 class="t-section">${done ? 'That is enough to place you' : nxt.profile ? 'Choosing a question about you' : `Choosing a question about ${AI[nxt.area].name}`}</h2>
   <div class="skel" aria-hidden="true"><i style="width:94%"></i><i style="width:80%"></i><i style="width:60%"></i></div>
   <div class="skel tiles" aria-hidden="true"><i></i><i></i><i></i></div></div>`;
 // A and C keep the map on screen: swap only the question area for the thinking state
@@ -474,7 +546,7 @@ function summary() {
   const avg = ps.reduce((s, a) => s + st.p[a.id], 0) / (ps.length || 1);
   const role = avg < .45 ? 'starting' : avg < .7 ? 'building' : 'confident';
   const gaps = ps.map((a) => ({ a, g: gapOf(a.id) })).filter((x) => x.g).sort((x, y) => Math.abs(confAvg(y.a.id) - st.p[y.a.id]) - Math.abs(confAvg(x.a.id) - st.p[x.a.id])).slice(0, 2);
-  const first = ps.reduce((m, a) => (st.p[a.id] < st.p[m.id] ? a : m), ps[0]);
+  const first = focusAreas()[0];
   const lab = (a) => (confAvg(a) < .45 ? 'Guessing' : confAvg(a) < .75 ? 'Fairly sure' : 'Sure');
   const card = (x) => x.g < 0
     ? `<section class="gap-hero rise"><p class="t-over">${x.a.name}</p><h2 class="t-section">You know more than you think</h2><p class="t-body">On ${x.a.name} you said “${lab(x.a.id)}”, yet your answers show you already understand how it works.</p></section>`
@@ -483,37 +555,84 @@ function summary() {
     <p class="t-over" style="margin-top:4px">Your quick check</p>
     ${(gaps.length ? gaps.map(card) : [`<section class="gap-hero rise"><p class="t-over">Confidence</p><h2 class="t-section">How sure you felt matches your answers</h2><p class="t-body">On the areas we checked, your confidence and your answers line up.</p></section>`]).join('')}
     <h1 class="t-display" style="margin-top:6px">You're a ${role} learner</h1>
-    <p class="t-body">Based on ${st.answered.length} answers and how sure you felt about each.</p>
+    <p class="t-body">Based on ${st.answered.filter((x) => !x.profile).length} answers and how sure you felt about each.</p>
     <div class="lesson rise" data-testid="first-lesson"><span class="tile">${ico('play')}</span><div><p class="t-over" style="color:var(--primary)">Your first lesson · ${first.name}</p><p class="t-card">${first.lesson}</p><p class="t-label" style="color:var(--text)">4 min · ${st.acct ? 'built on your own numbers' : 'built on example numbers'}</p></div></div>
     ${V.summaryMap()}
   </div>
   <div class="foot"><button class="big press" data-go="lesson" data-testid="start-learning">Start learning</button><button class="big ghost press" data-go="restart">Retake the quick check</button></div>`);
   requestAnimationFrame(syncMaps);
 }
-function lesson() {
-  setScreen(`<div class="body demo-end screen-in" style="flex:1">
-    <span class="tile lg">${ico('book')}</span><h1 class="t-display">The lesson starts here</h1><p class="t-body">The Quick check ends. The first lesson opens from this screen.</p></div>
-  <div class="foot"><button class="big press" data-go="restart">Restart the mock</button></div>`);
+const tag = (icon, t) => `<span class="srctag">${ico(icon)}${t}</span>`;
+const krow = (icon, value, meta) => `<li class="krow"><span class="tile sm">${ico(icon)}</span><div class="kt"><p class="t-card">${value}</p>${meta}</div></li>`;
+function know() {
+  const rows = [
+    st.skip ? krow('user', 'Life stage not shared', tag('x', 'You skipped this') + ' <span class="t-label">We will ask one question.</span>')
+      : krow('user', 'Building a family', tag('user', 'You told us')),
+    krow('sprout', 'Goals: a safety buffer and long-term investing', tag('user', 'You told us')),
+    ...(st.acct ? [
+      krow('coins', 'Savings cover 3–6 months of spending', tag('lock', 'From your accounts')),
+      krow('transfer', 'Monthly savings plan into a fund', tag('lock', 'From your accounts')),
+      krow('card', 'Instalment loan running', tag('lock', 'From your accounts')),
+      krow('trend', 'Depot with several positions', tag('lock', 'From your accounts')),
+    ] : [krow('lock', 'Account access is off', tag('x', 'You chose this') + ' <span class="t-label">We will ask about your savings.</span>')]),
+  ];
+  setScreen(`<div class="body screen-in">
+    <div class="head-row"><span class="tile sm">${ico('eye')}</span><span class="t-over">Before the first question</span></div>
+    <h1 class="t-display">What we know about you</h1>
+    <ul class="card klist" aria-label="What we know about you">${rows.join('')}</ul>
+    <p class="t-label klock">${ico('lock', 'sm')}<span>Ranges only, never exact amounts. Your questions use the exact numbers on this phone.</span></p>
+  </div>
+  <div class="foot"><button class="big press" data-go="question" data-testid="know-start">Start the quick check</button><button class="big ghost press" data-go="consent">Change account access</button></div>`);
 }
-
+function toast(msg) {
+  let t = $('#toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status'); phone.append(t); }
+  t.textContent = msg; t.classList.add('on'); clearTimeout(t.h); t.h = setTimeout(() => t.classList.remove('on'), 1800);
+}
+function learnMap() {
+  const foc = focusAreas(), rank = Object.fromEntries(foc.map((a, i) => [a.id, i + 1]));
+  const start = PATH.findIndex((l) => l.a === foc[0].id);
+  const rows = PATH.map((l, i) => {
+    const kind = i === start ? 'start' : rank[l.a] ? 'focus' : 'plain', A = AI[l.a];
+    return `<li class="lrow ${kind}" data-testid="lesson-${i}"><span class="ncol"><span class="lnode">${ico(kind === 'start' ? 'play' : A.icon)}</span></span>
+      <div class="lwrap">${kind === 'start' ? `<span class="startpin">${ico('play')}Start here</span>` : ''}
+        <button class="lcard press" data-lesson="${l.t}"><span class="t-card">${l.t}</span>
+          <span class="t-label">${A.name} · ${l.m} min${rank[l.a] ? ` · <b class="fpill">Focus ${rank[l.a]}</b>` : ''}</span>
+          ${kind === 'start' ? `<span class="t-label whyhere" style="color:var(--text)"><b>Why here:</b> Your answers about ${A.name}</span>` : ''}</button></div></li>`;
+  }).join('');
+  setScreen(`<div class="body lm screen-in" id="lm">
+    <p class="t-over">Your learning path</p><h1 class="t-display">Where to next?</h1>
+    <p class="t-body">Your quick check marked these focus areas, in order. Every lesson stays open.</p>
+    <ol class="focuslist" aria-label="Focus areas in order">${foc.map((a, i) => `<li><b>${i + 1}</b>${a.name}</li>`).join('')}</ol>
+    <ol class="path">${rows}</ol></div>
+  <nav class="tabs" aria-label="Finance Quest">${[['Bank', 'home'], ['Map', 'globe'], ['Glossary', 'book'], ['Profile', 'user']].map(([n, ic]) => `<button class="tab press ${n === 'Map' ? 'on' : ''}" ${n === 'Map' ? 'aria-current="page"' : ''}>${ico(ic)}<span>${n}</span></button>`).join('')}</nav>`);
+  requestAnimationFrame(() => { const lm = $('#lm'), r = $('.lrow.start'); lm.scrollTop = Math.max(0, r.offsetTop - 150); });
+}
 function seed() {
   reset();
-  [['infl', 1, 'guess'], ['apr', 0, 'sure'], ['div', 0, 'sure'], ['risk', 1, 'fair']].forEach((a) => answer(...a));
+  const picks = { infl: [1, 'guess'], apr: [0, 'sure'], div: [0, 'sure'], risk: [1, 'fair'], stage: [1], cover: [2], horizon: [2] };
+  [...st.queue].forEach((id) => answer(id, ...picks[id]));
   st.shown = { ...st.p };
 }
+function syncToggles() {
+  $$('[data-tog]').forEach((b) => { const on = (b.dataset.tog === 'acct' ? st.acct : st.skip) === (b.dataset.v === '1'); b.setAttribute('aria-pressed', on); });
+}
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-acct],[data-i].opt,[data-conf],[data-go],[data-jump]');
+  const t = e.target.closest('[data-acct],[data-i].opt,[data-conf],[data-go],[data-jump],[data-tog],[data-lesson]');
   if (!t) return;
-  if (t.dataset.acct != null) { st.acct = t.dataset.acct === '1'; go('question'); }
+  if (t.dataset.tog) {
+    st[t.dataset.tog] = t.dataset.v === '1'; reset(); syncToggles();
+    go(st.screen === 'consent' || st.screen === 'know' ? st.screen : 'know');
+  }
+  else if (t.dataset.lesson) toast(`Opens: ${t.dataset.lesson}`);
+  else if (t.dataset.acct != null) { st.acct = t.dataset.acct === '1'; st.queue = buildQueue(); syncToggles(); go('know'); }
   else if (t.classList.contains('opt')) select(+t.dataset.i);
   else if (t.dataset.conf) commit(st.sel, t.dataset.conf);
   else if (t.dataset.go === 'restart') { reset(); go('consent'); }
   else if (t.dataset.go) go(t.dataset.go);
-  else if (t.dataset.jump === 'consent') { reset(); go('consent'); }
-  else if (t.dataset.jump === 'question') { reset(); go('question'); }
-  else if (t.dataset.jump === 'summary') { seed(); go('summary'); }
+  else if (t.dataset.jump === 'summary' || t.dataset.jump === 'lesson') { seed(); go(t.dataset.jump); }
+  else { reset(); go(t.dataset.jump); }
 });
-reset(); go('consent');
+reset(); syncToggles(); go('consent');
 
 </script>
 </body>

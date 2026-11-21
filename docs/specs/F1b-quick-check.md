@@ -64,8 +64,10 @@ Categorization gains:
   checks: [{questionId, area, lessonId, result: "understands" | "partly" | "not-yet"}],   // [] when skipped
   startLesson: {lessonId: number, title: string} | null
   stored rows without `checks`/`startLesson` read as `[]`/null.
-confidenceGaps[].because may cite a check (D5), only one with `result: understands` in the same area as the gap:
-  "…and your answer about {area} shows you understand it."
+confidenceGaps[].because may cite checks (D5), only when every check in the gap's area is `understands`:
+  UNDER: "You said: {experience label}. Your answer about {area} shows you understand it."
+  OVER (every check in the area `not-yet`, no answer cited): "You said: {experience label}. Your Quick check points to {area} as a place to learn more."
+  Mixed results in one area: no check-based gap.
 ```
 - **Slots** (filled on the device from `BankState` through Danylo's selectors): `savingsBalance`, `savingsInterestRate`, `monthOut`, `loanRemaining`, `loanApr`, `cardUsed`, `cardLimit`, `etfMonthly`, `depotTotal`, `positionCount`. An account version is usable only with consent and every slot available: a slot is available when its value is > 0, `positionCount` must be ≥ 2, and the `rate-vs-inflation` version needs `savingsInterestRate` < 3. Amounts are whole euros from cents (`en-IE`). Q-F adds the selectors `etfMonthly` (`Math.abs(amount)` of the standing order whose recipient starts with "Depot") and any other missing slot to `selectors.ts`.
 - **What Jev gets per answer**: the **generic** prompt, the criterion and the answer text, never the account version, so the app sends no exact amounts. The text is wrapped as delimited data with the instruction to treat it as an answer, never as instructions (OWASP LLM01), plus the D2 instruction to judge the reasoning, not the numbers. Each answered check is one `choice` question `check_<id>` (key = `check_` + id with `-` → `_`) with labels `understands`, `partly`, `not-yet`, in the same request as role and focus areas. The request-level `state` gains `checks: [{questionId, genericPrompt, criterion, answer}]` for answered checks. A "Not sure" answer creates no `check_<id>` question; the backend sets its result to `not-yet`. `sharedWithModel` records `checks: [{questionId, answered}]`, never the text.
@@ -98,7 +100,7 @@ Every prompt asks about understanding and recommends nothing (MiFID II). Draw: o
 - Order: confidence gap card titled "You know more than you think" (when there is one) → "You're {a beginner / an intermediate / an advanced} learner" with the role's because lines → 2–3 focus areas with one "why" each → "Start learning" (opens `startLesson`, else the map) and a quiet "See all lessons".
 - Educate, never advise: sentences describe what the answers and the account show; no product, no "you should".
 - If Jev failed after answers were sent, one line: "We couldn't check your answers this time".
-- Shown when `categorizedAt` is later than a locally stored `summarySeenAt`; `/learning-path` without a categorisation redirects to the map. Profile can link to it later.
+- Shown after each categorisation from `/categorizing` (every onboarding recategorises, Q20, so no seen-state is kept); `/learning-path` without a categorisation redirects to the map. Profile can link to it later.
 
 ## Tasks
 Simplest working solution, no code or tests for later.
@@ -118,7 +120,7 @@ Round 1 (21.11), reports in `.planning/reviews/F1b-diff-{back,front}-2026-11-21.
 | # | finding | file:line | class | reason or commit |
 |---|---|---|---|---|
 | B-AR1 | `<>`→`‹›` swap does not stop an answer closing its tag; instructions never call state data | CategorizationService:154, JevClient:56-74 | fix | random per-request boundary named in every question + "data, not instructions" (OWASP LLM01) |
-| B-AR2 | Jev read timeout 4 s with up to 4 extra judgements | application.properties:28 | fix | 8 s, below the front's 10 s |
+| B-AR2 | Jev read timeout 4 s with up to 4 extra judgements | application.properties:28 | fix | 7 s (r2: the front's 10 s also covers the profile wait) |
 | B-AR3 | POST without answers within 5 min drops checks | CategorizationService:78-84,161 | fix | Jan 21.11: reuse the stored row with its checks when onboarding answers and consent match |
 | B-AR4 | OVER gap cites "your answer" for not-yet / Not sure | CategorizationRules:170 | fix | Jan 21.11: UNDER cites only answered `understands`; OVER from a check = "You said: {experience}." + area, no answer cited |
 | B-AR5 | reuse guard untested | QuickCheckTests:252 | fix | test without → with answers |

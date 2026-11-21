@@ -168,7 +168,8 @@ class CategorizationControllerTests {
 				    "because": ["Your accounts cover more than 6 months of spending.", "You picked investing as a goal.",
 				                "You are paying off a loan with us.",
 				                "Your accounts with us include investment products."]}],
-				 "sharedWithModel": {"facts": %s, "answers": %s},
+				 "checks": [],
+				 "sharedWithModel": {"facts": %s, "answers": %s, "checks": []},
 				 "source": "jev", "model": "jev-2026-05", "categorizedAt": "2026-06-15T10:00:00Z"}"""
 			.formatted(FACTS, ANSWERS);
 

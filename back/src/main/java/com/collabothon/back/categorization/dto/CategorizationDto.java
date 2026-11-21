@@ -18,8 +18,15 @@ public record CategorizationDto(
 		List<ConfidenceGapDto> confidenceGaps,
 		LessonVariantDto lessonVariant,
 		List<ExplanationDto> explanation,
+		List<CheckDto> checks,
 		SharedWithModelDto sharedWithModel,
 		CategorizationSource source,
 		String model,
 		Instant categorizedAt
-) {}
+) {
+
+	public CategorizationDto {
+		checks = checks == null ? List.of() : checks;
+	}
+
+}

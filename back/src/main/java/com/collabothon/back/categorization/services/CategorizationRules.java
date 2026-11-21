@@ -62,7 +62,7 @@ final class CategorizationRules {
 
 	static Judgement fallback(OnboardingAnswersDto a, FactsDto f) {
 		Role role = fallbackRole(a, f);
-		return new Judgement(role, Map.of(), fallbackFocus(a, f, role), Map.of(), null);
+		return new Judgement(role, Map.of(), fallbackFocus(a, f, role), Map.of(), null, Map.of());
 	}
 
 	/** The declaration decides; facts only lift someone who saves now and then but does so every month. */

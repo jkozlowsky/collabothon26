@@ -10,6 +10,10 @@ public final class JevConsts {
 
 	public static final String SYSTEM_ONE_PATH = "/v1/systemone";
 
+	public static final String ANSWER_TAG = "answer";
+
+	public static final String CHECK_QUESTION_PREFIX = "check_";
+
 	public static final String API_KEY_PATTERN = "[\\x21-\\x7E]*";
 
 	public static final String MODEL_ID_PATTERN = "[A-Za-z0-9._:-]{1,64}";

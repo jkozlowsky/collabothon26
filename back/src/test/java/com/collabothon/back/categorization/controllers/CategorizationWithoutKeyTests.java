@@ -54,4 +54,17 @@ class CategorizationWithoutKeyTests {
 		mvc.perform(get("/api/check-questions")).andExpect(status().isOk()).andExpect(content().json("[]"));
 	}
 
+	@Test
+	void answersAreIgnoredBeforeValidationWithoutAKey() throws Exception {
+		mvc.perform(put("/api/users/tom/profile/onboarding").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"goals\": [], \"skipped\": true}"))
+			.andExpect(status().isOk());
+
+		mvc.perform(post("/api/users/tom/categorization").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"consent\": true, \"answers\": [{\"questionId\": \"nope\", \"text\": \"  \"}]}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.checks").isEmpty());
+		jev.verify();
+	}
+
 }

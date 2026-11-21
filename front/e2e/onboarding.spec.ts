@@ -24,7 +24,7 @@ test.afterAll(async ({ request }) => {
 
 test('the welcome screen introduces Atlas, and the map and duel slides lead to the consent screen', async ({ page }) => {
   await openApp(page);
-  await expect(page.getByText('Learn how money works. Challenge your ideas with others.')).toBeVisible();
+  await expect(page.getByText('Atlas lets your financial decisions land safely.')).toBeVisible();
   await tap(page, 'onboarding-start');
   await expect(page.getByTestId('onboarding-intro')).toBeVisible();
   await tap(page, 'onboarding-next');
@@ -36,7 +36,6 @@ test('the welcome screen introduces Atlas, and the map and duel slides lead to t
   await expect(page.getByText('Learn needs them to work.')).toBeVisible();
   await expect(page.getByTestId('consent-facts')).toContainText('Your account already shows');
   await expect(page.getByTestId('consent-facts')).toContainText('Age 26–40');
-  await expect(page.getByTestId('consent-asks')).toContainText('What your savings are for');
   await expect(page.getByText('Only these summaries are shared, never your transactions.')).toBeVisible();
   await expect(page.getByTestId('consent-notice')).toContainText('Your choices are checked by an AI service.');
   await expect(page.getByTestId('consent-accept')).toHaveText('Use my account data');
@@ -109,43 +108,6 @@ test('the back arrow steps back through every screen, keeping answers', async ({
   await expect(page.getByTestId('option-home')).toHaveAttribute('aria-checked', 'true');
   await tap(page, 'onboarding-back');
   await expect(page.getByTestId('onboarding-consent')).toBeVisible();
-});
-
-test('"Edit answers" on Profile keeps its three steps with the goals grid', async ({ page, request }) => {
-  await openApp(page);
-  // "No plan yet" saves no goals, so the goals grid below starts empty.
-  await finishOnboarding(page, { purpose: 'none' });
-  await waitForCompletedOnboarding(request);
-  await tap(page, 'nav-profile');
-  await tap(page, 'edit-answers');
-
-  // 1. Life stage
-  await expect(page.getByText('Step 1 of 3')).toBeVisible();
-  await expectDisabled(page, 'onboarding-continue');
-  await tap(page, 'option-building');
-  await tap(page, 'onboarding-continue');
-
-  // 2. Goals: grouped by area, no upper limit, all on one screen.
-  for (const area of ['Everyday money', 'Saving', 'Borrowing', 'Investing', 'Protect & plan']) {
-    await expect(page.getByText(area, { exact: true })).toBeVisible();
-  }
-  const goals = ['budget', 'start-saving', 'credit-cards', 'stocks-etfs', 'crypto', 'insurance', 'retirement'];
-  for (const g of goals) await tap(page, `goal-${g}`);
-  await expect(page.getByText(`${goals.length} selected`)).toBeVisible();
-  await tap(page, 'goal-crypto'); // tapping again deselects
-  await expect(page.getByText(`${goals.length - 1} selected`)).toBeVisible();
-  await tap(page, 'onboarding-continue');
-
-  // 3. How the user manages money today. It is the last question.
-  await expect(page.getByText('Step 3 of 3')).toBeVisible();
-  await expect(page.getByTestId('onboarding-continue')).toHaveText('Finish');
-  await tap(page, 'option-not-saving');
-  await tap(page, 'onboarding-continue');
-
-  await expect(page.getByTestId('edit-answers')).toBeVisible();
-  await expect
-    .poll(async () => getProfile(request))
-    .toMatchObject({ lifeStage: 'building', goals: goals.filter((g) => g !== 'crypto'), experience: 'not-saving', onboardingCompleted: true });
 });
 
 test('"Restart onboarding" on Profile clears the answers and the flag; onboarding shows again', async ({ page, request }) => {

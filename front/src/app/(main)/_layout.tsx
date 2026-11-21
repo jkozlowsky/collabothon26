@@ -2,7 +2,6 @@ import { Tabs } from 'expo-router/tabs';
 
 import { FloatingNav } from '@/components/bank/FloatingNav';
 import { colors } from '@/constants/theme';
-import { useResumeLearnAfterOnboarding } from '@/hooks/useOpenLearn';
 
 /**
  * The two sides of the app: the bank shell and the Atlas module. Both are tabs of one
@@ -10,7 +9,6 @@ import { useResumeLearnAfterOnboarding } from '@/hooks/useOpenLearn';
  * FloatingNav stays mounted to morph between them.
  */
 export default function MainLayout() {
-  useResumeLearnAfterOnboarding();
   return (
     <Tabs
       tabBar={(props) => <FloatingNav {...props} />}

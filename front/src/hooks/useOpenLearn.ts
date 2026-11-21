@@ -1,5 +1,5 @@
-import { router, usePathname, type Href } from 'expo-router';
-import { useCallback, useEffect } from 'react';
+import { router, type Href } from 'expo-router';
+import { useCallback } from 'react';
 
 import { useOnboarding } from '@/hooks/useOnboarding';
 
@@ -42,17 +42,13 @@ function closeAndGo(target: Href) {
 }
 
 /**
- * Mount once inside the main layout. Onboarding is a plain stack screen on top of the bank (not a
- * protected one: removing a protected screen rebuilds the stack and loses the bank's tab and scroll),
- * so when it completes this closes it and moves on to /categorizing (the quick check and the path), which then calls continueToLearn.
+ * Closes onboarding (a plain stack screen on top of the bank) and opens /categorizing, the quick check
+ * and the path, which then calls continueToLearn. Call it only once `done` is true: /categorizing is
+ * behind the onboarding guard. A reload on /onboarding loses `pendingTarget`, so Learn falls back to the Map.
  */
-export function useResumeLearnAfterOnboarding() {
-  const { done } = useOnboarding();
-  const pathname = usePathname();
-  useEffect(() => {
-    // No pending target = onboarding was opened from Profile to edit answers; it closes itself.
-    if (done && pathname === '/onboarding' && pendingTarget) closeAndGo('/categorizing');
-  }, [done, pathname]);
+export function leaveOnboardingForCheck() {
+  pendingTarget ??= '/map';
+  closeAndGo('/categorizing');
 }
 
 /** Leaves /categorizing or the summary for the Learn screen the user opened onboarding from (the Map by default). */

@@ -31,7 +31,7 @@ test('profile shows the account and streak, and picking an avatar saves it', asy
   expect(await screen.findByTestId('streak-value')).toHaveTextContent('4 days');
   expect(screen.getByTestId('total-xp')).toHaveTextContent('120 XP');
   expect(screen.getByTestId('streak-nudge')).toBeTruthy();
-  expect(screen.getByText('Scams')).toBeTruthy();
+  expect(screen.queryByText('Your goals')).toBeNull();
 
   await fireEvent.press(screen.getByTestId('profile-avatar'));
   await fireEvent.press(await screen.findByTestId('avatar-f2'));

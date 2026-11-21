@@ -86,7 +86,7 @@
         "id": "v1",
         "title": "Two parts",
         "desc": "Many people split their savings into an [[emergency-fund]] and money that can wait.",
-        "duration": 10,
+        "duration": 9.2,
         "camera": "push",
         "setting": {
           "place": "office",
@@ -95,7 +95,7 @@
         "layers": [
           {
             "kind": "tag",
-            "at": 1,
+            "at": 3.2,
             "text": "Emergency",
             "tone": "neutral",
             "x": 0.28,
@@ -103,7 +103,7 @@
           },
           {
             "kind": "tag",
-            "at": 4.5,
+            "at": 6.7,
             "text": "Can wait",
             "tone": "good",
             "x": 0.72,
@@ -112,11 +112,11 @@
         ],
         "captions": [
           {
-            "at": 0.5,
+            "at": 0,
             "text": "Many people split their savings into two parts."
           },
           {
-            "at": 3.5,
+            "at": 2.9,
             "text": "First, a few months of costs, ready any day."
           },
           {
@@ -124,7 +124,8 @@
             "text": "Second, money that can wait for years."
           }
         ],
-        "transcript": "t1"
+        "transcript": "t1",
+        "audio": "berlin-5/v1.mp3"
       }
     ],
     "beats": [

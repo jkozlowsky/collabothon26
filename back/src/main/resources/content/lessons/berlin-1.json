@@ -181,7 +181,7 @@
         "id": "v1",
         "title": "Same balance, higher prices",
         "desc": "Prices go up over time. This is called [[inflation]]. Your balance does not fall, but after 10 years the same money buys less.",
-        "duration": 12,
+        "duration": 12.6,
         "camera": "push",
         "setting": {
           "place": "home",
@@ -199,7 +199,7 @@
           },
           {
             "kind": "tag",
-            "at": 4,
+            "at": 3.9,
             "text": "+34%",
             "tone": "bad",
             "x": 0.75,
@@ -207,7 +207,7 @@
           },
           {
             "kind": "amount",
-            "at": 7.5,
+            "at": 7.2,
             "len": 3,
             "from": 10000,
             "to": 7400,
@@ -217,19 +217,20 @@
         ],
         "captions": [
           {
-            "at": 0.5,
+            "at": 0,
             "text": "Prices go up over time. This is called inflation."
           },
           {
-            "at": 4,
+            "at": 3.9,
             "text": "In 10 years, prices can rise by about a third."
           },
           {
-            "at": 7.5,
+            "at": 7.2,
             "text": "Then €10,000 buys only what about €7,400 buys today."
           }
         ],
-        "transcript": "t1"
+        "transcript": "t1",
+        "audio": "berlin-1/v1.mp3"
       }
     ],
     "beats": [

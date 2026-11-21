@@ -81,13 +81,16 @@ public class CategorizationService {
 		Instant now = Instant.now(clock);
 		// Without a judge the answers cannot be used, so they are dropped before any validation.
 		List<CheckAnswerDto> submitted = checkAnswers == null || !jevProperties.callsJev() ? List.of() : checkAnswers;
-		List<CheckQuestionProjection> picked = submitted.isEmpty() ? List.of() : checkQuestions.pick(submitted);
+		List<CheckQuestionProjection> picked = List.of();
 		if (submitted.isEmpty()) {
 			Optional<CategorizationDto> recent = find(userId)
 				.filter(c -> isRecentJevResult(c, answers, consent, facts, now));
 			if (recent.isPresent()) {
 				return recent.get();
 			}
+		}
+		else {
+			picked = checkQuestions.pick(submitted);
 		}
 		List<JevCheckDto> toJudge = new ArrayList<>();
 		List<SharedCheckDto> sharedChecks = new ArrayList<>();

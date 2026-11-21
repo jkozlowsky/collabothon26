@@ -127,7 +127,7 @@ final class CategorizationRules {
 				.collect(Collectors.toCollection(() -> EnumSet.noneOf(CheckResult.class)));
 			boolean understood = results.equals(EnumSet.of(CheckResult.UNDERSTANDS));
 			boolean notYet = results.equals(EnumSet.of(CheckResult.NOT_YET));
-			String cite = understood ? " Your answer about " + area.wire() + " shows you understand it." : "";
+			String cite = understood ? "Your answer about " + area.wire() + " shows you understand it." : "";
 			boolean saysLow = area == ConfidenceArea.SAVING ? SAYS_LITTLE_SAVING.contains(said)
 					: !SAYS_INVESTING.contains(said);
 			Optional<ConfidenceGapDto> fromAccount = f == null ? Optional.empty() : accountGap(said, area, f, cite);
@@ -135,7 +135,7 @@ final class CategorizationRules {
 				gaps.add(fromAccount.get());
 			}
 			else if (saysLow && understood) {
-				gaps.add(gap(area, GapDirection.UNDER, said, cite.strip()));
+				gaps.add(gap(area, GapDirection.UNDER, said, cite));
 			}
 			else if (!saysLow && notYet) {
 				gaps.add(gap(area, GapDirection.OVER, said,
@@ -150,7 +150,7 @@ final class CategorizationRules {
 			String cite) {
 		if (area == ConfidenceArea.SAVING) {
 			if (SAYS_LITTLE_SAVING.contains(said) && f.savesRegularly()) {
-				return Optional.of(gap(area, GapDirection.UNDER, said, SAVES_LINE + cite));
+				return Optional.of(gap(area, GapDirection.UNDER, said, (SAVES_LINE + " " + cite).strip()));
 			}
 			if (!SAYS_LITTLE_SAVING.contains(said) && f.cashBufferMonths().equals(BUFFER_UNDER_1)) {
 				return Optional.of(gap(area, GapDirection.OVER, said, bufferLine(f)));
@@ -158,7 +158,7 @@ final class CategorizationRules {
 		}
 		else {
 			if (!SAYS_INVESTING.contains(said) && f.holdsInvestments()) {
-				return Optional.of(gap(area, GapDirection.UNDER, said, HOLDS_LINE + cite));
+				return Optional.of(gap(area, GapDirection.UNDER, said, (HOLDS_LINE + " " + cite).strip()));
 			}
 			if (SAYS_INVESTING.contains(said) && !f.holdsInvestments()) {
 				return Optional.of(gap(area, GapDirection.OVER, said, NO_HOLDS_LINE));
@@ -182,12 +182,16 @@ final class CategorizationRules {
 	}
 
 	static Optional<CheckDto> weakestLessonCheck(List<CheckDto> checks, List<FocusArea> focus) {
-		Comparator<CheckDto> weakestFirst = Comparator
-			.comparing((CheckDto c) -> c.result() == CheckResult.NOT_YET ? 0 : 1)
-			.thenComparing(c -> focus.contains(c.area()) ? focus.indexOf(c.area()) : focus.size());
+		Comparator<CheckDto> weakestFirst = Comparator.comparing((CheckDto c) -> c.result() == CheckResult.PARTLY)
+			.thenComparing(c -> focusRank(c.area(), focus));
 		return checks.stream()
 			.filter(c -> c.lessonId() != null && c.result() != CheckResult.UNDERSTANDS)
 			.min(weakestFirst);
+	}
+
+	private static int focusRank(FocusArea area, List<FocusArea> focus) {
+		int index = focus.indexOf(area);
+		return index < 0 ? focus.size() : index;
 	}
 
 	static Optional<CheckQuestionProjection> earliestLessonQuestion(List<FocusArea> focus,

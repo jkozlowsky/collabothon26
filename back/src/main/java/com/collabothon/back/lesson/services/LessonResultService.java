@@ -61,7 +61,7 @@ public class LessonResultService {
 		scenarioChoices.forEach((stepId, choice) -> recordScenarioChoice(lesson, userId, stepId, choice, now));
 
 		int xp = lesson.path("xp").asInt(0);
-		boolean first = completionRepo.insertIfAbsent(userId, id, xp, now) == 1;
+		boolean first = completionRepo.insertIfAbsent(userId, id, xp, now, req.mode()) == 1;
 		if (first) {
 			xpService.awardLesson(userId, id, lesson.path("story").asString(), xp, now);
 		}

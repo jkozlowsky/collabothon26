@@ -3,106 +3,136 @@
   "story": "berlin",
   "title": "Your own split",
   "place": "Your stop · today",
-  "topic": "Size your buffer with your bank data",
-  "minutes": 3,
+  "topic": "Split your savings with your bank data",
+  "minutes": 4,
   "xp": 70,
-  "concepts": ["emergency-fund", "inflation"],
+  "concepts": [
+    "emergency-fund",
+    "inflation"
+  ],
   "steps": [
     {
       "type": "text",
       "id": "t1",
-      "kicker": "Lena's fridge note",
-      "title": "\"Notgroschen first. Then let the rest wait.\"",
-      "body": "Lena's rule: three months of costs stay in Tagesgeld, ready any day. Money for Mia at 18 doesn't need to be reachable tomorrow. Her rule, not a recipe: a buffer sized by her [[emergency-fund|Notgroschen]] and her family."
+      "phase": "learn",
+      "kicker": "Two parts",
+      "title": "Your emergency fund, and the rest",
+      "body": "Many people split their savings into two parts. First, a few months of costs, ready any day. This part is the [[emergency-fund]]. Second, money that can wait for years. If that part stays in savings, [[inflation]] makes it buy less whenever the interest is lower than the price rise."
     },
     {
       "type": "quiz",
       "id": "q1",
-      "concepts": ["emergency-fund"],
-      "prompt": "Why does Lena size her buffer in months of costs, not in a round amount?",
+      "phase": "challenge",
+      "concepts": [
+        "emergency-fund"
+      ],
+      "prompt": "Why do people count an emergency fund in months of costs, not as a round amount?",
       "options": [
-        "Because the buffer has to cover life while an income is missing",
-        "Because banks require it",
-        "Because round amounts earn less interest"
+        "The fund has to pay for life while an income is missing",
+        "Banks require it",
+        "Round amounts earn less interest"
       ],
       "correctIndex": 0,
-      "explanation": "A buffer buys time. Months of costs tell you how much time, whatever the family spends."
+      "explanation": "An emergency fund buys time. Months of costs tell you how much time it buys."
     },
     {
       "type": "quiz",
       "id": "q2",
-      "concepts": ["inflation"],
-      "prompt": "Lena keeps much more than her buffer in Tagesgeld for 20 years. What's the cost?",
-      "options": [
-        "If interest stays below inflation, it slowly buys less",
-        "None, the balance never falls",
-        "The bank charges a fee for large balances"
+      "phase": "challenge",
+      "concepts": [
+        "inflation"
       ],
-      "correctIndex": 0,
-      "explanation": "Safe money is safe from falls, not from [[inflation]]. Over long periods, the gap between interest and prices adds up."
+      "prompt": "True or false: money kept in a savings account for 20 years keeps its value, because the balance never falls.",
+      "options": [
+        "True",
+        "False"
+      ],
+      "correctIndex": 1,
+      "explanation": "False. The balance never falls, but prices rise. If the interest stays lower than [[inflation]], the money buys less each year."
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "phase": "you",
+      "kicker": "Your money",
+      "title": "Your savings today",
+      "body": "You have **{totalAssets}** with us. **{savingsShareOfAssets}** of it is in your savings account, at **{savingsRate}** interest a year. That covers about **{bufferMonths}** months of your costs."
     },
     {
       "type": "action",
       "id": "a1",
-      "title": "Your turn",
-      "body": "You hold **{totalAssets}** with us. **{savingsShareOfAssets}** of it sits in savings, at {savingsRate} a year. That covers about **{bufferMonths}** months of your spending.",
-      "bodyNoData": "Think about your own money: how many months of your costs could you cover if an income stopped tomorrow?",
+      "phase": "decide",
+      "title": "Your decision",
+      "body": "Your savings account holds **{savingsBalance}**. How much of it do you want to keep ready any day? The rest is money that can wait. You decide. This app explains how money works. It does not recommend products.",
+      "bodyNoData": "How much of your savings do you want to keep ready any day? The rest is money that can wait. You decide. This app explains how money works. It does not recommend products.",
       "rule": {
-        "label": "My emergency buffer",
-        "min": 1,
-        "max": 12,
-        "step": 1,
-        "value": 3,
-        "unit": " months",
-        "appliesTo": "monthlySpending",
-        "kind": "multiple",
-        "result": "= {amount} kept ready any day"
+        "label": "Savings to keep ready any day",
+        "min": 10,
+        "max": 100,
+        "step": 5,
+        "value": 50,
+        "unit": "%",
+        "appliesTo": "savingsBalance",
+        "result": "= {amount} ready any day"
       },
-      "cta": "Set my buffer"
+      "cta": "Save my rule"
     }
   ],
-  "variants": {
-    "persona:student": {
-      "a1": {
-        "body": "You hold **{totalAssets}** with us, and **{savingsShareOfAssets}** of it sits in savings. Your costs are lower now, so even a small buffer covers **{bufferMonths}** months. That's room to try things without debt."
-      }
-    },
-    "persona:family": {
-      "a1": {
-        "body": "You hold **{totalAssets}** with us. **{savingsShareOfAssets}** of it sits in savings, at {savingsRate} a year. That covers about **{bufferMonths}** months of your family's spending, if one income stopped."
-      }
-    },
-    "persona:pre-retirement": {
-      "a1": {
-        "body": "You hold **{totalAssets}** with us, and **{savingsShareOfAssets}** of it sits in savings at {savingsRate}. That covers about **{bufferMonths}** months. Close to retirement, a buffer also covers the first years, so nothing has to be sold in a bad market."
-      }
-    },
-    "lang:plain": {
-      "t1": {
-        "title": "\"Emergency money first. The rest can wait.\"",
-        "body": "Lena's rule: money for three months of costs stays in the savings account. Mia's money is for when she is 18, so it doesn't need to be ready tomorrow. This is Lena's rule, not a rule for everyone."
-      },
-      "q1": {
-        "prompt": "Why does Lena count her emergency money in months?",
-        "options": [
-          "It must pay for life while one salary is missing",
-          "The bank says so",
-          "Round numbers get less interest"
+  "video": {
+    "minutes": 4,
+    "scenes": [
+      {
+        "type": "scene",
+        "id": "v1",
+        "title": "Two parts",
+        "desc": "Many people split their savings into an [[emergency-fund]] and money that can wait.",
+        "duration": 10,
+        "camera": "push",
+        "setting": {
+          "place": "office",
+          "time": "day"
+        },
+        "layers": [
+          {
+            "kind": "tag",
+            "at": 1,
+            "text": "Emergency",
+            "tone": "neutral",
+            "x": 0.28,
+            "y": 0.25
+          },
+          {
+            "kind": "tag",
+            "at": 4.5,
+            "text": "Can wait",
+            "tone": "good",
+            "x": 0.72,
+            "y": 0.25
+          }
         ],
-        "explanation": "Emergency money buys time. Months tell you how much time."
-      },
-      "q2": {
-        "prompt": "Lena keeps a lot more than she needs in the savings account for 20 years. What does it cost?",
-        "options": [
-          "If interest is lower than price rises, it buys less over time",
-          "Nothing, the number never goes down",
-          "The bank takes a fee"
+        "captions": [
+          {
+            "at": 0.5,
+            "text": "Many people split their savings into two parts."
+          },
+          {
+            "at": 3.5,
+            "text": "First, a few months of costs, ready any day."
+          },
+          {
+            "at": 6.5,
+            "text": "Second, money that can wait for years."
+          }
         ],
-        "explanation": "Safe money doesn't go down, but [[inflation]] still makes it worth less."
-      },
-      "a1": {
-        "bodyNoData": "Think about your money: how many months could you live if your salary stopped tomorrow?"
+        "transcript": "t1"
       }
-    }
+    ],
+    "beats": [
+      "v1",
+      "q1",
+      "q2",
+      "t2",
+      "a1"
+    ]
   }
 }

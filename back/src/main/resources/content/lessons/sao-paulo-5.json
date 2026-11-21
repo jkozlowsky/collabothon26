@@ -71,28 +71,6 @@
       "a1": {
         "body": "You owe **{creditOutstanding}** across your loan, card and Pay in 3. This month's repayments are **{monthlyRepayments}**, **{repaymentShareOfIncome}** of your income. When the salary turns into a pension, the same repayments take a bigger share."
       }
-    },
-    "lang:plain": {
-      "t1": {
-        "title": "\"Payments: max 20% of my pay. The card bill: always all of it.\"",
-        "body": "Rafa made two rules. He can still buy things. But only a small part of his pay is promised before the month starts. This is his [[committed-income]]. These are Rafa's rules, not rules for everyone."
-      },
-      "q1": {
-        "prompt": "Rafa earns R$2,800. His rule: max 20% for payments. How much is that each month?",
-        "explanation": "20% of R$2,800 is R$560. His four payments were R$710. So his rule says no to one of them."
-      },
-      "q2": {
-        "prompt": "Why is \"always pay the full card bill\" so important?",
-        "options": [
-          "Card debt that moves to next month is very expensive",
-          "Otherwise the card stops working",
-          "Paying everything gives you interest"
-        ],
-        "explanation": "Card debt grows every month. This is [[revolving-credit]]. Paying all of it keeps the card from becoming a loan."
-      },
-      "a1": {
-        "bodyNoData": "Think about your month: how much of your pay is already promised to payments?"
-      }
     }
   }
 }

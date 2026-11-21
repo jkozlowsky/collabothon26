@@ -79,46 +79,6 @@
   "variants": {
     "level:beginner": {
       "s1": { "goal": { "hint": "Keep 12 payments and lower the discount to 5%." } }
-    },
-    "lang:plain": {
-      "c1": {
-        "messages": [
-          { "from": "Rafa", "me": true, "text": "I found a fridge. 12 payments of R$250, no interest!" },
-          { "from": "Mãe", "text": "No interest? Ask the price if you pay today" },
-          { "from": "Rafa", "me": true, "text": "R$2,550 if I pay now. 15% less" },
-          { "from": "Mãe", "text": "So the 12 payments are not free" }
-        ]
-      },
-      "t1": {
-        "body": "It means \"split, without interest\". In Brazil you can pay for almost anything in parts. These parts are called [[installments]]. Rafa is 22. He just started his first job and earns **R$2,800** a month (about €450)."
-      },
-      "p1": {
-        "prompt": "Pay R$2,550 now, or 12 × R$250 = R$3,000 \"without interest\". How much interest is hidden in the 12 payments, per year? Guess.",
-        "reveal": "About 36% a year. If Rafa takes the 12 payments, he borrows R$2,550 and pays back R$3,000. The interest is hidden in the discount. This is [[hidden-interest]]."
-      },
-      "s1": {
-        "prompt": "Change the discount and the number of payments. Find a discount where the payments cost less than 10% a year.",
-        "output": { "label": "Hidden interest per year" },
-        "note": "Simple example: the first payment is after one month."
-      },
-      "q1": {
-        "prompt": "When are 12 payments really without interest?",
-        "options": [
-          "When paying now gives no discount",
-          "When the shop says so",
-          "When the payments are small"
-        ],
-        "explanation": "If the price now is the same as all the payments together, it is free. A discount for paying now is the cost of waiting."
-      },
-      "q2": {
-        "prompt": "The shop gives 15% less if you pay now. What does Rafa do if he takes 12 payments?",
-        "options": [
-          "He borrows money and pays back more",
-          "He pays less for the fridge",
-          "He saves money"
-        ],
-        "explanation": "He pays R$450 more in one year. That is a loan."
-      }
     }
   }
 }

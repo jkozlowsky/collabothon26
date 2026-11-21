@@ -27,7 +27,7 @@ export type Story = {
 };
 
 /** Header data from the learner profile (topic C). */
-export type Learner = { name: string; profileLabel: string; streak: number; xp: number };
+export type Learner = { name: string; streak: number; xp: number };
 
 /** Landmark shapes the story hero can draw, one per city with content: tower (Seoul), gate (Berlin), raised (São Paulo), lattice (Tokyo). */
 export type LandmarkKind = 'tower' | 'gate' | 'raised' | 'lattice';
@@ -36,6 +36,10 @@ export type LandmarkKind = 'tower' | 'gate' | 'raised' | 'lattice';
 export type StoryPage = {
   id: string;
   city: string;
+  /** Learning area shown as the story's title ("Investing"); the city moves to the overline. (`category` is the duel's name for the story.) */
+  area?: string;
+  /** No character: the story is about the user's own (mock) bank data, and the city is only the backdrop. */
+  personal?: boolean;
   topic: string;
   color: StoryColor;
   character: { name: string; age: number; role: string; place?: string; savings?: string } | null;

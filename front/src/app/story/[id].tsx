@@ -11,6 +11,8 @@ import { Sheet } from '@/components/bank/Sheet';
 import { StoryLandmark } from '@/components/StoryLandmark';
 import { colors, elevation, radii, spacing, storyColors, tints, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
+import { useBank } from '@/hooks/useBank';
+import { depotTotal, monthlyInvesting } from '@/lib/bank/selectors';
 import { USER_ID } from '@/lib/user';
 import type { LessonSummary } from '@/types/lessons';
 import type { StoryPage } from '@/types/stories';
@@ -64,8 +66,8 @@ export default function StoryScreen() {
           <View style={styles.header}>
             <IconButton icon="chevron-left" label="Back to the globe" onPress={back} />
             <View style={styles.heading}>
-              {story && <Text style={[styles.overline, { color: accent }]}>Story · {story.progress.total} stops</Text>}
-              <Text accessibilityRole="header" style={styles.title}>{story?.city ?? 'Story'}</Text>
+              {story && <Text style={[styles.overline, { color: accent }]}>{story.city} · {story.progress.total} stops</Text>}
+              <Text accessibilityRole="header" style={styles.title}>{story?.area ?? story?.city ?? 'Story'}</Text>
               {story && <Text style={styles.subtitle}>{story.topic}</Text>}
             </View>
           </View>
@@ -74,6 +76,7 @@ export default function StoryScreen() {
           <AsyncContent loading={loading} error={error} onRetry={reload}>
             {() => story ? (
               <>
+                {story.personal && <YourMoney story={story} accent={accent} tint={tint} />}
                 {story.character && (
                   <View style={styles.story}>
                     <View style={styles.character}>
@@ -121,7 +124,7 @@ export default function StoryScreen() {
                     <View style={[styles.lineLabel, { backgroundColor: accent }]}>
                       <Icon name="transfer" size={15} color={colors.textOnBrand} />
                       <Text style={styles.lineText}>
-                        {story.character ? `${story.character.name}'s line` : story.city} · {story.progress.total} stops · {minutes} min
+                        {story.character ? `${story.character.name}'s line` : story.personal ? 'Your line' : story.city} · {story.progress.total} stops · {minutes} min
                       </Text>
                     </View>
                     {story.lessons.map((lesson, index) => (
@@ -181,6 +184,51 @@ export default function StoryScreen() {
   );
 }
 
+/** Card for a personal story: the user's own money from the mock bank, then the path summary and stamps. */
+function YourMoney({ story, accent, tint }: { story: StoryPage; accent: string; tint: string }) {
+  const { state, money } = useBank();
+  const monthly = monthlyInvesting(state);
+  const figures = [
+    { label: 'On savings', value: money(state.savings.balance, { whole: true }) },
+    { label: 'Invested', value: money(depotTotal(state), { whole: true }) },
+    { label: 'Saved each month', value: monthly ? money(monthly, { whole: true }) : '—' },
+  ];
+  return (
+    <View style={styles.story} testID="your-money">
+      <View style={styles.character}>
+        <View style={[styles.avatar, { backgroundColor: tint }]}>
+          <Text style={[styles.avatarLetter, { color: accent }]}>{state.owner.initials.charAt(0)}</Text>
+        </View>
+        <View style={styles.bio}>
+          <Text style={styles.stopTitle}>Your money today</Text>
+          <Text style={styles.muted}>From your accounts · only on this device</Text>
+        </View>
+      </View>
+      <View style={styles.figures}>
+        {figures.map((figure) => (
+          <View key={figure.label} style={styles.figure}>
+            <Text style={styles.balance}>{figure.value}</Text>
+            <Text style={styles.muted}>{figure.label}</Text>
+          </View>
+        ))}
+      </View>
+      {story.intro && <Text style={styles.storyText}>{story.intro}</Text>}
+      <View style={styles.progress}>
+        <View style={styles.stamps} aria-hidden>
+          {story.lessons.map(({ id: lessonId, status }) => (
+            <View key={lessonId} style={[styles.stamp, status === 'done' && { ...styles.stamped, borderColor: accent, backgroundColor: accent }]}>
+              {status === 'done' && <Icon name="check" size={13} color={colors.textOnBrand} />}
+            </View>
+          ))}
+        </View>
+        <Text accessibilityLiveRegion="polite" style={styles.muted}>
+          {story.progress.done} of {story.progress.total} stamps
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 function Stop({ lesson, index, last, previousDone, current, highlighted, onHighlightLayout, accent }: {
   lesson: LessonSummary;
   index: number;
@@ -217,10 +265,17 @@ function Stop({ lesson, index, last, previousDone, current, highlighted, onHighl
       <View style={[styles.stopBody, current && styles.currentCard, highlighted && styles.highlightedCard]}>
         <Text style={[styles.overline, { color: accent }, locked && styles.locked]}>{lesson.place}</Text>
         <Text style={[styles.stopTitle, locked && styles.locked]}>{lesson.title}</Text>
-        <Text style={styles.muted}>
-          {topic ? `${topic} · ` : ''}{lesson.minutes} min
-          {done ? ' · Completed' : locked ? ' · Locked' : ` · +${lesson.xp} XP`}
-        </Text>
+        <View style={styles.metaRow}>
+          <Text style={styles.muted}>
+            {topic ? `${topic} · ` : ''}{lesson.minutes} min
+            {done ? ' · Completed' : locked ? ' · Locked' : ` · +${lesson.xp} XP`}
+          </Text>
+          {lesson.video && (
+            <View accessible accessibilityLabel="Also as video" testID={`lesson-video-${lesson.id}`}>
+              <Icon name="film" size={14} color={colors.textMuted} />
+            </View>
+          )}
+        </View>
         {!locked && (
           <View style={styles.action}>
             <Button
@@ -254,6 +309,9 @@ const styles = StyleSheet.create({
   bio: { flexGrow: 1, flexShrink: 1 },
   savings: { alignItems: 'flex-end', marginLeft: 'auto' },
   balance: type.labelStrong,
+  figures: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  figure: { flexGrow: 1, flexBasis: 90, gap: spacing.xs },
+  metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.xs },
   storyText: type.bodyDefault,
   progress: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: spacing.sm },
   stamps: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, flexShrink: 1 },

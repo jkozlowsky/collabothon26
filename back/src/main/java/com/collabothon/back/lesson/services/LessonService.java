@@ -11,10 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.dto.lesson.LessonSummary;
 import com.collabothon.back.entities.profile.UserProfile;
-import com.collabothon.back.exceptions.BusinessException;
 import com.collabothon.back.glossary.repositories.GlossaryContentRepository;
 import com.collabothon.back.lesson.repositories.StoryRepository;
 import com.collabothon.back.profile.repositories.UserProfileRepository;
+import com.collabothon.back.profile.services.UserProfileService;
 
 import lombok.RequiredArgsConstructor;
 import tools.jackson.databind.JsonNode;
@@ -25,9 +25,8 @@ import tools.jackson.databind.node.ObjectNode;
 @RequiredArgsConstructor
 public class LessonService {
 
-	static final String LANG_STANDARD = "standard";
-
-	static final String LANG_PLAIN = "plain";
+	/** Spring serves {@code resources/static/audio/} here; scene {@code audio} paths are relative to it. */
+	static final String AUDIO_BASE = "/audio/";
 
 	private final StoryRepository storyRepo;
 
@@ -36,6 +35,8 @@ public class LessonService {
 	private final UserProfileRepository userProfileRepo;
 
 	private final LessonProgression progression;
+
+	private final UserProfileService userProfileService;
 
 	/** Every story with its lessons and progress; the first available story with lessons left is "current". */
 	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
@@ -73,18 +74,17 @@ public class LessonService {
 		return out;
 	}
 
-	/** The lesson with the variants for the user's level, persona and language applied, plus its glossary. */
+	/**
+	 * The lesson with the variants for the user's level and persona applied, plus its glossary. Lessons with a video
+	 * track carry both play orders, so switching mode mid-lesson needs no reload.
+	 */
 	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
-	public ObjectNode getLesson(String id, String lang, String userId) {
-		if (!LANG_STANDARD.equals(lang) && !LANG_PLAIN.equals(lang)) {
-			throw new BusinessException(LessonErrorCode.INVALID_LANG, lang);
-		}
+	public ObjectNode getLesson(String id, String userId) {
 		ObjectNode base = progression.lessonOrNotFound(id);
 		progression.requireUnlocked(base, userId);
 
-		ObjectNode lesson = LessonRules.applyVariants(base, variantKeys(userId, lang));
+		ObjectNode lesson = LessonRules.applyVariants(base, variantKeys(userId));
 		List<String> ids = progression.storyLessonIds(lesson);
-		lesson.put("lang", lang);
 		lesson.put("position", ids.indexOf(id) + 1);
 		lesson.put("total", ids.size());
 		lesson.put("next", progression.nextLessonId(lesson));
@@ -93,18 +93,31 @@ public class LessonService {
 		for (String concept : LessonRules.concepts(lesson)) {
 			glossaryContentRepo.findByConcept(concept).ifPresent(c -> glossary.set(concept, c));
 		}
+
+		boolean video = lesson.hasNonNull("video");
+		if (!video) {
+			lesson.putNull("video");
+		}
+		lesson.put("startMode", video ? userProfileService.lessonMode(userId) : "classic");
+		JsonNode story = storyRepo.findRawById(lesson.path("story").asString()).orElseThrow();
+		lesson.put("city", story.path("city").asString());
+		lesson.put("color", story.path("color").asString("slate"));
+		if (story.hasNonNull("landmark")) {
+			lesson.set("landmark", story.get("landmark").deepCopy());
+		}
+		else {
+			lesson.putNull("landmark");
+		}
+		lesson.put("audioBase", AUDIO_BASE);
 		return lesson;
 	}
 
-	private List<String> variantKeys(String userId, String lang) {
+	private List<String> variantKeys(String userId) {
 		List<String> keys = new ArrayList<>();
 		profile(userId).ifPresent(profile -> {
 			levelKey(profile.getExperience()).ifPresent(keys::add);
 			personaKey(profile.getLifeStage()).ifPresent(keys::add);
 		});
-		if (LANG_PLAIN.equals(lang)) {
-			keys.add("lang:plain");
-		}
 		return keys;
 	}
 

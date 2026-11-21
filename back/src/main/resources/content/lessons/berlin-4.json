@@ -2,142 +2,245 @@
   "id": "berlin-4",
   "story": "berlin",
   "title": "The scary first year",
-  "place": "Tempelhofer Feld · one year later",
-  "topic": "Falls and the time to wait",
+  "place": "Your investments · a bad year",
+  "topic": "Falls, and the time to wait",
   "minutes": 4,
   "xp": 60,
-  "concepts": ["volatility", "drawdown", "time-horizon"],
+  "concepts": [
+    "volatility",
+    "drawdown",
+    "time-horizon"
+  ],
   "steps": [
     {
-      "type": "chat",
-      "id": "c1",
-      "title": "Jonas",
-      "messages": [
-        { "from": "Jonas", "text": "Have you looked at Mia's fund? It's down 20%" },
-        { "from": "Jonas", "text": "€5,000 is now €4,000. Sell before it gets worse?" },
-        { "from": "Lena", "me": true, "text": "She needs it in 17 years, not next week" },
-        { "from": "Jonas", "text": "Still. It feels terrible" }
-      ]
+      "type": "text",
+      "id": "t1",
+      "phase": "learn",
+      "kicker": "Ups and downs",
+      "title": "A fall is not the end",
+      "body": "You invest €5,000. After one bad year, it is worth €4,000. Swings like this are called [[volatility]]. A fall becomes a real loss when you sell during it. If you can wait, the price has time to recover. But nobody can promise that it will. How long your money can wait is your [[time-horizon]]."
     },
     {
       "type": "slider-chart",
       "id": "s1",
-      "concepts": ["drawdown"],
-      "prompt": "After a fall, the price must rise more than it fell to get back. Find the loss that needs a +25% rise.",
+      "phase": "learn",
+      "concepts": [
+        "drawdown"
+      ],
+      "prompt": "After a fall, the price must rise more than it fell to get back to the start. Move the slider to find the loss that needs a rise of 25%.",
       "model": "drawdownRecovery",
       "params": {
-        "loss": { "label": "Loss", "min": -80, "max": 0, "step": 5, "value": -5, "unit": "%" }
+        "loss": {
+          "label": "Loss",
+          "min": -80,
+          "max": 0,
+          "step": 5,
+          "value": -5,
+          "unit": "%"
+        }
       },
-      "output": { "label": "Rise needed to get back", "unit": "%" },
-      "goal": { "condition": { "of": "output", "min": 25, "max": 25 }, "hint": "It's the loss Mia's fund just had." }
+      "output": {
+        "label": "Rise needed to get back to the start",
+        "unit": "%"
+      },
+      "goal": {
+        "condition": {
+          "of": "output",
+          "min": 25,
+          "max": 25
+        },
+        "hint": "Try a loss of 20%."
+      }
     },
     {
       "type": "scenario",
       "id": "sc1",
-      "concepts": ["time-horizon", "volatility"],
-      "prompt": "The fund part is at €4,000 after one bad year. What does Lena do? Jump to Mia's 18th birthday.",
+      "phase": "challenge",
+      "concepts": [
+        "time-horizon",
+        "volatility"
+      ],
+      "prompt": "Imagine you put €5,000 in a fund. After one bad year, it is worth €4,000. What do you do? Choose, and see the result after 17 years.",
       "unit": "€k",
       "periodLabel": "17 years",
       "choices": [
         {
-          "label": "Sell now and keep it as cash",
-          "series": [5, 4, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5, 5.1],
-          "ending": "€5,100 at 18. Selling turned a fall on paper into a real loss, and the cash then barely kept up with prices."
+          "label": "Sell now and keep the money as cash",
+          "series": [
+            5,
+            4,
+            4.1,
+            4.2,
+            4.3,
+            4.4,
+            4.5,
+            4.6,
+            4.7,
+            4.8,
+            4.9,
+            5,
+            5.1
+          ],
+          "ending": "At the end, you have €5,100. Selling turned a fall on paper into a real loss. The cash then barely kept up with prices."
         },
         {
-          "label": "Hold and look less often",
-          "series": [5, 4, 4.6, 5.3, 5.9, 6.6, 7.2, 7.9, 8.6, 9.4, 10.2, 11, 11.8],
-          "ending": "€11,800 at 18, after a first year nobody enjoyed. In this path the market recovered. Past returns promise nothing about the next 17 years."
+          "label": "Keep the fund and check it less often",
+          "series": [
+            5,
+            4,
+            4.6,
+            5.3,
+            5.9,
+            6.6,
+            7.2,
+            7.9,
+            8.6,
+            9.4,
+            10.2,
+            11,
+            11.8
+          ],
+          "ending": "At the end, you have €11,800, after a hard first year. In this example, the market recovered. Past returns do not tell you what the next 17 years will bring."
         },
         {
-          "label": "If she had never started",
-          "series": [5, 5.1, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.2, 6.4],
-          "ending": "€6,400 at 18. Calm all the way, and smaller. Not wrong, a different trade: less worry for less growth."
+          "label": "Never invest the €5,000",
+          "series": [
+            5,
+            5.1,
+            5.1,
+            5.2,
+            5.3,
+            5.4,
+            5.5,
+            5.6,
+            5.7,
+            5.8,
+            5.9,
+            6.2,
+            6.4
+          ],
+          "ending": "At the end, you have €6,400. The value never fell, but it grew less. You get less worry for less growth."
         }
       ]
     },
     {
-      "type": "text",
-      "id": "t1",
-      "title": "A fall is a price, not a verdict",
-      "body": "[[volatility|Swings]] are the price of growth that isn't guaranteed. What makes a fall dangerous is having to sell during it. That's why the [[time-horizon]] decides which money can sit in something that falls. Simplified from real data."
-    },
-    {
       "type": "quiz",
       "id": "q1",
-      "concepts": ["time-horizon"],
-      "prompt": "Why does a −20% year hurt Mia's money less than it would hurt next month's rent?",
-      "options": [
-        "Mia's money has 17 years to recover and nobody needs to sell it now",
-        "Because children's money can't fall",
-        "Because −20% is a small loss"
+      "phase": "challenge",
+      "concepts": [
+        "drawdown"
       ],
-      "correctIndex": 0,
-      "explanation": "Rent money would have to be sold at the low point. Money that can wait has time for the price to climb back, though nothing guarantees it will."
+      "prompt": "True or false: a fund that lost 20% needs a 20% rise to get back to the start.",
+      "options": [
+        "True",
+        "False"
+      ],
+      "correctIndex": 1,
+      "explanation": "False. €4,000 × 1.25 = €5,000. The rise starts from the smaller amount, so it must be bigger than the fall. It needs 25%. This is how a [[drawdown]] works."
     },
     {
       "type": "quiz",
       "id": "q2",
-      "concepts": ["drawdown"],
-      "prompt": "The fund fell 20%. What rise brings it back to the start?",
-      "options": ["+20%", "+25%", "+40%"],
-      "correctIndex": 1,
-      "explanation": "€4,000 × 1.25 = €5,000. The rise is taken from the smaller amount, so it has to be bigger than the fall."
+      "phase": "challenge",
+      "concepts": [
+        "time-horizon"
+      ],
+      "prompt": "Why does a 20% fall hurt money for a child's studies in 17 years less than money for next month's rent?",
+      "options": [
+        "The money for studies has 17 years to recover, and nobody needs to sell it now",
+        "Money for children cannot fall",
+        "A 20% fall is a small loss"
+      ],
+      "correctIndex": 0,
+      "explanation": "Rent money would have to be sold at the low price. Money that can wait has time for the price to recover, but nothing guarantees that it will."
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "phase": "you",
+      "kicker": "Your investments",
+      "title": "A bad year for your account",
+      "body": "Your investment account holds **{depotTotal}**. After a 20% fall, it would be worth about **{depotAfterFall}**. To get back to today's value, it would then need a rise of 25%."
     }
   ],
+  "video": {
+    "minutes": 4,
+    "scenes": [
+      {
+        "type": "scene",
+        "id": "v1",
+        "title": "One bad year",
+        "desc": "Prices go up and down. These swings are called [[volatility]]. A fall is only a real loss if you sell during it. How long your money can wait is your [[time-horizon]].",
+        "duration": 12,
+        "camera": "drift",
+        "setting": {
+          "place": "street",
+          "time": "dusk"
+        },
+        "layers": [
+          {
+            "kind": "chart",
+            "at": 1,
+            "len": 8,
+            "series": [
+              5000,
+              4000,
+              4600,
+              5300,
+              5900,
+              6600
+            ],
+            "unit": "€"
+          },
+          {
+            "kind": "tag",
+            "at": 3,
+            "text": "−20%",
+            "tone": "bad",
+            "x": 0.35,
+            "y": 0.6
+          },
+          {
+            "kind": "tag",
+            "at": 8.5,
+            "text": "Wait",
+            "tone": "neutral",
+            "x": 0.78,
+            "y": 0.25
+          }
+        ],
+        "captions": [
+          {
+            "at": 0.5,
+            "text": "You invest €5,000. After one bad year, it is worth €4,000."
+          },
+          {
+            "at": 4.5,
+            "text": "Swings like this are called volatility."
+          },
+          {
+            "at": 8,
+            "text": "If you can wait, the price has time to recover."
+          }
+        ],
+        "transcript": "t1"
+      }
+    ],
+    "beats": [
+      "v1",
+      "s1",
+      "sc1",
+      "q1",
+      "q2",
+      "t2"
+    ]
+  },
   "variants": {
     "level:beginner": {
-      "s1": { "goal": { "hint": "Set the loss to −20%." } }
-    },
-    "lang:plain": {
-      "c1": {
-        "messages": [
-          { "from": "Jonas", "text": "Did you see Mia's fund? It went down 20%" },
-          { "from": "Jonas", "text": "€5,000 is now €4,000. Should we sell?" },
-          { "from": "Lena", "me": true, "text": "She needs it in 17 years, not next week" },
-          { "from": "Jonas", "text": "I know. It still feels bad" }
-        ]
-      },
       "s1": {
-        "prompt": "When a price falls, it must rise more than it fell to get back. Find the loss that needs +25% to get back.",
-        "output": { "label": "How much it must go up" }
-      },
-      "sc1": {
-        "prompt": "After one bad year the fund is worth €4,000. What does Lena do? See what happens when Mia is 18.",
-        "choices": [
-          {
-            "label": "Sell now and keep cash",
-            "series": [5, 4, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5, 5.1],
-            "ending": "€5,100 at 18. Selling made the loss real. Then the cash grew very slowly."
-          },
-          {
-            "label": "Keep it and check less often",
-            "series": [5, 4, 4.6, 5.3, 5.9, 6.6, 7.2, 7.9, 8.6, 9.4, 10.2, 11, 11.8],
-            "ending": "€11,800 at 18. In this example the market came back. The future can be different."
-          },
-          {
-            "label": "Never start at all",
-            "series": [5, 5.1, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.2, 6.4],
-            "ending": "€6,400 at 18. No stress, and less money. A different choice, not a wrong one."
-          }
-        ]
-      },
-      "t1": {
-        "title": "Going down is normal",
-        "body": "Prices go up and down. This is [[volatility]]. The problem is when you must sell while the price is down. So how long money can wait, the [[time-horizon]], decides where it can go."
-      },
-      "q1": {
-        "prompt": "Why is a −20% year less bad for Mia's money than for rent money?",
-        "options": [
-          "Mia's money can wait 17 years, nobody must sell it now",
-          "Children's money can't go down",
-          "−20% is very little"
-        ],
-        "explanation": "Rent money must be used now, at the low price. Money that can wait has time to come back, but there is no promise."
-      },
-      "q2": {
-        "prompt": "The fund went down 20%. How much must it go up to get back?",
-        "explanation": "€4,000 × 1.25 = €5,000. It must go up more than it went down."
+        "goal": {
+          "hint": "Set the loss to −20%."
+        }
       }
     }
   }

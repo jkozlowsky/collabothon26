@@ -1,97 +1,210 @@
 {
   "id": "tokyo-1",
   "story": "tokyo",
-  "title": "Buy what you know",
-  "place": "Marunouchi · farewell party",
-  "topic": "A tax-free account and a familiar feeling",
-  "minutes": 3,
+  "title": "Where your money sits",
+  "place": "Your accounts · today",
+  "topic": "Saving and investing",
+  "minutes": 4,
   "xp": 50,
-  "concepts": ["tax-free-account", "home-bias"],
+  "concepts": [
+    "time-horizon",
+    "emergency-fund"
+  ],
   "steps": [
-    {
-      "type": "chat",
-      "id": "c1",
-      "title": "Office group · 5 people",
-      "messages": [
-        { "from": "Kenji", "text": "Opened my new NISA. Only Japanese companies" },
-        { "from": "Kenji", "text": "I know them. I use their products every day" },
-        { "from": "Aya", "text": "Foreign shares are a gamble anyway" },
-        { "from": "Michiko", "me": true, "text": "I have ¥12 million on deposit doing nothing. Maybe it's time" }
-      ]
-    },
     {
       "type": "text",
       "id": "t1",
-      "kicker": "Meet Michiko",
-      "title": "58 · school administrator in Tokyo",
-      "body": "Michiko retires at 65. She has saved **¥12,000,000** (about €72,700), almost all of it in a bank deposit, like many Japanese households. Her colleagues are starting to invest. Their first instinct: stay at home."
-    },
-    {
-      "type": "text",
-      "id": "t2",
-      "kicker": "Word from Tokyo",
-      "title": "新NISA · new NISA",
-      "body": "Since 2024, a bigger version of Japan's [[tax-free-account]]: gains inside it are not taxed. The state promotes it with the slogan \"from savings to investment\". The account decides the tax. What goes inside decides the risk."
+      "phase": "learn",
+      "kicker": "The basics",
+      "title": "Saving and investing do different jobs",
+      "body": "Saving and investing do different jobs. Savings pay for plans and surprises in the next months, like a broken washing machine. This money is your [[emergency-fund]]. Investments are for money you won't need for years. Their value goes up and down, so time matters. The time until you need the money is your [[time-horizon]]."
     },
     {
       "type": "sort",
       "id": "so1",
-      "concepts": ["home-bias"],
-      "prompt": "Swipe each sentence: a feeling or a fact?",
-      "buckets": ["Feeling", "Fact"],
-      "items": [
-        { "text": "I use their products every day, so they're safe", "bucket": 0 },
-        { "text": "Japan is about 5% of the world's stock market", "bucket": 1 },
-        { "text": "Foreign shares are a gamble", "bucket": 0 },
-        { "text": "Gains inside a NISA are not taxed", "bucket": 1 },
-        { "text": "I understand Japanese companies better", "bucket": 0 },
-        { "text": "A broad world fund holds thousands of companies in many countries", "bucket": 1 }
+      "phase": "challenge",
+      "concepts": [
+        "time-horizon"
       ],
-      "explanation": "Knowing a company's products doesn't make its shares less risky. Familiar feels safe: that pull is called [[home-bias]]."
+      "prompt": "When will you need this money? Swipe each goal to the left or to the right.",
+      "buckets": [
+        "Within a year",
+        "In 10 years or later"
+      ],
+      "items": [
+        {
+          "text": "A holiday next summer",
+          "bucket": 0
+        },
+        {
+          "text": "Rent if you lose your job",
+          "bucket": 0
+        },
+        {
+          "text": "A new laptop if yours breaks",
+          "bucket": 0
+        },
+        {
+          "text": "Your retirement",
+          "bucket": 1
+        },
+        {
+          "text": "A child's studies in 15 years",
+          "bucket": 1
+        }
+      ],
+      "explanation": "If you need money soon, it has no time to recover after prices fall. Money you need in 10 years or later has a long [[time-horizon]]."
     },
     {
       "type": "quiz",
       "id": "q1",
-      "concepts": ["tax-free-account"],
-      "prompt": "Michiko moves money into a NISA. What changes?",
+      "phase": "challenge",
+      "concepts": [
+        "time-horizon"
+      ],
+      "prompt": "True or false: the money for next month's rent can wait out a fall in prices.",
       "options": [
-        "Gains inside are not taxed; the risk depends on what she buys",
-        "Her money becomes guaranteed by the state",
-        "Her money can no longer fall"
+        "True",
+        "False"
+      ],
+      "correctIndex": 1,
+      "explanation": "False. Prices can stay low for years, but the rent is due next month. Only money that can wait for years can sit through a fall. That is money with a long [[time-horizon]]."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "phase": "challenge",
+      "concepts": [
+        "emergency-fund"
+      ],
+      "prompt": "Your investments are down 20% this month. Then your car breaks down. What happens if the money for the repair is in your investments?",
+      "options": [
+        "You must sell them at a low price to pay for the repair",
+        "The bank pays you what they were worth before",
+        "Nothing, because losses only count at the end of the year"
       ],
       "correctIndex": 0,
-      "explanation": "A tax-free account is a wrapper. It changes the tax on gains, not how much the investments inside can rise or fall."
+      "explanation": "When you sell, you get today's price. Money for repairs is the job of an [[emergency-fund]] in your savings account. Then your investments can wait until prices recover."
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "phase": "you",
+      "kicker": "Your money today",
+      "title": "How long your savings last",
+      "body": "You have **{savingsBalance}** in your savings account and **{depotTotal}** in your investment account. Each month, **{monthlyInvesting}** goes into a savings plan. You spend about **{monthlySpending}** a month. Your savings could pay for about **{bufferMonths}** months of costs."
+    },
+    {
+      "type": "action",
+      "id": "a1",
+      "phase": "decide",
+      "title": "Your decision",
+      "body": "Your savings could pay for about **{bufferMonths}** months of costs today. How many months of costs do you want to always keep in your savings account? You choose the number.",
+      "bodyNoData": "How many months of costs do you want to always keep in your savings account? You choose the number.",
+      "rule": {
+        "label": "Months of costs to keep in savings",
+        "min": 1,
+        "max": 12,
+        "step": 1,
+        "value": 3,
+        "unit": " months",
+        "kind": "multiple",
+        "appliesTo": "monthlySpending",
+        "result": "= {amount} in your savings account"
+      },
+      "cta": "Save my rule"
     }
   ],
-  "variants": {
-    "lang:plain": {
-      "c1": {
-        "messages": [
-          { "from": "Kenji", "text": "I opened a new NISA. Only Japanese companies" },
-          { "from": "Kenji", "text": "I know them. I use their products every day" },
-          { "from": "Aya", "text": "Foreign shares are just luck" },
-          { "from": "Michiko", "me": true, "text": "My ¥12 million just sits in the bank. Maybe I should do something" }
-        ]
-      },
-      "t1": {
-        "body": "Michiko will stop working at 65. She saved **¥12,000,000** (about €72,700). Almost all of it is in the bank, like for many people in Japan. Her friends at work start to invest. They want to buy only Japanese companies."
-      },
-      "t2": {
-        "body": "Since 2024 Japan has a bigger version of this account. You pay no tax on gains inside it. This is a [[tax-free-account]]. The account changes the tax. What you put inside it decides the risk."
-      },
-      "so1": {
-        "prompt": "Swipe each sentence: is it a feeling or a fact?",
-        "explanation": "Knowing a company's products doesn't make its shares safer. We like what we know. This is called [[home-bias]]."
-      },
-      "q1": {
-        "prompt": "Michiko puts money in a NISA. What changes?",
-        "options": [
-          "She pays no tax on gains. The risk depends on what she buys",
-          "The state promises her money",
-          "Her money can't go down any more"
+  "video": {
+    "minutes": 4,
+    "scenes": [
+      {
+        "type": "scene",
+        "id": "v1",
+        "title": "Saving and investing",
+        "desc": "Savings are for the next few months. Investments are for money that can wait for years.",
+        "duration": 12,
+        "camera": "push",
+        "setting": {
+          "place": "home",
+          "time": "day"
+        },
+        "layers": [
+          {
+            "kind": "tag",
+            "at": 1,
+            "text": "Savings",
+            "tone": "neutral",
+            "x": 0.25,
+            "y": 0.25
+          },
+          {
+            "kind": "tag",
+            "at": 1.5,
+            "text": "Months",
+            "tone": "neutral",
+            "x": 0.25,
+            "y": 0.4
+          },
+          {
+            "kind": "chart",
+            "at": 5,
+            "len": 6,
+            "series": [
+              100,
+              112,
+              94,
+              118,
+              103,
+              126
+            ],
+            "unit": "€"
+          },
+          {
+            "kind": "tag",
+            "at": 6.5,
+            "text": "Investing",
+            "tone": "good",
+            "x": 0.72,
+            "y": 0.25
+          },
+          {
+            "kind": "tag",
+            "at": 7,
+            "text": "Years",
+            "tone": "good",
+            "x": 0.72,
+            "y": 0.4
+          }
         ],
-        "explanation": "The account only changes the tax. The things inside can still go up and down."
+        "captions": [
+          {
+            "at": 0.5,
+            "text": "Saving and investing do different jobs."
+          },
+          {
+            "at": 3.5,
+            "text": "Savings pay for plans and surprises in the next months."
+          },
+          {
+            "at": 6.5,
+            "text": "Investments are for money you won't need for years."
+          },
+          {
+            "at": 9.5,
+            "text": "Their value goes up and down, so time matters."
+          }
+        ],
+        "transcript": "t1"
       }
-    }
+    ],
+    "beats": [
+      "v1",
+      "so1",
+      "q1",
+      "q2",
+      "t2",
+      "a1"
+    ]
   }
 }

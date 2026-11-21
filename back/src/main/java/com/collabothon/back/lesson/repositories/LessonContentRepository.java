@@ -41,7 +41,9 @@ public class LessonContentRepository {
 			try (InputStream in = file.getInputStream()) {
 				lesson = (ObjectNode) json.readTree(in);
 			}
-			LessonRules.validate(lesson, concepts);
+			// Narration files live in static/audio/{lessonId}/…; a scene naming a missing one stops startup.
+			LessonRules.validate(lesson, concepts,
+					audio -> resolver.getResource("classpath:static/audio/" + audio).exists());
 			String id = lesson.path("id").asString();
 			String expectedFilename = id + ".json";
 			if (!expectedFilename.equals(file.getFilename())) {

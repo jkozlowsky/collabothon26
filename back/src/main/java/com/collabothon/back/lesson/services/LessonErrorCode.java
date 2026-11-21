@@ -12,7 +12,6 @@ import lombok.experimental.Accessors;
 public enum LessonErrorCode implements ErrorCode {
 
 	LESSON_NOT_FOUND(HttpStatus.NOT_FOUND, "Lesson not found."),
-	INVALID_LANG(HttpStatus.BAD_REQUEST, "Language must be standard or plain."),
 	INVALID_STEP(HttpStatus.BAD_REQUEST, "Invalid lesson step."),
 	INVALID_SCENARIO_CHOICE(HttpStatus.BAD_REQUEST, "Invalid scenario choice."),
 	PREVIOUS_LESSON_LOCKED(HttpStatus.FORBIDDEN, "Complete the previous lesson in this story first.");

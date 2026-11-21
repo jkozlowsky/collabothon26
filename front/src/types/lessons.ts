@@ -1,7 +1,12 @@
 // Mirrors the lesson JSON in back/src/main/resources/content and LessonController.java.
 // Shared contract between content, backend and player: change deliberately and tell the team.
+// Video mode: .plans/lesson-video-mode-spec.md §4 and §6.1.
+import type { LandmarkKind, StoryColor } from '@/types/stories';
 
 export type LessonStatus = 'done' | 'available' | 'locked';
+
+/** Video: animated scenes with steps in a panel. Classic: the text form, also called the transcript. */
+export type LessonMode = 'classic' | 'video';
 
 export type LessonSummary = {
   id: string;
@@ -14,9 +19,18 @@ export type LessonSummary = {
   minutes: number;
   xp: number;
   status: LessonStatus;
+  /** Set when the lesson has a video track. */
+  video: { minutes: number } | null;
 };
 
+/**
+ * Where a step sits in the lesson flow: the user learns, is challenged, sees their own situation, then
+ * (when the lesson leads to one) decides. Optional; a lesson that uses it gives every step a phase, in this order.
+ */
+export type Phase = 'learn' | 'challenge' | 'you' | 'decide';
+
 type StepBase = {
+  phase?: Phase;
   /** Unique within the lesson; variants and results refer to it. */
   id: string;
   /** Glossary keys this step trains; graded steps update the user's knowledge of them. */
@@ -36,6 +50,8 @@ export type QuizStep = StepBase & {
   options: string[];
   correctIndex: number;
   explanation: string;
+  /** "Explain the chart": a line drawn above the options. `labels` name the points (years, shares). */
+  chart?: { series: number[]; labels?: string[]; unit: string; caption?: string };
 };
 
 export type MatchStep = StepBase & { type: 'match'; prompt?: string; pairs: [string, string][] };
@@ -57,9 +73,27 @@ export type PredictStep = StepBase & {
   reveal: string;
 };
 
-export type SliderModel = 'drawdownRecovery' | 'leverage' | 'oneCompanyCrash' | 'realValue' | 'installmentCost' | 'countryMix';
+export type SliderModel =
+  | 'drawdownRecovery'
+  | 'leverage'
+  | 'oneCompanyCrash'
+  | 'realValue'
+  | 'installmentCost'
+  | 'countryMix'
+  | 'monthlyPlan'
+  | 'currencyMove'
+  | 'compoundGrowth';
 
-export type SliderParam = { label: string; min: number; max: number; step: number; value: number; unit?: string };
+export type SliderParam = {
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+  unit?: string;
+  /** Start value from the user's bank (a number metric in lib/lessonMetrics.ts); `value` when there is no data. */
+  fromBank?: string;
+};
 
 /** Goal is met when the value (`output` or a param key) lies within [min, max]. */
 export type GoalCondition = { of: string; min?: number; max?: number };
@@ -115,7 +149,63 @@ export type Step =
 
 export type StepType = Step['type'];
 
-export type Lang = 'standard' | 'plain';
+export type CameraMove = 'push' | 'pull' | 'drift' | 'none';
+export type ScenePlace = 'office' | 'home' | 'street' | 'cafe';
+export type SceneTime = 'day' | 'dusk' | 'night';
+export type TagTone = 'good' | 'bad' | 'neutral';
+
+/** The shot kit: every scene in every city is drawn from these. `at` / `len` are seconds from scene start. */
+export type SceneLayer =
+  | { kind: 'character'; pose: 'sit' | 'stand' | 'phone'; x: number; name?: string }
+  | { kind: 'phone'; messages: (ChatMessage & { at: number })[]; x?: number }
+  | {
+      kind: 'amount';
+      at?: number;
+      len?: number;
+      from?: number;
+      to?: number;
+      currency?: string;
+      label?: string;
+      /** Filled on the device from the mock bank (lib/lessonMetrics.ts AMOUNTS); `fallback` when there is no data. */
+      metric?: string;
+      fallback?: { to: number; currency: string; label: string };
+    }
+  | { kind: 'chart'; at?: number; len?: number; series: number[]; labels?: string[]; unit: string }
+  | { kind: 'tag'; at?: number; text: string; tone: TagTone; x: number; y: number };
+
+export type SceneCaption = { at: number; text: string };
+
+type SceneFields = {
+  title: string;
+  desc: string;
+  /** Seconds; the scene's length while it has no audio. */
+  duration: number;
+  /** Narration file, relative to the lesson's `audioBase`. */
+  audio?: string;
+  camera: CameraMove;
+  setting: { place: ScenePlace; time: SceneTime };
+  layers: SceneLayer[];
+  /** Captions = narration, one line at a time. */
+  captions: SceneCaption[];
+};
+
+export type SceneOverride = Partial<Pick<SceneFields, 'layers' | 'captions' | 'desc' | 'camera' | 'duration' | 'audio'>>;
+
+export type Scene = { id: string; type: 'scene' } & SceneFields & {
+    /** The ending that follows a scenario choice; keys are choice indices. */
+    byChoice?: { step: string } & Record<`${number}`, SceneOverride>;
+    /** Applied when a metric amount has no data (the character's number instead of the user's). */
+    noData?: SceneOverride;
+    /** Id of the text step that is this scene's transcript in classic mode; it contains every caption word for word. */
+    transcript?: string;
+  };
+
+export type VideoTrack = {
+  minutes: number;
+  scenes: Scene[];
+  /** The video order: scene ids and step ids. */
+  beats: string[];
+};
 
 export type GlossaryEntry = { term: string; definition: string };
 
@@ -128,8 +218,18 @@ export type Lesson = {
   minutes: number;
   xp: number;
   concepts: string[];
+  /** The classic order. */
   steps: Step[];
-  lang: Lang;
+  /** Null when the lesson has no video track. */
+  video: VideoTrack | null;
+  /** The user's last used mode if the lesson has a video track, else classic. */
+  startMode: LessonMode;
+  /** The story's city, for the player title "Seoul · Lesson 1". */
+  city: string;
+  color: StoryColor;
+  landmark: { kind: LandmarkKind; at: number } | null;
+  /** Base URL for scene audio, e.g. "/audio/". */
+  audioBase: string;
   /** 1-based position in the story, and the story's lesson count. */
   position: number;
   total: number;
@@ -144,7 +244,8 @@ export type StepOutcome = { correct?: boolean; choice?: number };
 export type LessonResultRequest = {
   steps: { stepId: string; correctFirstTry: boolean }[];
   scenarioChoices: Record<string, number>;
-  lang: Lang;
+  /** The mode the lesson was finished in. */
+  mode: LessonMode;
 };
 
 export type LessonResultResponse = { xpAwarded: number; firstCompletion: boolean; totalXp: number; next: string | null };

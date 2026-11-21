@@ -164,3 +164,37 @@ export const nav = {
   /** Bottom padding scrolling content needs so its last row clears the nav. */
   clearance: 64 + 12 + 24,
 } as const;
+
+/**
+ * Lesson video player and scenes (.plans/lesson-video-mode-spec.md §3.2, §4.3): always dark, whatever the app
+ * theme. Not Figma variables yet; the Shot kit board in Figma is where these get their final values.
+ */
+export const scenePalette = {
+  surface: '#071419',
+  onScene: '#FFFFFF',
+  onSceneMuted: 'rgba(255, 255, 255, 0.78)',
+  scrimStrong: 'rgba(0, 0, 0, 0.55)',
+  scrimClear: 'rgba(0, 0, 0, 0)',
+  captionPill: 'rgba(0, 0, 0, 0.62)',
+  segmentDone: 'rgba(255, 255, 255, 0.95)',
+  segmentNow: 'rgba(255, 255, 255, 0.62)',
+  segmentTodo: 'rgba(255, 255, 255, 0.28)',
+  progressTrack: 'rgba(255, 255, 255, 0.25)',
+  pressed: 'rgba(255, 255, 255, 0.14)',
+  /** Sky gradient, top to bottom, per time of day. */
+  sky: {
+    day: ['#1B6F82', '#4F9DB0', '#A9D3DC'],
+    dusk: ['#2E3F7E', '#C9637A', '#F2A86F'],
+    night: ['#070B22', '#141C46', '#2C2B5E'],
+  },
+  wall: { day: '#21343C', dusk: '#2B1C2C', night: '#131528' },
+  floor: { day: '#18282F', dusk: '#1F1420', night: '#0C0E1C' },
+  desk: '#3A4A52',
+  skyline: '#0B1A22',
+  windowLit: '#FFD98A',
+  star: '#FFFFFF',
+  phoneBody: '#0F1E24',
+  phoneScreen: '#E9EEF0',
+  phoneLight: '#BFE3EE',
+  bubble: '#FFFFFF',
+} as const;

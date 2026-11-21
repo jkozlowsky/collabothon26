@@ -14,7 +14,7 @@ import { LEARNER, STORIES, withLessons } from '@/lib/stories';
 import { USER_ID } from '@/lib/user';
 import type { LessonSummary } from '@/types/lessons';
 
-/** Map tab (Figma 3:496): header, the globe with story pins, and the "Your stories" sheet. */
+/** Map tab (Figma 3:496): header, the globe with story pins, and the "Your journeys" sheet. */
 export default function MapScreen() {
   const globe = useRef<GlobeHandle>(null);
   // Estimates until the first layout pass measures the real values.

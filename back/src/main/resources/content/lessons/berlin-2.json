@@ -1,135 +1,279 @@
 {
   "id": "berlin-2",
   "story": "berlin",
-  "title": "Word from Berlin: Sparbuch",
-  "place": "Prenzlauer Berg · Oma's flat",
-  "topic": "Time and compound growth",
+  "title": "Growth on growth",
+  "place": "Your savings · over many years",
+  "topic": "How money grows over time",
   "minutes": 4,
   "xp": 60,
-  "concepts": ["compound-interest", "real-return"],
+  "concepts": [
+    "compound-interest",
+    "real-return"
+  ],
   "steps": [
-    {
-      "type": "chat",
-      "id": "c1",
-      "title": "Oma",
-      "messages": [
-        { "from": "Oma", "text": "I opened a Sparbuch for your father in 1968" },
-        { "from": "Oma", "text": "I'll put €10,000 aside for Mia. For when she's 18" },
-        { "from": "Lena", "me": true, "text": "That's so kind. Where should it go?" },
-        { "from": "Oma", "text": "Somewhere safe. You young people know these things" }
-      ]
-    },
     {
       "type": "text",
       "id": "t1",
-      "kicker": "Word from Berlin",
-      "title": "Sparbuch",
-      "body": "The passbook savings account: for decades, the way Germans saved. Germans still keep a big share of their money in cash and deposits. There's even a word for saving out of worry: **Angstsparen**. The question is what that safety costs over 18 years."
-    },
-    {
-      "type": "predict",
-      "id": "p1",
-      "concepts": ["compound-interest"],
-      "prompt": "€10,000 grows 5% a year, and every year's growth keeps growing too. How much is there after 18 years?",
-      "input": { "kind": "slider", "min": 10000, "max": 40000, "step": 500, "unit": "€" },
-      "answer": 24000,
-      "reveal": "About €24,000. Not 10,000 + 18 × 500 = €19,000: from year two on, the earlier growth also grows. That's [[compound-interest]], and it needs time more than anything."
+      "phase": "learn",
+      "kicker": "How money grows",
+      "title": "Growth on growth",
+      "body": "€10,000 grows by 5% every year. Each year, last year's growth grows too. This is called [[compound-interest]]. After 30 years, there is about €43,000. In the first years, the effect is small. After many years, it becomes large."
     },
     {
       "type": "scenario",
       "id": "sc1",
-      "concepts": ["compound-interest", "real-return"],
-      "prompt": "Where does Mia's €10,000 wait until she is 18? Pick one and jump ahead.",
+      "phase": "learn",
+      "concepts": [
+        "compound-interest",
+        "real-return"
+      ],
+      "prompt": "€10,000 must wait 18 years, for example for a child's studies. Choose where it waits, and see what happens.",
       "unit": "€k",
       "periodLabel": "18 years",
       "choices": [
         {
-          "label": "All on Tagesgeld at 1.5%",
-          "series": [10, 10.2, 10.5, 10.7, 10.9, 11.2, 11.4, 11.7, 12, 12.2, 12.5, 12.8, 13.1],
-          "ending": "€13,100, and it never fell once. But prices rose too: at 2% inflation it buys what about €9,100 buys today."
+          "label": "All in a savings account at 1.5%",
+          "series": [
+            10,
+            10.2,
+            10.5,
+            10.7,
+            10.9,
+            11.2,
+            11.4,
+            11.7,
+            12,
+            12.2,
+            12.5,
+            12.8,
+            13.1
+          ],
+          "ending": "After 18 years, you have €13,100. The value never fell. But prices rose too. With prices rising 2% a year, the money buys what about €9,100 buys today."
         },
         {
-          "label": "Half Tagesgeld, half a broad global fund",
-          "series": [10, 10.7, 11.4, 12.1, 10.9, 11.6, 12.8, 13.7, 14.7, 15.8, 16.8, 17.7, 18.6],
-          "ending": "€18,600. In year six it dipped to €10,900, half as deep as an all-in fund, and it climbed back while Mia was still small."
+          "label": "Half in a savings account, half in a fund that invests all over the world",
+          "series": [
+            10,
+            10.7,
+            11.4,
+            12.1,
+            10.9,
+            11.6,
+            12.8,
+            13.7,
+            14.7,
+            15.8,
+            16.8,
+            17.7,
+            18.6
+          ],
+          "ending": "After 18 years, you have €18,600. In year six, the value fell to €10,900. That fall was half as deep as with all of the money in the fund."
         },
         {
-          "label": "All in a broad global fund",
-          "series": [10, 11.2, 12.4, 13.6, 10.8, 12.1, 14.2, 15.8, 17.5, 19.4, 21, 22.6, 24.1],
-          "ending": "€24,100. But in year six it fell to €10,800, and the news was loud. This only works for money that can wait, and nothing promises the next 18 years look like the last."
+          "label": "All in a fund that invests all over the world",
+          "series": [
+            10,
+            11.2,
+            12.4,
+            13.6,
+            10.8,
+            12.1,
+            14.2,
+            15.8,
+            17.5,
+            19.4,
+            21,
+            22.6,
+            24.1
+          ],
+          "ending": "After 18 years, you have €24,100. But in year six, the value fell to €10,800. This only works for money that can wait. The next 18 years may look very different."
         }
       ]
     },
     {
-      "type": "text",
-      "id": "t2",
-      "title": "What the paths show",
-      "body": "Safe money never fell, but lost buying power. Invested money grew more, but fell hard on the way. Neither is free: one costs [[real-return]], the other costs calm. Simplified from real data: 1.5% interest and 5% a year are illustrations, not forecasts."
+      "type": "predict",
+      "id": "p1",
+      "phase": "challenge",
+      "concepts": [
+        "compound-interest"
+      ],
+      "prompt": "€10,000 grows by 5% a year. Each year's growth also grows. How much is there after 18 years?",
+      "input": {
+        "kind": "slider",
+        "min": 10000,
+        "max": 40000,
+        "step": 500,
+        "unit": "€"
+      },
+      "answer": 24000,
+      "reveal": "About €24,000. It is not €10,000 + 18 × €500 = €19,000. From the second year on, the earlier growth also grows. This is [[compound-interest]]."
     },
     {
       "type": "quiz",
       "id": "q1",
-      "concepts": ["compound-interest"],
-      "prompt": "Why does compound growth matter so much for Mia's money?",
+      "phase": "challenge",
+      "concepts": [
+        "compound-interest"
+      ],
+      "prompt": "True or false: with compound interest, money grows by the same amount every year.",
       "options": [
-        "It has 18 years, and growth on growth speeds up over time",
-        "Because the bank adds a bonus for children",
-        "Because funds can't fall over 18 years"
+        "True",
+        "False"
+      ],
+      "correctIndex": 1,
+      "explanation": "False. Each year, the earnings from earlier years earn too. So the amount added each year gets bigger."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "phase": "challenge",
+      "concepts": [
+        "compound-interest"
+      ],
+      "prompt": "Why does time matter so much for compound interest?",
+      "options": [
+        "Earnings on earlier earnings get bigger every year",
+        "The bank pays a bonus after 10 years",
+        "Prices stop rising after many years"
       ],
       "correctIndex": 0,
-      "explanation": "Compounding is slow at first and fast later. The longer money can wait, the bigger the difference between paths. Funds can still fall in any year."
+      "explanation": "Compound interest is slow at first and fast later. The longer money can wait, the bigger the difference between the paths."
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "phase": "you",
+      "kicker": "Your savings",
+      "title": "Your interest grows too",
+      "body": "Your savings account holds **{savingsBalance}** and pays **{savingsRate}** a year. The bank adds the interest to your balance. The next year, that interest earns interest too. What your money gains after rising prices is called your [[real-return]]."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s1",
+      "phase": "you",
+      "concepts": [
+        "compound-interest"
+      ],
+      "prompt": "Your savings account holds {savingsBalance} at {savingsRate} a year. Move the sliders to see what it could grow to after some years.",
+      "model": "compoundGrowth",
+      "params": {
+        "years": {
+          "label": "Years",
+          "min": 1,
+          "max": 40,
+          "step": 1,
+          "value": 18,
+          "unit": " years"
+        },
+        "start": {
+          "label": "Starting amount",
+          "min": 0,
+          "max": 50000,
+          "step": 500,
+          "value": 10000,
+          "unit": "€",
+          "fromBank": "savingsBalance"
+        },
+        "rate": {
+          "label": "Interest or return per year",
+          "min": 0,
+          "max": 8,
+          "step": 0.25,
+          "value": 2,
+          "unit": "%",
+          "fromBank": "savingsRate"
+        }
+      },
+      "output": {
+        "label": "Value after these years",
+        "unit": "€"
+      },
+      "goal": {
+        "condition": {
+          "of": "output",
+          "min": -1000000
+        },
+        "hint": "Move a slider to see the result change."
+      },
+      "note": "The amount and the rate start at your real numbers. This is an example, not a forecast. It does not count rising prices."
     }
   ],
-  "variants": {
-    "lang:plain": {
-      "c1": {
-        "messages": [
-          { "from": "Oma", "text": "I opened a savings book for your father in 1968" },
-          { "from": "Oma", "text": "I want to give Mia €10,000. For when she is 18" },
-          { "from": "Lena", "me": true, "text": "That's so kind. Where should we keep it?" },
-          { "from": "Oma", "text": "Somewhere safe. You know these things better" }
-        ]
-      },
-      "t1": {
-        "body": "A savings book. For many years, this is how Germans saved. Many Germans still keep a lot of money in cash and savings accounts. They even have a word for saving because you are worried: **Angstsparen**. But what does this safety cost in 18 years?"
-      },
-      "p1": {
-        "prompt": "€10,000 grows 5% every year. The growth also grows the next year. How much is there after 18 years? Guess.",
-        "reveal": "About €24,000. Each year, last year's growth grows too. This is called [[compound-interest]]. It needs a lot of time."
-      },
-      "sc1": {
-        "prompt": "Where should Mia's €10,000 wait until she is 18? Choose, then see the result.",
-        "choices": [
+  "video": {
+    "minutes": 4,
+    "scenes": [
+      {
+        "type": "scene",
+        "id": "v1",
+        "title": "Growth on growth",
+        "desc": "Each year, the earlier growth grows too. After many years, the effect is large.",
+        "duration": 13,
+        "camera": "push",
+        "setting": {
+          "place": "home",
+          "time": "dusk"
+        },
+        "layers": [
           {
-            "label": "All in the savings account at 1.5%",
-            "series": [10, 10.2, 10.5, 10.7, 10.9, 11.2, 11.4, 11.7, 12, 12.2, 12.5, 12.8, 13.1],
-            "ending": "€13,100. It never went down. But prices went up too. It buys what about €9,100 buys today."
+            "kind": "tag",
+            "at": 1,
+            "text": "5% a year",
+            "tone": "neutral",
+            "x": 0.28,
+            "y": 0.25
           },
           {
-            "label": "Half savings, half a fund that holds many companies worldwide",
-            "series": [10, 10.7, 11.4, 12.1, 10.9, 11.6, 12.8, 13.7, 14.7, 15.8, 16.8, 17.7, 18.6],
-            "ending": "€18,600. In year six it went down to €10,900. Then it grew again."
+            "kind": "chart",
+            "at": 3.5,
+            "len": 8,
+            "series": [
+              10000,
+              12763,
+              16289,
+              20789,
+              26533,
+              33864,
+              43219
+            ],
+            "unit": "€"
           },
           {
-            "label": "All in a fund that holds many companies worldwide",
-            "series": [10, 11.2, 12.4, 13.6, 10.8, 12.1, 14.2, 15.8, 17.5, 19.4, 21, 22.6, 24.1],
-            "ending": "€24,100. But in year six it fell to €10,800. This only works for money that can wait. The future can be different from the past."
+            "kind": "tag",
+            "at": 10.5,
+            "text": "30 years",
+            "tone": "good",
+            "x": 0.75,
+            "y": 0.25
           }
-        ]
-      },
-      "t2": {
-        "title": "Nothing is free",
-        "body": "Safe money never went down, but it buys less. Invested money grew more, but fell on the way. One costs value ([[real-return]]), the other costs calm. The numbers are only examples."
-      },
-      "q1": {
-        "prompt": "Why is growth on growth so strong for Mia's money?",
-        "options": [
-          "It has 18 years, and growth on growth gets faster with time",
-          "The bank gives a bonus for children",
-          "Funds can't go down in 18 years"
         ],
-        "explanation": "Growth on growth is slow at first and fast later. More time means a bigger difference. Funds can still go down in any year."
+        "captions": [
+          {
+            "at": 0.5,
+            "text": "€10,000 grows by 5% every year."
+          },
+          {
+            "at": 4,
+            "text": "Each year, last year's growth grows too."
+          },
+          {
+            "at": 7,
+            "text": "This is called compound interest."
+          },
+          {
+            "at": 10,
+            "text": "After 30 years, there is about €43,000."
+          }
+        ],
+        "transcript": "t1"
       }
-    }
+    ],
+    "beats": [
+      "v1",
+      "sc1",
+      "p1",
+      "q1",
+      "q2",
+      "t2",
+      "s1"
+    ]
   }
 }

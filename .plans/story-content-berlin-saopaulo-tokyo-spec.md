@@ -21,7 +21,7 @@ Colours: Seoul moved to violet in the story-screen work, so Tokyo takes rose.
 - **Cities:** Berlin, São Paulo and Tokyo. Buenos Aires, Nairobi and Mumbai stay as "coming soon" pins.
 - **Depth:** 5 lessons per story, like Seoul. Lesson 5 is always "Your stop · today" and ends with an `action` step.
 - **Variants:**
-  - every lesson gets `lang:plain` for every step that has text;
+  - ~~every lesson gets `lang:plain` for every step that has text;~~ removed: plain language is gone, see [`lesson-video-mode-spec.md`](lesson-video-mode-spec.md) §9;
   - every `slider-chart` gets a `level:beginner` hint;
   - every final `action` step gets `persona:student|family|pre-retirement`.
 - **New maths:** at most 1 new slider model per city (§6.1).
@@ -206,7 +206,7 @@ Each also needs a test in `__tests__/models.test.ts`. All three are **blocking**
 ## 8. Output (generated after the OK)
 
 1. `back/src/main/resources/content/lessons/`: 15 files, `berlin-1..5.json`, `sao-paulo-1..5.json`, `tokyo-1..5.json`.
-   - Every lesson has `lang:plain` overrides.
+   - ~~Every lesson has `lang:plain` overrides.~~ Removed (`lesson-video-mode-spec.md` §9).
    - Every `slider-chart` has a `level:beginner` hint.
    - Every lesson-5 `action` has `persona:student|family|pre-retirement` overrides.
 2. `stories.json`:
@@ -230,7 +230,7 @@ Each also needs a test in `__tests__/models.test.ts`. All three are **blocking**
 **Done when:**
 - the backend starts, so `LessonContent` validation passes;
 - `npm run check` passes in `front/`;
-- every new lesson plays end to end in the app in both `standard` and `plain`;
+- every new lesson plays end to end in the app;
 - no "on one bet" text appears in a lesson where it makes no sense.
 
 ## 9. Open points

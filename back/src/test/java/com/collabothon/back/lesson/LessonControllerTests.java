@@ -46,30 +46,87 @@ class LessonControllerTests {
 			.andExpect(jsonPath("$[0].id").value("seoul-1"))
 			.andExpect(jsonPath("$[0].status").value("available"))
 			.andExpect(jsonPath("$[1].status").value("locked"))
-			.andExpect(jsonPath("$.length()").value(20));
+			.andExpect(jsonPath("$.length()").value(20))
+			.andExpect(jsonPath("$[0].video.minutes").value(5))
+			.andExpect(jsonPath("$[2].video").isEmpty());
 		mvc.perform(get("/api/stories"))
 			.andExpect(jsonPath("$[0].id").value("seoul"))
 			.andExpect(jsonPath("$[0].current").value(true))
 			.andExpect(jsonPath("$[0].nextLesson.id").value("seoul-1"))
+			.andExpect(jsonPath("$[0].lessons[0].video.minutes").value(5))
 			.andExpect(jsonPath("$[1].id").value("berlin"))
 			.andExpect(jsonPath("$[1].status").value("available"))
 			.andExpect(jsonPath("$[1].current").value(false));
 	}
 
 	@Test
-	void returnsLessonWithStepsGlossaryAndPlainVariant() throws Exception {
-		mvc.perform(get("/api/lessons/seoul-1"))
+	void returnsLessonWithBothOrdersGlossaryAndStoryLook() throws Exception {
+		mvc.perform(get("/api/lessons/seoul-1").param("userId", "newcomer"))
 			.andExpect(status().isOk())
+			// Classic order in steps, video order in beats, in one response.
 			.andExpect(jsonPath("$.steps[0].type").value("chat"))
+			.andExpect(jsonPath("$.steps[7].prompt")
+				.value("XYZ fell 50%. What rise does it need to get back to its old price?"))
+			.andExpect(jsonPath("$.video.beats[0]").value("v1"))
+			.andExpect(jsonPath("$.video.beats[1]").value("p1"))
+			.andExpect(jsonPath("$.video.beats[7]").value("v4"))
+			.andExpect(jsonPath("$.video.scenes.length()").value(4))
+			.andExpect(jsonPath("$.video.scenes[3].noData.captions[0].text").value("Ji-woo's savings today."))
+			.andExpect(jsonPath("$.startMode").value("video"))
+			.andExpect(jsonPath("$.color").value("violet"))
+			.andExpect(jsonPath("$.city").value("Seoul"))
+			.andExpect(jsonPath("$.landmark.kind").value("tower"))
+			.andExpect(jsonPath("$.audioBase").value("/audio/"))
+			.andExpect(jsonPath("$.lang").doesNotExist())
 			.andExpect(jsonPath("$.variants").doesNotExist())
 			.andExpect(jsonPath("$.next").value("seoul-2"))
-			.andExpect(jsonPath("$.glossary.drawdown.term").value("Drawdown"))
-			.andExpect(jsonPath("$.steps[6].prompt")
-				.value("XYZ fell 50%. What rise does it need to get back to its old price?"));
-		mvc.perform(get("/api/lessons/seoul-1").param("lang", "plain"))
-			.andExpect(jsonPath("$.lang").value("plain"))
-			.andExpect(jsonPath("$.steps[6].prompt").value("A price fell by half. How much must it go up to get back?"))
-			.andExpect(jsonPath("$.steps[6].correctIndex").value(1));
+			.andExpect(jsonPath("$.glossary.drawdown.term").value("Drawdown"));
+		mvc.perform(get("/api/lessons/seoul-3"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.video").isEmpty())
+			.andExpect(jsonPath("$.startMode").value("classic"));
+	}
+
+	@Test
+	void lessonModeIsRememberedPerUser() throws Exception {
+		mvc.perform(put("/api/users/reader/lesson-mode").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"mode\":\"classic\"}")).andExpect(status().isNoContent());
+		mvc.perform(get("/api/lessons/seoul-1").param("userId", "reader"))
+			.andExpect(jsonPath("$.startMode").value("classic"));
+		mvc.perform(put("/api/users/reader/lesson-mode").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"mode\":\"video\"}")).andExpect(status().isNoContent());
+		mvc.perform(get("/api/lessons/seoul-1").param("userId", "reader"))
+			.andExpect(jsonPath("$.startMode").value("video"));
+
+		mvc.perform(put("/api/users/reader/lesson-mode").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"mode\":\"film\"}")).andExpect(status().isBadRequest());
+		mvc.perform(put("/api/users/reader/lesson-mode").contentType(MediaType.APPLICATION_JSON)
+			.content("{}")).andExpect(status().isBadRequest());
+		// Switching mode must not touch the onboarding state.
+		mvc.perform(get("/api/users/reader/profile")).andExpect(jsonPath("$.onboardingCompleted").value(false));
+	}
+
+	@Test
+	void videoResultWithSharedStepsEarnsTheSameXp() throws Exception {
+		String body = """
+				{"steps":[{"stepId":"q1","correctFirstTry":true},{"stepId":"q2","correctFirstTry":true}],
+				 "scenarioChoices":{},"mode":"video"}""";
+		mvc.perform(post("/api/lessons/seoul-1/result").param("userId", "viewer")
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(body))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.xpAwarded").value(50))
+			.andExpect(jsonPath("$.firstCompletion").value(true));
+		// Scene ids are not steps.
+		mvc.perform(post("/api/lessons/seoul-1/result").param("userId", "viewer")
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("{\"steps\":[{\"stepId\":\"v1\",\"correctFirstTry\":true}],\"mode\":\"video\"}"))
+			.andExpect(status().isBadRequest());
+		// mode is required.
+		mvc.perform(post("/api/lessons/seoul-1/result").param("userId", "viewer")
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("{\"steps\":[]}"))
+			.andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -85,7 +142,7 @@ class LessonControllerTests {
 		for (int i = 1; i <= 4; i++) {
 			mvc.perform(post("/api/lessons/seoul-" + i + "/result").param("userId", "grandpa")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"steps\":[]}")).andExpect(status().isOk());
+				.content("{\"steps\":[],\"mode\":\"classic\"}")).andExpect(status().isOk());
 		}
 		mvc.perform(get("/api/lessons/seoul-5").param("userId", "grandpa"))
 			.andExpect(status().isOk())
@@ -97,7 +154,7 @@ class LessonControllerTests {
 	void resultAwardsXpOnceAndChecksScenarioChoices() throws Exception {
 		String body = """
 				{"steps":[{"stepId":"q1","correctFirstTry":false},{"stepId":"q2","correctFirstTry":true}],
-				 "scenarioChoices":{},"lang":"standard"}""";
+				 "scenarioChoices":{},"mode":"classic"}""";
 		mvc.perform(post("/api/lessons/seoul-1/result").param("userId", "mia")
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(body))
@@ -111,10 +168,10 @@ class LessonControllerTests {
 
 		mvc.perform(post("/api/lessons/seoul-2/result").param("userId", "mia")
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"steps\":[],\"scenarioChoices\":{\"sc1\":7}}")).andExpect(status().isBadRequest());
+			.content("{\"steps\":[],\"scenarioChoices\":{\"sc1\":7},\"mode\":\"classic\"}")).andExpect(status().isBadRequest());
 		mvc.perform(post("/api/lessons/seoul-2/result").param("userId", "mia")
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"steps\":[],\"scenarioChoices\":{\"sc1\":1}}")).andExpect(status().isOk());
+			.content("{\"steps\":[],\"scenarioChoices\":{\"sc1\":1},\"mode\":\"video\"}")).andExpect(status().isOk());
 	}
 
 	@Test
@@ -138,7 +195,7 @@ class LessonControllerTests {
 	private MvcResult finish(String userId) throws Exception {
 		return mvc.perform(post("/api/lessons/seoul-1/result").param("userId", userId)
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"steps\": [{\"stepId\": \"q1\", \"correctFirstTry\": true}], \"completedOn\": \"2026-11-21\"}"))
+			.content("{\"steps\": [{\"stepId\": \"q1\", \"correctFirstTry\": true}], \"completedOn\": \"2026-11-21\", \"mode\": \"classic\"}"))
 			.andReturn();
 	}
 }

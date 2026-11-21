@@ -159,12 +159,12 @@ class CategorizationControllerTests {
 				                "You are paying off a loan with us.",
 				                "Your accounts with us include investment products."]}],
 				 "profile": null, "mastery": {}, "confidence": {}, "answerCount": 0,
-				 "startLesson": {"lessonId": %1$d, "title": "Emergency fund", "area": "saving"},
+				 "startLesson": {"lessonId": %1$d, "title": "Compound interest", "area": "investing"},
 				 "readyForNext": false, "pathLessonIds": [%1$d, %2$d, %3$d],
-				 "startHere": {"lessonId": %1$d, "title": "Emergency fund", "area": "saving"},
+				 "startHere": {"lessonId": %1$d, "title": "Compound interest", "area": "investing"},
 				 "sharedWithModel": {"facts": %4$s, "answers": %5$s, "profile": null, "answerCount": 0, "stepCallsMade": 0},
 				 "source": "jev", "model": "jev-2026-05", "categorizedAt": "2026-06-15T10:00:00Z"}"""
-			.formatted(lessonAt(1), lessonAt(3), lessonAt(2), FACTS, ANSWERS);
+			.formatted(lessonAt(2), lessonAt(1), lessonAt(3), FACTS, ANSWERS);
 
 		categorize("alex", WITH_FACTS).andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json(expected, JsonCompareMode.STRICT));

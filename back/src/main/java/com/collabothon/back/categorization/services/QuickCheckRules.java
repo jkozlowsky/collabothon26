@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Stream;
 
+import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.ConfidenceGapDto;
 import com.collabothon.back.categorization.enums.AnswerResult;
 import com.collabothon.back.categorization.enums.Confidence;
@@ -250,7 +251,7 @@ final class QuickCheckRules {
 			return new LessonPlan(next.orElse(null), true, next.map(l -> List.of(l.id())).orElse(List.of()));
 		}
 		List<BankLesson> pool = pool(candidates, answers);
-		BankLesson start = pool.size() == 1 ? pool.getFirst()
+		BankLesson start = pool.size() < JevConsts.MIN_CHOICE_LABELS ? pool.getFirst()
 				: Objects.requireNonNullElseGet(picked, () -> ruleFirstLesson(pool, order, mastery, answers));
 		List<Long> path = new ArrayList<>(List.of(start.id()));
 		candidates.stream().map(BankLesson::id).filter(id -> !id.equals(start.id())).forEach(path::add);

@@ -9,11 +9,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 
 import com.collabothon.back.categorization.consts.CategorizationConsts;
+import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.CategorizationDto;
 import com.collabothon.back.categorization.dto.CategorizationRequestDto;
 import com.collabothon.back.categorization.dto.ConfidenceGapDto;
@@ -42,6 +44,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 // No @Transactional: each statement commits on its own, so no DB connection is held during the Jev call.
 @Service
@@ -74,37 +77,40 @@ public class CategorizationService {
 	public CategorizationDto categorize(String userId, CategorizationRequestDto request) {
 		boolean consent = request.consent();
 		FactsDto facts = request.facts();
-		ProfileRangesDto profile = request.profile();
 		OnboardingAnswersDto answers = onboarding(userId);
 		List<CheckQuestionProjection> bank = checkQuestions.bank();
-		List<Answer> resolved = checkQuestions.resolve(request.history(), bank);
+		// Without the ranges the Quick check did not run, so its fields are ignored, not history against the bank.
+		List<Answer> history = request.profile() == null ? List.of() : checkQuestions.resolve(request.history(), bank);
 		Set<String> bankAreas = bank.stream().map(q -> q.area().wire()).collect(Collectors.toSet());
-		if (!bankAreas.containsAll(request.mastery().keySet())) {
+		if (request.profile() != null && !bankAreas.containsAll(request.mastery().keySet())) {
 			throw new BadRequestException("Mastery is only kept for areas with questions");
 		}
 		Instant now = Instant.now(clock);
-		if (resolved.isEmpty()) {
+		if (request.profile() == null && !request.useRules()) {
 			Optional<CategorizationDto> recent = find(userId)
 				.filter(c -> isRecentJevResult(c, answers, consent, facts, now));
 			if (recent.isPresent()) {
 				return recent.get();
 			}
 		}
-		// The Quick check ran when it sent the ranges; without it F1 applies unchanged.
-		boolean ran = profile != null;
-		List<Answer> history = ran ? resolved : List.of();
+		boolean ran = !history.isEmpty();
+		ProfileRangesDto profile = ran ? request.profile() : null;
 		List<FocusArea> order = QuickCheckRules.areaOrder(answers.goals(), ran ? profile.horizon() : null, bank);
+		Map<FocusArea, Double> ruleMastery = QuickCheckRules.mastery(order, history);
 		Map<FocusArea, Double> mastery = new LinkedHashMap<>();
 		if (ran) {
-			order.forEach(area -> mastery.put(area, request.mastery().get(area.wire())));
+			order.forEach(area -> {
+				Double sent = request.mastery().get(area.wire());
+				mastery.put(area, sent != null ? sent : ruleMastery.get(area));
+			});
 		}
 		Set<Long> completed = completedLessons.findLessonIds(userId);
 		List<BankLesson> lessons = QuickCheckRules.lessons(bank);
-		List<BankLesson> candidates = QuickCheckRules.candidates(lessons, order, mastery, history, completed);
-		List<BankLesson> pool = QuickCheckRules.pool(candidates, history);
+		List<BankLesson> pool = QuickCheckRules.pool(
+				QuickCheckRules.candidates(lessons, order, mastery, history, completed), history);
 		List<FocusArea> gapAreas = QuickCheckRules.chipAreas(order, history);
 		Map<Long, String> lessonChoice = new LinkedHashMap<>();
-		if (pool.size() >= 2) {
+		if (pool.size() >= JevConsts.MIN_CHOICE_LABELS) {
 			pool.forEach(l -> lessonChoice.put(l.id(), l.summary()));
 		}
 		JevQuickCheck quickCheck = ran ? new JevQuickCheck(profile, answers.goals(),
@@ -116,15 +122,20 @@ public class CategorizationService {
 		String savingsCover = ran ? profile.savingsCover() : null;
 		Judgement j = fromJev.judgement()
 			.orElseGet(() -> CategorizationRules.fallback(answers, facts, lifeStage, savingsCover));
+		// Without the Quick check nothing was measured, so the judged focus leads the path.
+		List<FocusArea> pathOrder = ran ? order
+				: Stream.concat(j.focusAreas().stream().filter(order::contains), order.stream()).distinct().toList();
 		BankLesson picked = pool.stream().filter(l -> l.id().equals(j.firstLesson())).findFirst().orElse(null);
-		LessonPlan plan = QuickCheckRules.plan(lessons, candidates, picked, order, mastery, history, completed);
+		LessonPlan plan = QuickCheckRules.plan(lessons,
+				QuickCheckRules.candidates(lessons, pathOrder, mastery, history, completed), picked, pathOrder, mastery,
+				history, completed);
 		FocusArea startArea = plan.start() == null ? null : plan.start().area();
 		List<ConfidenceGapDto> gaps = ran
 				? QuickCheckRules.gapCards(gaps(order, history, mastery, fromJev.judgement()), history, startArea)
 				: CategorizationRules.confidenceGaps(answers, facts);
-		boolean sent = fromJev.sent() || request.stepCallsMade() > 0;
-		SharedWithModelDto shared = sent
-				? new SharedWithModelDto(facts, answers, profile, history.size(), request.stepCallsMade())
+		SharedWithModelDto shared = fromJev.sent() || request.stepCallsMade() > 0
+				? new SharedWithModelDto(facts, fromJev.sent() ? answers : null, profile, history.size(),
+						request.stepCallsMade())
 				: null;
 
 		List<FocusArea> focus = j.focusAreas();
@@ -135,18 +146,20 @@ public class CategorizationService {
 						CategorizationRules.focusBecause(focus, answers, facts)));
 		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, j.role(), lifeStage, focus, gaps,
 				CategorizationRules.lessonVariant(j.role(), lifeStage), explanation, profile,
-				ran ? request.mastery() : Map.of(),
+				QuickCheckRules.byWire(mastery),
 				ran ? QuickCheckRules.byWire(QuickCheckRules.confidence(order, history)) : Map.of(),
 				history.size(), plan.start() == null ? null : startLessonMapper.toStartLesson(plan.start()),
 				plan.readyForNext(), plan.pathLessonIds(), null, shared,
 				fromJev.judgement().isPresent() ? CategorizationSource.JEV : CategorizationSource.FALLBACK, j.model(),
 				now);
+		ObjectNode row = json.valueToTree(c);
+		row.remove("startHere");
 		// Inserting only while onboarding is completed turns a reset during the Jev call into a 404.
 		int saved = jdbc.sql("""
 				INSERT INTO categorization (user_id, data)
 				SELECT user_id, ?::jsonb FROM user_profile WHERE user_id = ? AND onboarding_completed
 				ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data""")
-			.params(json.writeValueAsString(c), userId)
+			.params(json.writeValueAsString(row), userId)
 			.update();
 		if (saved == 0) {
 			throw new NotFoundException(NO_PROFILE);
@@ -154,7 +167,7 @@ public class CategorizationService {
 		return c.withStartHere(startHere(c.pathLessonIds(), lessons, completed));
 	}
 
-	/** Jev's labels where its call answered, each checked against the chips; the rule otherwise. In area order. */
+	/** Jev's labels where its call answered, each history against the chips; the rule otherwise. In area order. */
 	private static Map<FocusArea, GapDirection> gaps(List<FocusArea> order, List<Answer> history,
 			Map<FocusArea, Double> mastery, Optional<Judgement> fromJev) {
 		Map<FocusArea, GapDirection> gaps = new LinkedHashMap<>();

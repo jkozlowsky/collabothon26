@@ -7,14 +7,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 
-/** Everything after {@code facts} is absent when the Quick check was skipped. */
 public record CategorizationRequestDto(
 		@NotNull
 		Boolean consent,
@@ -26,8 +23,6 @@ public record CategorizationRequestDto(
 		List<@NotNull @Valid HistoryEntryDto> history,
 		Map<String, @DecimalMin("0") @DecimalMax("1") Double> mastery,
 		Boolean useRules,
-		@PositiveOrZero
-		@Max(CategorizationConsts.MAX_QUESTIONS)
 		Integer stepCallsMade
 ) {
 
@@ -35,7 +30,8 @@ public record CategorizationRequestDto(
 		history = history == null ? List.of() : history;
 		mastery = mastery == null ? Map.of() : mastery;
 		useRules = Boolean.TRUE.equals(useRules);
-		stepCallsMade = stepCallsMade == null ? 0 : stepCallsMade;
+		// A restart after Back can count past the cap; the count is only shown, so it is clamped, not refused.
+		stepCallsMade = stepCallsMade == null ? 0 : Math.clamp(stepCallsMade, 0, CategorizationConsts.MAX_QUESTIONS);
 	}
 
 	@AssertTrue(message = "facts are only accepted with consent")

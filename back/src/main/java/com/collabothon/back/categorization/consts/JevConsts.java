@@ -32,4 +32,6 @@ public final class JevConsts {
 
 	public static final Set<String> LOOPBACK_HOSTS = Set.of("localhost", "127.0.0.1", "[::1]");
 
+	public static final int MIN_CHOICE_LABELS = 2;
+
 }

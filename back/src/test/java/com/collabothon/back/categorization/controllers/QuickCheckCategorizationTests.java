@@ -2,7 +2,6 @@ package com.collabothon.back.categorization.controllers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -12,7 +11,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -34,7 +36,9 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.json.JsonCompareMode;
+import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
@@ -72,6 +76,12 @@ class QuickCheckCategorizationTests {
 			{"consent": false, "profile": %s, "history": %s, "mastery": {"saving": 0.425, "investing": 0.5},
 			 "useRules": false, "stepCallsMade": 3}""".formatted(PROFILE, HISTORY);
 
+	private static final String FACTS = """
+			{"incomeBand": "2-3.5k", "cashBufferMonths": "6+", "savingsRate": "20%+", "savesRegularly": true,
+			 "inOverdraft": false, "holdsInvestments": true, "hasLoan": true}""";
+
+	private static final String NO_QUICK_CHECK = "{\"consent\": false}";
+
 	private static final String F1_ANSWERS = """
 			"role": {"type": "choice", "choice": "intermediate", "confidence": 0.8,
 			         "probabilities": {"novice": 0.1, "intermediate": 0.8, "advanced": 0.1}},
@@ -94,7 +104,12 @@ class QuickCheckCategorizationTests {
 	@Autowired
 	EntityManager entityManager;
 
+	@Autowired
+	Clock clock;
+
 	private String userId;
+
+	private TestBank bank;
 
 	private long emergency;
 
@@ -104,7 +119,7 @@ class QuickCheckCategorizationTests {
 
 	@BeforeEach
 	void ownBankAndUser() throws Exception {
-		TestBank bank = new TestBank(jdbc);
+		bank = new TestBank(jdbc);
 		emergency = bank.lesson("Emergency fund", "Rainy days.", 1);
 		compound = bank.lesson("Compound interest", "Time works.", 2);
 		inflation = bank.lesson("Inflation", "Prices rise.", 3);
@@ -133,6 +148,12 @@ class QuickCheckCategorizationTests {
 	private ResultActions categorize(String body) throws Exception {
 		return mvc.perform(post("/api/users/{id}/categorization", userId).contentType(MediaType.APPLICATION_JSON)
 			.content(body));
+	}
+
+	private void complete(long lessonId) {
+		jdbc.sql("INSERT INTO lesson_completion (user_id, lesson_id, completed_on, xp) VALUES (?, ?, ?, 10)")
+			.params(userId, lessonId, LocalDate.now(clock))
+			.update();
 	}
 
 	private ResultActions stored() throws Exception {
@@ -168,8 +189,9 @@ class QuickCheckCategorizationTests {
 			.andExpect(request -> sent.set(json.readTree(((MockClientHttpRequest) request).getBodyAsString())))
 			.andRespond(withSuccess(jevFinal(choice("gap_saving", "over", "under", "over", "aligned")
 					+ choice("gap_investing", "under", "under", "over", "aligned")
-					+ lessons(inflation, emergency, compound)), MediaType.APPLICATION_JSON));
+					+ lessons(emergency, inflation, compound)), MediaType.APPLICATION_JSON));
 
+		// The rule would start at inflation (sv-b, the weakest area's lowest score); Jev's emergency wins.
 		categorize(QUICK_CHECK).andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"source": "jev", "role": "intermediate", "profile": %s,
@@ -179,11 +201,11 @@ class QuickCheckCategorizationTests {
 					    "because": "On Investing you said “Fairly sure”, yet your answers show you already understand how it works."},
 					   {"area": "saving", "direction": "over",
 					    "because": "On Saving you said “Sure”. Your answers leave a few things open, which is where your first lesson starts."}],
-					 "startLesson": {"lessonId": %d, "title": "Inflation", "area": "saving"}, "readyForNext": false,
+					 "startLesson": {"lessonId": %d, "title": "Emergency fund", "area": "saving"}, "readyForNext": false,
 					 "pathLessonIds": [%d, %d, %d],
-					 "startHere": {"lessonId": %d, "title": "Inflation", "area": "saving"},
-					 "sharedWithModel": {"facts": null, "profile": %s, "answerCount": 4, "stepCallsMade": 3}}"""
-				.formatted(PROFILE, inflation, inflation, emergency, compound, inflation, PROFILE),
+					 "startHere": {"lessonId": %d, "title": "Emergency fund", "area": "saving"},
+					 "sharedWithModel": {"facts": null, "answers": %s, "profile": %s, "answerCount": 4, "stepCallsMade": 3}}"""
+				.formatted(PROFILE, emergency, emergency, inflation, compound, emergency, ONBOARDING, PROFILE),
 					JsonCompareMode.LENIENT));
 
 		assertEquals(json.readTree("""
@@ -243,7 +265,8 @@ class QuickCheckCategorizationTests {
 	void useRulesMakesNoFinalCallAndSharedWithModelStillCountsTheSteps() throws Exception {
 		categorize(onRules(QUICK_CHECK)).andExpect(status().isOk())
 			.andExpect(jsonPath("$.source").value("fallback"))
-			.andExpect(jsonPath("$.sharedWithModel.stepCallsMade").value(3));
+			.andExpect(jsonPath("$.sharedWithModel.stepCallsMade").value(3))
+			.andExpect(jsonPath("$.sharedWithModel.answers").isEmpty());
 
 		categorize(onRules(QUICK_CHECK).replace("\"stepCallsMade\": 3", "\"stepCallsMade\": 0"))
 			.andExpect(status().isOk())
@@ -266,7 +289,7 @@ class QuickCheckCategorizationTests {
 		JsonNode row = json.readTree(data);
 		assertEquals(json.readTree("{\"saving\": 0.25, \"investing\": 0.6}"), row.get("confidence"));
 		assertEquals(3, row.get("answerCount").intValue());
-		assertTrue(row.get("startHere").isNull());
+		assertFalse(row.has("startHere"));
 		for (String leak : new String[] { "sv-a", "sv-b", "in-a", "questionId", "optionIndex", "history" }) {
 			assertFalse(data.contains(leak), leak);
 		}
@@ -293,14 +316,15 @@ class QuickCheckCategorizationTests {
 
 	@Test
 	void startHereMovesOnAfterACompletionAndSkipsADeletedLesson() throws Exception {
-		categorize(onRules(QUICK_CHECK)).andExpect(status().isOk())
-			.andExpect(jsonPath("$.pathLessonIds").value(org.hamcrest.Matchers.contains((int) inflation,
-					(int) emergency, (int) compound)));
+		String path = categorize(onRules(QUICK_CHECK)).andExpect(status().isOk())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		assertEquals(json.readTree("[%d, %d, %d]".formatted(inflation, emergency, compound)),
+				json.readTree(path).get("pathLessonIds"));
 		stored().andExpect(jsonPath("$.startHere.lessonId").value(inflation));
 
-		jdbc.sql("INSERT INTO lesson_completion (user_id, lesson_id, completed_on, xp) VALUES (?, ?, DATE '2026-11-20', 10)")
-			.params(userId, inflation)
-			.update();
+		complete(inflation);
 		stored().andExpect(content().json("""
 				{"startHere": {"lessonId": %d, "title": "Emergency fund", "area": "saving"}}""".formatted(emergency),
 				JsonCompareMode.LENIENT));
@@ -311,9 +335,7 @@ class QuickCheckCategorizationTests {
 
 	@Test
 	void aLessonCompletedBeforeTheTestIsNotOnThePath() throws Exception {
-		jdbc.sql("INSERT INTO lesson_completion (user_id, lesson_id, completed_on, xp) VALUES (?, ?, DATE '2026-11-20', 10)")
-			.params(userId, inflation)
-			.update();
+		complete(inflation);
 
 		categorize(onRules(QUICK_CHECK)).andExpect(status().isOk())
 			.andExpect(jsonPath("$.startLesson.lessonId").value(emergency))
@@ -343,13 +365,159 @@ class QuickCheckCategorizationTests {
 					 "lessonVariant": {"persona": null, "level": "beginner", "lang": "plain"}, "explanation": [],
 					 "startLesson": {"lessonId": 1, "title": "Emergency fund"},
 					 "sharedWithModel": null, "source": "fallback", "model": null,
-					 "categorizedAt": "%s"}""".formatted(userId, Instant.parse("2026-11-20T10:00:00Z")))
+					 "categorizedAt": "%s"}""".formatted(userId, Instant.now(clock)))
 			.update();
 
 		stored().andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"profile": null, "mastery": {}, "confidence": {}, "answerCount": 0, "readyForNext": false,
 					 "pathLessonIds": [], "startHere": null}""", JsonCompareMode.LENIENT));
+	}
+
+	private JsonNode categorized(String body) throws Exception {
+		return json.readTree(categorize(body).andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+	}
+
+	@Test
+	void anAnsweredAreaWithoutAMasteryValueIsStoredWithTheRuleMean() throws Exception {
+		categorize(onRules(QUICK_CHECK.replace("\"investing\": 0.5", "\"investing\": null"))).andExpect(status().isOk());
+		stored().andExpect(content().json("{\"mastery\": {\"saving\": 0.425, \"investing\": 0.5}}",
+				JsonCompareMode.LENIENT));
+
+		categorize(onRules(QUICK_CHECK.replace(HISTORY, "[{\"questionId\": \"sv-a\", \"optionIndex\": 1, \"confidence\": \"sure\"}]")
+			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{}")))
+			.andExpect(status().isOk());
+		stored().andExpect(content().json("{\"mastery\": {\"saving\": 0.25, \"investing\": null}}",
+				JsonCompareMode.LENIENT));
+	}
+
+	@Test
+	void stepCallsMadeOutsideItsRangeIsClamped() throws Exception {
+		categorize(onRules(QUICK_CHECK).replace("\"stepCallsMade\": 3", "\"stepCallsMade\": 9")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.sharedWithModel.stepCallsMade").value(6));
+		categorize(onRules(QUICK_CHECK).replace("\"stepCallsMade\": 3", "\"stepCallsMade\": -1")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.sharedWithModel").isEmpty());
+	}
+
+	@Test
+	void useRulesWithoutTheQuickCheckMakesNoJevCall() throws Exception {
+		jev.expect(ExpectedCount.never(), requestTo(JEV_URL));
+
+		categorize("{\"consent\": false, \"useRules\": true}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.source").value("fallback"))
+			.andExpect(jsonPath("$.sharedWithModel").isEmpty());
+	}
+
+	@Test
+	void useRulesSkipsTheReuseOfARecentJevResult() throws Exception {
+		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(jevFinal(""), MediaType.APPLICATION_JSON));
+
+		categorize(NO_QUICK_CHECK).andExpect(status().isOk()).andExpect(jsonPath("$.source").value("jev"));
+		categorize("{\"consent\": false, \"useRules\": true}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.source").value("fallback"));
+	}
+
+	@Test
+	void theRangesWithoutAnAnswerAreTheSkipPath() throws Exception {
+		categorize(onRules(QUICK_CHECK.replace(HISTORY, "[]"))).andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"profile": null, "mastery": {}, "confidence": {}, "answerCount": 0}""", JsonCompareMode.LENIENT));
+	}
+
+	@Test
+	void withoutTheRangesTheHistoryIsNotCheckedAgainstTheBank() throws Exception {
+		categorize(onRules("""
+				{"consent": false, "history": [{"questionId": "gone-from-the-bank", "optionIndex": 7, "confidence": "sure"}],
+				 "mastery": {"debt": 0.5}, "useRules": true}"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.answerCount").value(0));
+	}
+
+	@Test
+	void withoutTheQuickCheckTheFirstLessonFollowsTheJudgedFocus() throws Exception {
+		// Goals put saving first; Jev's focus puts investing ahead of it.
+		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(jevFinal(""), MediaType.APPLICATION_JSON));
+
+		categorize(NO_QUICK_CHECK).andExpect(status().isOk())
+			.andExpect(jsonPath("$.startLesson.lessonId").value(compound))
+			.andExpect(jsonPath("$.pathLessonIds[0]").value(compound));
+	}
+
+	@Test
+	void oneCandidateIsTheFirstLessonWithoutAskingJev() throws Exception {
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(MockRestRequestMatchers.jsonPath("$.questions.first_lesson")
+				.doesNotExist())
+			.andRespond(withSuccess(jevFinal(choice("gap_investing", "aligned", "under", "over", "aligned")),
+					MediaType.APPLICATION_JSON));
+
+		categorize(QUICK_CHECK.replace(HISTORY, "[{\"questionId\": \"in-a\", \"optionIndex\": 0, \"confidence\": \"sure\"}]")
+			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": null, \"investing\": 0.85}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.source").value("jev"))
+			.andExpect(jsonPath("$.startLesson.lessonId").value(compound));
+	}
+
+	@Test
+	void withConsentTheFactsReachJevButTheGapsComeFromTheChipsOnly() throws Exception {
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(MockRestRequestMatchers.jsonPath("$.state.facts.incomeBand")
+				.value("2-3.5k"))
+			.andRespond(withSuccess(jevFinal(choice("gap_saving", "aligned", "under", "over", "aligned")
+					+ choice("gap_investing", "aligned", "under", "over", "aligned")
+					+ lessons(inflation, emergency, compound)), MediaType.APPLICATION_JSON));
+
+		// F1's facts table would give two "under" cards for this onboarding and these facts.
+		categorize(QUICK_CHECK.replace("\"consent\": false", "\"consent\": true, \"facts\": " + FACTS)
+			.replace("\"savingsCover\": \"1-3\"", "\"savingsCover\": null"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.bankData").value(true))
+			.andExpect(jsonPath("$.confidenceGaps").isEmpty());
+	}
+
+	@Test
+	void theSavingsCoverAndTheAgeBandFeedTheRuleFocus() throws Exception {
+		onboard("{\"goals\": [\"stocks-etfs\"], \"experience\": \"planning\", \"skipped\": false}");
+
+		assertEquals(json.readTree("[\"saving\", \"investing\"]"),
+				categorized(onRules(QUICK_CHECK.replace("\"1-3\"", "\"<1\""))).get("focusAreas"));
+		assertEquals(json.readTree("[\"investing\"]"),
+				categorized(onRules(QUICK_CHECK.replace("\"1-3\"", "\"6+\""))).get("focusAreas"));
+		JsonNode olderUser = categorized(onRules(QUICK_CHECK.replace("\"1-3\"", "\"6+\"")
+			.replace("\"ageBand\": null", "\"ageBand\": \"60+\"")));
+		assertEquals(json.readTree("[\"retirement\", \"investing\"]"), olderUser.get("focusAreas"));
+	}
+
+	@Test
+	void everyAreaSolidIsReadyForNextAndStartHereEndsWhenItIsDone() throws Exception {
+		String history = """
+				[{"questionId": "sv-a", "optionIndex": 0, "confidence": "sure"},
+				 {"questionId": "sv-b", "optionIndex": 0, "confidence": "sure"},
+				 {"questionId": "in-a", "optionIndex": 0, "confidence": "sure"},
+				 {"questionId": "short-term-fall", "optionIndex": 0, "confidence": "sure"}]""";
+
+		categorize(onRules(QUICK_CHECK.replace(HISTORY, history)
+			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": 0.9, \"investing\": 0.9}")))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"readyForNext": true, "startLesson": {"lessonId": %1$d}, "pathLessonIds": [%1$d],
+					 "startHere": {"lessonId": %1$d}}""".formatted(inflation), JsonCompareMode.LENIENT));
+
+		complete(inflation);
+		stored().andExpect(status().isOk()).andExpect(jsonPath("$.startHere").isEmpty());
+	}
+
+	@Test
+	void sevenDistinctAnswersAre400() throws Exception {
+		bank.question("sv-c", inflation, "saving", "easy");
+		StringBuilder seven = new StringBuilder();
+		for (String id : List.of("sv-a", "sv-b", "sv-c", "sv-hard", "in-a", "in-hard", "short-term-fall")) {
+			seven.append(seven.isEmpty() ? "" : ", ").append("{\"questionId\": \"%s\"}".formatted(id));
+		}
+
+		categorize(onRules(QUICK_CHECK.replace(HISTORY, "[" + seven + "]"))).andExpect(status().isBadRequest());
+		categorize(onRules(QUICK_CHECK.replace(HISTORY, "[" + seven.substring(0, seven.lastIndexOf(", {")) + "]")))
+			.andExpect(status().isOk());
 	}
 
 	static Stream<Arguments> badFinals() {
@@ -360,8 +528,6 @@ class QuickCheckCategorizationTests {
 						QUICK_CHECK.replace("\"investing\": 0.5", "\"" + SENTINEL + "\": 0.5")),
 				Arguments.of("mastery above 1", QUICK_CHECK.replace("0.425", "1.2")),
 				Arguments.of("mastery below 0", QUICK_CHECK.replace("0.425", "-0.1")),
-				Arguments.of("seven step calls", QUICK_CHECK.replace("\"stepCallsMade\": 3", "\"stepCallsMade\": 7")),
-				Arguments.of("negative step calls", QUICK_CHECK.replace("\"stepCallsMade\": 3", "\"stepCallsMade\": -1")),
 				Arguments.of("unknown question", QUICK_CHECK.replace("\"in-hard\"", "\"" + SENTINEL + "\"")),
 				Arguments.of("repeated question", QUICK_CHECK.replace("\"in-hard\"", "\"sv-a\"")),
 				Arguments.of("option past the last one", QUICK_CHECK.replace("\"optionIndex\": 1", "\"optionIndex\": 3")),
@@ -370,8 +536,6 @@ class QuickCheckCategorizationTests {
 						QUICK_CHECK.replace("\"optionIndex\": null, \"confidence\": null",
 								"\"optionIndex\": null, \"confidence\": \"sure\"")),
 				Arguments.of("confidence outside its set", QUICK_CHECK.replace("\"guessing\"", "\"" + SENTINEL + "\"")),
-				Arguments.of("more than six answers", QUICK_CHECK.replace(HISTORY, "[" + "{\"questionId\": \"sv-a\"},"
-					.repeat(6) + "{\"questionId\": \"sv-b\"}]")),
 				Arguments.of("profile value outside its set", QUICK_CHECK.replace("\"1-5y\"", "\"" + SENTINEL + "\"")),
 				Arguments.of("savings cover with consent", QUICK_CHECK.replace("\"consent\": false", "\"consent\": true")));
 	}

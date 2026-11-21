@@ -149,7 +149,7 @@ public class JevClient {
 			// ponytail: an area gets a mastery question only once its text is in STEP_QUESTIONS (spec: areas without lessons).
 			.filter(stepQuestions::has)
 			.forEach(key -> asked.set(key, stepQuestions.get(key).deepCopy()));
-		if (unasked.size() >= 2) {
+		if (unasked.size() >= JevConsts.MIN_CHOICE_LABELS) {
 			ObjectNode next = (ObjectNode) stepQuestions.get("next").deepCopy();
 			unasked.forEach(next.putObject("criteria")::put);
 			asked.set("next", next);

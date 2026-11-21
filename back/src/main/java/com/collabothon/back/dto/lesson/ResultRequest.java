@@ -6,7 +6,9 @@ import java.util.Map;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 
-public record ResultRequest(@NotNull List<@Valid StepResult> steps, Map<String, Integer> scenarioChoices, String lang,
+public record ResultRequest(@NotNull List<@Valid StepResult> steps, Map<String, Integer> scenarioChoices,
+		@NotNull @Pattern(regexp = "classic|video") String mode,
 		LocalDate completedOn) {
 }

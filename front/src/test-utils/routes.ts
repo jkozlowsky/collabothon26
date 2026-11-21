@@ -12,6 +12,7 @@ import GlossaryLayout from '@/app/(main)/(learn)/glossary/_layout';
 import GlossaryScreen from '@/app/(main)/(learn)/glossary/index';
 import MapScreen from '@/app/(main)/(learn)/map';
 import ProfileScreen from '@/app/(main)/(learn)/profile';
+import ScenePreviewScreen from '@/app/dev/scene/[lessonId]/[sceneId]';
 import DuelMatchScreen from '@/app/duel/match';
 import DuelRankingsScreen from '@/app/duel/rankings';
 import RootLayout from '@/app/_layout';
@@ -43,4 +44,5 @@ export const appRoutes = {
   '(main)/(learn)/profile': ProfileScreen,
   'duel/match': DuelMatchScreen,
   'duel/rankings': DuelRankingsScreen,
+  'dev/scene/[lessonId]/[sceneId]': ScenePreviewScreen,
 };

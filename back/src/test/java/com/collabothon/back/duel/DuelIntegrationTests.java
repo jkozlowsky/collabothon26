@@ -388,7 +388,7 @@ class DuelIntegrationTests {
 		// Complete lesson berlin-1
 		mvc.perform(post("/api/lessons/berlin-1/result").param("userId", "lesson-tester")
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"steps\":[],\"completedOn\":\"2026-11-23\"}"))
+			.content("{\"steps\":[],\"completedOn\":\"2026-11-23\",\"mode\":\"classic\"}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.xpAwarded").value(50))
 			.andExpect(jsonPath("$.firstCompletion").value(true))

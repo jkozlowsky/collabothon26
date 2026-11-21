@@ -28,6 +28,7 @@ module.exports = {
   ...Animated,
   cubicBezier: () => 'ease',
   useReducedMotion: () => false,
+  ReduceMotion: { System: 'system', Always: 'always', Never: 'never' },
   // Read by react-native-gesture-handler to tell shared values from plain props.
   isSharedValue: () => false,
   useComposedEventHandler: () => undefined,
@@ -38,10 +39,14 @@ module.exports = {
   withTiming: (to) => to,
   withSpring: (to) => to,
   withDecay: () => 0,
+  withRepeat: (animation) => animation,
+  withDelay: (_ms, animation) => animation,
+  withSequence: (...animations) => animations[animations.length - 1],
   cancelAnimation: () => {},
   interpolate: (_value, _input, output) => output[0],
   Easing: new Proxy({}, { get: () => easing }),
   FadeIn: builder,
+  FadeInDown: builder,
   FadeOut: builder,
   LinearTransition: builder,
 };

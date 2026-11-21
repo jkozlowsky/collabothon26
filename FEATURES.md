@@ -114,7 +114,7 @@ Pobranie appki → Profilowanie AI (dane z banku) → Test / onboarding (wiedza,
 ✅ Wymagania:
 - jedna treść bazowa → kilka wariantów, np.:
   - poziom: początkujący / zaawansowany
-  - prosty język / standardowy
+  - ~~prosty język / standardowy~~ (usunięte, zob. `.plans/lesson-video-mode-spec.md` §9)
   - przykłady pod etap życia (student / rodzina / przed emeryturą)
   - forma: tekst / audio / wizualna
 - wariant dobierany automatycznie na podstawie profilu (F1 + F2), z możliwością ręcznej zmiany

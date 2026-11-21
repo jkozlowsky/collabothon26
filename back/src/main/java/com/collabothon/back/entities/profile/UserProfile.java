@@ -44,6 +44,10 @@ public class UserProfile {
 	@Column(name = "onboarding_completed_at")
 	private Instant onboardingCompletedAt;
 
+	/** "classic" or "video": the mode lessons with a video track open in. Switched inside a lesson (V20). */
+	@Column(name = "preferred_lesson_mode", nullable = false, length = 8)
+	private String preferredLessonMode = "video";
+
 	@Builder
 	public UserProfile(String userId, String lifeStage, List<String> goals, String experience,
 			boolean onboardingCompleted, boolean onboardingSkipped, Instant onboardingCompletedAt) {
@@ -73,6 +77,10 @@ public class UserProfile {
 		this.onboardingSkipped = skipped;
 		this.onboardingCompleted = true;
 		this.onboardingCompletedAt = completedAt;
+	}
+
+	public void preferLessonMode(String mode) {
+		this.preferredLessonMode = mode;
 	}
 
 	public void resetOnboarding() {

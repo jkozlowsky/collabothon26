@@ -1,10 +1,13 @@
 package com.collabothon.back.lesson;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 
@@ -33,19 +36,19 @@ class LessonRulesTests {
 	@Test
 	void mergesVariantsInFixedOrderDeeplyAndLaterWins() {
 		ObjectNode l = lesson("""
-				{ "lang:plain":       { "q1": { "prompt": "plain" }, "a1": { "body": "plain" } },
-				  "persona:student":  { "a1": { "body": "student" } },
-				  "level:beginner":   { "s1": { "goal": { "hint": "beginner hint" } }, "q1": { "prompt": "beginner" } } }""");
+				{ "persona:student":  { "a1": { "body": "student" } },
+				  "level:beginner":   { "s1": { "goal": { "hint": "beginner hint" } }, "q1": { "prompt": "beginner" },
+				                        "a1": { "body": "beginner" } } }""");
 
-		// Keys arrive in any order; merging still runs level → persona → lang.
-		ObjectNode merged = LessonRules.applyVariants(l, List.of("lang:plain", "persona:student", "level:beginner"));
+		// Keys arrive in any order; merging still runs level → persona.
+		ObjectNode merged = LessonRules.applyVariants(l, List.of("persona:student", "level:beginner"));
 
 		assertThat(merged.has("variants")).isFalse();
 		assertThat(merged.at("/steps/0/goal/hint").asString()).isEqualTo("beginner hint");
 		// Deep merge: the sibling field of the overridden one survives.
 		assertThat(merged.at("/steps/0/goal/condition/max").asInt()).isEqualTo(-100);
-		assertThat(merged.at("/steps/1/prompt").asString()).isEqualTo("plain");
-		assertThat(merged.at("/steps/2/body").asString()).isEqualTo("plain");
+		assertThat(merged.at("/steps/1/prompt").asString()).isEqualTo("beginner");
+		assertThat(merged.at("/steps/2/body").asString()).isEqualTo("student");
 		// The base lesson is untouched.
 		assertThat(l.at("/steps/1/prompt").asString()).isEqualTo("base");
 
@@ -61,14 +64,44 @@ class LessonRulesTests {
 		assertThatThrownBy(() -> LessonRules.validate(lesson("{}"), Set.of()))
 			.hasMessageContaining("concept 'leverage'");
 		assertThatThrownBy(() -> LessonRules.validate(lesson("""
-				{ "lang:plain": { "q1": { "correctIndex": 0 } } }"""), glossary))
+				{ "level:advanced": { "q1": { "correctIndex": 0 } } }"""), glossary))
 			.hasMessageContaining("answer fields");
 		assertThatThrownBy(() -> LessonRules.validate(lesson("""
 				{ "persona:family": { "q1": { "prompt": "x" } } }"""), glossary))
 			.hasMessageContaining("only override action");
 		assertThatThrownBy(() -> LessonRules.validate(lesson("""
-				{ "lang:plain": { "zz": { "prompt": "x" } } }"""), glossary))
+				{ "level:beginner": { "zz": { "prompt": "x" } } }"""), glossary))
 			.hasMessageContaining("unknown step 'zz'");
+		// Plain language is gone (lesson-video-mode-spec §9).
+		assertThatThrownBy(() -> LessonRules.validate(lesson("""
+				{ "lang:plain": { "q1": { "prompt": "x" } } }"""), glossary))
+			.hasMessageContaining("unknown variant 'lang:plain'");
 	}
 
+
+	@Test
+	void phasesAreAllOrNothingInOrderAndDecideOnlyActs() {
+		ObjectNode ok = (ObjectNode) json.readTree("""
+				{ "id": "p-1", "xp": 10, "steps": [
+				  { "type": "text", "id": "t1", "phase": "learn", "body": "hi" },
+				  { "type": "quiz", "id": "q1", "phase": "challenge", "prompt": "p", "options": ["True", "False"], "correctIndex": 1,
+				    "explanation": "e", "chart": { "series": [1, 2, 3], "labels": ["a", "b", "c"], "unit": "%" } },
+				  { "type": "slider-chart", "id": "s1", "phase": "you", "prompt": "p", "model": "countryMix",
+				    "params": { "homeShare": { "label": "l", "min": 0, "max": 100, "step": 5, "value": 50, "fromBank": "europeShare" } },
+				    "output": { "label": "o", "unit": "%" }, "goal": { "condition": { "of": "output", "min": -100 }, "hint": "h" } },
+				  { "type": "action", "id": "a1", "phase": "decide", "body": "b", "bodyNoData": "n" } ] }""");
+		assertThatCode(() -> LessonRules.validate(ok, Set.of())).doesNotThrowAnyException();
+
+		BiConsumer<Consumer<ObjectNode>, String> fails = (breakIt, message) -> {
+			ObjectNode l = ok.deepCopy();
+			breakIt.accept(l);
+			assertThatThrownBy(() -> LessonRules.validate(l, Set.of())).hasMessageContaining(message);
+		};
+		fails.accept(l -> ((ObjectNode) l.at("/steps/0")).remove("phase"), "every step has a phase or none");
+		fails.accept(l -> ((ObjectNode) l.at("/steps/1")).put("phase", "you"), "a phased lesson needs a 'challenge' step");
+		fails.accept(l -> ((ObjectNode) l.at("/steps/2")).put("phase", "learn"), "comes after a later phase");
+		fails.accept(l -> ((ObjectNode) l.at("/steps/2")).put("phase", "decide"), "decide phase holds only action steps");
+		fails.accept(l -> ((ObjectNode) l.at("/steps/1/chart")).putArray("labels").add("a"), "chart labels must match");
+		fails.accept(l -> ((ObjectNode) l.at("/steps/2/params/homeShare")).put("fromBank", "salary"), "unknown bank number 'salary'");
+	}
 }

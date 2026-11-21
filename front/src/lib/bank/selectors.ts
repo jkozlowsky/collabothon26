@@ -2,7 +2,7 @@
  * Read-only views of the bank state. Lessons use these for "A u Ciebie?" moments
  * ("X% of your savings sit in one place"), so keep them pure and cheap.
  */
-import type { AssetClass, BankState, ChartRange } from '@/types/bank';
+import type { AssetClass, BankState, ChartRange, HoldingRegion } from '@/types/bank';
 import type { Slot } from '@/types/quickCheck';
 
 export const ASSET_CLASS_LABEL: Record<AssetClass, string> = {
@@ -90,3 +90,21 @@ export function largestPlace(s: BankState): { place: 'account' | 'savings' | 'de
   const top = places.reduce((a, b) => (b.value > a.value ? b : a));
   return { place: top.place, share: total ? top.value / total : 0 };
 }
+
+/** Share of the depot (0–1) invested in a region. */
+export function regionShare(s: BankState, region: HoldingRegion): number {
+  const total = depotTotal(s);
+  const value = s.holdings.filter((h) => h.region === region).reduce((sum, h) => sum + h.value, 0);
+  return total ? value / total : 0;
+}
+
+/** Region holding the biggest share of the depot, or null when nothing is invested. */
+export function largestRegion(s: BankState): { region: HoldingRegion; share: number } | null {
+  const regions: HoldingRegion[] = ['world', 'europe'];
+  const top = regions.map((region) => ({ region, share: regionShare(s, region) })).reduce((a, b) => (b.share > a.share ? b : a));
+  return top.share > 0 ? top : null;
+}
+
+/** What goes into the depot every month by standing order (savings plans), in cents. */
+export const monthlyInvesting = (s: BankState) =>
+  s.standingOrders.filter((o) => o.recipient.startsWith('Depot')).reduce((sum, o) => sum - o.amount, 0);

@@ -45,12 +45,10 @@ public class LessonController {
 		return ResponseEntity.ok(lessonService.getLessons(userId));
 	}
 
-	/** GET /api/lessons/{id}?lang=standard|plain&userId= : the lesson personalised for the user. */
+	/** GET /api/lessons/{id}?userId= : the lesson personalised for the user, with both play orders. */
 	@GetMapping("/lessons/{id}")
-	public ResponseEntity<ObjectNode> get(@PathVariable String id,
-			@RequestParam(defaultValue = "standard") String lang,
-			@RequestParam(required = false) String userId) {
-		return ResponseEntity.ok(lessonService.getLesson(id, lang, userId));
+	public ResponseEntity<ObjectNode> get(@PathVariable String id, @RequestParam(required = false) String userId) {
+		return ResponseEntity.ok(lessonService.getLesson(id, userId));
 	}
 
 	@PostMapping("/lessons/{id}/result")

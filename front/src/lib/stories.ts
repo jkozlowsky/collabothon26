@@ -7,8 +7,8 @@ export const STORIES: Story[] = [
   {
     id: 'seoul',
     city: 'Seoul',
-    title: 'The chat that always knows',
-    topic: 'Hype & borrowed money',
+    title: 'Investing',
+    topic: 'Hype and borrowed money',
     status: 'available',
     pin: { lat: 37.57, lng: 126.98 },
     icon: 'message-circle',
@@ -20,8 +20,8 @@ export const STORIES: Story[] = [
   {
     id: 'berlin',
     city: 'Berlin',
-    title: 'Safe, but not free',
-    topic: 'Safe money that shrinks',
+    title: 'Saving',
+    topic: 'Why safe savings lose value',
     status: 'available',
     pin: { lat: 52.52, lng: 13.4 },
     icon: 'shield',
@@ -33,8 +33,8 @@ export const STORIES: Story[] = [
   {
     id: 'sao-paulo',
     city: 'São Paulo',
-    title: 'Twelve easy payments',
-    topic: 'Twelve easy payments',
+    title: 'Credit & loans',
+    topic: 'The real cost of instalments',
     status: 'available',
     pin: { lat: -23.55, lng: -46.63 },
     icon: 'credit-card',
@@ -46,8 +46,8 @@ export const STORIES: Story[] = [
   {
     id: 'tokyo',
     city: 'Tokyo',
-    title: 'Buy what you know',
-    topic: 'One country or the world',
+    title: 'Investing',
+    topic: 'Spreading your investments',
     status: 'available',
     pin: { lat: 35.68, lng: 139.69 },
     icon: 'globe',
@@ -59,8 +59,8 @@ export const STORIES: Story[] = [
   {
     id: 'buenos-aires',
     city: 'Buenos Aires',
-    title: 'When prices run away',
-    topic: 'Inflation',
+    title: 'Money basics',
+    topic: 'When prices run away',
     status: 'coming-soon',
     pin: { lat: -34.6, lng: -58.38 },
     icon: 'tag',
@@ -72,8 +72,8 @@ export const STORIES: Story[] = [
   {
     id: 'nairobi',
     city: 'Nairobi',
-    title: 'Saving on the go',
-    topic: 'Saving habits',
+    title: 'Saving',
+    topic: 'Saving on the go',
     status: 'coming-soon',
     pin: { lat: -1.29, lng: 36.82 },
     icon: 'smartphone',
@@ -85,8 +85,8 @@ export const STORIES: Story[] = [
   {
     id: 'mumbai',
     city: 'Mumbai',
-    title: 'Why gold glitters',
-    topic: 'Gold & long horizons',
+    title: 'Investing',
+    topic: 'Why gold glitters',
     status: 'coming-soon',
     pin: { lat: 19.08, lng: 72.88 },
     icon: 'database',
@@ -98,7 +98,7 @@ export const STORIES: Story[] = [
 ];
 
 // ponytail: local mock, replaced by the learner profile API (topic C).
-export const LEARNER: Learner = { name: 'Alex', profileLabel: 'first-time investor', streak: 5, xp: 120 };
+export const LEARNER: Learner = { name: 'Alex', streak: 5, xp: 120 };
 
 /** Figma variant of a story's pin and card. */
 export type StoryState = 'default' | 'active' | 'done' | 'comingSoon';

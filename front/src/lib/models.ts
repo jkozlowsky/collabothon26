@@ -50,6 +50,23 @@ export function hiddenYearlyRate(discountPct: number, months: number): number {
   return round1(((1 + lo) ** 12 - 1) * 100);
 }
 
+/** Value in € after `years` of paying `monthly` € a month at `yearlyPct` a year, compounded monthly. */
+export function monthlyPlanValue(monthly: number, years: number, yearlyPct: number): number {
+  const r = yearlyPct / 100 / 12;
+  const months = Math.round(years * 12);
+  return Math.round(r === 0 ? monthly * months : (monthly * ((1 + r) ** months - 1)) / r);
+}
+
+/** Value in € of `start` € after `years` at `yearlyPct` a year, compounded yearly. */
+export function compoundGrowth(start: number, years: number, yearlyPct: number): number {
+  return Math.round(start * (1 + yearlyPct / 100) ** years);
+}
+
+/** Change in % in euros when `foreignSharePct` of the money is priced abroad and the euro moves `euroMovePct` against those currencies. */
+export function currencyMoveChange(foreignSharePct: number, euroMovePct: number): number {
+  return round1((foreignSharePct / 100) * (1 / (1 + euroMovePct / 100) - 1) * 100);
+}
+
 /** Total change in % when `homeSharePct` of the money moves `homeMovePct` and the rest moves `worldMovePct`. */
 export function countryMixChange(homeSharePct: number, homeMovePct: number, worldMovePct: number): number {
   return round1((homeSharePct * homeMovePct + (100 - homeSharePct) * worldMovePct) / 100);
@@ -65,6 +82,9 @@ export const MODELS: Record<SliderModel, { x: string; y: (v: Values) => number }
   realValue: { x: 'years', y: (v) => realValueChange(v.years, v.interest, v.inflation) },
   installmentCost: { x: 'discount', y: (v) => hiddenYearlyRate(v.discount, v.months) },
   countryMix: { x: 'homeShare', y: (v) => countryMixChange(v.homeShare, v.homeMove, v.worldMove) },
+  monthlyPlan: { x: 'years', y: (v) => monthlyPlanValue(v.monthly, v.years, v.rate) },
+  currencyMove: { x: 'euroMove', y: (v) => currencyMoveChange(v.foreignShare, v.euroMove) },
+  compoundGrowth: { x: 'years', y: (v) => compoundGrowth(v.start, v.years, v.rate) },
 };
 
 /** Output over the whole range of the model's x param, the other params held at their current values. */

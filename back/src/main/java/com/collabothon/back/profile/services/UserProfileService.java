@@ -39,6 +39,23 @@ public class UserProfileService {
 		return mapper.toDto(saved);
 	}
 
+	/** Remembers the lesson mode the user last switched to, so the next lesson opens in it. */
+	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
+	public void saveLessonMode(String userId, String mode) {
+		UserProfile profile = profiles.findById(userId).orElseGet(() -> new UserProfile(userId));
+		profile.preferLessonMode(mode);
+		profiles.save(profile);
+	}
+
+	/** The mode lessons open in; {@code video} for a user without a profile. */
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	public String lessonMode(String userId) {
+		if (userId == null) {
+			return "video";
+		}
+		return profiles.findById(userId).map(UserProfile::getPreferredLessonMode).orElse("video");
+	}
+
 	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
 	public void resetOnboarding(String userId) {
 		profiles.findById(userId).ifPresent(UserProfile::resetOnboarding);

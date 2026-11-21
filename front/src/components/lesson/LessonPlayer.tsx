@@ -5,79 +5,41 @@ import { GlossarySheet } from '@/components/lesson/GlossarySheet';
 import { LessonEnd } from '@/components/lesson/LessonEnd';
 import { LessonTopBar } from '@/components/lesson/LessonTopBar';
 import { ConceptLinkContext } from '@/components/lesson/RichText';
-import { ActionStep } from '@/components/steps/ActionStep';
-import { ChatStep } from '@/components/steps/ChatStep';
-import { MatchStep } from '@/components/steps/MatchStep';
-import { PredictStep } from '@/components/steps/PredictStep';
-import { QuizStep } from '@/components/steps/QuizStep';
-import { ScenarioStep } from '@/components/steps/ScenarioStep';
-import { SliderChartStep } from '@/components/steps/SliderChartStep';
-import { SortStep } from '@/components/steps/SortStep';
-import { TextStep } from '@/components/steps/TextStep';
-import { advance, isFinished, isRetry, resultRequest, startPlayer, weakConcepts } from '@/lib/lessonPlayer';
-import type { Lesson, LessonResultRequest, LessonResultResponse, Step, StepOutcome, StepType } from '@/types/lessons';
+import { StepView } from '@/components/lesson/StepView';
+import type { LessonSession } from '@/hooks/useLessonSession';
+import { isRetry, progressShare, weakConcepts } from '@/lib/lessonPlayer';
+import type { Lesson } from '@/types/lessons';
 
 type Props = {
   lesson: Lesson;
-  onTogglePlain: () => void;
+  session: LessonSession;
   onClose: () => void;
   onNext: (lessonId: string) => void;
   onOpenGlossary: () => void;
-  saveResult: (result: LessonResultRequest) => Promise<LessonResultResponse>;
 };
 
-const KNOWN: ReadonlySet<StepType> = new Set([
-  'text',
-  'chat',
-  'quiz',
-  'match',
-  'sort',
-  'predict',
-  'slider-chart',
-  'scenario',
-  'action',
-]);
-
 /**
- * Plays a lesson: one step at a time, missed graded steps again at the end, then the end screen. The lesson
- * may be swapped for its plain-language version mid-way; steps keep their ids, so the position stays.
+ * Classic form of a lesson (the transcript of the video form): one step at a time, missed graded steps again
+ * at the end, then the end screen. Progress lives in the session, so switching to video keeps the place.
  */
-export function LessonPlayer({ lesson, onTogglePlain, onClose, onNext, onOpenGlossary, saveResult }: Props) {
-  // Unknown step types are skipped (backend validation should prevent them).
-  const steps = lesson.steps.filter((s) => KNOWN.has(s.type));
-  const [state, setState] = useState(() => startPlayer(steps));
+export function LessonPlayer({ lesson, session, onClose, onNext, onOpenGlossary }: Props) {
+  const { progress, xp, complete, switchTo } = session;
   const [concept, setConcept] = useState<string | null>(null);
-  const [xp, setXp] = useState<number | null | 'error'>(null);
-  const finished = isFinished(state);
-
-  function onDone(outcome: StepOutcome) {
-    const next = advance(state, steps, outcome);
-    setState(next);
-    if (isFinished(next)) {
-      saveResult(resultRequest(next, lesson.lang)).then(
-        (r) => setXp(r.xpAwarded),
-        () => setXp('error'),
-      );
-    }
-  }
-
-  const step = finished ? null : steps[state.queue[state.pos]];
-  const weak = weakConcepts(state, steps, lesson.concepts);
+  const step = progress.current === null ? undefined : lesson.steps.find((s) => s.id === progress.current);
+  const weak = weakConcepts(progress, lesson.steps, lesson.concepts);
 
   return (
     <ConceptLinkContext.Provider value={setConcept}>
       <View style={styles.fill}>
         <LessonTopBar
-          progress={state.pos / state.queue.length}
-          plain={lesson.lang === 'plain'}
-          showLangToggle={!finished}
-          onTogglePlain={onTogglePlain}
+          progress={progressShare(progress, lesson)}
+          onWatch={lesson.video && step ? () => switchTo('video') : undefined}
           onClose={onClose}
         />
         {step ? (
-          // Keyed by position: a repeated step mounts fresh (reset, reshuffled).
-          <View key={`${step.id}-${state.pos}`} style={styles.fill}>
-            {renderStep(step, isRetry(state), onDone)}
+          // Keyed by turn: a repeated step mounts fresh (reset, reshuffled).
+          <View key={`${step.id}-${progress.turn}`} style={styles.fill}>
+            <StepView step={step} retry={isRetry(progress)} onDone={(outcome) => complete(step.id, outcome)} />
           </View>
         ) : (
           <LessonEnd
@@ -100,29 +62,6 @@ export function LessonPlayer({ lesson, onTogglePlain, onClose, onNext, onOpenGlo
       </View>
     </ConceptLinkContext.Provider>
   );
-}
-
-function renderStep(step: Step, retry: boolean, onDone: (o: StepOutcome) => void) {
-  switch (step.type) {
-    case 'text':
-      return <TextStep step={step} onDone={onDone} />;
-    case 'chat':
-      return <ChatStep step={step} onDone={onDone} />;
-    case 'quiz':
-      return <QuizStep step={step} onDone={onDone} />;
-    case 'match':
-      return <MatchStep step={step} onDone={onDone} />;
-    case 'sort':
-      return <SortStep step={step} retry={retry} onDone={onDone} />;
-    case 'predict':
-      return <PredictStep step={step} onDone={onDone} />;
-    case 'slider-chart':
-      return <SliderChartStep step={step} onDone={onDone} />;
-    case 'scenario':
-      return <ScenarioStep step={step} onDone={onDone} />;
-    case 'action':
-      return <ActionStep step={step} onDone={onDone} />;
-  }
 }
 
 const styles = StyleSheet.create({

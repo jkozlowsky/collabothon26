@@ -1,10 +1,12 @@
 package com.collabothon.back.lesson.services;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,14 +27,21 @@ public final class LessonRules {
 	public static final Set<String> GRADED = Set.of("quiz", "match", "sort");
 
 	public static final Set<String> VARIANT_KEYS = Set.of("level:beginner", "level:advanced", "persona:student",
-			"persona:family", "persona:pre-retirement", "lang:plain");
+			"persona:family", "persona:pre-retirement");
 
-	/** Variants apply in this order, later wins: base → level → persona → lang. */
-	private static final List<String> VARIANT_ORDER = List.of("level:", "persona:", "lang:");
+	/** Variants apply in this order, later wins: base → level → persona. */
+	private static final List<String> VARIANT_ORDER = List.of("level:", "persona:");
 
 	/** slider-chart models implemented in front/src/lib/models.ts. */
 	public static final Set<String> MODELS = Set.of("drawdownRecovery", "leverage", "oneCompanyCrash", "realValue",
-			"installmentCost", "countryMix");
+			"installmentCost", "countryMix", "monthlyPlan", "currencyMove", "compoundGrowth");
+
+	/** Lesson flow, in order. A lesson either gives every step a phase or none; "decide" is optional. */
+	public static final List<String> PHASES = List.of("learn", "challenge", "you", "decide");
+
+	/** Bank numbers a slider can start from ({@code fromBank}). Mirror of {@code NUMBERS} in front/src/lib/lessonMetrics.ts. */
+	public static final Set<String> NUMBER_METRICS = Set.of("worldShare", "europeShare", "largestPositionShare",
+			"monthlyInvesting", "savingsBalance", "savingsRate");
 
 	/** [[concept]] or [[concept|shown text]] inside any text field. */
 	private static final Pattern CONCEPT_REF = Pattern.compile("\\[\\[([a-z0-9-]+)(?:\\|[^\\]]*)?]]");
@@ -86,8 +95,16 @@ public final class LessonRules {
 		throw new IllegalArgumentException("no step '" + stepId + "'");
 	}
 
-	/** Fails with a message naming the lesson and the problem. Run for every content file at startup. */
+	/** Validation without audio files on disk (tests, lessons without narration). */
 	public static void validate(ObjectNode lesson, Set<String> glossary) {
+		validate(lesson, glossary, audio -> false);
+	}
+
+	/**
+	 * Fails with a message naming the lesson and the problem. Run for every content file at startup.
+	 * {@code audioExists} answers whether a scene's {@code audio} path is a file under {@code static/audio/}.
+	 */
+	public static void validate(ObjectNode lesson, Set<String> glossary, Predicate<String> audioExists) {
 		String id = lesson.path("id").asString("");
 		check(!id.isBlank(), id, "missing id");
 		check(lesson.path("xp").asInt(0) > 0, id, "xp must be positive");
@@ -101,6 +118,7 @@ public final class LessonRules {
 			validateStep(id, sid, type, step);
 		}
 		check(!stepIds.isEmpty(), id, "no steps");
+		validatePhases(id, lesson);
 
 		for (String concept : concepts(lesson)) {
 			check(glossary.contains(concept), id, "concept '" + concept + "' is not in the glossary");
@@ -123,6 +141,37 @@ public final class LessonRules {
 						key + " must not change answer fields of " + sid);
 			}
 		}
+
+		if (lesson.hasNonNull("video")) {
+			SceneRules.validate(id, lesson, audioExists);
+		}
+	}
+
+	/** Phases are all-or-nothing, in order, with learn, challenge and you present; decide holds only action steps. */
+	private static void validatePhases(String lesson, JsonNode content) {
+		List<JsonNode> steps = new ArrayList<>();
+		content.path("steps").forEach(steps::add);
+		long phased = steps.stream().filter(s -> s.has("phase")).count();
+		if (phased == 0) {
+			return;
+		}
+		check(phased == steps.size(), lesson, "either every step has a phase or none does");
+		int last = 0;
+		Set<String> seen = new HashSet<>();
+		for (JsonNode step : steps) {
+			String sid = step.path("id").asString("");
+			String phase = step.path("phase").asString("");
+			int rank = PHASES.indexOf(phase);
+			check(rank >= 0, lesson, "step " + sid + " has unknown phase '" + phase + "'");
+			check(rank >= last, lesson, "step " + sid + " (" + phase + ") comes after a later phase");
+			check(!"decide".equals(phase) || "action".equals(step.path("type").asString()), lesson,
+					"step " + sid + ": the decide phase holds only action steps");
+			last = rank;
+			seen.add(phase);
+		}
+		for (String phase : PHASES.subList(0, 3)) {
+			check(seen.contains(phase), lesson, "a phased lesson needs a '" + phase + "' step");
+		}
 	}
 
 	private static void validateStep(String lesson, String sid, String type, JsonNode step) {
@@ -131,6 +180,14 @@ public final class LessonRules {
 			case "quiz" -> {
 				int i = step.path("correctIndex").asInt(-1);
 				check(i >= 0 && i < step.path("options").size(), lesson, at + "correctIndex out of range");
+				if (step.has("chart")) {
+					JsonNode chart = step.get("chart");
+					int n = chart.path("series").size();
+					check(n >= 2 && n <= 12, lesson, at + "chart needs 2–12 points");
+					check(chart.has("unit"), lesson, at + "chart needs a unit");
+					check(!chart.has("labels") || chart.path("labels").size() == n, lesson,
+							at + "chart labels must match the points");
+				}
 			}
 			case "match" -> {
 				int n = step.path("pairs").size();
@@ -143,8 +200,15 @@ public final class LessonRules {
 					check(b == 0 || b == 1, lesson, at + "item bucket must be 0 or 1");
 				}
 			}
-			case "slider-chart" -> check(MODELS.contains(step.path("model").asString("")), lesson,
-					at + "unknown model '" + step.path("model").asString("") + "'");
+			case "slider-chart" -> {
+				check(MODELS.contains(step.path("model").asString("")), lesson,
+						at + "unknown model '" + step.path("model").asString("") + "'");
+				for (var param : step.path("params").properties()) {
+					String metric = param.getValue().path("fromBank").asString("");
+					check(metric.isEmpty() || NUMBER_METRICS.contains(metric), lesson,
+							at + "param " + param.getKey() + " starts from unknown bank number '" + metric + "'");
+				}
+			}
 			case "scenario" -> {
 				check(step.path("choices").size() >= SCENARIO_MIN_CHOICES, lesson, at + "scenario needs at least 2 choices");
 				for (JsonNode c : step.path("choices")) {

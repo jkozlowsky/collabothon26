@@ -6,7 +6,7 @@
 ## 1. Zakres
 
 - **Treść:** współczesne historie ze świata (globus). Misje demo z pełną treścią: **Seul** (wzór w `doc/historie.md` §4) i **Berlin**, ewentualnie kolejne, jeśli zostanie czas. Pozostałe piny widoczne jako „Coming soon”.
-- **Język:** angielski (UI, treść, wariant plain).
+- **Język:** angielski (UI, treść). Wariant plain usunięty, zob. [`lesson-video-mode-spec.md`](lesson-video-mode-spec.md) §9.
 - **Platformy:** muszą działać **web i Android** (sposób demo jeszcze nieustalony). Każda interakcja gestem ma odpowiednik klikany.
 
 ## 2. Decyzje
@@ -17,7 +17,7 @@
 | Składanie wariantów | Backend |
 | Persona (F5) | Zmienia **tylko** krok `action` („Your turn”); historia i postać są takie same dla wszystkich |
 | Poziom (F5) | Zostaje jako nadpisania (beginner/advanced) |
-| Plain language | Generowany offline przez LLM, przeglądany przez człowieka, commitowany do JSON; przełącznik „Aa” w lekcji |
+| Plain language | **Usunięte** (2026-11-21): tylko tekst standardowy, bez przełącznika „Aa”. Zob. [`lesson-video-mode-spec.md`](lesson-video-mode-spec.md) §9 |
 | Dane do „Your turn” | Mockowane konta bankowe użytkowników; backend liczy **nazwane metryki** |
 | Skutek w `scenario` | Zawsze ta sama, ustalona ścieżka na decyzję |
 | Błędna odpowiedź | Styl Duolingo: idziesz dalej, błędne kroki wracają na końcu lekcji, aż do poprawnej odpowiedzi |

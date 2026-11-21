@@ -18,7 +18,7 @@ Apply these to every feature and every line of user-facing copy:
 - **Demo-first.** One polished mission that works end to end beats many half-built features. Mock data is fine; a broken flow is not.
 - **Educate, never advise.** The app (and especially the chatbot) explains concepts and consequences; it never recommends buying a specific product. Investment advice is regulated (MiFID II) and a bank jury will check.
 - **Actionable.** A lesson ends with a small real-world step or decision scenario, not just a score.
-- **All generations.** The same content adapts to persona (student / family / pre-retirement), level, and plain vs. standard language.
+- **All generations.** The same content adapts to persona (student / family / pre-retirement) and level, and can be watched (video) or read (transcript).
 - **Short.** Lessons take 2–5 minutes.
 
 ## Features

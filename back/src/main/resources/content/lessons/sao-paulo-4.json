@@ -70,37 +70,5 @@
       "explanation": "People compare the number they see first. Fees and add-ons are where [[hidden-interest]] lives."
     }
   ],
-  "variants": {
-    "lang:plain": {
-      "c1": {
-        "messages": [
-          { "from": "Lender A", "text": "Loan for a motorbike, R$8,000 in 24 months: only 1.9% a month!" },
-          { "from": "Lender A", "text": "You also pay a R$300 fee and R$600 insurance" },
-          { "from": "Lender B", "text": "R$8,000 in 24 months at 2.3% a month. Nothing more" },
-          { "from": "Rafa", "me": true, "text": "1.9 is less than 2.3. So A is cheaper?" }
-        ]
-      },
-      "t1": {
-        "body": "It means \"total real cost\". In Brazil, lenders must show it. It is one number with interest, fees and insurance together. In English: [[total-cost-of-credit]]. Compare this number, not the first one you see."
-      },
-      "p1": {
-        "prompt": "Offer A adds R$900 for the fee and insurance. Rafa still gets only R$8,000. What does offer A really cost per month? Guess.",
-        "reveal": "About 2.9% a month. So the \"cheap\" 1.9% costs more than offer B's 2.3%."
-      },
-      "m1": { "prompt": "Match each part of a loan with what it means." },
-      "q1": {
-        "prompt": "A: 1.9% a month, real cost 2.9%. B: 2.3% a month, real cost 2.3%. Which is cheaper?",
-        "explanation": "Look at the real cost. B is 2.3% and that's all. A is 2.9% with the fee and insurance."
-      },
-      "q2": {
-        "prompt": "Why does a lender show a low rate and add fees?",
-        "options": [
-          "People see the low rate first, but the fees make it cost more",
-          "The law says so",
-          "Fees protect the borrower"
-        ],
-        "explanation": "People compare the first number. Extra fees are [[hidden-interest]]."
-      }
-    }
-  }
+  "variants": {}
 }

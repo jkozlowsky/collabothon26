@@ -2,101 +2,276 @@
   "id": "tokyo-2",
   "story": "tokyo",
   "title": "One country of many",
-  "place": "Shinjuku · bookshop",
-  "topic": "Spreading across countries",
+  "place": "The world map · your depot",
+  "topic": "Spreading money across countries",
   "minutes": 4,
-  "xp": 60,
-  "concepts": ["home-bias", "diversification"],
+  "xp": 50,
+  "concepts": [
+    "home-bias",
+    "diversification"
+  ],
   "steps": [
     {
-      "type": "chat",
-      "id": "c1",
-      "title": "Yuki",
-      "messages": [
-        { "from": "Yuki", "text": "Mum, I'm looking at investing books for you" },
-        { "from": "Yuki", "text": "This one has a map of the world's stock markets" },
-        { "from": "Michiko", "me": true, "text": "Japan must be a big part of it, right?" },
-        { "from": "Yuki", "text": "Guess" }
-      ]
-    },
-    {
-      "type": "predict",
-      "id": "p1",
-      "concepts": ["home-bias"],
-      "prompt": "All the world's listed companies together are worth a certain amount. What share of that is Japanese companies?",
-      "input": { "kind": "slider", "min": 0, "max": 50, "step": 1, "unit": "%" },
-      "answer": 5,
-      "reveal": "About 5%. Japan is a big economy, but a small slice of the world market. Putting everything at home is betting on one slice. Simplified from real data."
+      "type": "text",
+      "id": "t1",
+      "phase": "learn",
+      "kicker": "The world market",
+      "title": "Your country is a small part of the world",
+      "body": "All companies on stock exchanges make up the world market. Germany is about 2% of it. Japan is about 5%. A big economy can still be a small part. Many people invest mostly in their own country. This is called [[home-bias]]. Investing across many countries is called [[diversification]]. The numbers are rounded."
     },
     {
       "type": "slider-chart",
       "id": "s1",
-      "concepts": ["diversification"],
-      "prompt": "Imagine a bad year: Japan falls 40%, the rest of the world falls 10%. Change how much of Michiko's money is in Japan. Keep her total fall to 15% or less.",
+      "phase": "learn",
+      "concepts": [
+        "diversification"
+      ],
+      "prompt": "Imagine a bad year. Companies in one country lose 40% of their value. Companies in the rest of the world lose 10%. Use the first slider to choose how much of the money is in that one country. Find a mix where the total loss is 15% or less.",
       "model": "countryMix",
       "params": {
-        "homeShare": { "label": "Share in Japan", "min": 0, "max": 100, "step": 5, "value": 100, "unit": "%" },
-        "homeMove": { "label": "Japan's move", "min": -60, "max": 0, "step": 5, "value": -40, "unit": "%" },
-        "worldMove": { "label": "Rest of the world's move", "min": -60, "max": 0, "step": 5, "value": -10, "unit": "%" }
+        "homeShare": {
+          "label": "Money in that one country",
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "value": 100,
+          "unit": "%"
+        },
+        "homeMove": {
+          "label": "Change in that country",
+          "min": -60,
+          "max": 0,
+          "step": 5,
+          "value": -40,
+          "unit": "%"
+        },
+        "worldMove": {
+          "label": "Change in the rest of the world",
+          "min": -60,
+          "max": 0,
+          "step": 5,
+          "value": -10,
+          "unit": "%"
+        }
       },
-      "output": { "label": "Michiko's total change", "unit": "%" },
-      "goal": { "condition": { "of": "output", "min": -15 }, "hint": "Japan is about 5% of the world. What if her mix looked more like the world?" },
-      "note": "Illustration only. Real years can hit every country at once."
-    },
-    {
-      "type": "text",
-      "id": "t1",
-      "title": "Home is a choice, not a default",
-      "body": "Most people hold far more of their own country than its share of the world. That's [[home-bias]]. Spreading across countries is [[diversification]] on a bigger scale: when one market has a bad decade, it's only part of the picture."
+      "output": {
+        "label": "Change of all the money",
+        "unit": "%"
+      },
+      "goal": {
+        "condition": {
+          "of": "output",
+          "min": -15
+        },
+        "hint": "Try putting less money in the one country."
+      },
+      "note": "This is an example. In a real crisis, all countries can fall at the same time."
     },
     {
       "type": "quiz",
       "id": "q1",
-      "concepts": ["diversification"],
-      "prompt": "Why can spreading money across countries soften a bad year at home?",
+      "phase": "challenge",
+      "concepts": [
+        "diversification"
+      ],
+      "prompt": "Look at the chart. What does it show?",
       "options": [
-        "Different markets don't always fall at the same time or by the same amount",
-        "Foreign markets never fall",
-        "Foreign shares are guaranteed by their governments"
+        "The more money is in the falling country, the bigger the total loss",
+        "Spreading the money makes the loss bigger",
+        "It does not matter how much money is in one country"
       ],
       "correctIndex": 0,
-      "explanation": "Countries move differently. Sometimes they all fall together, but rarely by the same amount, so a spread usually falls less than its worst part."
+      "explanation": "With 0% in that country, the total loss is 10%. With 100% in that country, the total loss is 40%. Each extra share in that country makes the total loss bigger.",
+      "chart": {
+        "series": [
+          -10,
+          -16,
+          -22,
+          -28,
+          -34,
+          -40
+        ],
+        "labels": [
+          "0% in one country",
+          "20%",
+          "40%",
+          "60%",
+          "80%",
+          "100% in one country"
+        ],
+        "unit": "%",
+        "caption": "Total change of the money. That country falls 40%, the rest of the world falls 10%."
+      }
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "phase": "challenge",
+      "concepts": [
+        "diversification"
+      ],
+      "prompt": "True or false: a fund that invests all over the world cannot lose value in a bad year.",
+      "options": [
+        "True",
+        "False"
+      ],
+      "correctIndex": 1,
+      "explanation": "False. In a bad year, most countries fall at the same time. A spread fund usually loses less than its worst country, but it still loses."
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "phase": "you",
+      "kicker": "Your investments",
+      "title": "How spread your money is",
+      "body": "**{worldShare}** of your investment account is in funds that invest all over the world. **{europeShare}** is in funds that invest only in Europe. If Europe has a bad year, that part loses the most."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s2",
+      "phase": "you",
+      "concepts": [
+        "home-bias"
+      ],
+      "prompt": "Your investment account has {europeShare} in Europe-only funds. Imagine Europe falls 40% and the rest of the world falls 10%. The result shows the change of your account. Move the sliders to try other mixes.",
+      "model": "countryMix",
+      "params": {
+        "homeShare": {
+          "label": "Your money in Europe-only funds",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "value": 30,
+          "unit": "%",
+          "fromBank": "europeShare"
+        },
+        "homeMove": {
+          "label": "Change in Europe",
+          "min": -60,
+          "max": 0,
+          "step": 5,
+          "value": -40,
+          "unit": "%"
+        },
+        "worldMove": {
+          "label": "Change in the rest of the world",
+          "min": -60,
+          "max": 0,
+          "step": 5,
+          "value": -10,
+          "unit": "%"
+        }
+      },
+      "output": {
+        "label": "Change of your investment account",
+        "unit": "%"
+      },
+      "goal": {
+        "condition": {
+          "of": "output",
+          "min": -1000000
+        },
+        "hint": "Move a slider to see the result change."
+      },
+      "note": "The first slider starts at your real share. This is an example, not a forecast."
+    },
+    {
+      "type": "action",
+      "id": "a1",
+      "phase": "decide",
+      "title": "Your decision",
+      "body": "**{europeShare}** of your investment account depends on Europe only. What is the most you want to have in one country or region? You choose the limit.",
+      "bodyNoData": "What is the most you want to have in one country or region? You choose the limit.",
+      "rule": {
+        "label": "Most money in one country or region",
+        "min": 10,
+        "max": 100,
+        "step": 5,
+        "value": 30,
+        "unit": "%",
+        "appliesTo": "depotTotal",
+        "result": "= at most {amount} of your investment account"
+      },
+      "cta": "Save my rule"
     }
   ],
+  "video": {
+    "minutes": 4,
+    "scenes": [
+      {
+        "type": "scene",
+        "id": "v1",
+        "title": "A small part of the world",
+        "desc": "Each country is a small part of the world stock market. Investing mostly in your own country is called [[home-bias]]. Spreading money across many countries is called [[diversification]]. The numbers are rounded.",
+        "duration": 12,
+        "camera": "drift",
+        "setting": {
+          "place": "street",
+          "time": "night"
+        },
+        "layers": [
+          {
+            "kind": "tag",
+            "at": 4,
+            "text": "Germany 2%",
+            "tone": "neutral",
+            "x": 0.3,
+            "y": 0.3
+          },
+          {
+            "kind": "tag",
+            "at": 5,
+            "text": "Japan 5%",
+            "tone": "neutral",
+            "x": 0.7,
+            "y": 0.3
+          },
+          {
+            "kind": "tag",
+            "at": 10,
+            "text": "Spread",
+            "tone": "good",
+            "x": 0.5,
+            "y": 0.55
+          }
+        ],
+        "captions": [
+          {
+            "at": 0.5,
+            "text": "All companies on stock exchanges make up the world market."
+          },
+          {
+            "at": 4,
+            "text": "Germany is about 2% of it. Japan is about 5%."
+          },
+          {
+            "at": 7,
+            "text": "A big economy can still be a small part."
+          },
+          {
+            "at": 9.5,
+            "text": "Investing across many countries is called diversification."
+          }
+        ],
+        "transcript": "t1"
+      }
+    ],
+    "beats": [
+      "v1",
+      "s1",
+      "q1",
+      "q2",
+      "t2",
+      "s2",
+      "a1"
+    ]
+  },
   "variants": {
     "level:beginner": {
-      "s1": { "goal": { "hint": "Leave the moves as they are and set the share in Japan to 15% or less." } }
-    },
-    "lang:plain": {
-      "c1": {
-        "messages": [
-          { "from": "Yuki", "text": "Mum, I'm looking for an investing book for you" },
-          { "from": "Yuki", "text": "This one has a map of all stock markets" },
-          { "from": "Michiko", "me": true, "text": "Japan is a big part, right?" },
-          { "from": "Yuki", "text": "Guess" }
-        ]
-      },
-      "p1": {
-        "prompt": "Take all companies in the world that sell shares. How much of their value is Japanese companies? Guess.",
-        "reveal": "About 5%. Japan is big, but only a small part of the world market. Putting all money in Japan is a bet on one small part."
-      },
       "s1": {
-        "prompt": "A bad year: Japan goes down 40%, the rest of the world goes down 10%. How much of Michiko's money is in Japan? Change it so she loses 15% or less.",
-        "output": { "label": "What Michiko loses or wins" },
-        "note": "Only an example. Sometimes all countries fall together."
-      },
-      "t1": {
-        "title": "Your country is a choice",
-        "body": "Most people own much more of their own country than its part of the world. This is [[home-bias]]. Spreading money over many countries is [[diversification]]. If one country has a bad time, it's only a part of your money."
-      },
-      "q1": {
-        "prompt": "Why can money in many countries make a bad year at home less bad?",
-        "options": [
-          "Countries don't always go down at the same time or by the same amount",
-          "Other countries never go down",
-          "Other governments promise the money"
-        ],
-        "explanation": "Countries move in different ways. So money spread over many countries usually falls less than the worst country."
+        "goal": {
+          "hint": "Keep the other two sliders as they are. Move the first slider to 15% or less."
+        }
       }
     }
   }

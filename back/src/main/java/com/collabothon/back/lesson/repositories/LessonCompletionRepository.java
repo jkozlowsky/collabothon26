@@ -29,12 +29,12 @@ public interface LessonCompletionRepository extends JpaRepository<LessonCompleti
 	@Transactional(propagation = Propagation.MANDATORY)
 	@Modifying
 	@Query(nativeQuery = true, value = """
-			INSERT INTO lesson_completion (user_id, lesson_id, xp, completed_at)
-			VALUES (:userId, :lessonId, :xp, :completedAt)
+			INSERT INTO lesson_completion (user_id, lesson_id, xp, completed_at, mode)
+			VALUES (:userId, :lessonId, :xp, :completedAt, :mode)
 			ON CONFLICT (user_id, lesson_id) DO NOTHING
 			""")
 	int insertIfAbsent(@Param("userId") String userId, @Param("lessonId") String lessonId, @Param("xp") int xp,
-			@Param("completedAt") Instant completedAt);
+			@Param("completedAt") Instant completedAt, @Param("mode") String mode);
 
 	@Transactional
 	@Modifying

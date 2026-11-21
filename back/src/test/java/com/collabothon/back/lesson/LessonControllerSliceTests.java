@@ -32,7 +32,7 @@ class LessonControllerSliceTests {
 
 	@Test
 	void listLessonsReturnsOk() throws Exception {
-		LessonSummary summary = new LessonSummary("seoul-1", "seoul", "Hype", "Seoul", "Hype", 3, 50, "available");
+		LessonSummary summary = new LessonSummary("seoul-1", "seoul", "Hype", "Seoul", "Hype", 3, 50, "available", null);
 		when(lessonService.getLessons("user1")).thenReturn(List.of(summary));
 
 		mvc.perform(get("/api/lessons").param("userId", "user1"))

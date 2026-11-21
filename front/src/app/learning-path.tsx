@@ -13,7 +13,7 @@ export default function LearningPathScreen() {
   const summary = useSummary();
   const leaving = useRef(false);
   // A second tap would close the screen twice or push the lesson twice.
-  const leave = useCallback((lessonId?: number) => {
+  const leave = useCallback((lessonId?: string) => {
     if (leaving.current) return;
     leaving.current = true;
     continueToLearn(lessonId);

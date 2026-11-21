@@ -26,7 +26,8 @@ export type SharedAnswers = {
   skipped: boolean;
 };
 
-export type StartLesson = { lessonId: number; title: string; area: FocusArea };
+/** A lesson of a story; `area` is null when the lesson has no bank area. */
+export type StartLesson = { lessonId: string; title: string; area: FocusArea | null; storyId: string; storyCity: string };
 
 /** POST/GET /api/users/{userId}/categorization (contract: docs/specs/F1-profiling.md). */
 export type Categorization = {
@@ -55,8 +56,8 @@ export type Categorization = {
   answerCount: number;
   startLesson: StartLesson | null;
   readyForNext: boolean;
-  pathLessonIds: number[];
-  /** Computed on read: the first lesson of the path the user has not completed. */
+  pathStoryIds: string[];
+  /** Computed on read: the first path story with a lesson not done, at that lesson; null when the path is done. */
   startHere?: StartLesson | null;
   sharedWithModel: {
     facts: Facts | null;

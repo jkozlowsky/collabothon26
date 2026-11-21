@@ -47,6 +47,9 @@ const stepper =
       stepFellBack: false,
     } satisfies StepResponse);
 
+const stop = (n: number) => ({ id: `berlin-${n}`, story: 'berlin', title: `Stop ${n}`, place: 'Mitte', topic: null, minutes: 4, xp: 50, status: 'available' });
+const BERLIN = { id: 'berlin', city: 'Berlin', lessons: [1, 2, 3, 4].map(stop) };
+
 let fetchMock: jest.Mock;
 const body = (init?: RequestInit) => JSON.parse(String(init?.body ?? '{}'));
 
@@ -69,7 +72,8 @@ function backend({
       const profile = { userId: 'demo-user', lifeStage, goals, onboardingCompleted: true };
       return init?.method ? ok({}) : ok(profile);
     }
-    if (/\/api\/lessons\/\d+$/.test(url)) return ok({ id: 2, title: 'Compound interest', questions: [] });
+    if (url.includes('/api/stories?')) return ok([BERLIN]);
+    if (/\/api\/lessons\/[\w-]+/.test(url)) return ok({ id: 'berlin-2', title: 'Compound interest', steps: [], concepts: [], glossary: {}, next: null });
     return ok([]);
   });
   globalThis.fetch = fetchMock;
@@ -670,15 +674,16 @@ async function toSummary(post: Categorization) {
 
 test('the summary: a gap card, the level and its basis, the first lesson, the disclaimer', async () => {
   const gap = { area: 'saving' as const, direction: 'over' as const, because: 'On Saving you said “Sure”. Your answers leave a few things open to explore.' };
-  await toSummary(ran({ confidenceGaps: [gap], startLesson: { lessonId: 1, title: 'Emergency fund', area: 'saving' } }));
+  await toSummary(ran({ confidenceGaps: [gap], startLesson: { lessonId: 'berlin-3', title: 'Emergency fund', area: 'saving', storyId: 'berlin', storyCity: 'Berlin' } }));
 
   expect(get('summary-gap-saving')).toHaveTextContent('There is more to explore here', { exact: false });
   expect(get('summary-gap-saving')).toHaveTextContent(gap.because, { exact: false });
   expect(screen.queryByTestId('summary-aligned')).toBeNull();
   expect(get('summary-role')).toHaveTextContent("You're an intermediate learner", { exact: false });
   expect(get('summary-based-on')).toHaveTextContent('Based on 3 answers and how sure you felt about each.', { exact: false });
-  expect(get('summary-first-lesson')).toHaveTextContent('Your first lesson · Saving', { exact: false });
+  expect(get('summary-first-lesson')).toHaveTextContent(/your first stop · saving/i);
   expect(get('summary-first-lesson')).toHaveTextContent('Emergency fund', { exact: false });
+  expect(get('summary-first-lesson')).toHaveTextContent('Berlin · stop 3 of 4', { exact: false });
   expect(get('summary-disclaimer')).toHaveTextContent('This picks lessons for you. It is not investment advice.', { exact: false });
   expect(screen.queryByTestId('summary-simple')).toBeNull();
 });
@@ -704,6 +709,11 @@ test('with only "Not sure" answers there is no chip, so no aligned card', async 
   expect(screen.queryByTestId('summary-aligned')).toBeNull();
 });
 
+test('a start lesson with no area is just "your first stop"', async () => {
+  await toSummary(ran({ startLesson: { lessonId: 'berlin-1', title: 'Safe, but not free', area: null, storyId: 'berlin', storyCity: 'Berlin' } }));
+  expect(get('summary-first-lesson')).toHaveTextContent('Your first stopSafe, but not free', { exact: false });
+});
+
 test('ready for the next step: the first-lesson card says so; with no start lesson the card is hidden', async () => {
   await toSummary(ran({ readyForNext: true }));
   expect(get('summary-first-lesson')).toHaveTextContent("You're ready for the next lesson", { exact: false });
@@ -719,7 +729,7 @@ test('no first lesson hides the card and Start learning opens the map', async ()
 test('Start learning opens the first lesson; See all lessons opens the map', async () => {
   await toSummary(ran());
   await press('summary-start');
-  expect(screen).toHavePathname('/lesson/2');
+  expect(screen).toHavePathname('/lesson/berlin-2');
 });
 
 test('the simpler-check line shows only when the model was asked and then failed', async () => {
@@ -735,7 +745,7 @@ test('a fallback with nothing sent to the model has no simpler-check line', asyn
 });
 
 test('a reload of /learning-path rebuilds the summary from the stored row', async () => {
-  backend({ stored: ran({ startLesson: { lessonId: 1, title: 'Emergency fund', area: 'saving' } }) });
+  backend({ stored: ran({ startLesson: { lessonId: 'berlin-3', title: 'Emergency fund', area: 'saving', storyId: 'berlin', storyCity: 'Berlin' } }) });
   await renderRouter(routes, { initialUrl: '/' });
   await screen.findByTestId('screen-overview');
   await act(async () => {});
@@ -813,6 +823,8 @@ test('a tap on the dock opens "Your map in detail" with both markers and the leg
 
   await press('map-dock');
   expect(await screen.findByText('Your map in detail')).toBeOnTheScreen();
+  // The sheet closes only once it has been laid out; Jest has no layout pass.
+  await fireEvent(get('map-sheet'), 'layout', { nativeEvent: { layout: { height: 300 } } });
   expect(get('area-level-saving')).toHaveTextContent('Building');
   expect(get('area-level-investing')).toHaveTextContent('Just starting');
   expect(screen.getByText('How sure you felt')).toBeOnTheScreen();

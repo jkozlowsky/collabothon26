@@ -5,9 +5,12 @@ import { IconTile } from '@/components/onboarding/ui';
 import { RULE } from '@/constants/path';
 import { AREAS, AREA_LABEL, SOLID_MIN_ANSWERS } from '@/constants/quickCheck';
 import { colors, radii, spacing, type } from '@/constants/theme';
+import { useApi } from '@/hooks/useApi';
 import type { Summary } from '@/lib/learningPath';
 import { areaMarks } from '@/lib/quickCheck';
+import { USER_ID } from '@/lib/user';
 import type { Role } from '@/types/categorization';
+import type { StoryPage } from '@/types/stories';
 
 const BULLET = 6;
 /** Centres the bullet on the first line of the 13 px body text. */
@@ -22,6 +25,9 @@ const ALIGNED = {
 
 export function PathSummary({ categorization: c, chipped, counts = {} }: Summary) {
   const start = c.startLesson;
+  const { data: stories } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(USER_ID)}`);
+  const lessons = start && stories?.find((s) => s.id === start.storyId)?.lessons;
+  const stop = lessons ? lessons.findIndex((l) => l.id === start!.lessonId) + 1 : 0;
   const roleLines = c.explanation.find((e) => e.output === 'role')?.because ?? [];
   // A reload has no history, so the stored confidence stands in for "an answer carried a chip".
   const hasChip = chipped ?? Object.values(c.confidence).some((v) => v != null);
@@ -75,8 +81,14 @@ export function PathSummary({ categorization: c, chipped, counts = {} }: Summary
         <View style={styles.lesson} testID="summary-first-lesson">
           <IconTile icon="play" active />
           <View style={styles.lessonText}>
-            <Text style={styles.lessonOverline}>Your first lesson · {AREA_LABEL[start.area]}</Text>
+            <Text style={styles.lessonOverline}>
+              Your first stop{start.area && ` · ${AREA_LABEL[start.area]}`}
+            </Text>
             <Text style={type.titleCard}>{start.title}</Text>
+            <Text style={type.labelDefault}>
+              {start.storyCity}
+              {stop > 0 && ` · stop ${stop} of ${lessons!.length}`}
+            </Text>
             {c.readyForNext && <Text style={type.labelDefault}>You&apos;re ready for the next lesson</Text>}
           </View>
         </View>

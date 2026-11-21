@@ -29,7 +29,7 @@ const ran = (patch: object = {}) =>
     confidence: { saving: 0.9, investing: 0.25 },
     answerCount: 3,
     confidenceGaps: [],
-    startLesson: { lessonId: 1, title: 'Emergency fund', area: 'saving' },
+    startLesson: { lessonId: 'berlin-3', title: 'Emergency fund', area: 'saving', storyId: 'berlin', storyCity: 'Berlin' },
     ...patch,
   });
 
@@ -121,6 +121,7 @@ test('consent, what we know, the time frame, three questions with chips, the sum
   await expect(page.getByTestId('learning-path')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId('summary-role')).toHaveText("You're an intermediate learner");
   await expect(page.getByTestId('summary-first-lesson')).toContainText('Emergency fund');
+  await expect(page.getByTestId('summary-first-lesson')).toContainText('Berlin · stop 3 of 5');
   await expect(page.getByTestId('summary-disclaimer')).toHaveText('This picks lessons for you. It is not investment advice.');
 
   expect(steps.map((s) => s.history.length)).toEqual([0, 1, 2, 3]);
@@ -140,7 +141,7 @@ test('consent, what we know, the time frame, three questions with chips, the sum
   expect(JSON.stringify(finals[0])).not.toMatch(/12,?500|1,?268/);
 
   await tap(page, 'summary-start');
-  await expect(page).toHaveURL(/\/lesson\/1$/);
+  await expect(page).toHaveURL(/\/lesson\/berlin-3$/);
 });
 
 test('without consent the savings cover is asked and the questions use example numbers', async ({ page }) => {

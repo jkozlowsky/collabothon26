@@ -14,6 +14,8 @@ const PROFILE_RETRIES = 3;
 const PROFILE_BACKOFF_MS = 400;
 
 const isStatus = (e: unknown, status: number) => e instanceof ApiError && e.status === status;
+/** The backend refused the request itself, so sending it again unchanged fails the same way. */
+export const isBadRequest = (e: unknown) => isStatus(e, 400);
 const nullOn404 = (e: unknown) => {
   if (isStatus(e, 404)) return null;
   throw e;

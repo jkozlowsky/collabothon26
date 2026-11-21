@@ -397,3 +397,23 @@ test('a double tap on Start learning opens the lesson once', async () => {
   expect(push.mock.calls.filter(([href]) => typeof href === 'object')).toHaveLength(1);
   push.mockRestore();
 });
+
+test('a 400 on answers the backend rejects retries once without them, so the user still gets a path', async () => {
+  backend({ post: (init) => (JSON.parse(String(init?.body)).answers ? fail(400) : ok(categorization({ checks: [] }))) });
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+  await answerAll(['a', 'b', 'c', 'd']);
+
+  expect(await screen.findByTestId('learning-path', {}, { timeout: 4000 })).toBeOnTheScreen();
+  expect(bodies().map((body) => 'answers' in body)).toEqual([true, false]);
+  expect(screen.queryByText("We couldn't check your answers this time")).toBeNull();
+});
+
+test('a 400 without answers still ends in the error screen', async () => {
+  backend({ pool: () => ok([]), post: () => fail(400) });
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+
+  expect(await screen.findByTestId('categorizing-error', {}, { timeout: 4000 })).toBeOnTheScreen();
+  expect(bodies()).toHaveLength(1);
+});

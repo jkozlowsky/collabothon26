@@ -90,8 +90,9 @@ front/src/
 │   ├── (main)/           # bank + Finance Quest, one floating nav (components/bank/FloatingNav) that morphs between them
 │   │   ├── _layout.tsx
 │   │   ├── (bank)/       # mock banking app, the first screen: index (/) · payments · credits · invest
-│   │   └── (learn)/      # Finance Quest: map (/map, lesson list) · glossary · profile
-│   └── lesson/[id].tsx   # /lesson/1, pushed over the tabs
+│   │   └── (learn)/      # Finance Quest: map (/map, lesson list) · glossary · duel (lobby) · profile
+│   ├── lesson/[id].tsx   # /lesson/1, pushed over the tabs
+│   └── duel/             # match.tsx · rankings.tsx: full-screen duel flow, pushed over the tabs
 ├── components/           # reusable UI (Screen, Button, AsyncContent)
 ├── hooks/                # custom hooks (useXxx.ts)
 ├── lib/                  # non-UI code: api.ts (backend client), bank/ (seeded mock bank data, pure logic), utils

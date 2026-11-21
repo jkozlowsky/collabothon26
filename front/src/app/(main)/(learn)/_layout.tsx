@@ -8,6 +8,7 @@ export default function LearnLayout() {
     <TopTabs tabBar={() => null} screenOptions={{ swipeEnabled: true, sceneStyle: { backgroundColor: colors.bgCanvas } }}>
       <TopTabs.Screen name="map" options={{ title: 'Map' }} />
       <TopTabs.Screen name="glossary" options={{ title: 'Glossary' }} />
+      <TopTabs.Screen name="duel" options={{ title: 'Duel' }} />
       <TopTabs.Screen name="profile" options={{ title: 'Profile' }} />
     </TopTabs>
   );

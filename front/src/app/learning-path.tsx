@@ -6,10 +6,12 @@ import { Button } from '@/components/Button';
 import { FlowPage } from '@/components/categorizing/FlowPage';
 import { PathSummary } from '@/components/categorizing/PathSummary';
 import { continueToLearn } from '@/hooks/useOpenLearn';
-import { currentSummary } from '@/lib/learningPath';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { currentSummary, goalAreas } from '@/lib/learningPath';
 
 export default function LearningPathScreen() {
   const summary = currentSummary();
+  const { answers } = useOnboarding();
   const leaving = useRef(false);
   // A second tap would close the screen twice or push the lesson twice.
   const leave = useCallback((lessonId?: number) => {
@@ -30,7 +32,7 @@ export default function LearningPathScreen() {
   );
 
   if (!summary) return <Redirect href="/map" />;
-  const { categorization, unchecked } = summary;
+  const { categorization, unchecked, answered } = summary;
   return (
     <FlowPage
       testID="learning-path"
@@ -45,7 +47,9 @@ export default function LearningPathScreen() {
         </>
       }
     >
-      <PathSummary categorization={categorization} unchecked={unchecked} />
+      <PathSummary categorization={categorization} unchecked={unchecked}
+        answered={answered}
+        goalAreas={goalAreas(answers.goals)} />
     </FlowPage>
   );
 }

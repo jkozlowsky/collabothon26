@@ -136,7 +136,8 @@ export default function CategorizingScreen() {
       const { categorization, answersDropped } = result.value;
       const hadText = checkAnswers.some((a) => a.text !== null);
       const unchecked = hadText && (answersDropped || categorization.source === 'fallback');
-      setSummary({ categorization, unchecked });
+      const answered = checkAnswers.filter((a) => a.text !== null).map((a) => a.questionId);
+      setSummary({ categorization, unchecked, answered });
       return router.replace('/learning-path');
     }
     inFlight.current = false;

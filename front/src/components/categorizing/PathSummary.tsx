@@ -24,9 +24,13 @@ type Props = {
   categorization: Categorization;
   /** The user typed answers that Jev did not judge. */
   unchecked: boolean;
+  /** Ids of the questions the user answered with text, not "Not sure". */
+  answered: string[];
+  /** The areas of the goals the user picked in the onboarding. */
+  goalAreas: FocusArea[];
 };
 
-export function PathSummary({ categorization: c, unchecked }: Props) {
+export function PathSummary({ categorization: c, unchecked, answered, goalAreas }: Props) {
   const gap = c.confidenceGaps[0];
   const areas = c.focusAreas.slice(0, SUMMARY_AREAS);
   const start = c.startLesson;
@@ -34,10 +38,12 @@ export function PathSummary({ categorization: c, unchecked }: Props) {
   const roleLines = c.explanation.find((e) => e.output === 'role')?.because ?? [];
   const firstLesson = startArea ? `Your first lesson · ${AREA_LABEL[startArea]}` : 'Your first lesson';
 
-  const why = (area: FocusArea) =>
-    c.checks.some((check) => check.area === area)
-      ? `Your answer helped place ${AREA_LABEL[area]} on your path.`
-      : 'It fits the answers you gave.';
+  const why = (area: FocusArea) => {
+    const answeredHere = c.checks.some((check) => check.area === area && answered.includes(check.questionId));
+    if (answeredHere) return `Your answer helped place ${AREA_LABEL[area]} on your path.`;
+    if (goalAreas.includes(area)) return `You picked ${AREA_LABEL[area]} as a goal.`;
+    return 'It fits the answers you gave.';
+  };
   const icon = (name: 'eye' | 'user' | 'play') => <Feather name={name} size={16} color={colors.brandPrimary} />;
 
   return (

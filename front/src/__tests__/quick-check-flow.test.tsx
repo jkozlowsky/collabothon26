@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 import { AccessibilityInfo, BackHandler, Platform, StyleSheet } from 'react-native';
 
 import { ANSWER_DELAY_MS } from '@/hooks/useQuickCheck';
@@ -22,13 +22,13 @@ const PROFILE = { userId: 'demo-user', goals: [], onboardingCompleted: true };
 
 let fetchMock: jest.Mock;
 type Handler = (init?: RequestInit) => Promise<unknown>;
-type Backend = { pool?: Handler; post?: Handler };
+type Backend = { pool?: Handler; post?: Handler; goals?: string[] };
 
-function backend({ pool = () => ok(POOL), post = () => ok(categorization()) }: Backend = {}) {
+function backend({ pool = () => ok(POOL), post = () => ok(categorization()), goals = [] }: Backend = {}) {
   fetchMock = jest.fn((url: string, init?: RequestInit) => {
     if (url.endsWith('/api/check-questions')) return pool(init);
     if (url.endsWith('/categorization')) return init?.method === 'POST' ? post(init) : fail(404);
-    if (/\/profile(\/onboarding)?$/.test(url)) return init?.method ? ok({}) : ok(PROFILE);
+    if (/\/profile(\/onboarding)?$/.test(url)) return init?.method ? ok({}) : ok({ ...PROFILE, goals });
     if (/\/api\/lessons\/\d+$/.test(url)) return ok({ id: 2, title: 'Compound interest', questions: [] });
     return ok([]);
   });
@@ -293,10 +293,7 @@ test('the summary leads with the gap, then the level and why, then up to three a
   expect(screen.getByTestId('summary-gap')).toHaveTextContent(/your answer about investing shows you understand it\.$/);
   expect(screen.getByText("You're an intermediate learner")).toBeOnTheScreen();
   expect(screen.getByText('Money goes to savings or investments every month.')).toBeOnTheScreen();
-  for (const [area, label] of [['investing', 'Investing'], ['debt', 'Borrowing'], ['risk', 'Risk']])
-    expect(screen.getByTestId(`summary-area-${area}`)).toHaveTextContent(
-      new RegExp(`${label}Your answer helped place ${label} on your path\\.$`),
-    );
+  for (const area of ['investing', 'debt', 'risk']) expect(screen.getByTestId(`summary-area-${area}`)).toBeOnTheScreen();
   expect(screen.getByText('Compound interest')).toBeOnTheScreen();
   expect(screen.queryByTestId('summary-area-saving')).toBeNull();
   expect(screen.queryByText("We couldn't check your answers this time")).toBeNull();
@@ -544,4 +541,43 @@ test.each(['ios', 'android'] as const)('on %s focus moves to the prompt of each 
     focus.mockRestore();
     platform.restore();
   }
+});
+
+/** A goal in each area, as the onboarding offers them. */
+const GOAL_OF = { saving: 'start-saving', debt: 'pay-off-debt', investing: 'start-investing', risk: 'scams', retirement: 'retirement' };
+
+describe('why each area is on the path', () => {
+  const areasDrawn = () => draw(true).map((d) => d.question.area);
+  const post = () => {
+    const checks = draw(true).map(({ question }) => ({
+      questionId: question.id,
+      area: question.area,
+      lessonId: null,
+      result: 'partly' as const,
+    }));
+    return () => ok(categorization({ checks, focusAreas: areasDrawn(), confidenceGaps: [] }));
+  };
+  const summaryWith = async (goals: string[]) => {
+    backend({ post: post(), goals });
+    await open();
+    await fireEvent.press(await screen.findByTestId('consent-accept'));
+    await answerAll(['a', null, 'c', 'd']);
+    await screen.findByTestId('learning-path', {}, { timeout: 4000 });
+  };
+  const why = (area: string) => screen.getByTestId(`summary-area-${area}`);
+  const label = (area: keyof typeof GOAL_OF) =>
+    ({ saving: 'Saving', debt: 'Borrowing', investing: 'Investing', risk: 'Risk', retirement: 'Retirement' })[area];
+
+  test('an answered check places the area; a "Not sure" area reads its goal, or the generic line', async () => {
+    const [first, second, third] = areasDrawn();
+    await summaryWith([GOAL_OF[second]]);
+    expect(within(why(first)).getByText(`Your answer helped place ${label(first)} on your path.`)).toBeOnTheScreen();
+    expect(within(why(third)).getByText(`Your answer helped place ${label(third)} on your path.`)).toBeOnTheScreen();
+    expect(within(why(second)).getByText(`You picked ${label(second)} as a goal.`)).toBeOnTheScreen();
+  });
+
+  test('without a goal the "Not sure" area gets the generic line, never a claim about an answer', async () => {
+    await summaryWith([]);
+    expect(within(why(areasDrawn()[1])).getByText('It fits the answers you gave.')).toBeOnTheScreen();
+  });
 });

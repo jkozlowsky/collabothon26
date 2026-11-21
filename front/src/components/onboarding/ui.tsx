@@ -211,12 +211,13 @@ export function ChoiceChip({ label, selected, disabled, onPress, testID }: ChipP
 }
 
 type StepHeaderProps = {
-  /** The control on the left: `BackButton` in the survey, `CloseButton` in the quick check. */
-  left: ReactNode;
+  /** The control on the left: `BackButton` in the survey; the quick check has none. */
+  left?: ReactNode;
   /** The centre label, e.g. "Step 2 of 3". */
   label: string;
   /** How much of the track is filled, 0–1. */
   progress: number;
+  /** Only Profile → "Edit answers" can be skipped. */
   onSkip?: () => void;
 };
 
@@ -224,7 +225,7 @@ export function StepHeader({ left, label, progress, onSkip }: StepHeaderProps) {
   return (
     <View style={styles.stepHeader}>
       <View style={styles.stepRow}>
-        {left}
+        {left ?? <View style={styles.stepSpacer} />}
         <Text style={styles.stepText}>{label}</Text>
         {onSkip ? <SkipLink onPress={onSkip} /> : <View style={styles.stepSpacer} />}
       </View>
@@ -251,12 +252,10 @@ export function BackButton({ onPress, onDark }: { onPress: () => void; onDark?: 
   );
 }
 
-type SkipLinkProps = { onPress: () => void; label?: string; onDark?: boolean; testID?: string };
-
-export function SkipLink({ onPress, label = 'Skip', onDark, testID = 'onboarding-skip' }: SkipLinkProps) {
+function SkipLink({ onPress }: { onPress: () => void }) {
   return (
-    <Tappable testID={testID} accessibilityRole="button" onPress={onPress} hitSlop={12} pressedScale={0.92}>
-      <Text style={[styles.skip, onDark && styles.onDark]}>{label}</Text>
+    <Tappable testID="onboarding-skip" accessibilityRole="button" onPress={onPress} hitSlop={12} pressedScale={0.92}>
+      <Text style={styles.skip}>Skip</Text>
     </Tappable>
   );
 }
@@ -416,10 +415,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepText: { fontFamily: fonts.semiBold, fontSize: 12, color: colors.textMuted },
-  // As wide as the back button, so the label stays centred when there is no Skip.
-  stepSpacer: { width: 36 },
+  // As big as the back button: the label stays centred and the row keeps its height with no control beside it.
+  stepSpacer: { width: 36, height: 36 },
   skip: { fontFamily: fonts.semiBold, fontSize: 13, color: colors.brandPrimary },
-  onDark: { color: colors.textOnBrand },
   closeOnDark: { backgroundColor: colors.onBrandTile, borderColor: colors.onBrandTile },
   track: { height: 6, borderRadius: 3, backgroundColor: colors.borderDefault, overflow: 'hidden' },
   trackFill: { height: '100%', borderRadius: 3, backgroundColor: colors.brandAccent },

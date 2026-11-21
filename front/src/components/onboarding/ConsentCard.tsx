@@ -34,9 +34,11 @@ export function ConsentCard({ facts }: Props) {
     <>
       <IconTile icon="lock" active />
       <Text style={type.display} accessibilityRole="header">
-        Make it personal?
+        Your path starts from your account
       </Text>
-      <Text style={type.body}>Let Atlas read a few summaries from your account, so you answer fewer questions.</Text>
+      <Text style={type.body}>
+        Atlas reads a few summaries from your account to build your learning path. Learn needs them to work.
+      </Text>
       <Lines title="Your account already shows" lines={facts} icon="check" color={colors.feedbackSuccess} testID="consent-facts" />
       <Lines title="We will still ask" lines={STILL_ASKED} icon="help-circle" color={colors.textMuted} testID="consent-asks" />
       <View style={styles.line}>
@@ -44,9 +46,9 @@ export function ConsentCard({ facts }: Props) {
         <Text style={styles.promise}>Only these summaries are shared, never your transactions.</Text>
       </View>
       <Text style={type.label} testID="consent-notice">
-        Your answers, how confident you said you feel and the ranges you pick (and, if you allow it, ranges from your
-        accounts) are checked by an external AI provider to pick your first lesson. Exact account numbers never leave
-        this phone. We keep the result and the ranges. Your choices are checked by an AI service.
+        Your answers, the ranges you pick and ranges from your accounts are checked by
+        an external AI provider to pick your first lesson. Exact account numbers never leave this phone. We keep the
+        result and the ranges. Your choices are checked by an AI service.
       </Text>
     </>
   );

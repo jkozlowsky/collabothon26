@@ -43,7 +43,7 @@ const RULES_ONLY: Partial<QuickResult> = { useRules: true };
 
 /**
  * After a fresh onboarding: the Quick check when the survey asked for it, then the learning path is built.
- * Without the survey's hand-over (a skip, or a reload here) the path is built from the saved answers alone.
+ * Without the survey's hand-over (a reload here) the path is built from the saved answers alone.
  */
 export default function CategorizingScreen() {
   const { state: bank } = useBank();
@@ -51,7 +51,8 @@ export default function CategorizingScreen() {
   // Computed once per visit, so every call of this visit sends the same facts.
   const [facts] = useState(() => factsFrom(bank));
   const labels = factLabels(facts);
-  const consent = intake?.consent ?? false;
+  // A hand-over only exists once the user agreed on the consent screen.
+  const consent = intake !== null;
   const check = intake?.check ?? null;
   const wantsCheck = check !== null;
   const [openFailed, setOpenFailed] = useState(false);
@@ -86,7 +87,6 @@ export default function CategorizingScreen() {
       setSummary({
         categorization: result.value,
         counts: history && answerCounts(history, pool.current),
-        chipped: history?.some((h) => h.confidence !== null),
         savingFor: savingForLine(intake?.purpose ?? null, intake?.horizon ?? null),
       });
       return router.replace('/learning-path');
@@ -97,16 +97,14 @@ export default function CategorizingScreen() {
   };
 
   const quick = useQuickCheck({
-    bank,
     consent,
     facts,
     profile: check?.profile ?? NO_PROFILE,
-    rating: check?.rating ?? 3,
     onFinish: (result) => void start(result),
     onSkip: () => void start(),
   });
 
-  // An empty question bank (or no hand-over) leaves the test out: the F1 path.
+  // No questions (or no hand-over) leaves the test out: the F1 path.
   const opened = useEffectEvent((questions: CheckQuestion[]) => {
     pool.current = questions;
     if (!wantsCheck || !questions.length) return void start();
@@ -162,11 +160,6 @@ export default function CategorizingScreen() {
     if (Platform.OS !== 'web' && message) AccessibilityInfo.announceForAccessibility(message);
   }, [phase, status, alert]);
 
-  const leave = () => {
-    quick.close();
-    continueToLearn();
-  };
-
   const screen = (): ReactNode => {
     if (phase === 'quick') {
       return (
@@ -177,7 +170,6 @@ export default function CategorizingScreen() {
           status={quick.status}
           onAnswer={quick.answer}
           onContinue={quick.proceed}
-          onClose={leave}
         />
       );
     }
@@ -199,7 +191,7 @@ export default function CategorizingScreen() {
             <>
               {retryable && <BigButton label="Retry" onPress={reopen} testID="categorizing-check-retry" />}
               <BigButton
-                label="Skip for now"
+                label="Continue to Learn"
                 variant={retryable ? 'ghost' : 'primary'}
                 onPress={() => continueToLearn()}
                 testID="categorizing-check-skip"
@@ -245,7 +237,7 @@ export default function CategorizingScreen() {
               <BigButton label="Retry" onPress={() => void start(sent.current)} testID="categorizing-retry" />
             )}
             <BigButton
-              label="Skip for now"
+              label="Continue to Learn"
               variant={retryable ? 'ghost' : 'primary'}
               onPress={() => continueToLearn()}
               testID="categorizing-skip"

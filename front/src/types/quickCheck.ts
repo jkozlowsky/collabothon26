@@ -1,37 +1,21 @@
 import type { Facts, FocusArea } from '@/types/categorization';
 
-/** Bank numbers an account prompt can quote; filled in on the device only (docs/specs/F1b-quick-check.md). */
-export const SLOTS = [
-  'savingsBalance',
-  'savingsInterestRate',
-  'monthOut',
-  'loanRemaining',
-  'loanApr',
-  'cardUsed',
-  'cardLimit',
-  'etfMonthly',
-  'depotTotal',
-  'positionCount',
-] as const;
-export type Slot = (typeof SLOTS)[number];
-
-/** GET /api/check-questions item; `correctIndex` is shown after each answer. */
+/**
+ * GET /api/check-questions item: one quiz step of a lesson, `id` = `<lessonId>/<stepId>`. `correctIndex` and
+ * `explanation` are shown after each answer; the explanation may hold [[concept|shown text]] glossary markup.
+ */
 export type CheckQuestion = {
   id: string;
+  lessonId: string;
   area: FocusArea;
-  accountPrompt: string | null;
-  slots: Slot[];
-  genericPrompt: string;
+  prompt: string;
   options: string[];
   correctIndex: number;
+  explanation: string;
 };
 
-export type Confidence = 'guessing' | 'fairly-sure' | 'sure';
-/** The survey's one self-rating, "How confident do you feel making your own money decisions?". */
-export type ConfidenceRating = 1 | 2 | 3 | 4 | 5;
-
-/** `optionIndex` and `confidence` both null = "Not sure". */
-export type HistoryEntry = { questionId: string; optionIndex: number | null; confidence: Confidence | null };
+/** `optionIndex` null = "Not sure". */
+export type HistoryEntry = { questionId: string; optionIndex: number | null };
 
 export type AgeBand = '18-25' | '26-40' | '41-59' | '60+';
 export type Horizon = 'within-1y' | '1-5y' | '5y+' | 'not-sure';
@@ -41,7 +25,7 @@ export type ProfileRanges = {
   horizon: Horizon | null;
 };
 
-/** Per area with bank questions; null = no answer yet. */
+/** Per area with questions; null = no answer yet. */
 export type Mastery = Partial<Record<FocusArea, number | null>>;
 
 /** `useRules`: no model at all (no key). `stepFellBack`: a step's model call failed, so only the later steps use the rule. */

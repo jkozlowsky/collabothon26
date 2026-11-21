@@ -15,12 +15,11 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 
 import com.collabothon.back.categorization.consts.CategorizationConsts;
-import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.CategorizationDto;
 import com.collabothon.back.categorization.dto.CategorizationRequestDto;
-import com.collabothon.back.categorization.dto.ConfidenceGapDto;
 import com.collabothon.back.categorization.dto.ExplanationDto;
 import com.collabothon.back.categorization.dto.FactsDto;
+import com.collabothon.back.categorization.dto.GapDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
 import com.collabothon.back.categorization.dto.ProfileRangesDto;
 import com.collabothon.back.categorization.dto.SharedWithModelDto;
@@ -32,13 +31,12 @@ import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.LifeStage;
 import com.collabothon.back.categorization.enums.Role;
-import com.collabothon.back.categorization.mappers.BankLessonMapper;
+import com.collabothon.back.categorization.mappers.CheckLessonMapper;
 import com.collabothon.back.categorization.mappers.JevAnswerMapper;
 import com.collabothon.back.categorization.mappers.OnboardingAnswersMapper;
 import com.collabothon.back.categorization.mappers.StartLessonMapper;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
 import com.collabothon.back.categorization.repositories.ProfileAnswersRepository;
-import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 import com.collabothon.back.exceptions.BusinessException;
 import com.collabothon.back.lesson.repositories.LessonCompletionRepository;
 import com.collabothon.back.lesson.repositories.LessonContentRepository;
@@ -68,7 +66,7 @@ public class CategorizationService {
 
 	private final StartLessonMapper startLessonMapper;
 
-	private final BankLessonMapper bankLessonMapper;
+	private final CheckLessonMapper lessonMapper;
 
 	private final JevAnswerMapper jevAnswerMapper;
 
@@ -84,11 +82,11 @@ public class CategorizationService {
 		boolean consent = request.consent();
 		FactsDto facts = request.facts();
 		OnboardingAnswersDto answers = onboarding(userId);
-		List<CheckQuestionProjection> bank = checkQuestions.bank();
-		// Without the ranges the Quick check did not run, so its fields are ignored, not history against the bank.
-		List<Answer> history = request.profile() == null ? List.of() : checkQuestions.resolve(request.history(), bank);
-		Set<String> bankAreas = bank.stream().map(q -> q.area().wire()).collect(Collectors.toSet());
-		if (request.profile() != null && !bankAreas.containsAll(request.mastery().keySet())) {
+		List<CheckQuestion> pool = checkQuestions.pool();
+		// Without the ranges the Quick check did not run, so its fields are ignored, not checked against the pool.
+		List<Answer> history = request.profile() == null ? List.of() : checkQuestions.resolve(request.history());
+		Set<String> poolAreas = pool.stream().map(q -> q.area().wire()).collect(Collectors.toSet());
+		if (request.profile() != null && !poolAreas.containsAll(request.mastery().keySet())) {
 			throw new BusinessException(CategorizationErrorCode.MASTERY_ONLY_FOR_QUESTION_AREAS);
 		}
 		Instant now = Instant.now(clock);
@@ -101,7 +99,7 @@ public class CategorizationService {
 		}
 		boolean ran = !history.isEmpty();
 		ProfileRangesDto profile = ran ? request.profile() : null;
-		List<FocusArea> order = QuickCheckRules.areaOrder(answers.goals(), ran ? profile.horizon() : null, bank);
+		List<FocusArea> order = QuickCheckRules.areaOrder(answers.goals(), ran ? profile.horizon() : null, pool);
 		Map<FocusArea, Double> ruleMastery = QuickCheckRules.mastery(order, history);
 		Map<FocusArea, Double> mastery = new LinkedHashMap<>();
 		if (ran) {
@@ -112,16 +110,13 @@ public class CategorizationService {
 		}
 		Set<String> completed = new HashSet<>(completions.findLessonIdsByUserId(userId));
 		List<Story> stories = stories();
-		List<BankLesson> lessons = QuickCheckRules.lessons(bank, bankLessonMapper::toLesson);
-		List<Story> pool = QuickCheckRules.stories(QuickCheckRules.pool(
-				QuickCheckRules.candidates(lessons, stories, order, mastery, history, completed), history), stories);
-		List<FocusArea> gapAreas = QuickCheckRules.chipAreas(order, history);
-		Map<String, String> storyChoice = new LinkedHashMap<>();
-		if (pool.size() >= JevConsts.MIN_CHOICE_LABELS) {
-			pool.forEach(story -> storyChoice.put(story.id(), story.topic()));
-		}
+		List<CheckLesson> lessons = QuickCheckRules.lessons(pool, lessonMapper::toLesson);
+		List<CheckLesson> choices = QuickCheckRules.firstLessonChoices(QuickCheckRules.pool(
+				QuickCheckRules.candidates(lessons, stories, order, mastery, history, completed), history), history,
+				completed);
+		List<FocusArea> gapAreas = QuickCheckRules.gapAreas(order, history, facts);
 		JevQuickCheck quickCheck = ran ? new JevQuickCheck(profile, answers.goals(),
-				history.stream().map(jevAnswerMapper::toJev).toList(), gapAreas, storyChoice) : null;
+				history.stream().map(jevAnswerMapper::toJev).toList(), gapAreas, choices) : null;
 		JevResult fromJev = request.useRules() ? JevResult.SKIPPED : jev.ask(answers, facts, quickCheck);
 
 		LifeStage lifeStage = answers.lifeStage() == null && ran ? LifeStage.fromAgeBand(profile.ageBand())
@@ -135,15 +130,16 @@ public class CategorizationService {
 		// Without the Quick check nothing was measured, so the judged focus leads the path.
 		List<FocusArea> pathOrder = ran ? order
 				: Stream.concat(j.focusAreas().stream().filter(order::contains), order.stream()).distinct().toList();
-		Story picked = pool.stream().filter(story -> story.id().equals(j.firstStory())).findFirst().orElse(null);
+		// Jev's lesson counts only when it is one of the lessons it was given to choose from.
+		CheckLesson picked = choices.stream().filter(l -> l.id().equals(j.firstLesson())).findFirst().orElse(null);
 		StoryPlan plan = QuickCheckRules.plan(stories,
 				QuickCheckRules.candidates(lessons, stories, pathOrder, mastery, history, completed), picked, pathOrder,
 				mastery, history, completed);
 		StartLessonDto startLesson = plan.start() == null ? null : startLesson(plan.start(), plan.area(), completed);
 		FocusArea startArea = startLesson == null ? null : startLesson.area();
-		List<ConfidenceGapDto> gaps = ran
-				? QuickCheckRules.gapCards(gaps(order, history, mastery, fromJev.judgement()), startArea)
-				: CategorizationRules.confidenceGaps(answers, facts);
+		List<GapDto> gaps = ran
+				? QuickCheckRules.gapCards(gaps(order, history, facts, fromJev.judgement()), startArea)
+				: CategorizationRules.saidGaps(answers, facts);
 		SharedWithModelDto shared = fromJev.sent() || request.stepCallsMade() > 0
 				? new SharedWithModelDto(facts, fromJev.sent() ? answers : null, answers.goals(),
 						ran || request.stepCallsMade() > 0 ? request.profile() : null, history.size(),
@@ -158,9 +154,7 @@ public class CategorizationService {
 						CategorizationRules.focusBecause(focus, answers, facts)));
 		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, role, lifeStage, focus, gaps,
 				CategorizationRules.lessonVariant(role, lifeStage), explanation, profile,
-				QuickCheckRules.byWire(mastery),
-				ran ? QuickCheckRules.byWire(QuickCheckRules.confidence(order, history)) : Map.of(),
-				history.size(), startLesson, plan.readyForNext(), plan.pathStoryIds(), null, shared,
+				QuickCheckRules.byWire(mastery), history.size(), startLesson, plan.readyForNext(), plan.pathStoryIds(), null, shared,
 				fromJev.judgement().isPresent() ? CategorizationSource.JEV : CategorizationSource.FALLBACK, j.model(),
 				now);
 		ObjectNode row = json.valueToTree(c);
@@ -172,23 +166,23 @@ public class CategorizationService {
 		return c.withStartHere(startHere(c, stories, lessons, completed));
 	}
 
-	/** Jev's labels where its call answered, each history against the chips; the rule otherwise. In area order. */
-	private static Map<FocusArea, GapDirection> gaps(List<FocusArea> order, List<Answer> history,
-			Map<FocusArea, Double> mastery, Optional<Judgement> fromJev) {
+	/** Jev's labels where its call answered, each checked against the rule; the rule otherwise. In area order. */
+	private static Map<FocusArea, GapDirection> gaps(List<FocusArea> order, List<Answer> history, FactsDto facts,
+			Optional<Judgement> fromJev) {
 		Map<FocusArea, GapDirection> gaps = new LinkedHashMap<>();
 		for (FocusArea area : order) {
 			List<Answer> inArea = QuickCheckRules.inArea(history, area);
 			Optional<GapDirection> gap = fromJev.isPresent()
 					? Optional.ofNullable(fromJev.get().gaps().get(area))
-						.flatMap(label -> QuickCheckRules.checkedJevGap(label, inArea, mastery.get(area)))
-					: QuickCheckRules.ruleGap(inArea, mastery.get(area));
+						.flatMap(label -> QuickCheckRules.checkedJevGap(label, area, inArea, facts))
+					: QuickCheckRules.ruleGap(area, inArea, facts);
 			gap.ifPresent(direction -> gaps.put(area, direction));
 		}
 		return gaps;
 	}
 
 	/** The first story of the path that still exists and has a lesson left; read fresh, never stored. */
-	private StartLessonDto startHere(CategorizationDto c, List<Story> stories, List<BankLesson> lessons,
+	private StartLessonDto startHere(CategorizationDto c, List<Story> stories, List<CheckLesson> lessons,
 			Set<String> completed) {
 		StartLessonDto start = c.startLesson();
 		return c.pathStoryIds().stream()
@@ -196,7 +190,7 @@ public class CategorizationService {
 			.filter(s -> QuickCheckRules.startLesson(s, completed).isPresent())
 			.findFirst()
 			.map(s -> startLesson(s, start != null && s.id().equals(start.storyId()) ? start.area()
-					: QuickCheckRules.storedPickingArea(s, lessons, c.mastery()), completed))
+					: QuickCheckRules.areaOf(s, lessons), completed))
 			.orElse(null);
 	}
 
@@ -224,7 +218,7 @@ public class CategorizationService {
 		return categorizations.findData(userId)
 			.flatMap(this::read)
 			.map(c -> c.withStartHere(startHere(c, stories(),
-					QuickCheckRules.lessons(checkQuestions.bank(), bankLessonMapper::toLesson),
+					QuickCheckRules.lessons(checkQuestions.pool(), lessonMapper::toLesson),
 					new HashSet<>(completions.findLessonIdsByUserId(userId)))));
 	}
 

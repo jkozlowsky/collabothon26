@@ -10,44 +10,88 @@ import org.springframework.stereotype.Service;
 
 import com.collabothon.back.categorization.dto.CheckQuestionDto;
 import com.collabothon.back.categorization.dto.HistoryEntryDto;
+import com.collabothon.back.categorization.enums.FocusArea;
+import com.collabothon.back.categorization.mappers.CheckLessonMapper;
 import com.collabothon.back.categorization.mappers.CheckQuestionMapper;
-import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
-import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 import com.collabothon.back.exceptions.BusinessException;
+import com.collabothon.back.lesson.repositories.LessonContentRepository;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
+import tools.jackson.databind.JsonNode;
 
+/** The Quick check's questions: the quiz steps of the lessons, read once from the lesson content. */
 @Service
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class CheckQuestionService {
 
-	private final CheckQuestionRepository questions;
+	private static final String QUIZ = "quiz";
+
+	private final List<CheckQuestion> pool;
 
 	private final CheckQuestionMapper mapper;
 
+	CheckQuestionService(LessonContentRepository content, CheckQuestionMapper mapper, CheckLessonMapper lessonMapper) {
+		this.mapper = mapper;
+		List<CheckQuestion> questions = new ArrayList<>();
+		for (JsonNode story : content.stories()) {
+			FocusArea area = FocusArea.ofStoryArea(story.path("area").asString());
+			String character = story.path("character").path("name").asString("").split(" ")[0];
+			for (String lessonId : content.lessonIdsOf(story)) {
+				JsonNode lesson = content.lesson(lessonId).orElseThrow();
+				List<String> concepts = strings(lesson.path("concepts"));
+				for (JsonNode step : lesson.path("steps")) {
+					// Left out: a step that asks about its chart (the test shows none) or that names its story's character.
+					if (QUIZ.equals(step.path("type").asString()) && !step.has("chart") && !mentions(step, character)) {
+						questions.add(new CheckQuestion(lessonId + "/" + step.path("id").asString(), lessonId,
+								story.path("id").asString(), area, lesson.path("topic").asString(), concepts,
+								step.path("prompt").asString(), strings(step.path("options")),
+								step.path("correctIndex").asInt(), step.path("explanation").asString()));
+					}
+				}
+			}
+		}
+		this.pool = List.copyOf(questions);
+		List<String> labels = QuickCheckRules.lessons(pool, lessonMapper::toLesson).stream().map(CheckLesson::label)
+			.toList();
+		// Jev answers with a lesson's label, so two lessons must never share one.
+		if (labels.stream().distinct().count() != labels.size()) {
+			throw new IllegalStateException("Two lessons with a quiz share a topic");
+		}
+	}
+
+	/** A step that names the story's character only makes sense inside that story. */
+	private static boolean mentions(JsonNode step, String character) {
+		String text = String.join(" ", step.path("prompt").asString(), step.path("explanation").asString(),
+				String.join(" ", strings(step.path("options"))));
+		return !character.isEmpty() && text.contains(character);
+	}
+
+	private static List<String> strings(JsonNode array) {
+		List<String> values = new ArrayList<>();
+		array.forEach(value -> values.add(value.asString()));
+		return List.copyOf(values);
+	}
+
 	public List<CheckQuestionDto> questions() {
-		return bank().stream().map(mapper::toDto).toList();
+		return pool.stream().map(mapper::toDto).toList();
 	}
 
-	List<CheckQuestionProjection> bank() {
-		return questions.findBank();
+	/** In story order: the stories as stories.json lists them, their lessons, then each lesson's quiz steps. */
+	List<CheckQuestion> pool() {
+		return pool;
 	}
 
-	/** The history checked against the bank; the messages never repeat a rejected value. */
-	List<Answer> resolve(List<HistoryEntryDto> history, List<CheckQuestionProjection> bank) {
-		Map<String, CheckQuestionProjection> byId = bank.stream()
-			.collect(Collectors.toMap(CheckQuestionProjection::id, Function.identity()));
+	/** The history checked against the pool; the messages never repeat a rejected value. */
+	List<Answer> resolve(List<HistoryEntryDto> history) {
+		Map<String, CheckQuestion> byId = pool.stream().collect(Collectors.toMap(CheckQuestion::id, Function.identity()));
 		List<Answer> answers = new ArrayList<>();
 		for (HistoryEntryDto entry : history) {
-			CheckQuestionProjection question = byId.remove(entry.questionId());
+			CheckQuestion question = byId.remove(entry.questionId());
 			if (question == null) {
 				throw new BusinessException(CategorizationErrorCode.ANSWER_EACH_QUESTION_ONCE);
 			}
 			if (entry.optionIndex() != null && entry.optionIndex() >= question.options().size()) {
 				throw new BusinessException(CategorizationErrorCode.PICK_ONE_OPTION);
 			}
-			answers.add(new Answer(question, entry.optionIndex(), entry.confidence()));
+			answers.add(new Answer(question, entry.optionIndex()));
 		}
 		return answers;
 	}

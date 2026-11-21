@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 
-import { openApp, resetOnboarding } from './app';
+import { finishOnboarding, openApp, resetOnboarding } from './app';
 
 const CATEGORY_SLUGS = ['seoul', 'berlin', 'sao-paulo', 'tokyo'] as const;
 
@@ -12,7 +12,7 @@ test.afterAll(async ({ request }) => {
   await resetOnboarding(request);
 });
 
-/** Open the app and navigate from Bank to Learn, complete/skip onboarding if prompted, then open Duel. */
+/** Open the app and navigate from Bank to Learn, complete onboarding if prompted, then open Duel. */
 async function openDuelLobby(page: Page) {
   await openApp(page);
 
@@ -24,11 +24,7 @@ async function openDuelLobby(page: Page) {
     learn.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {}),
   ]);
 
-  if (await welcome.isVisible()) {
-    await page.getByTestId('onboarding-skip-intro').click();
-    await page.getByTestId('summary-start').click();
-    await expect(learn).toBeVisible({ timeout: 15000 });
-  }
+  if (await welcome.isVisible()) await finishOnboarding(page);
 
   await expect(learn).toBeVisible();
   await page.getByTestId('nav-duel').click();

@@ -4,13 +4,13 @@ import java.util.List;
 
 import com.collabothon.back.categorization.enums.FocusArea;
 
-// The correct option goes out so the app can show it after each answer; misconceptions, the checks sentence and the level stay in the backend.
+// The correct option and the explanation go out so the app can show them after each answer.
 public record CheckQuestionDto(
 		String id,
+		String lessonId,
 		FocusArea area,
-		String accountPrompt,
-		List<String> slots,
-		String genericPrompt,
+		String prompt,
 		List<String> options,
-		int correctIndex
+		int correctIndex,
+		String explanation
 ) {}

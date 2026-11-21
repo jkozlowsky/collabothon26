@@ -4,8 +4,6 @@ import type { Categorization, FocusArea } from '@/types/categorization';
 export type Summary = {
   categorization: Categorization;
   counts?: Partial<Record<FocusArea, number>>;
-  /** An answer carried the user's confidence (not every one was "Not sure"). */
-  chipped?: boolean;
   /** "Saving for: A home of my own · needed 1–5 years", from the survey. */
   savingFor?: string;
 };

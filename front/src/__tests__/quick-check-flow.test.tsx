@@ -1,17 +1,17 @@
 import { router } from 'expo-router';
-import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 import { BackHandler, StyleSheet } from 'react-native';
 
 import { DONE_MS, FEEDBACK, MAX_QUESTIONS } from '@/constants/quickCheck';
 import { groupThousands } from '@/lib/bank/money';
 import { seedAccount } from '@/lib/bank/seed';
-import { slotValues } from '@/lib/bank/selectors';
+import { depotTotal } from '@/lib/bank/selectors';
 import { factsFrom } from '@/lib/categorization';
 import { setSummary } from '@/lib/learningPath';
-import { promptParts } from '@/lib/quickCheck';
+import { plainText } from '@/lib/quickCheck';
 import { categorization } from '@/test-utils/categorization';
 import { POOL } from '@/test-utils/checkPool';
-import { walkSurvey, WITHOUT_ACCOUNT } from '@/test-utils/onboarding';
+import { walkSurvey } from '@/test-utils/onboarding';
 import { appRoutes as routes } from '@/test-utils/routes';
 import type { Categorization } from '@/types/categorization';
 import type { StepResponse } from '@/types/quickCheck';
@@ -35,7 +35,7 @@ type Backend = {
 };
 
 /** The question ids in the order the stub backend asks them: Saving, Investing, Saving, Investing. */
-const ORDER = ['inflation-real-value', 'time-in-market', 'emergency-cushion-purpose', 'short-term-fall'];
+const ORDER = ['berlin-1/q1', 'seoul-1/q1', 'berlin-1/q2', 'seoul-1/q2'];
 const MASTERY = { saving: 0.6, investing: 0.25 };
 /** A step stub: asks ORDER one by one and says done after `doneAfter` answers. */
 const stepper =
@@ -124,10 +124,9 @@ const finish = () => act(() => jest.advanceTimersByTimeAsync(DONE_MS));
 const summary = () => screen.findByTestId('learning-path', {}, { timeout: 4000 });
 const question = (n: number) => screen.findByText(`Question ${n} of up to ${MAX_QUESTIONS}`);
 const byId = (id: string) => POOL.find((q) => q.id === id)!;
-const promptOf = (id: string, consent = true) =>
-  promptParts(byId(id), seedAccount(), consent && id !== 'compound-rate-vs-time')
-    .map((p) => p.text)
-    .join('');
+const promptOf = (id: string) => byId(id).prompt;
+/** What the banner shows under its title. */
+const EXPLAINED = plainText(byId(ORDER[0]).explanation);
 const FIRST = byId(ORDER[0]);
 const WRONG = (FIRST.correctIndex + 1) % FIRST.options.length;
 const marks = () =>
@@ -143,7 +142,7 @@ test('the summary of a user who has not been categorised redirects to the map', 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
 });
 
-test('with account access the test starts on a knowledge question; the first step carries the facts, the age band and the time frame', async () => {
+test('the test starts on a knowledge question; the first step carries the facts, the age band and the time frame', async () => {
   backend();
   await toFirstQuestion();
 
@@ -162,32 +161,14 @@ test('with account access the test starts on a knowledge question; the first ste
   expect(finals()).toHaveLength(0);
 });
 
-test('without account access the survey\'s savings cover is sent, no facts and no age band; the questions use example numbers', async () => {
-  backend();
-  await toFirstQuestion({ consent: false, horizon: '5y+' });
-
-  expect(steps()).toEqual([
-    {
-      consent: false,
-      profile: { ageBand: null, savingsCover: WITHOUT_ACCOUNT.savingsCover, horizon: '5y+' },
-      history: [],
-      useRules: false,
-      stepFellBack: false,
-    },
-  ]);
-  expect(prompt()).toHaveTextContent(FIRST.genericPrompt, { exact: false });
-  expect(screen.getByText('Example numbers')).toBeOnTheScreen();
-  expect(screen.queryByText('Only your answer is sent, never these numbers.')).toBeNull();
-});
-
-test('a question quotes the account, shows its why line and the slip; "Continue" waits for an answer', async () => {
+test('a question shows the lesson\'s quiz prompt and its why line, with no account numbers; "Continue" waits for an answer', async () => {
   backend();
   await toFirstQuestion();
 
-  expect(prompt()).toHaveTextContent(promptOf(ORDER[0]), { exact: false });
-  expect(promptOf(ORDER[0])).not.toBe(FIRST.genericPrompt);
+  expect(prompt()).toHaveTextContent(FIRST.prompt);
   expect(get('quick-check-why')).toHaveTextContent('Why this question: Picked to learn more about Saving', { exact: false });
-  expect(screen.getByText('Only your answer is sent, never these numbers.')).toBeOnTheScreen();
+  expect(screen.queryByText('Only your answer is sent, never these numbers.')).toBeNull();
+  expect(screen.queryByText('Example numbers')).toBeNull();
   expect(screen.getAllByRole('radio')).toHaveLength(FIRST.options.length + 1);
   expect(get('quick-check-unsure')).toHaveTextContent('Not sureThat is fine. Your lessons cover it.');
   expect(get('quick-check-continue')).toBeDisabled();
@@ -198,15 +179,15 @@ test('a question quotes the account, shows its why line and the slip; "Continue"
 
 test('a right answer is committed at the tap and marked; the next question waits for "Continue"', async () => {
   backend();
-  await toFirstQuestion({ rating: 2 });
+  await toFirstQuestion();
   await press(tile(FIRST.correctIndex));
 
   expect(marks()).toEqual([`${tile(FIRST.correctIndex)}-correct`]);
   expect(get(tile(FIRST.correctIndex)).props.accessibilityLabel).toBe(`${FIRST.options[FIRST.correctIndex]}. Correct answer.`);
-  expect(get('quick-check-feedback')).toHaveTextContent(`${FEEDBACK.rightLow.title}${FEEDBACK.rightLow.body}`, { exact: false });
-  expect(get('flow-status')).toHaveTextContent(`${FEEDBACK.rightLow.title}. ${FEEDBACK.rightLow.body}`);
-  // The step left at the tap, with the confidence the survey's 2 of 5 stands for.
-  expect(steps()[1].history).toEqual([{ questionId: ORDER[0], optionIndex: FIRST.correctIndex, confidence: 'guessing' }]);
+  expect(get('quick-check-feedback')).toHaveTextContent(`${FEEDBACK.right.title}${EXPLAINED}`, { exact: false });
+  expect(get('flow-status')).toHaveTextContent(`${FEEDBACK.right.title}. ${EXPLAINED}`);
+  // The step left at the tap.
+  expect(steps()[1].history).toEqual([{ questionId: ORDER[0], optionIndex: FIRST.correctIndex }]);
 
   // The step has answered, yet the reveal stays; a second tap changes nothing.
   await settle();
@@ -224,25 +205,25 @@ test('a right answer is committed at the tap and marked; the next question waits
   expect(get('quick-check-continue')).toBeDisabled();
 });
 
-test('a wrong answer is marked next to the right one; a high self-rating changes the feedback and the confidence sent', async () => {
+test('a wrong answer is marked next to the right one, with its feedback', async () => {
   backend();
-  await toFirstQuestion({ rating: 5 });
+  await toFirstQuestion();
   await press(tile(WRONG));
 
   expect(marks()).toEqual([tile(FIRST.correctIndex), tile(WRONG)].sort().map((id) => `${id}-${id === tile(WRONG) ? 'wrong' : 'correct'}`));
   expect(get(tile(WRONG)).props.accessibilityLabel).toBe(`${FIRST.options[WRONG]}. Not the right answer.`);
-  expect(get('quick-check-feedback')).toHaveTextContent(`${FEEDBACK.wrongHigh.title}${FEEDBACK.wrongHigh.body}`, { exact: false });
-  expect(steps()[1].history).toEqual([{ questionId: ORDER[0], optionIndex: WRONG, confidence: 'sure' }]);
+  expect(get('quick-check-feedback')).toHaveTextContent(`${FEEDBACK.wrong.title}${EXPLAINED}`, { exact: false });
+  expect(steps()[1].history).toEqual([{ questionId: ORDER[0], optionIndex: WRONG }]);
 });
 
-test('"Not sure" commits with no option and no confidence, and still shows the right answer', async () => {
+test('"Not sure" commits with no option, and still shows the right answer', async () => {
   backend();
-  await toFirstQuestion({ rating: 3 });
+  await toFirstQuestion();
   await press(tile('unsure'));
 
   expect(marks()).toEqual([`${tile(FIRST.correctIndex)}-correct`, 'quick-check-unsure-selected']);
-  expect(get('quick-check-feedback')).toHaveTextContent(`${FEEDBACK.unsure.title}${FEEDBACK.unsure.body}`, { exact: false });
-  expect(steps()[1].history).toEqual([{ questionId: ORDER[0], optionIndex: null, confidence: null }]);
+  expect(get('quick-check-feedback')).toHaveTextContent(`${FEEDBACK.unsure.title}${EXPLAINED}`, { exact: false });
+  expect(steps()[1].history).toEqual([{ questionId: ORDER[0], optionIndex: null }]);
 });
 
 test('an area asked about before reads "from another angle"', async () => {
@@ -276,7 +257,7 @@ test('"Continue" before the step answers shows the status line in place of the q
 
 test('the step that says done ends the test only after "Continue": "All set", then one final POST with everything', async () => {
   backend({ step: stepper(2) });
-  await toFirstQuestion({ rating: 2 });
+  await toFirstQuestion();
   await answer(1);
   await question(2);
   await press(tile('unsure'));
@@ -300,12 +281,13 @@ test('the step that says done ends the test only after "Continue": "All set", th
       facts: factsFrom(seedAccount()),
       profile: { ageBand: '26-40', savingsCover: null, horizon: '1-5y' },
       history: [
-        { questionId: ORDER[0], optionIndex: 1, confidence: 'guessing' },
-        { questionId: ORDER[1], optionIndex: null, confidence: null },
+        { questionId: ORDER[0], optionIndex: 1 },
+        { questionId: ORDER[1], optionIndex: null },
       ],
       mastery: MASTERY,
       useRules: false,
-      stepCallsMade: 2,
+      // The first step and one per answer.
+      stepCallsMade: 3,
     },
   ]);
   expect(steps()).toHaveLength(3);
@@ -319,8 +301,9 @@ test('no exact account amount leaves the phone in any call', async () => {
   await summary();
 
   const sent = JSON.stringify([...steps(), ...finals()]);
-  const { positionCount, ...amounts } = slotValues(seedAccount());
-  for (const value of Object.values(amounts)) {
+  const seed = seedAccount();
+  const cents = [seed.savings.balance, seed.account.monthOut, seed.loan.remaining, seed.creditCard.used, depotTotal(seed)];
+  for (const value of cents.map((amount) => Math.round(amount / 100))) {
     expect(sent).not.toContain(String(value));
     expect(sent).not.toContain(groupThousands(value));
   }
@@ -358,10 +341,11 @@ test('a step that answers stepFellBack makes the later steps run on the rule; on
     [false, true],
     [false, true],
   ]);
-  expect(finals()[0]).toMatchObject({ useRules: false, stepCallsMade: 2 });
+  // The first step and the two answers before the fallback.
+  expect(finals()[0]).toMatchObject({ useRules: false, stepCallsMade: 3 });
 });
 
-test('the maximum number of questions ends the test; every history step was a model call', async () => {
+test('the maximum number of questions ends the test; the first step and every answer were model calls', async () => {
   const step: Handler = ({ history }) =>
     ok({
       mastery: MASTERY,
@@ -381,20 +365,20 @@ test('the maximum number of questions ends the test; every history step was a mo
   await finish();
   await summary();
   expect(finals()[0].history).toHaveLength(MAX_QUESTIONS);
-  expect(finals()[0].stepCallsMade).toBe(MAX_QUESTIONS);
+  expect(finals()[0].stepCallsMade).toBe(MAX_QUESTIONS + 1);
 });
 
 test.each([
-  { name: 'an empty bank (no Jev key and no questions)', pool: () => ok([]) },
+  { name: 'no questions', pool: () => ok([]) },
   { name: 'a failed GET', pool: () => fail(500) },
-  { name: 'a bank without the correct options', pool: () => ok(POOL.map(({ correctIndex, ...q }) => q)) },
+  { name: 'questions without the correct options', pool: () => ok(POOL.map(({ correctIndex, ...q }) => q)) },
 ])('$name leaves the test out: "Start the quick check" leads straight to the summary with the F1 body', async ({ pool }) => {
-  backend({ pool, post: () => ok(categorization({ source: 'fallback', startLesson: null, confidenceGaps: [] })) });
-  await startCheck({ consent: false });
+  backend({ pool, post: () => ok(categorization({ source: 'fallback', startLesson: null, gaps: [] })) });
+  await startCheck();
 
   expect(await summary()).toBeOnTheScreen();
   expect(steps()).toHaveLength(0);
-  expect(finals()).toEqual([{ consent: false }]);
+  expect(finals()).toEqual([{ consent: true, facts: factsFrom(seedAccount()) }]);
   expect(screen.queryByTestId('summary-simple')).toBeNull();
 });
 
@@ -426,7 +410,7 @@ test('a later step that fails is retried once with stepFellBack, and the test go
 test('a step that fails twice ends the test at "Continue"; the final POST carries the history so far, and the model is still asked', async () => {
   const step: Handler = (request) => (request.history.length === 2 ? fail(503) : stepper()(request));
   backend({ step });
-  await toFirstQuestion({ rating: 3 });
+  await toFirstQuestion();
   await answer(0);
   await question(2);
   await press(tile(1));
@@ -442,12 +426,13 @@ test('a step that fails twice ends the test at "Continue"; the final POST carrie
       facts: expect.any(Object),
       profile: expect.any(Object),
       history: [
-        { questionId: ORDER[0], optionIndex: 0, confidence: 'fairly-sure' },
-        { questionId: ORDER[1], optionIndex: 1, confidence: 'fairly-sure' },
+        { questionId: ORDER[0], optionIndex: 0 },
+        { questionId: ORDER[1], optionIndex: 1 },
       ],
       mastery: MASTERY,
       useRules: false,
-      stepCallsMade: 2,
+      // The first step and one per answer.
+      stepCallsMade: 3,
     },
   ]);
 });
@@ -463,18 +448,30 @@ test('a step that never answers fails after the client timeout and is retried wi
   expect(steps().at(-1)).toMatchObject({ stepFellBack: true });
 });
 
-test('Close leaves the test for Learn: nothing is posted, and a step that answers later is ignored', async () => {
-  const slow = slowStep();
-  backend({ step: slow.step });
-  await toFirstQuestion();
-  await press(tile(0));
-  await press('onboarding-close');
+test('a fresh onboarding cannot be skipped: no Skip on any step, and no Close in the test', async () => {
+  backend();
+  await renderRouter(routes, { initialUrl: '/' });
+  await fireEvent.press(await screen.findByTestId('nav-learn'));
+  const STEPS: [step: string, ...taps: string[]][] = [
+    ['welcome', 'onboarding-start'],
+    ['intro', 'onboarding-next'],
+    ['challenge', 'onboarding-challenge-next'],
+    ['consent', 'consent-accept'],
+    ['purpose', 'option-home', 'onboarding-continue'],
+    ['horizon', 'option-1-5y', 'onboarding-continue'],
+    ['check-intro', 'check-start'],
+  ];
+  for (const [step, ...taps] of STEPS) {
+    expect(await screen.findByTestId(`onboarding-${step}`)).toBeOnTheScreen();
+    expect(screen.queryByText(/skip/i)).toBeNull();
+    for (const id of ['onboarding-skip', 'onboarding-skip-intro', 'check-skip']) expect(screen.queryByTestId(id)).toBeNull();
+    for (const id of taps) await press(id);
+  }
 
-  expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
-  await slow.release();
-  await act(() => jest.advanceTimersByTimeAsync(DONE_MS));
-  expect(finals()).toHaveLength(0);
-  expect(screen.queryByTestId('quick-check')).toBeNull();
+  await screen.findByTestId('quick-check-unsure');
+  expect(screen.queryByTestId('onboarding-close')).toBeNull();
+  expect(screen.queryByLabelText('Close')).toBeNull();
+  expect(within(get('quick-check')).getAllByRole('button').map((b) => b.props.testID)).toEqual(['quick-check-continue']);
 });
 
 test('hardware back does nothing inside the test', async () => {
@@ -538,9 +535,8 @@ const ran = (patch: object = {}) =>
   categorization({
     profile: { ageBand: null, savingsCover: null, horizon: '1-5y' },
     mastery: { saving: 0.6, investing: 0.25 },
-    confidence: { saving: 0.9, investing: 0.25 },
     answerCount: 3,
-    confidenceGaps: [],
+    gaps: [],
     ...patch,
   });
 
@@ -553,42 +549,42 @@ async function toSummary(post: Categorization, survey?: Survey) {
 }
 
 test('the summary: a gap card, the level and its basis, the first lesson, the disclaimer', async () => {
-  const gap = { area: 'saving' as const, direction: 'over' as const, because: 'You rated your confidence high. Your Saving answers leave a few things open to explore.' };
-  await toSummary(ran({ confidenceGaps: [gap], startLesson: { lessonId: 'berlin-3', title: 'Emergency fund', area: 'saving', storyId: 'berlin', storyCity: 'Berlin' } }));
+  const gap = {
+    area: 'saving' as const,
+    direction: 'habit-ahead' as const,
+    because: 'Your account shows you move money to savings every month. Your Saving answers leave a few things open, which is where your first lesson starts.',
+  };
+  await toSummary(ran({ gaps: [gap], startLesson: { lessonId: 'berlin-3', title: 'Emergency fund', area: 'saving', storyId: 'berlin', storyCity: 'Berlin' } }));
 
-  expect(get('summary-gap-saving')).toHaveTextContent('There is more to explore here', { exact: false });
+  expect(get('summary-gap-saving')).toHaveTextContent('Your habits are ahead of the theory', { exact: false });
   expect(get('summary-gap-saving')).toHaveTextContent(gap.because, { exact: false });
-  expect(screen.queryByTestId('summary-aligned')).toBeNull();
   expect(get('summary-role')).toHaveTextContent("You're an intermediate learner", { exact: false });
-  expect(get('summary-based-on')).toHaveTextContent('Based on 3 answers and how confident you said you feel.', { exact: false });
+  expect(get('summary-based-on')).toHaveTextContent('Based on 3 answers and what your account shows.', { exact: false });
   expect(get('summary-first-lesson')).toHaveTextContent(/your first stop · saving/i);
   expect(get('summary-first-lesson')).toHaveTextContent('Emergency fund', { exact: false });
   expect(get('summary-first-lesson')).toHaveTextContent('Berlin · stop 3 of 4', { exact: false });
   expect(get('summary-disclaimer')).toHaveTextContent('This picks lessons for you. It is not investment advice.', { exact: false });
   expect(get('summary-saving-for')).toHaveTextContent('Saving for: A home of my own · needed in 1–5 years');
-  expect(screen.getByText('How confident you said you feel')).toBeOnTheScreen();
   expect(screen.queryByTestId('summary-simple')).toBeNull();
 });
 
-test('an under-confidence gap says "You know more than you think"', async () => {
-  const gap = { area: 'investing' as const, direction: 'under' as const, because: 'You rated your confidence low, yet your Investing answers show you already understand how it works.' };
-  await toSummary(ran({ confidenceGaps: [gap] }));
-  expect(get('summary-gap-investing')).toHaveTextContent('You know more than you think', { exact: false });
+test('a knowledge-ahead gap says "You know more than your account shows"', async () => {
+  const gap = {
+    area: 'investing' as const,
+    direction: 'knowledge-ahead' as const,
+    because: 'Your Investing answers show you understand how it works. Your account shows no investment products.',
+  };
+  await toSummary(ran({ gaps: [gap] }));
+  expect(get('summary-gap-investing')).toHaveTextContent('You know more than your account shows', { exact: false });
+  expect(get('summary-gap-investing')).toHaveTextContent(gap.because, { exact: false });
 });
 
-test('with no gap and an answered question, the aligned card shows', async () => {
+test('with no gap the summary has no gap card, and the map has no confidence marker or legend', async () => {
   await toSummary(ran());
-  expect(get('summary-aligned')).toHaveTextContent('Your confidence matches your answers', { exact: false });
-  expect(get('summary-aligned')).toHaveTextContent('On the areas we checked, your confidence and your answers line up.', { exact: false });
-});
-
-test('with only "Not sure" answers no confidence was sent, so no aligned card', async () => {
-  backend({ step: stepper(1), post: () => ok(ran()) });
-  await toFirstQuestion();
-  await answer('unsure');
-  await finish();
-  await summary();
-  expect(screen.queryByTestId('summary-aligned')).toBeNull();
+  expect(screen.queryByTestId(/^summary-gap-/)).toBeNull();
+  expect(get('summary-map')).toBeOnTheScreen();
+  expect(screen.queryByTestId(/^area-diamond-/, { includeHiddenElements: true })).toBeNull();
+  expect(screen.queryByText(/confiden/i)).toBeNull();
 });
 
 test.each([
@@ -643,7 +639,6 @@ test('a reload of /learning-path rebuilds the summary from the stored row', asyn
   await openAt('/learning-path');
 
   expect(await screen.findByTestId('summary-first-lesson')).toHaveTextContent('Emergency fund', { exact: false });
-  expect(get('summary-aligned')).toBeOnTheScreen();
   expect(get('summary-based-on')).toHaveTextContent('3 answers', { exact: false });
   expect(screen.queryByTestId('summary-saving-for')).toBeNull();
 });
@@ -663,13 +658,13 @@ test('hardware back on the summary leaves for the map like Show my path', async 
 const style = (id: string) => StyleSheet.flatten(screen.getByTestId(id, { includeHiddenElements: true }).props.style);
 
 test('after a reload the summary map comes from the stored row; a ready path reads Solid', async () => {
-  backend({ onboarded: true, stored: ran({ readyForNext: true, mastery: { saving: 0.9, investing: 0.8 }, confidence: { saving: 0.9, investing: 0.6 } }) });
+  backend({ onboarded: true, stored: ran({ readyForNext: true, mastery: { saving: 0.9, investing: 0.8 } }) });
   await openAt('/learning-path');
 
   expect(await screen.findByTestId('summary-map')).toBeOnTheScreen();
   expect(get('area-level-saving')).toHaveTextContent('Solid');
   expect(style('area-bar-saving').width).toBe('90%');
-  expect(style('area-diamond-investing').left).toBe('60%');
+  expect(style('area-bar-investing').width).toBe('80%');
 });
 
 test('after a reload a high mastery on a path that is not ready reads Building: the answer counts are gone', async () => {

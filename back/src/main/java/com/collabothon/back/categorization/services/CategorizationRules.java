@@ -18,7 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-import com.collabothon.back.categorization.dto.ConfidenceGapDto;
+import com.collabothon.back.categorization.dto.GapDto;
 import com.collabothon.back.categorization.dto.FactsDto;
 import com.collabothon.back.categorization.dto.LessonVariantDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
@@ -120,8 +120,11 @@ final class CategorizationRules {
 
 	private static final List<FocusArea> ACCOUNT_GAP_AREAS = List.of(FocusArea.SAVING, FocusArea.INVESTING);
 
-	/** Where what the user said about themselves and what their accounts show differ (F1, without a Quick check). */
-	static List<ConfidenceGapDto> confidenceGaps(OnboardingAnswersDto a, FactsDto f) {
+	/**
+	 * Where what the user said about themselves and what their accounts show differ (F1, without a Quick check):
+	 * the account ahead of what they said is habit ahead, the reverse knowledge ahead.
+	 */
+	static List<GapDto> saidGaps(OnboardingAnswersDto a, FactsDto f) {
 		Experience said = Experience.fromWire(a.experience());
 		if (said == null || f == null) {
 			return List.of();
@@ -129,28 +132,28 @@ final class CategorizationRules {
 		return ACCOUNT_GAP_AREAS.stream().flatMap(area -> accountGap(said, area, f).stream()).toList();
 	}
 
-	private static Optional<ConfidenceGapDto> accountGap(Experience said, FocusArea area, FactsDto f) {
+	private static Optional<GapDto> accountGap(Experience said, FocusArea area, FactsDto f) {
 		if (area == FocusArea.SAVING) {
 			if (SAYS_LITTLE_SAVING.contains(said) && f.savesRegularly()) {
-				return Optional.of(gap(area, GapDirection.UNDER, said, SAVES_LINE));
+				return Optional.of(gap(area, GapDirection.HABIT_AHEAD, said, SAVES_LINE));
 			}
 			if (!SAYS_LITTLE_SAVING.contains(said) && f.cashBufferMonths().equals(BUFFER_UNDER_1)) {
-				return Optional.of(gap(area, GapDirection.OVER, said, bufferLine(f)));
+				return Optional.of(gap(area, GapDirection.KNOWLEDGE_AHEAD, said, bufferLine(f)));
 			}
 		}
 		else {
 			if (!SAYS_INVESTING.contains(said) && f.holdsInvestments()) {
-				return Optional.of(gap(area, GapDirection.UNDER, said, HOLDS_LINE));
+				return Optional.of(gap(area, GapDirection.HABIT_AHEAD, said, HOLDS_LINE));
 			}
 			if (SAYS_INVESTING.contains(said) && !f.holdsInvestments()) {
-				return Optional.of(gap(area, GapDirection.OVER, said, NO_HOLDS_LINE));
+				return Optional.of(gap(area, GapDirection.KNOWLEDGE_AHEAD, said, NO_HOLDS_LINE));
 			}
 		}
 		return Optional.empty();
 	}
 
-	private static ConfidenceGapDto gap(FocusArea area, GapDirection direction, Experience said, String shows) {
-		return new ConfidenceGapDto(area, direction, said.saidLine() + " " + shows);
+	private static GapDto gap(FocusArea area, GapDirection direction, Experience said, String shows) {
+		return new GapDto(area, direction, said.saidLine() + " " + shows);
 	}
 
 	static LessonVariantDto lessonVariant(Role role, LifeStage lifeStage) {

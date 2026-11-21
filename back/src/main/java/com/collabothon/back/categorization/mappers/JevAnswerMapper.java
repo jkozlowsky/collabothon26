@@ -10,9 +10,11 @@ import com.collabothon.back.categorization.services.Answer;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface JevAnswerMapper {
 
-	@Mapping(target = "area", expression = "java(answer.area())")
+	@Mapping(target = "area", source = "question.area")
+	@Mapping(target = "lessonId", source = "question.lessonId")
+	@Mapping(target = "topic", source = "question.topic")
+	@Mapping(target = "concepts", source = "question.concepts")
 	@Mapping(target = "result", expression = "java(answer.result())")
-	@Mapping(target = "misconception", expression = "java(answer.misconception())")
 	JevAnswerDto toJev(Answer answer);
 
 }

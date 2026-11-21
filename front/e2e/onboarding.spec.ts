@@ -4,15 +4,14 @@ import {
   answerSurvey,
   expectDisabled,
   expectOnLearn,
+  finishOnboarding,
   getProfile,
   goToConsent,
   openApp,
   passSummary,
   resetOnboarding,
-  skipOnboarding,
   tap,
   waitForCompletedOnboarding,
-  WITHOUT_ACCOUNT,
 } from './app';
 
 test.beforeEach(async ({ request }) => {
@@ -21,22 +20,6 @@ test.beforeEach(async ({ request }) => {
 
 test.afterAll(async ({ request }) => {
   await resetOnboarding(request);
-});
-
-test('a new user can skip onboarding; that is saved and onboarding does not come back', async ({ page, request }) => {
-  expect((await getProfile(request)).onboardingCompleted).toBe(false);
-  await openApp(page);
-  await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
-  await expect(page.getByText('Learn how money works. Challenge your ideas with others.')).toBeVisible();
-
-  await skipOnboarding(page);
-  await expectOnLearn(page);
-
-  const profile = await waitForCompletedOnboarding(request);
-  expect(profile).toMatchObject({ onboardingCompleted: true, onboardingSkipped: true, goals: [], lifeStage: null });
-
-  await page.reload();
-  await expectOnLearn(page);
 });
 
 test('the welcome screen introduces Atlas, and the map and duel slides lead to the consent screen', async ({ page }) => {
@@ -49,39 +32,45 @@ test('the welcome screen introduces Atlas, and the map and duel slides lead to t
   await tap(page, 'onboarding-challenge-next');
 
   await expect(page.getByTestId('onboarding-consent')).toBeVisible();
-  await expect(page.getByText('Make it personal?')).toBeVisible();
+  await expect(page.getByText('Your path starts from your account')).toBeVisible();
+  await expect(page.getByText('Learn needs them to work.')).toBeVisible();
   await expect(page.getByTestId('consent-facts')).toContainText('Your account already shows');
   await expect(page.getByTestId('consent-facts')).toContainText('Age 26–40');
   await expect(page.getByTestId('consent-asks')).toContainText('What your savings are for');
   await expect(page.getByText('Only these summaries are shared, never your transactions.')).toBeVisible();
   await expect(page.getByTestId('consent-notice')).toContainText('Your choices are checked by an AI service.');
   await expect(page.getByTestId('consent-accept')).toHaveText('Use my account data');
-  await expect(page.getByTestId('consent-decline')).toHaveText('Continue without');
+  await expect(page.getByTestId('consent-not-now')).toHaveText('Not now');
+  await expect(page.getByTestId('consent-decline')).toHaveCount(0);
 });
 
-test('with account access three questions lead to the quick check intro; the purpose is saved as goals', async ({ page, request }) => {
+test('"Not now" on the consent screen returns to the bank and saves nothing; Learn shows onboarding again', async ({ page, request }) => {
+  await openApp(page);
+  await goToConsent(page);
+  await tap(page, 'consent-not-now');
+
+  await expect(page.getByTestId('screen-overview')).toBeVisible();
+  expect((await getProfile(request)).onboardingCompleted).toBe(false);
+  await tap(page, 'nav-learn');
+  await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
+});
+
+test('two questions lead to the quick check intro, with no way to skip; the purpose is saved as goals', async ({ page, request }) => {
   await openApp(page);
   await goToConsent(page);
   await tap(page, 'consent-accept');
 
-  await expect(page.getByText('Step 1 of 3')).toBeVisible();
+  await expect(page.getByText('Step 1 of 2')).toBeVisible();
   await expect(page.getByText('What are you saving for?')).toBeVisible();
+  await expect(page.getByTestId('onboarding-skip')).toHaveCount(0);
   await expectDisabled(page, 'onboarding-continue');
   await tap(page, 'option-home');
   await expectDisabled(page, 'onboarding-continue', false);
   await tap(page, 'onboarding-continue');
 
-  await expect(page.getByText('Step 2 of 3')).toBeVisible();
-  await tap(page, 'option-1-5y');
-  await tap(page, 'onboarding-continue');
-
-  await expect(page.getByText('Step 3 of 3')).toBeVisible();
-  await expect(page.getByText('How confident do you feel making your own money decisions?')).toBeVisible();
-  await expect(page.getByTestId('confidence-caption')).toHaveText('Pick a number');
+  await expect(page.getByText('Step 2 of 2')).toBeVisible();
   await expectDisabled(page, 'onboarding-continue');
-  await tap(page, 'confidence-2');
-  await expect(page.getByTestId('confidence-2')).toHaveAttribute('aria-checked', 'true');
-  await expect(page.getByTestId('confidence-caption')).toHaveText('2 — “I know a bit, but I hesitate to act”');
+  await tap(page, 'option-1-5y');
   await tap(page, 'onboarding-continue');
 
   await expect(page.getByTestId('onboarding-check-intro')).toBeVisible();
@@ -89,6 +78,7 @@ test('with account access three questions lead to the quick check intro; the pur
   await expect(page.getByText("Let's see what you already know")).toBeVisible();
   await expect(page.getByText('About 2 minutes')).toBeVisible();
   await expect(page.getByTestId('quick-check-hero')).toBeVisible();
+  await expect(page.getByTestId('check-skip')).toHaveCount(0);
   // openApp serves an empty question bank, so the test is left out and the path is built at once.
   await tap(page, 'check-start');
   await expect(page.getByTestId('summary-saving-for')).toHaveText('Saving for: A home of my own · needed in 1–5 years', { timeout: 15_000 });
@@ -103,54 +93,6 @@ test('with account access three questions lead to the quick check intro; the pur
   await expectOnLearn(page);
 });
 
-test('without account access the life stage, the experience and the savings cover are asked first', async ({ page, request }) => {
-  await openApp(page);
-  await goToConsent(page);
-  await tap(page, 'consent-decline');
-
-  await expect(page.getByText('Step 1 of 6')).toBeVisible();
-  await expect(page.getByText('Where are you in life?')).toBeVisible();
-  await tap(page, `option-${WITHOUT_ACCOUNT.lifeStage}`);
-  await tap(page, 'onboarding-continue');
-  await expect(page.getByText('How do you manage your money today?')).toBeVisible();
-  await tap(page, `option-${WITHOUT_ACCOUNT.experience}`);
-  await tap(page, 'onboarding-continue');
-  await expect(page.getByText('Step 3 of 6')).toBeVisible();
-  await expect(page.getByText('How many months of spending could your savings cover?')).toBeVisible();
-  await tap(page, `option-${WITHOUT_ACCOUNT.savingsCover}`);
-  await tap(page, 'onboarding-continue');
-  await expect(page.getByText('Step 4 of 6')).toBeVisible();
-  await tap(page, 'option-safety-net');
-  await tap(page, 'onboarding-continue');
-  await tap(page, 'option-within-1y');
-  await tap(page, 'onboarding-continue');
-  await expect(page.getByText('Step 6 of 6')).toBeVisible();
-  await tap(page, 'confidence-4');
-  await tap(page, 'onboarding-continue');
-  await tap(page, 'check-skip');
-  await passSummary(page);
-
-  const profile = await waitForCompletedOnboarding(request);
-  expect(profile).toMatchObject({ lifeStage: 'building', goals: ['emergency-fund'], experience: 'regular', onboardingSkipped: false });
-  const categorization = await (await request.get('/api/users/demo-user/categorization')).json();
-  expect(categorization).toMatchObject({ consent: false, bankData: false });
-});
-
-test('skipping in the middle of the questions keeps the answers given so far', async ({ page, request }) => {
-  await openApp(page);
-  await goToConsent(page);
-  await tap(page, 'consent-accept');
-  await tap(page, 'option-retirement');
-  await tap(page, 'onboarding-continue');
-  await tap(page, 'onboarding-skip');
-  await expect(page.getByTestId('summary-saving-for')).toHaveText('Saving for: Retirement', { timeout: 15_000 });
-  await passSummary(page);
-  await expectOnLearn(page);
-
-  const profile = await waitForCompletedOnboarding(request);
-  expect(profile).toMatchObject({ lifeStage: null, goals: ['retirement'], experience: null, onboardingSkipped: false });
-});
-
 test('the back arrow steps back through every screen, keeping answers', async ({ page }) => {
   await openApp(page);
   await tap(page, 'onboarding-start');
@@ -159,11 +101,11 @@ test('the back arrow steps back through every screen, keeping answers', async ({
   await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
 
   await answerSurvey(page);
-  for (const step of ['confidence', 'horizon', 'purpose']) {
+  for (const step of ['horizon', 'purpose']) {
     await tap(page, 'onboarding-back');
     await expect(page.getByTestId(`onboarding-${step}`)).toBeVisible();
   }
-  await expect(page.getByText('Step 1 of 3')).toBeVisible();
+  await expect(page.getByText('Step 1 of 2')).toBeVisible();
   await expect(page.getByTestId('option-home')).toHaveAttribute('aria-checked', 'true');
   await tap(page, 'onboarding-back');
   await expect(page.getByTestId('onboarding-consent')).toBeVisible();
@@ -171,7 +113,8 @@ test('the back arrow steps back through every screen, keeping answers', async ({
 
 test('"Edit answers" on Profile keeps its three steps with the goals grid', async ({ page, request }) => {
   await openApp(page);
-  await skipOnboarding(page);
+  // "No plan yet" saves no goals, so the goals grid below starts empty.
+  await finishOnboarding(page, { purpose: 'none' });
   await waitForCompletedOnboarding(request);
   await tap(page, 'nav-profile');
   await tap(page, 'edit-answers');
@@ -207,7 +150,7 @@ test('"Edit answers" on Profile keeps its three steps with the goals grid', asyn
 
 test('"Restart onboarding" on Profile clears the answers and the flag; onboarding shows again', async ({ page, request }) => {
   await openApp(page);
-  await skipOnboarding(page);
+  await finishOnboarding(page);
   await expectOnLearn(page);
   await waitForCompletedOnboarding(request);
 

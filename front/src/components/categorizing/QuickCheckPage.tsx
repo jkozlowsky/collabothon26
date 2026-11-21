@@ -1,12 +1,10 @@
-import Feather from '@expo/vector-icons/Feather';
 import { useEffect, useRef, type ComponentRef } from 'react';
 import { AccessibilityInfo, findNodeHandle, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AnswerTile, type AnswerState } from '@/components/categorizing/AnswerTile';
 import { FeedbackBanner } from '@/components/categorizing/FeedbackBanner';
 import { Page } from '@/components/onboarding/Page';
-import { BigButton, CloseButton, FadeIn, haptic, StepHeader, type as text } from '@/components/onboarding/ui';
-import { GLYPH } from '@/constants/path';
+import { BigButton, FadeIn, haptic, StepHeader, type as text } from '@/components/onboarding/ui';
 import { AREA_LABEL, STATUS_TEXT } from '@/constants/quickCheck';
 import { colors, spacing, type } from '@/constants/theme';
 import type { QuestionView } from '@/hooks/useQuickCheck';
@@ -21,13 +19,12 @@ type Props = {
   /** `optionIndex` null = "Not sure". */
   onAnswer: (optionIndex: number | null) => void;
   onContinue: () => void;
-  onClose: () => void;
 };
 
 // react-native-web takes tabIndex on Text so focus() works; RN's TextProps do not declare it.
 const WEB_FOCUSABLE = { tabIndex: -1 };
 
-export function QuickCheckPage({ view, position, total, status, onAnswer, onContinue, onClose }: Props) {
+export function QuickCheckPage({ view, position, total, status, onAnswer, onContinue }: Props) {
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   // The feedback lands under the tiles, which a long question pushes below the fold.
   const answer = (optionIndex: number | null) => {
@@ -42,13 +39,7 @@ export function QuickCheckPage({ view, position, total, status, onAnswer, onCont
     <Page
       testID="quick-check"
       scrollRef={scroll}
-      header={
-        <StepHeader
-          left={<CloseButton onPress={onClose} />}
-          label={`Question ${position} of up to ${total}`}
-          progress={position / total}
-        />
-      }
+      header={<StepHeader label={`Question ${position} of up to ${total}`} progress={position / total} />}
       footer={<BigButton label="Continue" onPress={next} disabled={!view?.result} testID="quick-check-continue" />}
     >
       {/* Keyed per question, so the focus and the entrance start fresh while the header stays. */}
@@ -101,11 +92,7 @@ function Question({ view, position, total, onAnswer }: QuestionProps) {
         accessibilityRole="header"
         testID="quick-check-prompt"
       >
-        {view.parts.map((p, i) => (
-          <Text key={i} style={p.filled && styles.filled}>
-            {p.text}
-          </Text>
-        ))}
+        {view.prompt}
       </Text>
       <Text style={text.label} testID="quick-check-why">
         Why this question: {view.why}
@@ -133,14 +120,6 @@ function Question({ view, position, total, onAnswer }: QuestionProps) {
         />
       </View>
       {result && <FeedbackBanner feedback={result.feedback} />}
-      {view.account ? (
-        <View style={styles.slip}>
-          <Feather name="lock" size={GLYPH} color={colors.textMuted} />
-          <Text style={[text.label, styles.slipText]}>Only your answer is sent, never these numbers.</Text>
-        </View>
-      ) : (
-        <Text style={text.label}>Example numbers</Text>
-      )}
     </>
   );
 }
@@ -148,9 +127,6 @@ function Question({ view, position, total, onAnswer }: QuestionProps) {
 const styles = StyleSheet.create({
   question: { gap: spacing.smPlus },
   prompt: { ...type.titleSection },
-  filled: { color: colors.brandPrimary, backgroundColor: colors.brandPrimarySoft },
   options: { gap: spacing.smPlus, marginTop: spacing.sm },
-  slip: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  slipText: { flexShrink: 1 },
   status: { ...type.titleCard, color: colors.brandPrimary },
 });

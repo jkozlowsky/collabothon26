@@ -5,10 +5,13 @@ import java.util.Map;
 
 import com.collabothon.back.categorization.enums.FocusArea;
 
-/** {@code next} is null when the question was not asked (fewer than two unasked ids). */
+/**
+ * {@code nextLesson} is a lesson id; null when the question was not asked (fewer than two lessons to choose from).
+ * {@code enough} is 0 when it was not asked (before the first answer).
+ */
 record StepJudgement(
 		Map<FocusArea, Double> mastery,
-		String next,
+		String nextLesson,
 		double enough,
 		Duration elapsed
 ) {}

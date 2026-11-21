@@ -1,6 +1,6 @@
 import type { IconName } from '@/constants/onboarding';
 import type { FocusArea } from '@/types/categorization';
-import type { ConfidenceRating, ProfileRanges } from '@/types/quickCheck';
+import type { ProfileRanges } from '@/types/quickCheck';
 
 /** Knowledge questions per test: the backend's `MAX_QUESTIONS`. */
 export const MAX_QUESTIONS = 6;
@@ -28,27 +28,15 @@ export const AREA_ICON: Record<FocusArea, IconName> = {
   retirement: 'sunrise',
 };
 
-/** The survey's confidence step: the caption under the scale for each number. */
-export const CONFIDENCE_CAPTION: Record<ConfidenceRating, string> = {
-  1: 'I avoid these decisions',
-  2: 'I know a bit, but I hesitate to act',
-  3: 'I manage, with some doubts',
-  4: 'I usually feel sure',
-  5: 'I decide with confidence',
-};
-
 export type FeedbackTone = 'right' | 'wrong' | 'unsure';
 export type Feedback = { tone: FeedbackTone; title: string; body: string };
 
-const MARKED = 'The right answer is marked above.';
-/** After each answer; the right and wrong lines depend on how the user rated their confidence. */
+/** After each answer; the body is the question's explanation. */
 export const FEEDBACK = {
-  rightLow: { tone: 'right', title: 'Right', body: 'You rated yourself low, yet you got this one. You may know more than you think.' },
-  right: { tone: 'right', title: 'Right', body: 'That matches how confident you said you feel.' },
-  wrongHigh: { tone: 'wrong', title: 'Not quite', body: `You said you feel confident, so this one is worth a closer look. ${MARKED}` },
-  wrong: { tone: 'wrong', title: 'Not quite', body: `${MARKED} Your lessons cover this.` },
-  unsure: { tone: 'unsure', title: 'Good to know', body: `${MARKED} Your lessons cover this.` },
-} as const satisfies Record<string, Feedback>;
+  right: { tone: 'right', title: 'Right' },
+  wrong: { tone: 'wrong', title: 'Not quite' },
+  unsure: { tone: 'unsure', title: 'Good to know' },
+} as const satisfies Record<string, Omit<Feedback, 'body'>>;
 
 /** Mastery levels (spec Q16, D7); never shown as a number. */
 export const JUST_STARTING_BELOW = 0.4;
@@ -62,18 +50,8 @@ type ProfileQuestion<K extends keyof ProfileRanges> = {
   options: { label: string; value: NonNullable<ProfileRanges[K]> }[];
 };
 
-/** The survey's two range questions; the age band comes from the account or the life stage. */
-export const PROFILE_QUESTIONS: { [K in 'savingsCover' | 'horizon']: ProfileQuestion<K> } = {
-  savingsCover: {
-    prompt: 'How many months of spending could your savings cover?',
-    why: 'So examples fit your savings',
-    options: [
-      { label: 'Less than 1 month', value: '<1' },
-      { label: '1–3 months', value: '1-3' },
-      { label: '3–6 months', value: '3-6' },
-      { label: '6 months or more', value: '6+' },
-    ],
-  },
+/** The survey's range question; the age band and the savings cover come from the account. */
+export const PROFILE_QUESTIONS: { horizon: ProfileQuestion<'horizon'> } = {
   horizon: {
     prompt: 'When might you need the money you save or invest?',
     why: 'So examples match your time frame',

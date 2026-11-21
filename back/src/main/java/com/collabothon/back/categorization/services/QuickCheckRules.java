@@ -3,13 +3,12 @@ package com.collabothon.back.categorization.services;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.ENOUGH_THRESHOLD;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.HORIZON_WITHIN_1Y;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.JUST_STARTING_BELOW;
-import static com.collabothon.back.categorization.consts.CategorizationConsts.LONG_HORIZON_QUESTION_ID;
+import static com.collabothon.back.categorization.consts.CategorizationConsts.LESSON_CHOICES_PER_AREA;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.MAX_GAP_CARDS;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.MAX_QUESTIONS;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.MIN_QUESTIONS;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.RULE_MAX_QUESTIONS;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.RULE_START;
-import static com.collabothon.back.categorization.consts.CategorizationConsts.SHORT_HORIZON_QUESTION_ID;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.SOLID_ABOVE;
 import static com.collabothon.back.categorization.consts.CategorizationConsts.SOLID_MIN_ANSWERS;
 
@@ -26,31 +25,24 @@ import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
+import java.util.random.RandomGenerator;
 
 import com.collabothon.back.categorization.consts.JevConsts;
-import com.collabothon.back.categorization.dto.ConfidenceGapDto;
+import com.collabothon.back.categorization.dto.FactsDto;
+import com.collabothon.back.categorization.dto.GapDto;
 import com.collabothon.back.categorization.enums.AnswerResult;
-import com.collabothon.back.categorization.enums.Confidence;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.GapDirection;
-import com.collabothon.back.categorization.enums.QuestionLevel;
 import com.collabothon.back.categorization.enums.Role;
-import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 
 final class QuickCheckRules {
 
-	/** Among equally easy questions, the one that quotes more of the user's own numbers goes first. */
-	private static final Comparator<CheckQuestionProjection> EASY_FIRST = Comparator
-		.comparing(CheckQuestionProjection::level, Comparator.comparing(level -> level != QuestionLevel.EASY))
-		.thenComparing(q -> q.slots().size(), Comparator.reverseOrder())
-		.thenComparing(CheckQuestionProjection::id);
-
-	/** Goal areas first, then the fixed order, only areas with bank questions; a short horizon puts saving first. */
-	static List<FocusArea> areaOrder(List<String> goals, String horizon, List<CheckQuestionProjection> bank) {
+	/** Goal areas first, then the fixed order, only areas with questions; a short horizon puts saving first. */
+	static List<FocusArea> areaOrder(List<String> goals, String horizon, List<CheckQuestion> pool) {
 		Set<FocusArea> order = new LinkedHashSet<>(FocusArea.fromGoals(goals));
 		order.addAll(Arrays.asList(FocusArea.values()));
 		List<FocusArea> areas = new ArrayList<>(order.stream()
-			.filter(area -> bank.stream().anyMatch(q -> q.area() == area))
+			.filter(area -> pool.stream().anyMatch(q -> q.area() == area))
 			.toList());
 		if (HORIZON_WITHIN_1Y.equals(horizon) && areas.indexOf(FocusArea.SAVING) > areas.indexOf(FocusArea.INVESTING)
 				&& areas.contains(FocusArea.INVESTING)) {
@@ -60,7 +52,7 @@ final class QuickCheckRules {
 		return areas;
 	}
 
-	/** Keeps the nulls: every bank area is a key, null until it has an answer. */
+	/** Keeps the nulls: every area with questions is a key, null until it has an answer. */
 	static Map<String, Double> byWire(Map<FocusArea, Double> values) {
 		Map<String, Double> wire = new LinkedHashMap<>();
 		values.forEach((area, value) -> wire.put(area.wire(), value));
@@ -69,10 +61,6 @@ final class QuickCheckRules {
 
 	static Map<FocusArea, Double> mastery(List<FocusArea> areas, List<Answer> answers) {
 		return meanPerArea(areas, answers, Answer::score);
-	}
-
-	static Map<FocusArea, Double> confidence(List<FocusArea> areas, List<Answer> answers) {
-		return meanPerArea(areas, answers, Answer::chip);
 	}
 
 	private static Map<FocusArea, Double> meanPerArea(List<FocusArea> areas, List<Answer> answers,
@@ -85,76 +73,108 @@ final class QuickCheckRules {
 		return means;
 	}
 
-	static List<CheckQuestionProjection> unasked(List<CheckQuestionProjection> bank, List<Answer> answers) {
-		return bank.stream().filter(q -> answers.stream().noneMatch(a -> a.question().id().equals(q.id()))).toList();
+	/** The questions that can still be asked, in pool order: not asked yet, in lessons the user has not completed. */
+	static List<CheckQuestion> open(List<CheckQuestion> pool, List<Answer> answers, Set<String> completed) {
+		return pool.stream()
+			.filter(q -> !completed.contains(q.lessonId())
+					&& answers.stream().noneMatch(a -> a.question().id().equals(q.id())))
+			.toList();
 	}
 
-	static Optional<CheckQuestionProjection> next(List<FocusArea> order, List<CheckQuestionProjection> bank,
-			List<Answer> answers, String horizon) {
-		List<CheckQuestionProjection> unasked = unasked(bank, answers);
-		Optional<CheckQuestionProjection> pick = Optional.empty();
+	/** The lesson the next question comes from; empty when no question is left. */
+	static Optional<String> nextLesson(List<FocusArea> order, List<CheckQuestion> pool, List<CheckQuestion> open,
+			List<Answer> answers) {
+		Optional<CheckQuestion> pick = Optional.empty();
 		if (!answers.isEmpty() && answers.getLast().result() != AnswerResult.CORRECT) {
-			FocusArea area = answers.getLast().area();
-			pick = firstIn(unasked, area).filter(q -> q.level() == QuestionLevel.EASY);
+			pick = sameLessonOrLaterInStory(pool, open, answers.getLast().question());
 		}
 		if (pick.isEmpty()) {
 			pick = order.stream()
 				.filter(area -> inArea(answers, area).isEmpty())
-				.flatMap(area -> firstIn(unasked, area).stream())
+				.flatMap(area -> firstIn(open, area, answers).stream())
 				.findFirst();
 		}
 		if (pick.isEmpty()) {
-			pick = oneShortOfSolid(order, unasked, answers).flatMap(area -> firstIn(unasked, area));
+			pick = oneShortOfSolid(order, open, answers).flatMap(area -> firstIn(open, area, answers));
 		}
 		if (pick.isEmpty()) {
 			Map<FocusArea, Double> mastery = mastery(order, answers);
 			pick = order.stream()
-				.sorted(Comparator.comparing(area -> Objects.requireNonNullElse(mastery.get(area), RULE_START)))
-				.flatMap(area -> firstIn(unasked, area).stream())
+				.sorted(Comparator.comparing(area -> masteryOrStart(mastery, area)))
+				.flatMap(area -> firstIn(open, area, answers).stream())
 				.findFirst();
 		}
-		return pick.map(q -> shortHorizon(q, unasked, horizon));
+		return pick.map(CheckQuestion::lessonId);
 	}
 
-	private static Optional<CheckQuestionProjection> firstIn(List<CheckQuestionProjection> unasked, FocusArea area) {
-		return unasked.stream().filter(q -> q.area() == area).min(EASY_FIRST);
+	/** After an answer that is not right: the same lesson while it has a question left, else the story's next one. */
+	private static Optional<CheckQuestion> sameLessonOrLaterInStory(List<CheckQuestion> pool, List<CheckQuestion> open,
+			CheckQuestion last) {
+		int lessonStart = pool.indexOf(pool.stream().filter(q -> q.lessonId().equals(last.lessonId())).findFirst()
+			.orElseThrow());
+		return open.stream()
+			.filter(q -> q.storyId().equals(last.storyId()) && pool.indexOf(q) >= lessonStart)
+			.findFirst();
 	}
 
-	static List<CheckQuestionProjection> forHorizon(List<CheckQuestionProjection> bank, String horizon) {
-		return HORIZON_WITHIN_1Y.equals(horizon)
-				? bank.stream().filter(q -> !q.id().equals(LONG_HORIZON_QUESTION_ID)).toList()
-				: bank;
+	/** In story order, a lesson with no answer yet before one already asked about. */
+	private static Optional<CheckQuestion> firstIn(List<CheckQuestion> open, FocusArea area, List<Answer> answers) {
+		// min keeps the first of equals, so story order decides among lessons of the same kind.
+		return open.stream()
+			.filter(q -> q.area() == area)
+			.min(Comparator.comparing(q -> answers.stream().anyMatch(a -> a.question().lessonId().equals(q.lessonId()))));
 	}
 
-	/** With money needed within a year, the saving question is the one about a fall before it is needed (D8). */
-	static CheckQuestionProjection shortHorizon(CheckQuestionProjection next, List<CheckQuestionProjection> unasked,
-			String horizon) {
-		if (!HORIZON_WITHIN_1Y.equals(horizon) || next.area() != FocusArea.SAVING) {
-			return next;
-		}
-		return unasked.stream().filter(q -> q.id().equals(SHORT_HORIZON_QUESTION_ID)).findFirst().orElse(next);
+	/** One of the lesson's open questions, each as likely as the others. */
+	static CheckQuestion draw(List<CheckQuestion> open, String lessonId, RandomGenerator random) {
+		List<CheckQuestion> ofLesson = open.stream().filter(q -> q.lessonId().equals(lessonId)).toList();
+		return ofLesson.get(random.nextInt(ofLesson.size()));
 	}
 
-	static boolean ruleDone(List<FocusArea> order, List<CheckQuestionProjection> unasked, List<Answer> answers) {
-		return answers.size() >= RULE_MAX_QUESTIONS || unasked.isEmpty() || (answers.size() >= MIN_QUESTIONS
-				&& order.stream().noneMatch(area -> inArea(answers, area).isEmpty())
-				&& oneShortOfSolid(order, unasked, answers).isEmpty());
+	/** What Jev chooses the next lesson from: per area, the first lessons with a question left. */
+	static List<CheckLesson> nextLessonChoices(List<FocusArea> order, List<CheckLesson> open) {
+		return order.stream()
+			.flatMap(area -> acrossStories(open.stream().filter(l -> l.area() == area).toList()).stream()
+				.limit(LESSON_CHOICES_PER_AREA))
+			.toList();
+	}
+
+	/** Each story's first lesson before any story's second, so a short choice spans the area's stories. */
+	private static List<CheckLesson> acrossStories(List<CheckLesson> lessons) {
+		return lessons.stream()
+			.sorted(Comparator.comparingLong(l -> lessons.stream()
+				.takeWhile(other -> !other.id().equals(l.id()))
+				.filter(other -> other.storyId().equals(l.storyId()))
+				.count()))
+			.toList();
+	}
+
+	static boolean ruleDone(List<FocusArea> order, List<CheckQuestion> open, List<Answer> answers) {
+		// A run without a mistake may go on to the maximum, so two answers in each area can make every area Solid.
+		int limit = answers.stream().allMatch(a -> a.result() == AnswerResult.CORRECT) ? MAX_QUESTIONS
+				: RULE_MAX_QUESTIONS;
+		return answers.size() >= limit || open.isEmpty() || (answers.size() >= MIN_QUESTIONS
+				&& order.stream().noneMatch(area -> inArea(answers, area).isEmpty() && hasQuestion(open, area))
+				&& oneShortOfSolid(order, open, answers).isEmpty());
 	}
 
 	/** In a run without a mistake, the first area one answer short of Solid that still has a question to ask. */
-	private static Optional<FocusArea> oneShortOfSolid(List<FocusArea> order, List<CheckQuestionProjection> unasked,
+	private static Optional<FocusArea> oneShortOfSolid(List<FocusArea> order, List<CheckQuestion> open,
 			List<Answer> answers) {
 		if (answers.stream().anyMatch(a -> a.result() != AnswerResult.CORRECT)) {
 			return Optional.empty();
 		}
 		return order.stream()
-			.filter(area -> inArea(answers, area).size() == SOLID_MIN_ANSWERS - 1
-					&& unasked.stream().anyMatch(q -> q.area() == area))
+			.filter(area -> inArea(answers, area).size() == SOLID_MIN_ANSWERS - 1 && hasQuestion(open, area))
 			.findFirst();
 	}
 
-	static boolean jevDone(List<CheckQuestionProjection> unasked, List<Answer> answers, double enough) {
-		return answers.size() >= MAX_QUESTIONS || unasked.isEmpty()
+	private static boolean hasQuestion(List<CheckQuestion> open, FocusArea area) {
+		return open.stream().anyMatch(q -> q.area() == area);
+	}
+
+	static boolean jevDone(List<CheckQuestion> open, List<Answer> answers, double enough) {
+		return answers.size() >= MAX_QUESTIONS || open.isEmpty()
 				|| (answers.size() >= MIN_QUESTIONS && enough >= ENOUGH_THRESHOLD);
 	}
 
@@ -175,76 +195,78 @@ final class QuickCheckRules {
 		return building ? role : Role.NOVICE;
 	}
 
-	/** The role the answers show, for a user who declared no experience: by how many answered areas are Solid. */
+	/**
+	 * The role the answers show, for a user who declared no experience. It follows the map: one answered area above
+	 * SOLID_ABOVE is enough for intermediate, even with a single answer; advanced needs every answered area Solid.
+	 */
 	static Role measuredRole(Map<FocusArea, Double> mastery, List<Answer> answers) {
 		List<FocusArea> answered = answers.stream().map(Answer::area).distinct().toList();
-		long solid = answered.stream().filter(area -> solid(area, mastery, answers)).count();
-		if (solid == 0) {
+		if (answered.stream().noneMatch(area -> mastery.get(area) != null && mastery.get(area) > SOLID_ABOVE)) {
 			return Role.NOVICE;
 		}
-		return solid == answered.size() ? Role.ADVANCED : Role.INTERMEDIATE;
+		return answered.stream().allMatch(area -> solid(area, mastery, answers)) ? Role.ADVANCED : Role.INTERMEDIATE;
 	}
 
-	/** Areas where at least one answer carries a chip: the only ones a gap can be about. */
-	static List<FocusArea> chipAreas(List<FocusArea> order, List<Answer> answers) {
-		return order.stream().filter(area -> inArea(answers, area).stream().anyMatch(a -> a.confidence() != null))
+	/** What the account shows for an area; null for an area the facts say nothing about. */
+	private static Boolean habit(FocusArea area, FactsDto facts) {
+		return switch (area) {
+			case SAVING -> facts.savesRegularly();
+			case INVESTING -> facts.holdsInvestments();
+			default -> null;
+		};
+	}
+
+	/** Answered areas the facts say something about: the only ones a gap can be about. None without facts. */
+	static List<FocusArea> gapAreas(List<FocusArea> order, List<Answer> answers, FactsDto facts) {
+		return order.stream()
+			.filter(area -> facts != null && habit(area, facts) != null && !inArea(answers, area).isEmpty())
 			.toList();
 	}
 
-	static boolean overHolds(List<Answer> inArea) {
-		return inArea.stream().anyMatch(a -> a.result() == AnswerResult.WRONG && a.confidence() == Confidence.SURE);
-	}
-
-	/** Every answer in the area is right, and the user rated their confidence low. */
-	static boolean underHolds(List<Answer> inArea) {
-		return !inArea.isEmpty() && inArea.stream()
-			.allMatch(a -> a.result() == AnswerResult.CORRECT && a.confidence() == Confidence.GUESSING);
-	}
-
-	static Optional<GapDirection> ruleGap(List<Answer> inArea, Double mastery) {
-		if (overHolds(inArea)) {
-			return Optional.of(GapDirection.OVER);
+	/** The habit with an answer not right is habit ahead; no habit with every answer right is knowledge ahead. */
+	static Optional<GapDirection> ruleGap(FocusArea area, List<Answer> inArea, FactsDto facts) {
+		if (gapAreas(List.of(area), inArea, facts).isEmpty()) {
+			return Optional.empty();
 		}
-		return underHolds(inArea) && atLeastBuilding(mastery) ? Optional.of(GapDirection.UNDER) : Optional.empty();
+		boolean allRight = inArea.stream().allMatch(a -> a.result() == AnswerResult.CORRECT);
+		if (habit(area, facts)) {
+			return allRight ? Optional.empty() : Optional.of(GapDirection.HABIT_AHEAD);
+		}
+		return allRight ? Optional.of(GapDirection.KNOWLEDGE_AHEAD) : Optional.empty();
 	}
 
-	private static boolean atLeastBuilding(Double mastery) {
-		return mastery != null && mastery >= JUST_STARTING_BELOW;
+	/** A Jev label counts only when the rule finds the same gap in the area; otherwise aligned. */
+	static Optional<GapDirection> checkedJevGap(GapDirection label, FocusArea area, List<Answer> inArea,
+			FactsDto facts) {
+		return ruleGap(area, inArea, facts).filter(label::equals);
 	}
 
-	/** A Jev label counts only when the chips (and for under, the rule's mastery guard) back it up; else aligned. */
-	static Optional<GapDirection> checkedJevGap(GapDirection label, List<Answer> inArea, Double mastery) {
-		boolean holds = label == GapDirection.OVER ? overHolds(inArea)
-				: label == GapDirection.UNDER && underHolds(inArea) && atLeastBuilding(mastery);
-		return holds ? Optional.of(label) : Optional.empty();
-	}
-
-	/** {@code gaps} in area order; under before over, at most MAX_GAP_CARDS cards. */
-	static List<ConfidenceGapDto> gapCards(Map<FocusArea, GapDirection> gaps, FocusArea startLessonArea) {
+	/** The card about the start lesson's area first, then area order; at most MAX_GAP_CARDS cards. */
+	static List<GapDto> gapCards(Map<FocusArea, GapDirection> gaps, FocusArea startLessonArea) {
 		return gaps.entrySet().stream()
-			.sorted(Comparator.comparing(gap -> gap.getValue() != GapDirection.UNDER))
+			.sorted(Comparator.comparing(gap -> gap.getKey() != startLessonArea))
 			.limit(MAX_GAP_CARDS)
-			.map(gap -> new ConfidenceGapDto(gap.getKey(), gap.getValue(),
+			.map(gap -> new GapDto(gap.getKey(), gap.getValue(),
 				because(gap.getKey(), gap.getValue(), startLessonArea)))
 			.toList();
 	}
 
 	private static String because(FocusArea area, GapDirection direction, FocusArea startLessonArea) {
-		if (direction == GapDirection.UNDER) {
-			return "You rated your confidence low, yet your %s answers show you already understand how it works."
-				.formatted(area.getLabel());
+		boolean saving = area == FocusArea.SAVING;
+		if (direction == GapDirection.KNOWLEDGE_AHEAD) {
+			return "Your %s answers show you understand how it works. Your account shows %s.".formatted(
+					area.getLabel(), saving ? "no monthly transfer to savings" : "no investment products");
 		}
 		String end = area == startLessonArea ? "open, which is where your first lesson starts." : "open to explore.";
-		return "You rated your confidence high. Your %s answers leave a few things %s".formatted(area.getLabel(), end);
+		return "Your account shows you %s. Your %s answers leave a few things %s".formatted(
+				saving ? "move money to savings every month" : "already invest", area.getLabel(), end);
 	}
 
-	static List<BankLesson> lessons(List<CheckQuestionProjection> bank,
-			Function<CheckQuestionProjection, BankLesson> toLesson) {
-		Map<String, BankLesson> lessons = new LinkedHashMap<>();
-		bank.stream()
-			.sorted(Comparator.comparing(CheckQuestionProjection::id))
-			.forEach(q -> lessons.putIfAbsent(q.lessonId(), toLesson.apply(q)));
-		return lessons.values().stream().sorted(Comparator.comparing(BankLesson::id)).toList();
+	/** The questions' lessons, each once, in the questions' order. */
+	static List<CheckLesson> lessons(List<CheckQuestion> questions, Function<CheckQuestion, CheckLesson> toLesson) {
+		Map<String, CheckLesson> lessons = new LinkedHashMap<>();
+		questions.forEach(q -> lessons.computeIfAbsent(q.lessonId(), id -> toLesson.apply(q)));
+		return List.copyOf(lessons.values());
 	}
 
 	static Optional<Story> storyOf(String lessonId, List<Story> stories) {
@@ -256,30 +278,20 @@ final class QuickCheckRules {
 		return story.lessonIds().stream().filter(id -> !completed.contains(id)).findFirst();
 	}
 
-	/** J4: the area that put the story on the path, i.e. that of its first lesson in candidate order. */
-	static FocusArea pickingArea(Story story, List<BankLesson> candidates) {
-		return candidates.stream().filter(l -> story.lessonIds().contains(l.id())).findFirst().map(BankLesson::area)
-			.orElse(null);
-	}
-
-	/** A later path story read back without the history: its bank area with the lowest stored mastery, unanswered last. */
-	static FocusArea storedPickingArea(Story story, List<BankLesson> lessons, Map<String, Double> mastery) {
-		return lessons.stream()
-			.filter(l -> story.lessonIds().contains(l.id()))
-			.map(BankLesson::area)
-			.min(Comparator.comparing((FocusArea area) -> mastery.get(area.wire()),
-					Comparator.nullsLast(Comparator.naturalOrder())).thenComparing(Comparator.naturalOrder()))
+	/** The area a story teaches; null for a story without a quiz. */
+	static FocusArea areaOf(Story story, List<CheckLesson> lessons) {
+		return lessons.stream().filter(l -> l.storyId().equals(story.id())).findFirst().map(CheckLesson::area)
 			.orElse(null);
 	}
 
 	/** Lessons of non-Solid areas whose story has a lesson left, in path order: answered areas weakest first. */
-	static List<BankLesson> candidates(List<BankLesson> lessons, List<Story> stories, List<FocusArea> order,
+	static List<CheckLesson> candidates(List<CheckLesson> lessons, List<Story> stories, List<FocusArea> order,
 			Map<FocusArea, Double> mastery, List<Answer> answers, Set<String> completed) {
-		Comparator<BankLesson> pathOrder = Comparator
-			.comparing((BankLesson l) -> inArea(answers, l.area()).isEmpty())
+		Comparator<CheckLesson> pathOrder = Comparator
+			.comparing((CheckLesson l) -> inArea(answers, l.area()).isEmpty())
 			.thenComparing(l -> inArea(answers, l.area()).isEmpty() ? 0 : masteryOrStart(mastery, l.area()))
-			.thenComparing(l -> order.indexOf(l.area()))
-			.thenComparing(BankLesson::id);
+			.thenComparing(l -> order.indexOf(l.area()));
+		// The sort is stable, so lessons of one area stay in story order.
 		return lessons.stream()
 			.filter(l -> order.contains(l.area()) && !solid(l.area(), mastery, answers)
 					&& storyOf(l.id(), stories).flatMap(s -> startLesson(s, completed)).isPresent())
@@ -288,23 +300,40 @@ final class QuickCheckRules {
 	}
 
 	/** The candidates' stories, each once, in candidate order. */
-	static List<Story> stories(List<BankLesson> candidates, List<Story> stories) {
+	static List<Story> stories(List<CheckLesson> candidates, List<Story> stories) {
 		return candidates.stream().flatMap(l -> storyOf(l.id(), stories).stream()).distinct().toList();
 	}
 
 	/** Jev and the rule pick from answered areas when any have a candidate. */
-	static List<BankLesson> pool(List<BankLesson> candidates, List<Answer> answers) {
-		List<BankLesson> answered = candidates.stream().filter(l -> !inArea(answers, l.area()).isEmpty()).toList();
+	static List<CheckLesson> pool(List<CheckLesson> candidates, List<Answer> answers) {
+		List<CheckLesson> answered = candidates.stream().filter(l -> !inArea(answers, l.area()).isEmpty()).toList();
 		return answered.isEmpty() ? candidates : answered;
 	}
 
-	static BankLesson ruleFirstLesson(List<BankLesson> pool, List<FocusArea> order, Map<FocusArea, Double> mastery,
+	/**
+	 * What Jev chooses the first lesson from: per area of the pool, lessons not completed, those with an answer that
+	 * was not right first, then across the area's stories. Empty below two: one lesson needs no question.
+	 */
+	static List<CheckLesson> firstLessonChoices(List<CheckLesson> pool, List<Answer> answers, Set<String> completed) {
+		Comparator<CheckLesson> gapFirst = Comparator.comparing(l -> answers.stream()
+			.noneMatch(a -> a.result() != AnswerResult.CORRECT && a.question().lessonId().equals(l.id())));
+		List<CheckLesson> choices = pool.stream().map(CheckLesson::area).distinct()
+			.flatMap(area -> acrossStories(pool.stream()
+				.filter(l -> l.area() == area && !completed.contains(l.id()))
+				.toList()).stream()
+				.sorted(gapFirst)
+				.limit(LESSON_CHOICES_PER_AREA))
+			.toList();
+		return choices.size() < JevConsts.MIN_CHOICE_LABELS ? List.of() : choices;
+	}
+
+	static CheckLesson ruleFirstLesson(List<CheckLesson> pool, List<FocusArea> order, Map<FocusArea, Double> mastery,
 			List<Answer> answers) {
 		FocusArea weakest = pool.stream()
-			.map(BankLesson::area)
+			.map(CheckLesson::area)
 			.min(Comparator.comparing((FocusArea area) -> masteryOrStart(mastery, area)).thenComparing(order::indexOf))
 			.orElseThrow();
-		List<BankLesson> inWeakest = pool.stream().filter(l -> l.area() == weakest).toList();
+		List<CheckLesson> inWeakest = pool.stream().filter(l -> l.area() == weakest).toList();
 		// min keeps the first of equal scores, so a tie goes to the earlier answer.
 		return inArea(answers, weakest).stream()
 			.filter(a -> inWeakest.stream().anyMatch(l -> l.id().equals(a.question().lessonId())))
@@ -313,21 +342,23 @@ final class QuickCheckRules {
 			.orElse(inWeakest.getFirst());
 	}
 
-	static StoryPlan plan(List<Story> stories, List<BankLesson> candidates, Story picked, List<FocusArea> order,
+	/**
+	 * The path starts in the story of the picked lesson (Jev's, else the rule's). The app opens a story's lessons in
+	 * order, so the start lesson itself is that story's first lesson not completed.
+	 */
+	static StoryPlan plan(List<Story> stories, List<CheckLesson> candidates, CheckLesson picked, List<FocusArea> order,
 			Map<FocusArea, Double> mastery, List<Answer> answers, Set<String> completed) {
 		if (candidates.isEmpty()) {
 			Optional<Story> next = stories.stream().filter(s -> startLesson(s, completed).isPresent()).findFirst();
 			return new StoryPlan(next.orElse(null), null, order.stream().allMatch(area -> solid(area, mastery, answers)),
 					next.map(s -> List.of(s.id())).orElse(List.of()));
 		}
-		List<BankLesson> pool = pool(candidates, answers);
-		List<Story> poolStories = stories(pool, stories);
-		Story start = poolStories.size() < JevConsts.MIN_CHOICE_LABELS ? poolStories.getFirst()
-				: Objects.requireNonNullElseGet(picked,
-						() -> storyOf(ruleFirstLesson(pool, order, mastery, answers).id(), stories).orElseThrow());
+		CheckLesson lesson = picked != null ? picked
+				: ruleFirstLesson(pool(candidates, answers), order, mastery, answers);
+		Story start = storyOf(lesson.id(), stories).orElseThrow();
 		List<String> path = new ArrayList<>(List.of(start.id()));
 		stories(candidates, stories).stream().map(Story::id).filter(id -> !id.equals(start.id())).forEach(path::add);
-		return new StoryPlan(start, pickingArea(start, candidates), false, path);
+		return new StoryPlan(start, lesson.area(), false, path);
 	}
 
 	private static double masteryOrStart(Map<FocusArea, Double> mastery, FocusArea area) {

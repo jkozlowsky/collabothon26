@@ -4,7 +4,7 @@ import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testin
 import { seedAccount } from '@/lib/bank/seed';
 import { factLabels, factsFrom } from '@/lib/categorization';
 import { categorization } from '@/test-utils/categorization';
-import { walkSurvey, WITHOUT_ACCOUNT } from '@/test-utils/onboarding';
+import { walkSurvey } from '@/test-utils/onboarding';
 import { appRoutes as routes } from '@/test-utils/routes';
 
 const PROFILE_URL = /\/api\/users\/demo-user\/profile$/;
@@ -70,7 +70,7 @@ async function choose(step: string, label: string, pick: string) {
   await press('onboarding-continue');
 }
 
-test('app opens on the bank; the first Learn tap runs onboarding, skipping the intro lands on Learn', async () => {
+test('app opens on the bank; the first Learn tap runs onboarding, and Close goes back to the bank and saves nothing', async () => {
   await renderRouter(routes, { initialUrl: '/' });
   expect(await screen.findByTestId('screen-overview')).toBeOnTheScreen();
   expect(screen.queryByTestId('onboarding-welcome')).toBeNull();
@@ -78,27 +78,16 @@ test('app opens on the bank; the first Learn tap runs onboarding, skipping the i
   await press('nav-learn');
   expect(await screen.findByTestId('onboarding-welcome')).toBeOnTheScreen();
   expect(screen.getByText('Learn how money works. Challenge your ideas with others.')).toBeOnTheScreen();
-  await press('onboarding-start');
-  await press('onboarding-skip-intro');
-  await passSummary();
-
-  expect(savedOnboarding()).toEqual({ goals: [], skipped: true });
-  // Skipped before the consent screen and its AI notice: rules only.
-  expect(categorized()).toEqual([{ consent: false, useRules: true }]);
-  expect(calls('/api/check-questions')).toHaveLength(0);
-});
-
-test('skip on the first screen lands on Learn; close goes back to the bank and saves nothing', async () => {
-  await openLearn();
-  await fireEvent.press(await screen.findByTestId('onboarding-close'));
+  await press('onboarding-close');
   expect(await screen.findByTestId('screen-overview')).toBeOnTheScreen();
   expect(savedOnboarding()).toBeUndefined();
 
-  // Not saved, so the next Learn tap shows onboarding again.
+  // Not saved, so the next Learn tap shows onboarding again; finishing it is the only way to Learn.
   await press('nav-learn');
-  await fireEvent.press(await screen.findByTestId('onboarding-skip-intro'));
+  await walkSurvey();
+  await press('check-start');
   await passSummary();
-  expect(savedOnboarding()).toEqual({ goals: [], skipped: true });
+  expect(savedOnboarding()).toEqual({ goals: ['start-saving', 'inflation'], skipped: false });
 });
 
 test('a user whose profile says onboarding is completed goes from the bank straight to Learn', async () => {
@@ -141,35 +130,43 @@ test('the consent screen lists what the account shows, what is still asked and t
   await press('onboarding-challenge-next');
 
   expect(get('onboarding-consent')).toBeOnTheScreen();
-  expect(screen.getByText('Make it personal?')).toBeOnTheScreen();
+  expect(screen.getByText('Your path starts from your account')).toBeOnTheScreen();
+  expect(screen.getByText('Atlas reads a few summaries from your account to build your learning path. Learn needs them to work.')).toBeOnTheScreen();
   // The icons are glyphs, not words.
   const lines = (id: string) => within(get(id)).getAllByText(/\w/).map((line) => line.props.children);
   expect(lines('consent-facts')).toEqual(['Your account already shows', ...factLabels(factsFrom(seedAccount())), 'Age 26–40']);
   expect(lines('consent-asks')).toEqual(['We will still ask', 'What your savings are for', 'When you need the money', 'What you already know']);
   expect(screen.getByText('Only these summaries are shared, never your transactions.')).toBeOnTheScreen();
-  expect(get('consent-notice')).toHaveTextContent(/how confident you said you feel/);
+  expect(get('consent-notice')).toHaveTextContent(/the ranges you pick and ranges from your accounts are checked/);
   expect(get('consent-notice')).toHaveTextContent(/Your choices are checked by an AI service\./);
-  expect(get('consent-accept')).toHaveTextContent('Use my account data');
-  expect(get('consent-decline')).toHaveTextContent('Continue without');
-  expect(screen.queryByTestId('onboarding-skip')).toBeNull();
 });
 
-test('with account access three questions follow, then the quick check intro; the purpose is saved as goals', async () => {
+test('the consent screen offers only "Use my account data" and "Not now"; "Not now" leaves and saves nothing', async () => {
+  await openLearn();
+  await fireEvent.press(await screen.findByTestId('onboarding-start'));
+  await press('onboarding-next');
+  await press('onboarding-challenge-next');
+
+  const buttons = within(get('onboarding-consent')).getAllByRole('button').map((b) => b.props.testID);
+  expect(buttons).toEqual(['onboarding-back', 'consent-accept', 'consent-not-now']);
+  expect(get('consent-accept')).toHaveTextContent('Use my account data');
+  expect(get('consent-not-now')).toHaveTextContent('Not now');
+
+  await press('consent-not-now');
+  expect(await screen.findByTestId('screen-overview')).toBeOnTheScreen();
+  expect(savedOnboarding()).toBeUndefined();
+  expect(categorized()).toHaveLength(0);
+});
+
+test('two questions follow the consent, then the quick check intro; the purpose is saved as goals', async () => {
   await openLearn();
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
   await press('onboarding-next');
   await press('onboarding-challenge-next');
   await press('consent-accept');
 
-  await choose('purpose', 'Step 1 of 3', 'option-home');
-  await choose('horizon', 'Step 2 of 3', 'option-1-5y');
-  expect(get('onboarding-confidence')).toBeOnTheScreen();
-  expect(screen.getByText('Step 3 of 3')).toBeOnTheScreen();
-  expect(get('confidence-caption')).toHaveTextContent('Pick a number');
-  expect(get('onboarding-continue')).toBeDisabled();
-  await press('confidence-2');
-  expect(get('confidence-caption')).toHaveTextContent('2 — “I know a bit, but I hesitate to act”');
-  await press('onboarding-continue');
+  await choose('purpose', 'Step 1 of 2', 'option-home');
+  await choose('horizon', 'Step 2 of 2', 'option-1-5y');
 
   expect(get('onboarding-check-intro')).toBeOnTheScreen();
   expect(screen.getByTestId('quick-check-hero', { includeHiddenElements: true })).toBeOnTheScreen();
@@ -183,51 +180,6 @@ test('with account access three questions follow, then the quick check intro; th
   expect(savedOnboarding()).toEqual({ goals: ['start-saving', 'inflation'], skipped: false });
   expect(categorized()).toEqual([{ consent: true, facts: factsFrom(seedAccount()) }]);
   expect(calls('/api/check-questions')).toHaveLength(1);
-});
-
-test('without account access the life stage, the experience and the savings cover are asked first', async () => {
-  await openLearn();
-  await fireEvent.press(await screen.findByTestId('onboarding-start'));
-  await press('onboarding-next');
-  await press('onboarding-challenge-next');
-  await press('consent-decline');
-
-  await choose('life-stage', 'Step 1 of 6', `option-${WITHOUT_ACCOUNT.lifeStage}`);
-  await choose('experience', 'Step 2 of 6', `option-${WITHOUT_ACCOUNT.experience}`);
-  await choose('savings-cover', 'Step 3 of 6', `option-${WITHOUT_ACCOUNT.savingsCover}`);
-  await choose('purpose', 'Step 4 of 6', 'option-safety-net');
-  await choose('horizon', 'Step 5 of 6', 'option-within-1y');
-  await press('confidence-4');
-  await press('onboarding-continue');
-  await press('check-start');
-
-  await passSummary();
-  expect(savedOnboarding()).toEqual({ lifeStage: 'building', experience: 'regular', goals: ['emergency-fund'], skipped: false });
-  expect(categorized()).toEqual([{ consent: false }]);
-});
-
-test.each([
-  { name: '"Skip" in a question', skip: 'onboarding-skip', answered: 1 },
-  { name: '"Skip for now" before the quick check', skip: 'check-skip', answered: 3 },
-])('$name keeps the answers so far and builds the path without the quick check', async ({ skip, answered }) => {
-  await openLearn();
-  if (answered === 3) await walkSurvey({ purpose: 'retirement', horizon: 'not-sure' });
-  else {
-    await fireEvent.press(await screen.findByTestId('onboarding-start'));
-    await press('onboarding-next');
-    await press('onboarding-challenge-next');
-    await press('consent-accept');
-    await press('option-retirement');
-    await press('onboarding-continue');
-  }
-  await press(skip);
-
-  expect(await screen.findByTestId('summary-saving-for', {}, { timeout: 4000 })).toHaveTextContent('Saving for: Retirement');
-  await passSummary();
-  expect(savedOnboarding()).toEqual({ goals: ['retirement'], skipped: false });
-  expect(categorized()).toEqual([{ consent: true, facts: factsFrom(seedAccount()) }]);
-  expect(calls('/api/check-questions')).toHaveLength(0);
-  expect(calls('/quick-check/step')).toHaveLength(0);
 });
 
 test('"Edit answers" keeps its three steps with the goals grid and saves them', async () => {
@@ -256,7 +208,7 @@ test('"Edit answers" keeps its three steps with the goals grid and saves them', 
 });
 
 // Last: it leaves the onboarding open, with Learn still waiting behind it.
-test('the back button goes back one step, and a changed consent changes the questions', async () => {
+test('the back button goes back one step, down to the consent screen', async () => {
   await openLearn();
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
   expect(get('onboarding-intro')).toBeOnTheScreen();
@@ -264,11 +216,8 @@ test('the back button goes back one step, and a changed consent changes the ques
   expect(get('onboarding-welcome')).toBeOnTheScreen();
 
   await walkSurvey();
-  for (const step of ['confidence', 'horizon', 'purpose', 'consent']) {
+  for (const step of ['horizon', 'purpose', 'consent']) {
     await press('onboarding-back');
     expect(get(`onboarding-${step}`)).toBeOnTheScreen();
   }
-  await press('consent-decline');
-  expect(get('onboarding-life-stage')).toBeOnTheScreen();
-  expect(screen.getByText('Step 1 of 6')).toBeOnTheScreen();
 });

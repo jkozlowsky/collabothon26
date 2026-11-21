@@ -36,6 +36,16 @@ public enum FocusArea {
 		return "focus_" + wire();
 	}
 
+	/** The area a story teaches: the one place the {@code area} names of stories.json are read. */
+	public static FocusArea ofStoryArea(String storyArea) {
+		return switch (storyArea) {
+			case "Saving" -> SAVING;
+			case "Credit & loans" -> DEBT;
+			case "Investing" -> INVESTING;
+			default -> throw new IllegalStateException("No focus area for the story area " + storyArea);
+		};
+	}
+
 	/** The areas the goals point to, in the order the user picked them. */
 	public static List<FocusArea> fromGoals(List<String> goals) {
 		return goals.stream()

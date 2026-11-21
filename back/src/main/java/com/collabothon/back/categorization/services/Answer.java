@@ -2,15 +2,12 @@ package com.collabothon.back.categorization.services;
 
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 import com.collabothon.back.categorization.enums.AnswerResult;
-import com.collabothon.back.categorization.enums.Confidence;
 import com.collabothon.back.categorization.enums.FocusArea;
-import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 
-/** One knowledge answer checked against the bank; {@code optionIndex} null = "Not sure". */
+/** One knowledge answer checked against the pool; {@code optionIndex} null = "Not sure". */
 public record Answer(
-		CheckQuestionProjection question,
-		Integer optionIndex,
-		Confidence confidence
+		CheckQuestion question,
+		Integer optionIndex
 ) {
 
 	public FocusArea area() {
@@ -24,16 +21,8 @@ public record Answer(
 		return optionIndex == question.correctIndex() ? AnswerResult.CORRECT : AnswerResult.WRONG;
 	}
 
-	public String misconception() {
-		return result() == AnswerResult.WRONG ? question.misconceptions().get(optionIndex) : null;
-	}
-
 	public double score() {
 		return result() == AnswerResult.CORRECT ? CategorizationConsts.SCORE_CORRECT : CategorizationConsts.SCORE_WRONG;
-	}
-
-	public double chip() {
-		return (confidence == null ? Confidence.GUESSING : confidence).getChip();
 	}
 
 }

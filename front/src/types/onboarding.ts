@@ -1,6 +1,6 @@
-import type { ConfidenceRating, Horizon, ProfileRanges } from '@/types/quickCheck';
+import type { Horizon, ProfileRanges } from '@/types/quickCheck';
 
-/** Answers from the optional personalisation questions. Every field may be missing (user skipped). */
+/** The personalisation answers on the profile. A fresh onboarding saves the goals; the rest comes from "Edit answers". */
 /** Broad stage of life, used to pick examples that feel familiar. */
 export type LifeStage = 'starting-out' | 'building' | 'settled' | 'later-life';
 /** How the user handles their money today, from not saving yet to planning ahead. */
@@ -33,12 +33,11 @@ export type OnboardingAnswers = {
 
 /** What a fresh onboarding hands to /categorizing, in memory only: gone after a reload. */
 export type Intake = {
-  consent: boolean;
   /** The label of the picked purpose; null when none was picked or it was "No plan yet". */
   purpose: string | null;
   horizon: Horizon | null;
-  /** Set by "Start the quick check"; null after a skip, and the categorisation then runs without the test. */
-  check: { profile: ProfileRanges; rating: ConfidenceRating } | null;
+  /** What the quick check sends with its steps. */
+  check: { profile: ProfileRanges };
 };
 
 /** GET /api/users/{userId}/profile. Always answers; missing answers come back as null. */
@@ -47,7 +46,7 @@ export type UserProfile = {
   lifeStage: LifeStage | null;
   goals: Goal[];
   experience: Experience | null;
-  /** Onboarding was finished or skipped; it is not shown again. */
+  /** Onboarding was finished; it is not shown again. */
   onboardingCompleted: boolean;
   onboardingSkipped: boolean;
   onboardingCompletedAt: string | null;

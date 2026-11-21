@@ -12,7 +12,7 @@ public final class CategorizationConsts {
 
 	public static final double FOCUS_THRESHOLD = 0.5;
 
-	/** {@code check_question.id} is VARCHAR(64). */
+	/** Longer than any {@code <lessonId>/<stepId>}. */
 	public static final int MAX_QUESTION_ID_LENGTH = 64;
 
 	public static final String AGE_18_25 = "18-25";
@@ -27,7 +27,6 @@ public final class CategorizationConsts {
 
 	public static final double RULE_START = 0.5;
 
-	/** One self-rating covers every answer, so a right answer scores the same whatever the confidence. */
 	public static final double SCORE_CORRECT = 0.85;
 
 	public static final double SCORE_WRONG = 0.25;
@@ -48,16 +47,7 @@ public final class CategorizationConsts {
 
 	public static final int MAX_GAP_CARDS = 2;
 
-	/** Served for saving with money needed within a year (D8). */
-	public static final String SHORT_HORIZON_QUESTION_ID = "fall-before-you-need-it";
-
-	/** Twenty years of compounding: never served with money needed within a year (D8). */
-	public static final String LONG_HORIZON_QUESTION_ID = "short-term-fall";
-
-	public static final double CHIP_GUESSING = 0.25;
-
-	public static final double CHIP_FAIRLY_SURE = 0.6;
-
-	public static final double CHIP_SURE = 0.9;
+	/** Lessons per area that Jev chooses among, for the next question and for the first lesson. */
+	public static final int LESSON_CHOICES_PER_AREA = 2;
 
 }

@@ -17,24 +17,20 @@ const BULLET = 6;
 const BULLET_TOP = 6;
 
 const ROLE: Record<Role, string> = { novice: 'a beginner', intermediate: 'an intermediate', advanced: 'an advanced' };
-const GAP_TITLE = { under: 'You know more than you think', over: 'There is more to explore here' };
-const ALIGNED = {
-  title: 'Your confidence matches your answers',
-  body: 'On the areas we checked, your confidence and your answers line up.',
+const GAP_TITLE = {
+  'habit-ahead': 'Your habits are ahead of the theory',
+  'knowledge-ahead': 'You know more than your account shows',
 };
 
-export function PathSummary({ categorization: c, chipped, counts = {}, savingFor }: Summary) {
+export function PathSummary({ categorization: c, counts = {}, savingFor }: Summary) {
   const start = c.startLesson;
   const { data: stories } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(USER_ID)}`);
   const lessons = start && stories?.find((s) => s.id === start.storyId)?.lessons;
   const stop = lessons ? lessons.findIndex((l) => l.id === start!.lessonId) + 1 : 0;
   const roleLines = c.explanation.find((e) => e.output === 'role')?.because ?? [];
-  // A reload has no history, so the stored confidence stands in for "an answer carried the user's confidence".
-  const hasChip = chipped ?? Object.values(c.confidence).some((v) => v != null);
-  const showAligned = c.profile !== null && !c.confidenceGaps.length && hasChip;
   const usedModel = c.sharedWithModel !== null;
   // After a reload the per-area answer counts are gone: Solid shows only when the whole path is ready for the next step.
-  const marks = areaMarks(AREAS.filter((a) => a in c.mastery), c.mastery, c.confidence, counts, c.readyForNext ? SOLID_MIN_ANSWERS : 0);
+  const marks = areaMarks(AREAS.filter((a) => a in c.mastery), c.mastery, counts, c.readyForNext ? SOLID_MIN_ANSWERS : 0);
 
   return (
     <>
@@ -44,7 +40,7 @@ export function PathSummary({ categorization: c, chipped, counts = {}, savingFor
           We used a simpler check this time
         </Text>
       )}
-      {c.confidenceGaps.map((gap) => (
+      {c.gaps.map((gap) => (
         <View key={gap.area} style={styles.hero} testID={`summary-gap-${gap.area}`}>
           <Text style={styles.heroOverline}>{AREA_LABEL[gap.area]}</Text>
           <Text style={styles.heroTitle} accessibilityRole="header">
@@ -53,15 +49,6 @@ export function PathSummary({ categorization: c, chipped, counts = {}, savingFor
           <Text style={styles.heroBody}>{gap.because}</Text>
         </View>
       ))}
-      {showAligned && (
-        <View style={styles.hero} testID="summary-aligned">
-          <Text style={styles.heroOverline}>Confidence</Text>
-          <Text style={styles.heroTitle} accessibilityRole="header">
-            {ALIGNED.title}
-          </Text>
-          <Text style={styles.heroBody}>{ALIGNED.body}</Text>
-        </View>
-      )}
       {savingFor && (
         <Text style={text.strong} testID="summary-saving-for">
           {savingFor}
@@ -72,7 +59,7 @@ export function PathSummary({ categorization: c, chipped, counts = {}, savingFor
       </Text>
       {c.answerCount > 0 ? (
         <Text style={text.body} testID="summary-based-on">
-          Based on {c.answerCount} answers and how confident you said you feel.
+          Based on {c.answerCount} answers and what your account shows.
         </Text>
       ) : (
         roleLines.map((line) => (

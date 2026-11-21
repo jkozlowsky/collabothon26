@@ -59,9 +59,7 @@ public class CategorizationService {
 	public CategorizationDto categorize(String userId, CategorizationRequestDto request) {
 		boolean consent = request.consent();
 		FactsDto facts = request.facts();
-		OnboardingAnswersDto answers = profiles.findAnswers(userId)
-			.map(mapper::toAnswers)
-			.orElseThrow(() -> new NotFoundException(NO_PROFILE));
+		OnboardingAnswersDto answers = onboarding(userId);
 		Instant now = Instant.now(clock);
 		Optional<CategorizationDto> recent = find(userId)
 			.filter(c -> isRecentJevResult(c, answers, consent, facts, now));
@@ -100,6 +98,11 @@ public class CategorizationService {
 			throw new NotFoundException(NO_PROFILE);
 		}
 		return c;
+	}
+
+	/** Skipped onboarding counts; no finished onboarding is a 404. */
+	public OnboardingAnswersDto onboarding(String userId) {
+		return profiles.findAnswers(userId).map(mapper::toAnswers).orElseThrow(() -> new NotFoundException(NO_PROFILE));
 	}
 
 	public Optional<CategorizationDto> find(String userId) {

@@ -56,6 +56,13 @@ final class QuickCheckRules {
 		return areas;
 	}
 
+	/** Keeps the nulls: every bank area is a key, null until it has an answer. */
+	static Map<String, Double> byWire(Map<FocusArea, Double> values) {
+		Map<String, Double> wire = new LinkedHashMap<>();
+		values.forEach((area, value) -> wire.put(area.wire(), value));
+		return wire;
+	}
+
 	static Map<FocusArea, Double> mastery(List<FocusArea> areas, List<Answer> answers) {
 		return meanPerArea(areas, answers, Answer::score);
 	}

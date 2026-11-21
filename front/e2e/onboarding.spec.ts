@@ -91,6 +91,19 @@ test('answers to all three questions are saved on the profile', async ({ page, r
 
   await page.reload();
   await expectOnLearn(page);
+
+  // The answers show on the Finance Quest profile.
+  await tap(page, 'nav-profile');
+  await expect(page.getByTestId('profile-life-stage')).toContainText('Building my life');
+  await expect(page.getByTestId('profile-experience')).toContainText("I don't save yet");
+  await expect(page.getByText('Credit cards', { exact: true })).toBeVisible();
+});
+
+test('a reload on a Learn tab before onboarding sends the user through onboarding first', async ({ page }) => {
+  await page.goto('/map');
+  await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
+  await tap(page, 'onboarding-skip-intro');
+  await expectOnLearn(page);
 });
 
 test('skipping in the middle of the questions keeps the answers given so far', async ({ page, request }) => {

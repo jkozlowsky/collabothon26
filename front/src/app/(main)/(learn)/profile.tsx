@@ -12,7 +12,7 @@ import { Section } from '@/components/bank/Section';
 import { BigButton, motion, Tappable } from '@/components/onboarding/ui';
 import { Avatar } from '@/components/profile/Avatar';
 import { AvatarPickerSheet } from '@/components/profile/AvatarPickerSheet';
-import { GOAL_GROUPS } from '@/constants/onboarding';
+import { EXPERIENCE, GOAL_GROUPS, LIFE_STAGES } from '@/constants/onboarding';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import { useAccount } from '@/hooks/useAccount';
 import { useBank } from '@/hooks/useBank';
@@ -20,6 +20,7 @@ import { useOnboarding } from '@/hooks/useOnboarding';
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const GOAL_LABEL = Object.fromEntries(GOAL_GROUPS.flatMap((g) => g.goals.map((goal) => [goal.value, goal.label])));
+const NOT_ANSWERED = 'Not answered yet';
 /** Pause before the streak number flips, so the user sees the old value first. */
 const BUMP_DELAY_MS = 450;
 
@@ -121,6 +122,23 @@ export default function ProfileScreen() {
           <BigButton label="Start a lesson" onPress={() => router.navigate('/map')} testID="streak-start-lesson" />
         </View>
       )}
+
+      <Section title="About you">
+        <ListCard>
+          <ListRow
+            icon="user"
+            title="Stage of life"
+            meta={LIFE_STAGES.find((o) => o.value === answers.lifeStage)?.title ?? NOT_ANSWERED}
+            testID="profile-life-stage"
+          />
+          <ListRow
+            icon="card"
+            title="How you manage money"
+            meta={EXPERIENCE.find((o) => o.value === answers.experience)?.title ?? NOT_ANSWERED}
+            testID="profile-experience"
+          />
+        </ListCard>
+      </Section>
 
       <Section title="Your goals">
         {answers.goals.length > 0 ? (

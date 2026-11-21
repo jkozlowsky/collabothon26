@@ -416,8 +416,9 @@ test('the match screen sends a user who has not finished onboarding to onboardin
       : fetchMock(url, init),
   ) as jest.Mock;
 
-  await renderRouter(appRoutes, { initialUrl: '/duel' });
-  await screen.findByTestId('screen-duel');
+  // Learn tabs (the duel lobby too) are off-limits before onboarding, so a deep link straight into a match.
+  await renderRouter(appRoutes, { initialUrl: '/' });
+  await screen.findByTestId('screen-overview');
   await act(async () => {});
   await act(async () => router.push('/duel/match?category=instruments&mode=SOLO'));
 

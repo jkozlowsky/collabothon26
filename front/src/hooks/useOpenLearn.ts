@@ -1,10 +1,13 @@
 import { router, usePathname, type Href } from 'expo-router';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { useOnboarding } from '@/hooks/useOnboarding';
 
 /** Where to go once onboarding finishes. Module state is fine: one app, one onboarding at a time. */
 let pendingTarget: Href | null = null;
+
+/** Finance Quest tabs; none of them opens before onboarding was finished or skipped. */
+const LEARN_PATHS = ['/map', '/glossary', '/duel', '/profile'];
 
 /**
  * Opens the Finance Quest module from the bank. The first time (onboarding not done yet) the
@@ -36,8 +39,23 @@ export function useOpenLearnFocus() {
  * so when it completes this closes it and moves on to Learn.
  */
 export function useResumeLearnAfterOnboarding() {
-  const { done } = useOnboarding();
+  const { loaded, done } = useOnboarding();
   const pathname = usePathname();
+
+  // Learn entered without onboarding (a web reload or deep link on /map, or a tap before the profile
+  // loaded): back to the bank and run onboarding first, then come back here. Reacts to entering a tab,
+  // not to `done` flipping, so Profile → "Restart onboarding" can leave for the bank on its own.
+  const doneRef = useRef(done);
+  useEffect(() => {
+    doneRef.current = done;
+  }, [done]);
+  useEffect(() => {
+    if (!loaded || doneRef.current || !LEARN_PATHS.includes(pathname)) return;
+    pendingTarget = pathname as Href;
+    router.navigate('/');
+    router.push('/onboarding');
+  }, [loaded, pathname]);
+
   useEffect(() => {
     // No pending target = onboarding was opened from Profile to edit answers; it closes itself.
     if (!done || pathname !== '/onboarding' || !pendingTarget) return;

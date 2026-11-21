@@ -124,3 +124,20 @@ test('the back arrow returns from the intro slide to the welcome screen', async 
   await fireEvent.press(screen.getByTestId('onboarding-back'));
   expect(screen.getByTestId('onboarding-welcome')).toBeOnTheScreen();
 });
+
+test('opening a Learn tab directly (web reload, deep link) runs onboarding first, then lands there', async () => {
+  await renderRouter(routes, { initialUrl: '/map' });
+  expect(await screen.findByTestId('onboarding-welcome')).toBeOnTheScreen();
+
+  await fireEvent.press(screen.getByTestId('onboarding-skip-intro'));
+  expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
+  expect(savedOnboarding()).toEqual({ goals: [], skipped: true });
+});
+
+test('a user who already finished onboarding opens a Learn tab directly', async () => {
+  stubBackend({ onboardingCompleted: true });
+  await renderRouter(routes, { initialUrl: '/map' });
+  expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
+  await act(async () => {});
+  expect(screen.queryByTestId('onboarding-welcome')).toBeNull();
+});

@@ -67,9 +67,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const complete = useCallback((answers: OnboardingAnswers, skipped: boolean) => {
     // Move on right away; the save runs in the background so a slow network never blocks the user.
     setState({ loaded: true, done: true, answers });
-    api(onboardingPath, { method: 'PUT', body: JSON.stringify({ ...answers, skipped }) }).catch((e: unknown) =>
-      console.warn('Could not save onboarding answers', e),
-    );
+    api<UserProfile>(onboardingPath, { method: 'PUT', body: JSON.stringify({ ...answers, skipped }) })
+      // The saved profile is the source of truth (e.g. duplicate goals are dropped there).
+      .then((p) => p?.onboardingCompleted && setState({ loaded: true, done: true, answers: toAnswers(p) }))
+      .catch((e: unknown) => console.warn('Could not save onboarding answers', e));
   }, []);
 
   const reset = useCallback(() => {

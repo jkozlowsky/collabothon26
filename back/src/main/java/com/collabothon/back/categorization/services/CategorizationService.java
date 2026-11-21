@@ -2,6 +2,7 @@ package com.collabothon.back.categorization.services;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,10 +38,9 @@ import com.collabothon.back.categorization.mappers.StartLessonMapper;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
 import com.collabothon.back.categorization.repositories.ProfileAnswersRepository;
 import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
-import com.collabothon.back.common.exceptions.BadRequestException;
-import com.collabothon.back.common.exceptions.NotFoundException;
-import com.collabothon.back.lesson.LessonContent;
-import com.collabothon.back.lesson.LessonProgress;
+import com.collabothon.back.exceptions.BusinessException;
+import com.collabothon.back.lesson.repositories.LessonCompletionRepository;
+import com.collabothon.back.lesson.repositories.LessonContentRepository;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -54,8 +54,6 @@ import tools.jackson.databind.node.ObjectNode;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 @Slf4j
 public class CategorizationService {
-
-	private static final String NO_PROFILE = "Finish onboarding first";
 
 	private final ProfileAnswersRepository profiles;
 
@@ -73,9 +71,9 @@ public class CategorizationService {
 
 	private final JevAnswerMapper jevAnswerMapper;
 
-	private final LessonContent content;
+	private final LessonContentRepository content;
 
-	private final LessonProgress progress;
+	private final LessonCompletionRepository completions;
 
 	private final JsonMapper json;
 
@@ -90,7 +88,7 @@ public class CategorizationService {
 		List<Answer> history = request.profile() == null ? List.of() : checkQuestions.resolve(request.history(), bank);
 		Set<String> bankAreas = bank.stream().map(q -> q.area().wire()).collect(Collectors.toSet());
 		if (request.profile() != null && !bankAreas.containsAll(request.mastery().keySet())) {
-			throw new BadRequestException("Mastery is only kept for areas with questions");
+			throw new BusinessException(CategorizationErrorCode.MASTERY_ONLY_FOR_QUESTION_AREAS);
 		}
 		Instant now = Instant.now(clock);
 		if (request.profile() == null && !request.useRules()) {
@@ -111,7 +109,7 @@ public class CategorizationService {
 				mastery.put(area, sent != null ? sent : ruleMastery.get(area));
 			});
 		}
-		Set<String> completed = progress.completed(userId);
+		Set<String> completed = new HashSet<>(completions.findLessonIdsByUserId(userId));
 		List<Story> stories = stories();
 		List<BankLesson> lessons = QuickCheckRules.lessons(bank, bankLessonMapper::toLesson);
 		List<Story> pool = QuickCheckRules.stories(QuickCheckRules.pool(
@@ -166,7 +164,7 @@ public class CategorizationService {
 		row.remove("startHere");
 		// Saved only while onboarding is completed, so a reset during the Jev call is a 404.
 		if (categorizations.saveIfOnboarded(userId, json.writeValueAsString(row)) == 0) {
-			throw new NotFoundException(NO_PROFILE);
+			throw new BusinessException(CategorizationErrorCode.FINISH_ONBOARDING_FIRST);
 		}
 		return c.withStartHere(startHere(c, stories, lessons, completed));
 	}
@@ -215,7 +213,8 @@ public class CategorizationService {
 
 	/** Skipped onboarding counts; no finished onboarding is a 404. */
 	public OnboardingAnswersDto onboarding(String userId) {
-		return profiles.findAnswers(userId).map(mapper::toAnswers).orElseThrow(() -> new NotFoundException(NO_PROFILE));
+		return profiles.findAnswers(userId).map(mapper::toAnswers)
+			.orElseThrow(() -> new BusinessException(CategorizationErrorCode.FINISH_ONBOARDING_FIRST));
 	}
 
 	public Optional<CategorizationDto> find(String userId) {
@@ -223,7 +222,7 @@ public class CategorizationService {
 			.flatMap(this::read)
 			.map(c -> c.withStartHere(startHere(c, stories(),
 					QuickCheckRules.lessons(checkQuestions.bank(), bankLessonMapper::toLesson),
-					progress.completed(userId))));
+					new HashSet<>(completions.findLessonIdsByUserId(userId)))));
 	}
 
 	private Optional<CategorizationDto> read(String data) {

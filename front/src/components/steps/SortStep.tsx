@@ -10,7 +10,11 @@ import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import { shuffle } from '@/lib/lessonPlayer';
 import type { SortStep as SortStepData, StepOutcome } from '@/types/lessons';
 
-type Props = { step: SortStepData; retry: boolean; onDone: (outcome: StepOutcome) => void };
+type Props = {
+  step: SortStepData;
+  retry?: boolean;
+  onDone?: (outcome: StepOutcome) => void;
+};
 
 /** Drag past this (px) and let go to sort the card; less springs back. */
 const SWIPE_DISTANCE = 90;
@@ -20,7 +24,7 @@ const NATIVE = Platform.OS !== 'web';
  * Cards one at a time: swipe left/right or use the two buttons (web, screen readers). Feedback for each card
  * shows while the next one is up; cards are shuffled on a repeat.
  */
-export function SortStep({ step, retry, onDone }: Props) {
+export function SortStep({ step, retry = false, onDone }: Props) {
   const reduceMotion = useReducedMotion();
   const [order] = useState(() => (retry ? shuffle([...step.items.keys()]) : [...step.items.keys()]));
   const [pos, setPos] = useState(0);
@@ -34,9 +38,10 @@ export function SortStep({ step, retry, onDone }: Props) {
   const [flying, setFlying] = useState(false);
 
   function decide(bucket: 0 | 1) {
-    if (!item) return;
-    const correct = item.bucket === bucket;
-    setLast({ text: item.text, correct, bucket: item.bucket });
+    const currentItem = step.items[order[pos]];
+    if (!currentItem) return;
+    const correct = currentItem.bucket === bucket;
+    setLast({ text: currentItem.text, correct, bucket: currentItem.bucket });
     if (!correct) setMistakes((m) => m + 1);
     haptic(correct ? 'success' : 'light');
     x.setValue(0);
@@ -78,7 +83,7 @@ export function SortStep({ step, retry, onDone }: Props) {
           <Feedback
             correct={mistakes === 0}
             explanation={step.explanation}
-            onContinue={() => onDone({ correct: mistakes === 0 })}
+            onContinue={() => onDone?.({ correct: mistakes === 0 })}
           />
         ) : (
           <View style={styles.buttons}>

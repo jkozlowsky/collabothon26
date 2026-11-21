@@ -15,8 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.collabothon.back.categorization.dto.CategorizationDto;
 import com.collabothon.back.categorization.dto.CategorizationRequestDto;
+import com.collabothon.back.categorization.services.CategorizationErrorCode;
 import com.collabothon.back.categorization.services.CategorizationService;
-import com.collabothon.back.common.exceptions.NotFoundException;
+import com.collabothon.back.exceptions.BusinessException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -36,7 +37,7 @@ class CategorizationController {
 
 	@GetMapping
 	CategorizationDto get(@PathVariable @NotBlank @Size(max = MAX_USER_ID_LENGTH) String userId) {
-		return service.find(userId).orElseThrow(() -> new NotFoundException("Not categorised yet"));
+		return service.find(userId).orElseThrow(() -> new BusinessException(CategorizationErrorCode.NOT_CATEGORISED_YET));
 	}
 
 }

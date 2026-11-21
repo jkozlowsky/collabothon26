@@ -61,3 +61,19 @@ test('a coming-soon story has a callout without a button', async () => {
   expect(within(callout).getByText('Coming soon')).toBeOnTheScreen();
   expect(within(callout).queryByTestId('pin-callout-open')).toBeNull();
 });
+
+test('the Rome Arena pin opens the Arena callout and navigates to duel tab', async () => {
+  await renderRouter(appRoutes, { initialUrl: '/map' });
+
+  const arenaPin = await screen.findByTestId('globe-pin-arena');
+  expect(arenaPin).toBeOnTheScreen();
+
+  await fireEvent.press(arenaPin);
+
+  const callout = await screen.findByTestId('pin-callout-arena');
+  expect(callout).toBeOnTheScreen();
+  expect(within(callout).getByText('Challenge others')).toBeOnTheScreen();
+
+  await fireEvent.press(screen.getByTestId('pin-callout-arena-open'));
+  expect(await screen.findByTestId('screen-duel')).toBeOnTheScreen();
+});

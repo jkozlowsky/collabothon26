@@ -8,7 +8,10 @@ import { colors, radii, spacing, type } from '@/constants/theme';
 import { shuffle } from '@/lib/lessonPlayer';
 import type { MatchStep as MatchStepData, StepOutcome } from '@/types/lessons';
 
-type Props = { step: MatchStepData; onDone: (outcome: StepOutcome) => void };
+type Props = {
+  step: MatchStepData;
+  onDone?: (outcome: StepOutcome) => void;
+};
 
 type Side = 'left' | 'right';
 type TileState = 'idle' | 'selected' | 'matched' | 'wrong';
@@ -45,7 +48,8 @@ export function MatchStep({ step, onDone }: Props) {
     const right = side === 'right' ? index : selected.index;
     setSelected(null);
     if (left === right) {
-      setMatched((m) => [...m, left]);
+      const nextMatched = [...matched, left];
+      setMatched(nextMatched);
       haptic('success');
     } else {
       setWrong({ left, right });
@@ -93,7 +97,7 @@ export function MatchStep({ step, onDone }: Props) {
           <Feedback
             correct={mistakes === 0}
             explanation={mistakes === 0 ? 'All pairs right on the first try.' : `All matched, with ${mistakes} wrong ${mistakes === 1 ? 'pair' : 'pairs'} on the way.`}
-            onContinue={() => onDone({ correct: mistakes === 0 })}
+            onContinue={() => onDone?.({ correct: mistakes === 0 })}
           />
         ) : undefined
       }

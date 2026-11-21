@@ -43,8 +43,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
 import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
-import com.collabothon.back.lesson.LessonCompletionRepository;
-import com.collabothon.back.lesson.LessonContent;
+import com.collabothon.back.lesson.repositories.LessonCompletionRepository;
+import com.collabothon.back.lesson.repositories.LessonContentRepository;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -112,7 +112,7 @@ class QuickCheckCategorizationTests {
 	Clock clock;
 
 	@Autowired
-	LessonContent lessonContent;
+	LessonContentRepository lessonContent;
 
 	private String userId;
 

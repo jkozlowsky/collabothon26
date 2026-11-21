@@ -1,136 +1,124 @@
-import { StatusBar } from 'expo-status-bar';
+import Feather from '@expo/vector-icons/Feather';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Icon } from '@/components/bank/Icon';
-import { IconButton } from '@/components/bank/IconButton';
-import { MatchmakingGlow } from '@/components/duel/MatchmakingGlow';
-import { MysteryAvatar } from '@/components/duel/MysteryAvatar';
+import { Button } from '@/components/Button';
+import { DuelPage } from '@/components/duel/DuelPage';
 import { PlayerAvatar } from '@/components/duel/PlayerAvatar';
-import { BigButton } from '@/components/onboarding/ui';
-import { colors, radii, spacing, tints, type } from '@/constants/theme';
-import { formatNumber, getCategoryMeta } from '@/lib/duel/meta';
-import type { DuelMatchState } from '@/lib/duel/reducer';
+import { colors, radii, spacing, type } from '@/constants/theme';
+import { getStoryCategoryMeta } from '@/lib/duel/meta';
 import type { AvatarId } from '@/types/account';
+import type { DuelMatchState } from '@/lib/duel/reducer';
 
 type Props = {
   state: DuelMatchState;
   youAvatar: AvatarId;
-  initialElo?: number;
-  initialCalibrated?: boolean;
   onCancel: () => void;
 };
 
-const MODE_LABEL = { HUMAN: 'VS HUMAN', BOT: 'VS BOT', SOLO: 'SOLO' } as const;
-const TITLE = { HUMAN: 'Finding a rival…', BOT: 'Setting up your bot match…', SOLO: 'Starting your solo round…' } as const;
-
-/** Petrol "finding a rival" screen (Figma "Duel — Matchmaking"); bot and solo get a short loading state. */
-export function MatchmakingView({ state, youAvatar, initialElo, initialCalibrated = true, onCancel }: Props) {
-  const cat = getCategoryMeta(state.category);
-  const isHuman = state.mode === 'HUMAN';
-  const eloLabel = initialElo === undefined ? 'Ranked' : initialCalibrated ? formatNumber(initialElo) : 'Calibrating';
+/** Matchmaking view while searching for a rival (Figma 157:3800). */
+export function MatchmakingView({ state, youAvatar, onCancel }: Props) {
+  const categoriesText = state.categories
+    .map((c) => getStoryCategoryMeta(c).name)
+    .join(', ');
 
   return (
-    <SafeAreaView style={styles.screen} testID="duel-matchmaking">
-      <StatusBar style="light" />
-      <MatchmakingGlow />
-      <View style={styles.top}>
-        <IconButton icon="close" tone="onBrand" onPress={onCancel} label="Cancel matchmaking" testID="matchmaking-close" />
-      </View>
-
-      <View style={styles.body}>
-        {isHuman ? (
-          <View style={styles.stage}>
-            <View style={styles.orbit} />
-            <View style={styles.players}>
-              <View style={styles.side}>
-                <PlayerAvatar avatar={youAvatar} size={92} ring="accent" />
-                <View style={[styles.pill, styles.pillLight]}>
-                  <Icon name="trophy" size={14} color={colors.brandPrimary} />
-                  <Text style={[styles.pillText, styles.pillTextDark]}>{eloLabel}</Text>
-                </View>
-              </View>
-              <Text style={styles.vs}>VS</Text>
-              <View style={styles.side}>
-                <MysteryAvatar size={92} />
-                <View style={[styles.pill, styles.pillDark]}>
-                  <ActivityIndicator size="small" color={colors.textOnBrand} />
-                  <Text style={styles.pillText}>Searching</Text>
-                </View>
-              </View>
-            </View>
+    <DuelPage
+      testID="duel-matchmaking"
+      centered
+      footer={
+        <Button
+          label="Cancel"
+          variant="secondary"
+          onPress={onCancel}
+          testID="matchmaking-cancel"
+        />
+      }
+    >
+      <View style={styles.card} testID="matchmaking-card">
+        <View style={styles.avatarRow}>
+          <PlayerAvatar avatar={youAvatar} size={64} ring="accent" />
+          <View style={styles.vsBadge}>
+            <Text style={styles.vsText}>VS</Text>
           </View>
-        ) : (
-          <View style={styles.simpleStage}>
-            {state.mode === 'BOT' ? (
-              <PlayerAvatar avatar={null} isBot size={92} />
-            ) : (
-              <View style={styles.soloBadge}>
-                <Icon name="target" size={40} color={colors.brandAccent} />
-              </View>
-            )}
-            <ActivityIndicator color={colors.brandAccent} />
+          <View style={styles.rivalSearchCircle}>
+            <ActivityIndicator size="small" color={colors.brandAccent} />
           </View>
-        )}
+        </View>
 
-        <View style={styles.copy}>
-          <Text style={styles.overline}>
-            {MODE_LABEL[state.mode]} · {cat.name.toUpperCase()}
+        <Text style={styles.title} testID="matchmaking-title">
+          Searching for rival…
+        </Text>
+
+        <Text style={styles.categories} numberOfLines={2}>
+          Categories: {categoriesText}
+        </Text>
+
+        <View style={styles.tipRow}>
+          <Feather name="info" size={14} color={colors.onBrandMuted} />
+          <Text style={styles.tipText}>
+            6 questions · no time pressure, accuracy counts
           </Text>
-          <Text style={styles.title} accessibilityRole="header">
-            {TITLE[state.mode]}
-          </Text>
-          {isHuman && (
-            <Text style={styles.subtitle}>We look for a rival close to your Elo.</Text>
-          )}
         </View>
       </View>
-
-      <View style={styles.footer}>
-        <BigButton label="Cancel" variant="ghost" onDark onPress={onCancel} testID="matchmaking-cancel" />
-      </View>
-    </SafeAreaView>
+    </DuelPage>
   );
 }
 
-const ORBIT = 248;
-
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.brandPrimary },
-  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xl, paddingTop: spacing.sm },
-  body: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl, gap: spacing.xl },
-  stage: { alignItems: 'center', justifyContent: 'center', minHeight: ORBIT + spacing.lg },
-  orbit: {
-    position: 'absolute',
-    width: ORBIT,
-    height: ORBIT,
-    borderRadius: ORBIT / 2,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: colors.onBrandHairline,
+  card: {
+    backgroundColor: colors.brandPrimary,
+    borderRadius: radii.card,
+    padding: spacing.xxl,
+    alignItems: 'center',
+    gap: spacing.lg,
+    width: '100%',
+    maxWidth: 360,
   },
-  players: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  side: { alignItems: 'center', gap: spacing.sm },
-  vs: { ...type.displayLarge, color: colors.brandAccent, marginBottom: spacing.xxl },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radii.pill },
-  pillLight: { backgroundColor: colors.bgSurface },
-  pillDark: { backgroundColor: colors.onBrandChip },
-  pillText: { ...type.labelStrong, color: colors.textOnBrand },
-  pillTextDark: { color: colors.textOnAccent },
-  simpleStage: { alignItems: 'center', gap: spacing.xl, paddingVertical: spacing.xxl },
-  soloBadge: {
-    width: 92,
-    height: 92,
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  vsBadge: {
+    backgroundColor: colors.brandAccent,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: radii.pill,
-    backgroundColor: tints.accent,
+  },
+  vsText: {
+    ...type.labelStrong,
+    color: colors.textOnAccent,
+  },
+  rivalSearchCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     borderWidth: 2,
     borderColor: colors.brandAccent,
+    borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  copy: { gap: spacing.sm },
-  overline: { ...type.overline, color: colors.brandAccent },
-  title: { ...type.displayLarge, color: colors.textOnBrand },
-  subtitle: { ...type.bodyDefault, color: colors.onBrandMuted },
-  footer: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: spacing.xs },
+  title: {
+    ...type.titleSection,
+    color: colors.textOnBrand,
+  },
+  categories: {
+    ...type.bodyDefault,
+    color: colors.onBrandMuted,
+    textAlign: 'center',
+  },
+  tipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.brandPrimarySoft,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+  },
+  tipText: {
+    ...type.labelTab,
+    color: colors.onBrandMuted,
+  },
 });

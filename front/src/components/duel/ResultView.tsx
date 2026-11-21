@@ -1,15 +1,11 @@
+import Feather from '@expo/vector-icons/Feather';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
-import { Icon } from '@/components/bank/Icon';
-import { DeltaStatCard } from '@/components/duel/DeltaStatCard';
-import { DuelHeading } from '@/components/duel/DuelHeading';
 import { DuelPage } from '@/components/duel/DuelPage';
+import { PlayerAvatar } from '@/components/duel/PlayerAvatar';
 import { ReviewCard } from '@/components/duel/ReviewCard';
-import { StatusChip } from '@/components/duel/StatusChip';
-import { VersusHero } from '@/components/duel/VersusHero';
-import { colors, elevation, radii, spacing, type } from '@/constants/theme';
-import { formatNumber, formatSigned, getCategoryMeta } from '@/lib/duel/meta';
+import { colors, radii, spacing, type } from '@/constants/theme';
 import type { AvatarId } from '@/types/account';
 import type { MatchEnd } from '@/types/duel';
 
@@ -22,135 +18,165 @@ type Props = {
   onBackToLobby: () => void;
 };
 
-const OVERLINE = { WIN: 'DUEL WON', DRAW: 'DUEL DRAW', LOSS: 'DUEL FINISHED', SOLO: 'SOLO FINISHED' } as const;
-
-function heading(outcome: MatchEnd['outcome'], name?: string) {
-  if (outcome === 'WIN') return name ? `You won, ${name}` : 'You won!';
-  if (outcome === 'DRAW') return "It's a draw";
-  if (outcome === 'SOLO') return 'Nice practice';
-  return name ? `Good match, ${name}` : 'Good match';
+function getOutcomeTitle(outcome: MatchEnd['outcome'], isSolo: boolean): string {
+  if (isSolo) return 'Practice complete';
+  if (outcome === 'WIN') return 'You won!';
+  if (outcome === 'DRAW') return 'Draw';
+  return 'You lost';
 }
 
-/** End of a match: score, XP, Elo, level, and the review that teaches (Figma "Duel — Result"). */
-export function ResultView({ result, youName, youAvatar, onPlayAgain, onSeeRankings, onBackToLobby }: Props) {
-  const cat = getCategoryMeta(result.category);
-  const total = result.review.length || 6;
+function getOverline(outcome: MatchEnd['outcome'], isSolo: boolean): string {
+  if (isSolo) return 'SOLO · NO XP';
+  if (outcome === 'WIN') return 'DUEL WON';
+  if (outcome === 'DRAW') return 'DUEL DRAW';
+  return 'DUEL COMPLETE';
+}
+
+/** Result and review screen (Figma 157:4454). */
+export function ResultView({ result, youName, youAvatar, onBackToLobby }: Props) {
   const isSolo = result.mode === 'SOLO' || result.outcome === 'SOLO';
-  const elo = result.eloBefore !== null && result.eloAfter !== null ? { before: result.eloBefore, after: result.eloAfter } : null;
-  const rival = result.rival;
-  const rivalName = rival?.name ?? 'your rival';
-  const rivalElo = rival?.elo != null ? ` (Elo ${formatNumber(rival.elo)})` : '';
-  const verb = result.outcome === 'WIN' ? 'Beat' : result.outcome === 'DRAW' ? 'Drew with' : 'Played';
-  const levelUp = result.levelAfter > result.levelBefore;
+  const total = result.review.length || 6;
+  const outcomeTitle = getOutcomeTitle(result.outcome, isSolo);
+  const overline = getOverline(result.outcome, isSolo);
+
+  const scoreText = isSolo
+    ? `${result.score} / ${total}`
+    : `${result.score} : ${result.rivalScore ?? 0}`;
+
+  const displayName = youName ?? result.you.name ?? 'You';
 
   return (
     <DuelPage
       testID="duel-result"
-    >
-      <View style={styles.top}>
-        <DuelHeading overline={`${OVERLINE[result.outcome]} · ${cat.name.toUpperCase()}`} title={heading(result.outcome, youName)} titleTestID="result-heading">
-          <StatusChip label={`+${result.xpGained} XP`} tone="xp" icon="zap" testID="result-xp" />
-          <StatusChip label={`${result.score} / ${total} correct`} tone="success" icon="check" testID="result-score-chip" />
-          {elo && <StatusChip label={`${formatSigned(elo.after - elo.before)} Elo`} tone="elo" icon="trophy" testID="result-elo-chip" />}
-        </DuelHeading>
-      </View>
-
-      {isSolo ? (
-        <View style={styles.soloCard} testID="result-solo-card">
-          <View style={styles.soloTile}>
-            <Icon name="target" size={22} color={colors.brandPrimary} />
-          </View>
-          <View style={styles.soloText}>
-            <Text style={type.titleCard}>
-              Solo · {result.score} / {total} correct
-            </Text>
-            <Text style={styles.muted}>XP for every right answer · no Elo</Text>
-          </View>
-        </View>
-      ) : (
-        <VersusHero
-          testID="result-hero-card"
-          you={{ avatar: youAvatar, label: 'You' }}
-          rival={{ avatar: rival?.avatar, isBot: rival?.isBot, label: rival?.name ?? 'Rival' }}
-        >
-          <Text style={styles.outcome}>{result.outcome}</Text>
-          <Text style={styles.score} testID="result-score">
-            {result.score} : {result.rivalScore ?? 0}
-          </Text>
-          {result.outcome === 'DRAW' && (
-            <Text style={styles.caption}>
-              +{result.xpGained} XP · {elo ? 'Elo by expected score' : 'practice'}
-            </Text>
-          )}
-          {rival?.isBot && result.outcome !== 'DRAW' && <Text style={styles.caption}>Practice · no Elo</Text>}
-        </VersusHero>
-      )}
-
-      <View style={styles.stats}>
-        {elo && (
-          <DeltaStatCard
-            testID="result-elo-card"
-            overline="ELO · RANKED"
-            before={formatNumber(elo.before)}
-            after={formatNumber(elo.after)}
-            caption={`${verb} ${rivalName}${rivalElo} in a ranked match.`}
-          />
-        )}
-        <DeltaStatCard
-          testID="result-level-card"
-          overline={`LEVEL · ${cat.shortName.toUpperCase()}`}
-          before={levelUp ? String(result.levelBefore) : undefined}
-          after={levelUp ? String(result.levelAfter) : `Lv ${result.levelAfter}`}
-          progress={result.xpForLevel > 0 ? result.xpIntoLevel / result.xpForLevel : 0}
-          caption={`${result.xpIntoLevel} / ${result.xpForLevel} XP to level ${result.levelAfter + 1}`}
+      footer={
+        <Button
+          label="Back to arena"
+          onPress={onBackToLobby}
+          testID="result-back-lobby"
         />
-      </View>
+      }
+    >
+      {/* Navy Header Block */}
+      <View style={styles.navyHeader} testID="result-navy-header">
+        <Text style={styles.overline}>{overline}</Text>
+        <Text style={styles.title} testID="result-heading">
+          {outcomeTitle}
+        </Text>
 
-      <ReviewCard review={result.review} />
+        {/* Players with avatar + name next to the score */}
+        <View style={styles.playersScoreRow} testID="result-players-row">
+          {/* You */}
+          <View style={styles.playerSide}>
+            <PlayerAvatar avatar={youAvatar} size={50} ring="accent" />
+            <Text style={styles.playerName} numberOfLines={1} testID="result-you-name">
+              {displayName}
+            </Text>
+          </View>
 
-      <View style={styles.actions}>
-        <Button label="Play again" onPress={onPlayAgain} testID="result-play-again" />
-        <View style={styles.secondary}>
-          <View style={styles.half}>
-            <Button label="Rankings" variant="secondary" onPress={onSeeRankings} testID="result-see-rankings" />
+          {/* Middle: score + XP */}
+          <View style={styles.scoreWrap}>
+            <Text style={styles.score} testID="result-score">
+              {scoreText}
+            </Text>
+            {result.xpGained > 0 && (
+              <View style={styles.xpPill} testID="result-xp">
+                <Feather name="zap" size={14} color={colors.textOnAccent} />
+                <Text style={styles.xpPillText}>+{result.xpGained} XP</Text>
+              </View>
+            )}
           </View>
-          <View style={styles.half}>
-            <Button label="Lobby" variant="secondary" onPress={onBackToLobby} testID="result-back-lobby" />
-          </View>
+
+          {/* Rival / Solo */}
+          {!isSolo && result.rival ? (
+            <View style={styles.playerSide}>
+              <PlayerAvatar avatar={result.rival.avatar} size={50} ring="xp" />
+              <Text style={styles.playerName} numberOfLines={1} testID="result-rival-name">
+                {result.rival.name}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.playerSide}>
+              <View style={styles.soloPlaceholder}>
+                <Feather name="target" size={24} color={colors.textOnBrand} />
+              </View>
+              <Text style={styles.playerName}>Solo</Text>
+            </View>
+          )}
         </View>
       </View>
+
+      {/* Review Section */}
+      <ReviewCard review={result.review} />
     </DuelPage>
   );
 }
 
 const styles = StyleSheet.create({
-  top: { paddingTop: spacing.md },
-  actions: { gap: spacing.sm, marginTop: spacing.xs },
-  secondary: { flexDirection: 'row', gap: spacing.sm },
-  half: { flex: 1 },
-  soloCard: {
+  navyHeader: {
+    backgroundColor: colors.brandPrimary,
+    borderRadius: radii.card,
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  overline: {
+    ...type.overline,
+    color: colors.brandAccent,
+  },
+  title: {
+    ...type.displayLarge,
+    color: colors.textOnBrand,
+    textAlign: 'center',
+  },
+  playersScoreRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.bgSurface,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    padding: spacing.lg,
-    ...elevation.low,
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingTop: spacing.sm,
   },
-  soloTile: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.tile,
+  playerSide: {
+    alignItems: 'center',
+    width: 80,
+    gap: spacing.xs,
+  },
+  playerName: {
+    ...type.labelStrong,
+    color: colors.textOnBrand,
+    textAlign: 'center',
+    fontSize: 12,
+  },
+  scoreWrap: {
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.xs,
+  },
+  score: {
+    ...type.displayAmount,
+    color: colors.brandAccent,
+    textAlign: 'center',
+  },
+  soloPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: radii.pill,
     backgroundColor: colors.brandPrimarySoft,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.borderDefault,
   },
-  soloText: { flex: 1, gap: spacing.xxs },
-  muted: { ...type.bodyDefault, color: colors.textMuted },
-  outcome: { ...type.overline, color: colors.brandAccent },
-  score: { ...type.displayAmount, color: colors.textOnBrand },
-  caption: { ...type.labelDefault, color: colors.onBrandMuted, textAlign: 'center' },
-  stats: { flexDirection: 'row', gap: spacing.md },
+  xpPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.brandAccent,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+  },
+  xpPillText: {
+    ...type.labelStrong,
+    color: colors.textOnAccent,
+  },
 });

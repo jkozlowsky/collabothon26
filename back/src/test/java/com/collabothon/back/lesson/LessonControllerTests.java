@@ -22,6 +22,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.collabothon.back.Race;
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.entities.lesson.ConceptKnowledgeId;
+import com.collabothon.back.lesson.repositories.ConceptKnowledgeRepository;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

@@ -8,6 +8,8 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import com.collabothon.back.lesson.services.LessonRules;
+
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 

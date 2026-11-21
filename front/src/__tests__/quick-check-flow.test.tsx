@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { AccessibilityInfo, BackHandler, Platform, StyleSheet } from 'react-native';
 
+import { ANSWER_DELAY_MS } from '@/hooks/useQuickCheck';
 import { createRng, seedAccount } from '@/lib/bank/seed';
 import { setSummary } from '@/lib/learningPath';
 import { accountUsable, drawQuestions, promptParts } from '@/lib/quickCheck';
@@ -41,10 +42,15 @@ const get = (id: string) => screen.getByTestId(id);
 const press = (id: string) => fireEvent.press(get(id));
 const type = (text: string) => fireEvent.changeText(get('quick-check-input'), text);
 const input = () => get('quick-check-input').props.value;
-/** "Not sure" ignores taps right after a question appears, so a double tap cannot skip one unseen. */
+/** Next and "Not sure" stay disabled for a moment after a question appears, so a double tap cannot skip one. */
+const ready = () => act(() => jest.advanceTimersByTimeAsync(ANSWER_DELAY_MS));
 const unsure = async () => {
-  await act(() => jest.advanceTimersByTimeAsync(400));
+  await ready();
   await press('quick-check-unsure');
+};
+const next = async () => {
+  await ready();
+  await press('quick-check-next');
 };
 
 // The draw is seeded (EXPO_PUBLIC_QUIZ_SEED, dev builds): the screen shows what the same seed draws here.
@@ -69,7 +75,7 @@ const answerAll = async (texts: (string | null)[]) => {
     if (text === null) await unsure();
     else {
       await type(text);
-      await press('quick-check-next');
+      await next();
     }
   }
 };
@@ -119,6 +125,8 @@ test('questions come one at a time, 1 of 4, with the privacy copy above the firs
   expect(screen.getByTestId('quick-check-next')).toBeDisabled();
   await type('Interest keeps growing.');
   expect(screen.getByText('23 / 280')).toBeOnTheScreen();
+  expect(screen.getByTestId('quick-check-next')).toBeDisabled();
+  await ready();
   expect(screen.getByTestId('quick-check-next')).toBeEnabled();
   await press('quick-check-next');
 
@@ -141,13 +149,13 @@ test('Back keeps the answers and the draft, and Back on question 1 returns to th
   await open();
   await fireEvent.press(await screen.findByTestId('consent-accept'));
   await type('first');
-  await press('quick-check-next');
+  await next();
   await type('half-written');
 
   await press('quick-check-back');
   expect(screen.getByText('1 of 4')).toBeOnTheScreen();
   expect(input()).toBe('first');
-  await press('quick-check-next');
+  await next();
   expect(input()).toBe('half-written');
 
   await press('quick-check-back');
@@ -177,7 +185,7 @@ test('hardware back during the questions is the previous question, and from the 
   await open();
   await fireEvent.press(await screen.findByTestId('consent-accept'));
   await type('first');
-  await press('quick-check-next');
+  await next();
   const hardwareBack = async () => {
     const ours = add.mock.calls.filter(([event]) => event === 'hardwareBackPress').at(-1)?.[1] as () => boolean;
     await act(async () => {
@@ -193,20 +201,43 @@ test('hardware back during the questions is the previous question, and from the 
   add.mockRestore();
 });
 
-test('a double tap on "Not sure" skips one question, not two', async () => {
+test('Next and "Not sure" wait a moment on each new question, so a double tap skips one question, not two', async () => {
   backend();
   await open();
   await fireEvent.press(await screen.findByTestId('consent-accept'));
-  await act(() => jest.advanceTimersByTimeAsync(400));
-  const { onClick } = get('quick-check-unsure').props;
+  expect(get('quick-check-unsure')).toBeDisabled();
+  await ready();
+  expect(get('quick-check-unsure')).toBeEnabled();
 
-  await act(async () => {
-    onClick({ nativeEvent: {} });
-  });
-  await act(async () => {
-    onClick({ nativeEvent: {} });
-  });
+  await press('quick-check-unsure');
   expect(screen.getByText('2 of 4')).toBeOnTheScreen();
+  expect(get('quick-check-unsure')).toBeDisabled();
+  await press('quick-check-unsure');
+  expect(screen.getByText('2 of 4')).toBeOnTheScreen();
+});
+
+test('a kept answer does not make Next skippable: it waits too', async () => {
+  backend();
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-accept'));
+  await type('first');
+  await next();
+  await press('quick-check-back');
+  expect(get('quick-check-next')).toBeDisabled();
+  await ready();
+  expect(get('quick-check-next')).toBeEnabled();
+});
+
+test('Back to the consent card before typing anything, then accepting, draws again with the account versions', async () => {
+  backend();
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+  expect(screen.queryByText('Only your answer is sent, never these numbers.')).toBeNull();
+  await press('quick-check-back');
+
+  await fireEvent.press(await screen.findByTestId('consent-accept'));
+  expect(get('quick-check-prompt')).toHaveTextContent(promptOf(true, 0));
+  expect(screen.getByText('Only your answer is sent, never these numbers.')).toBeOnTheScreen();
 });
 
 test('a pool request that never answers is treated as no questions after 10 s', async () => {
@@ -465,7 +496,7 @@ test('each new question is announced to screen readers: the live region on web, 
   await fireEvent.press(await screen.findByTestId('consent-decline'));
   expect(get('flow-status')).toHaveTextContent('Question 1 of 4');
   await type('a');
-  await press('quick-check-next');
+  await next();
   expect(get('flow-status')).toHaveTextContent('Question 2 of 4');
 });
 
@@ -478,7 +509,7 @@ test.each(['ios', 'android'] as const)('on %s the question is announced with the
     await open();
     await fireEvent.press(await screen.findByTestId('consent-decline'));
     await type('a');
-    await press('quick-check-next');
+    await next();
     expect(announce.mock.calls.map(([message]) => message)).toEqual(['Question 1 of 4', 'Question 2 of 4']);
   } finally {
     announce.mockRestore();

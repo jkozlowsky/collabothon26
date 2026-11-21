@@ -22,6 +22,8 @@ type Props = {
   parts: { text: string; filled: boolean }[];
   /** The question quotes the account, so the slip line says the numbers stay on the phone. */
   account: boolean;
+  /** Next and "Not sure" wait a moment after a question appears. */
+  ready: boolean;
   value: string;
   onChange: (text: string) => void;
   onNext: (text: string) => void;
@@ -29,7 +31,7 @@ type Props = {
   onBack: () => void;
 };
 
-export function QuickCheckPage({ index, total, parts, account, value, onChange, onNext, onUnsure, onBack }: Props) {
+export function QuickCheckPage({ index, total, parts, account, ready, value, onChange, onNext, onUnsure, onBack }: Props) {
   const text = value;
   const [focused, setFocused] = useState(false);
   const prompt = parts.map((p) => p.text).join('');
@@ -45,8 +47,8 @@ export function QuickCheckPage({ index, total, parts, account, value, onChange, 
       status={position}
       footer={
         <>
-          <Button label="Next" onPress={() => onNext(text.trim())} disabled={!text.trim()} testID="quick-check-next" />
-          <Button label="Not sure" variant="ghost" onPress={onUnsure} testID="quick-check-unsure" />
+          <Button label="Next" onPress={() => onNext(text.trim())} disabled={!ready || !text.trim()} testID="quick-check-next" />
+          <Button label="Not sure" variant="ghost" onPress={onUnsure} disabled={!ready} testID="quick-check-unsure" />
         </>
       }
     >

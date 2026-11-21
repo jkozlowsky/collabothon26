@@ -53,8 +53,8 @@ test('consent, four questions, the summary, then the first lesson', async ({ pag
   await tap(page, 'quick-check-back');
   await expect(page.getByTestId('quick-check-input')).toHaveValue('Interest keeps growing.');
   await tap(page, 'quick-check-next');
-  // "Not sure" ignores taps for 400 ms after a question appears.
-  await page.waitForTimeout(500);
+  // Next and "Not sure" wait a moment after each question appears.
+  await expect(page.getByTestId('quick-check-unsure')).toBeEnabled();
   await tap(page, 'quick-check-unsure');
   await page.getByTestId('quick-check-input').fill('One failing hurts less.');
   await tap(page, 'quick-check-next');

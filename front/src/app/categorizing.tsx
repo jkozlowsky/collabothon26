@@ -46,7 +46,7 @@ export default function CategorizingScreen() {
   const [phase, setPhase] = useState<Phase>('consent');
   const [consent, setConsent] = useState(false);
   const [pool, setPool] = useState<CheckQuestion[]>([]);
-  const quick = useQuickCheck(pool, bank);
+  const quick = useQuickCheck(pool, bank, consent);
   const sent = useRef<CheckAnswer[]>([]);
   const [step, setStep] = useState(0);
   const [retryable, setRetryable] = useState(true);
@@ -144,12 +144,12 @@ export default function CategorizingScreen() {
 
   /** Consent given or declined: the questions follow, unless there are none. */
   const decide = (withConsent: boolean) => {
-    if (!quick.begin(withConsent)) return void start(withConsent, []);
     setConsent(withConsent);
+    if (!quick.begin(withConsent)) return void start(withConsent, []);
     setPhase('quick');
   };
   if (phase === 'quick' && quick.view) {
-    const { index, total, account, parts, draft } = quick.view;
+    const { index, total, account, parts, draft, ready } = quick.view;
     return (
       <QuickCheckPage
         index={index}
@@ -157,6 +157,7 @@ export default function CategorizingScreen() {
         parts={parts}
         account={account}
         value={draft}
+        ready={ready}
         onChange={quick.setDraft}
         onNext={(text) => submit(quick.answer(text))}
         onUnsure={() => submit(quick.answer(null))}

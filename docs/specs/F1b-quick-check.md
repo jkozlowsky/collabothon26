@@ -113,13 +113,74 @@ Simplest working solution, no code or tests for later.
 - Exact account amounts sent by the app, or raw answer text stored or logged.
 
 ## Review triage
+Round 1 (21.11), reports in `.planning/reviews/F1b-diff-{back,front}-2026-11-21.md`. Sources: AR adversarial-review, CR code-review, K conformance (repo rules). `#` = source + number in that report.
 
-## To confirm
-Forks Q-F settled with the simplest option; Jan decides.
-- **Per-area "why" on the summary.** The contract's `explanation[focusAreas].because` is one flat list, not per area, so the front derives each area's line: the Quick check result for that area ("Your answer about borrowing shows where to start."), else "You picked {area} as a goal." when the list holds it, else "It fits the answers you gave.". Option: the backend returns `because` per area (contract change, Q-B).
-- **`summarySeenAt` is in memory.** The summary shows once per app run; after a restart an unseen stored categorisation shows it again. Option: AsyncStorage (new native dependency) for a true local store.
-- **Draw does not force `retirement`.** Investing draws 2 of its 3 areas at random, so a pre-retirement user may not get the retirement question. Option: force it when the onboarding life stage is `later-life` (the draw then needs the profile).
-- **Title for an `over` gap.** The spec fixes only "You know more than you think" (an `under` gap); an `over` gap gets "There is more to explore here". Option: another wording, or no card for `over`.
-- **Consent line shown when the pool is non-empty**, even if a category has fewer than 2 areas and the draw skips the questions. Option: compute the draw before the card.
-- **No separate "POST in flight" state on the last question.** Next leads to the loading screen at once; a double tap is stopped by the in-flight guard, so the spec's "last Next disabled while the POST is in flight" holds by the screen change.
-- **`e2e/duel.spec.ts`** (other topic) still expects Learn right after skipping onboarding and fails on the consent card since before this branch; untouched.
+| # | finding | file:line | class | reason or commit |
+|---|---|---|---|---|
+| B-AR1 | `<>`→`‹›` swap does not stop an answer closing its tag; instructions never call state data | CategorizationService:154, JevClient:56-74 | fix | random per-request boundary named in every question + "data, not instructions" (OWASP LLM01) |
+| B-AR2 | Jev read timeout 4 s with up to 4 extra judgements | application.properties:28 | fix | 8 s, below the front's 10 s |
+| B-AR3 | POST without answers within 5 min drops checks | CategorizationService:78-84,161 | fix | Jan 21.11: reuse the stored row with its checks when onboarding answers and consent match |
+| B-AR4 | OVER gap cites "your answer" for not-yet / Not sure | CategorizationRules:170 | fix | Jan 21.11: UNDER cites only answered `understands`; OVER from a check = "You said: {experience}." + area, no answer cited |
+| B-AR5 | reuse guard untested | QuickCheckTests:252 | fix | test without → with answers |
+| B-AR6 | 400 sentinel not in the rejected value; logs checked on one path | QuickCheckTests:340,524 | fix | sentinel in offending value, logs on every 400 path |
+| B-AR7 | startLesson sort test passes on area order alone | QuickCheckTests:412 | fix | test where area order and result order disagree |
+| B-AR8 | `answers: [null]` → 400 without a key | CategorizationRequestDto:15 | fix | element null handled in `pick`, ignored without a key |
+| B-AR9 | V16 seed by non-unique `position` | V16__check_questions.sql:16 | fix | match `position` and `title` (V16 not applied anywhere yet) |
+| B-AR10 | D6 line after reload undecidable | CategorizationService:97 | defer | reload is off the demo path; revisit with the Profile link |
+| B-AR11 | records print answer text in `toString()` | CheckAnswerDto, JevCheckDto | fix | redacted `toString()` |
+| B-AR12 | mixed evidence in one area makes an UNDER gap | CategorizationRules:151 | fix | no check-based gap on mixed results |
+| B-AR13 | Jev-500 stub body empty | QuickCheckTests:536 | fix | sentinel in the error body |
+| B-AR14 | answers list unbounded; NBSP/FEFF blank mismatch | CategorizationRequestDto:15 | fix / reject | `@Size(max = 4)`; whitespace variant is cosmetic |
+| B-AR15 | no-consent test passes whatever consent is; small items | QuickCheckTests | fix | assert the consent:false path; other small items reject (framework/DB constraints) |
+| B-AR-spec | D2 instruction sent when the generic version was shown | JevClient | reject | "judge reasoning, not numbers" is right for both versions |
+| B-CR1/K2 | DTOs built by hand from the projection | CategorizationService:92,103; CategorizationRules:208 | fix | MapStruct, one target per mapper (CLAUDE.local) |
+| B-CR2/K1 | name-only consts `ANSWER_TAG`, `CHECK_QUESTION_PREFIX` | JevConsts:13,15 | fix | inline (with B-AR1) |
+| B-CR3 | `substring(len-1)` period surgery | CategorizationRules:159 | fix | build because lines from parts |
+| B-CR4 | `FocusArea.valueOf(area.name())` | CategorizationRules:150 | fix | `ConfidenceArea.focusArea()` |
+| B-CR5 | pool read on every POST, outside its service | CategorizationService:62 | fix | read in `CheckQuestionService`, only with answers |
+| B-CR6 | two similar converters | entities/*Converter | reject | a generic converter adds an abstraction for two 20-line files |
+| B-CR7 | validator before size check | CheckQuestionService:55 | fix | covered by B-AR14 |
+| B-CR8/9 | lines > 120, restating Javadoc, mid-class constants | several | fix | wrap, trim, move up |
+| B-CR-S1 | startLesson skips `understands` checks | CategorizationRules:201 | reject | spec ranks weak checks; an understood lesson is not a start |
+| B-CR-S3 | V16 not in decisions.md | — | reject | recorded in coordinator's `.planning/decisions.md` |
+| B-K3 | response DTOs without contract annotations | dto/* | fix / reject | `@Size(max = 64)` on `questionId`; OpenAPI annotations not adopted here (no springdoc) |
+| B-K4 | tests rely on seeded lessons and pool | QuickCheckTests | reject | reference data from migrations; the tests prove the seed |
+| B-K5/6/7/8 | fixed user ids, literal date, double verdicts, rename helper | QuickCheckTests | fix | random ids, `Clock`, ids only, inline |
+| B-K9-11 | test-only commit, two goals, late split | git log | reject | no history rewrite; brief for next rounds |
+| B-merge | duplicate `common` beans; duel imports changed | 747284a | fix | Jan 21.11: keep; Jan tells F8's author |
+| F-AR1 | summary crashes without `checks` | PathSummary:23 | fix | `checks ?? []`, `startLesson ?? null` |
+| F-AR2 | 400 with answers leaves only "Skip" | categorizing.tsx | fix | retry once without answers |
+| F-AR3 | consent switch after Back wipes answers | categorizing.tsx decide() | fix | keep items and answers, recompute account per item; test |
+| F-AR4 | module state leaks between tests | learningPath.ts:18 | fix | state reset/isolation; navigation moves to the route (F-CR2) |
+| F-AR5 | stale "existing → Learn" test | categorizing.test.tsx:180 | fix | with Q20 change (F-CR-S5) |
+| F-AR6 | real-backend e2e assume no key | e2e/app.ts:63, smoke.spec:166 | fix | stub `/api/check-questions` with `[]` there |
+| F-AR7 | per-answer verdict copy | learningPath.ts areaWhy | fix | Jan 21.11: "Your answer helped place {area} on your path." |
+| F-AR8 | string-matching the backend's sentence; raw slug shown | areaWhy | fix | match on area, show `AREA_LABEL` |
+| F-AR9 | hardware back during questions / on summary | categorizing.tsx, learning-path.tsx | fix | previous question; summary → `continueToLearn()` |
+| F-AR10/CR-S2 | draft lost on Back | QuickCheckPage onBack | fix | keep draft |
+| F-AR11 | new question not focused/announced (WCAG 2.4.3, 4.1.3) | QuickCheckPage | fix | focus prompt / announce "Question n of 4" |
+| F-AR12 | input border 1.5:1 (WCAG 1.4.11) | QuickCheckPage styles.input | fix | ≥ 3:1 token |
+| F-AR13 | consent note "as you type them" (GDPR art. 13) | ConsentCard | fix | "sent once, exactly as you write them, to an AI service that picks your first lesson" |
+| F-AR14 | `maxLength` untested | QuickCheckPage | fix | assert 280 |
+| F-AR15 | malformed pool item / unknown slot throws | quickCheck.ts | fix | skip item; generic prompt |
+| F-AR16/CR-S1 | seed depends on `localeCompare` and found-order | quickCheck.ts:45 | fix | code-unit sort, fixed area order |
+| F-AR17/18 | untested branches; small guards | tests, summary | fix | over title, double tap, hung GET, slow POST; D6 line not for 4× Not sure; tap guard; autoComplete off |
+| F-CR1 | `Drawn` type in lib | quickCheck.ts:13 | fix | `src/types/quickCheck.ts` |
+| F-CR2/K-SOLID | navigation and copy inside `lib/learningPath` | learningPath.ts | fix | route navigates; copy in component |
+| F-CR3 | state machine inline in route | categorizing.tsx:135 | fix | `useQuickCheck` hook |
+| F-CR4/K | literal sizes | QuickCheckPage:103, PathSummary:91 | fix | tokens / named constants |
+| F-CR5/K | restating JSDoc | several | fix | trim |
+| F-CR6 | long lines | several | fix | wrap |
+| F-CR7 | track components may duplicate PathSteps | QuestionTrack, RouteStation | fix | reuse PathSteps if it fits, else keep |
+| F-CR-S4 | "Start learning: {title}" | learning-path.tsx:26 | fix | label "Start learning", title as secondary text |
+| F-CR-S5 | existing categorisation short-circuits re-onboarding (Q20) | categorizing.tsx:64 | fix | new onboarding always recategorises |
+| F-K literals | `'rate-vs-inflation'`, `'Depot'`, "Four" | quickCheck.ts:38, selectors.ts:62, QuickCheckPage:59 | fix | named constants; count from `total` |
+| F-K chains | multi-operator one-liners, nested ternaries | quickCheck.ts, QuestionTrack, learningPath, PathSummary, categorization.ts, onboarding.test | fix | named steps |
+| F-K tuples | parallel `answers` array; `test.each` tuples | categorizing.tsx:50, quick-check-flow.test:195 | fix | answers on drawn items; objects |
+| F-K back | hand-rolled back button | QuickCheckPage:42 | reject | `BackButton` lives in Remigiusz's `onboarding/ui.tsx`, which stays as on main |
+| F-K optional | `quickCheck?` always passed | ConsentCard:11 | fix | required |
+| F-K mock | `jest.mock` of our own `quickCheck` | quick-check-flow.test:51 | fix | use the seed seam |
+| F-K data | fixed date; literal slot values | test-utils/categorization.ts:35, quick-check.test:96 | fix | from now; from `seedAccount()` |
+| F-K env | `.env.example` carries a value | front/.env.example:5 | fix | key only |
+| F-K commits | red/mixed commits | git log | reject | no history rewrite; brief for next rounds |
+| F-e2e | `duel.spec` stops at the consent card (REAL) | e2e/duel.spec.ts | fix | Jan 21.11: two optional clicks like smoke.spec; Jan tells F8's author |

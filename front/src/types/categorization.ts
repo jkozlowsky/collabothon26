@@ -1,4 +1,4 @@
-import type { Check } from '@/types/quickCheck';
+import type { Mastery, ProfileRanges } from '@/types/quickCheck';
 import type { Experience, Goal, LifeStage } from '@/types/onboarding';
 
 /** What `factsFrom` computes on the device from the bank: the only bank data that may leave it. */
@@ -26,6 +26,8 @@ export type SharedAnswers = {
   skipped: boolean;
 };
 
+export type StartLesson = { lessonId: number; title: string; area: FocusArea };
+
 /** POST/GET /api/users/{userId}/categorization (contract: docs/specs/F1-profiling.md). */
 export type Categorization = {
   userId: string;
@@ -34,7 +36,7 @@ export type Categorization = {
   role: Role;
   lifeStage: 'student' | 'family' | 'established' | 'pre-retirement' | null;
   focusAreas: FocusArea[];
-  confidenceGaps: { area: 'saving' | 'investing'; direction: 'under' | 'over'; because: string }[];
+  confidenceGaps: { area: FocusArea; direction: 'under' | 'over'; because: string }[];
   lessonVariant: {
     persona: 'student' | 'family' | 'pre-retirement' | null;
     level: 'beginner' | 'advanced';
@@ -45,10 +47,24 @@ export type Categorization = {
     probabilities: Record<string, number>;
     because: string[];
   }[];
-  /** Quick check judgements (docs/specs/F1b-quick-check.md); [] when it was skipped. */
-  checks: Check[];
-  startLesson: { lessonId: number; title: string } | null;
-  sharedWithModel: { facts: Facts | null; answers: SharedAnswers } | null;
+  /** Set when the Quick check ran (docs/specs/F1b-quick-check.md); the rest reads {} / 0 / [] / false without it. */
+  profile: ProfileRanges | null;
+  mastery: Mastery;
+  /** Per-area mean of the chips the user tapped, 0-1. */
+  confidence: Mastery;
+  answerCount: number;
+  startLesson: StartLesson | null;
+  readyForNext: boolean;
+  pathLessonIds: number[];
+  /** Computed on read: the first lesson of the path the user has not completed. */
+  startHere?: StartLesson | null;
+  sharedWithModel: {
+    facts: Facts | null;
+    answers: SharedAnswers;
+    profile: ProfileRanges | null;
+    answerCount: number;
+    stepCallsMade: number;
+  } | null;
   source: 'jev' | 'fallback';
   model: string | null;
   categorizedAt: string;

@@ -1,103 +1,85 @@
-import Feather from '@expo/vector-icons/Feather';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { RouteStation } from '@/components/categorizing/RouteStation';
-import { GLYPH, HAIRLINE } from '@/constants/path';
+import { IconTile } from '@/components/onboarding/ui';
+import { RULE } from '@/constants/path';
+import { AREA_LABEL } from '@/constants/quickCheck';
 import { colors, radii, spacing, type } from '@/constants/theme';
-import type { Categorization, FocusArea, Role } from '@/types/categorization';
+import type { Summary } from '@/lib/learningPath';
+import type { Role } from '@/types/categorization';
 
-const SUMMARY_AREAS = 3;
 const BULLET = 6;
-/** Centres the bullet on the first line of the 18 px body text. */
+/** Centres the bullet on the first line of the 13 px body text. */
 const BULLET_TOP = 6;
 
-const AREA_LABEL: Record<FocusArea, string> = {
-  saving: 'Saving',
-  debt: 'Borrowing',
-  investing: 'Investing',
-  risk: 'Risk',
-  retirement: 'Retirement',
-};
 const ROLE: Record<Role, string> = { novice: 'a beginner', intermediate: 'an intermediate', advanced: 'an advanced' };
 const GAP_TITLE = { under: 'You know more than you think', over: 'There is more to explore here' };
-
-type Props = {
-  categorization: Categorization;
-  /** The user typed answers that Jev did not judge. */
-  unchecked: boolean;
-  /** Ids of the questions the user answered with text, not "Not sure". */
-  answered: string[];
-  /** The areas of the goals the user picked in the onboarding. */
-  goalAreas: FocusArea[];
+const ALIGNED = {
+  title: 'How sure you felt matches your answers',
+  body: 'On the areas we checked, your confidence and your answers line up.',
 };
 
-export function PathSummary({ categorization: c, unchecked, answered, goalAreas }: Props) {
-  const gap = c.confidenceGaps[0];
-  const areas = c.focusAreas.slice(0, SUMMARY_AREAS);
+export function PathSummary({ categorization: c, chipped }: Summary) {
   const start = c.startLesson;
-  const startArea = start && c.checks.find((check) => check.lessonId === start.lessonId)?.area;
   const roleLines = c.explanation.find((e) => e.output === 'role')?.because ?? [];
-  const firstLesson = startArea ? `Your first lesson · ${AREA_LABEL[startArea]}` : 'Your first lesson';
-
-  const why = (area: FocusArea) => {
-    const answeredHere = c.checks.some((check) => check.area === area && answered.includes(check.questionId));
-    if (answeredHere) return `Your answer helped place ${AREA_LABEL[area]} on your path.`;
-    if (goalAreas.includes(area)) return `You picked ${AREA_LABEL[area]} as a goal.`;
-    return 'It fits the answers you gave.';
-  };
-  const icon = (name: 'eye' | 'user' | 'play') => <Feather name={name} size={GLYPH} color={colors.brandPrimary} />;
+  // A reload has no history, so the stored confidence stands in for "an answer carried a chip".
+  const hasChip = chipped ?? Object.values(c.confidence).some((v) => v != null);
+  const showAligned = c.profile !== null && !c.confidenceGaps.length && hasChip;
+  const usedModel = c.sharedWithModel !== null;
 
   return (
     <>
       <Text style={styles.overline}>Your learning path</Text>
-      {unchecked && (
-        <Text style={styles.muted} testID="summary-unchecked">
-          We couldn&apos;t check your answers this time
+      {c.source === 'fallback' && usedModel && (
+        <Text style={styles.muted} testID="summary-simple">
+          We used a simpler check this time
         </Text>
       )}
-      <View>
-        {gap && (
-          <RouteStation node={icon('eye')} testID="summary-gap">
-            <View style={styles.gap}>
-              <Text style={styles.gapOverline}>{AREA_LABEL[gap.area]}</Text>
-              <Text style={styles.gapTitle} accessibilityRole="header">
-                {GAP_TITLE[gap.direction]}
-              </Text>
-              <Text style={styles.gapBody}>{gap.because}</Text>
-            </View>
-          </RouteStation>
-        )}
-        <RouteStation node={icon('user')} last={!areas.length && !start}>
-          <Text style={type.displayLarge} accessibilityRole="header">
-            You&apos;re {ROLE[c.role]} learner
+      {c.confidenceGaps.map((gap) => (
+        <View key={gap.area} style={styles.hero} testID={`summary-gap-${gap.area}`}>
+          <Text style={styles.heroOverline}>{AREA_LABEL[gap.area]}</Text>
+          <Text style={styles.heroTitle} accessibilityRole="header">
+            {GAP_TITLE[gap.direction]}
           </Text>
-          {roleLines.map((line) => (
-            <View key={line} style={styles.bullet}>
-              <View style={styles.dot} />
-              <Text style={styles.because}>{line}</Text>
-            </View>
-          ))}
-        </RouteStation>
-        {areas.map((area, i) => (
-          <RouteStation
-            key={area}
-            node={<Text style={type.labelStrong}>{i + 1}</Text>}
-            last={i === areas.length - 1 && !start}
-            testID={`summary-area-${area}`}
-          >
-            <View style={styles.card}>
-              <Text style={type.titleCard}>{AREA_LABEL[area]}</Text>
-              <Text style={styles.muted}>{why(area)}</Text>
-            </View>
-          </RouteStation>
-        ))}
-        {start && (
-          <RouteStation node={icon('play')} end last>
+          <Text style={styles.heroBody}>{gap.because}</Text>
+        </View>
+      ))}
+      {showAligned && (
+        <View style={styles.hero} testID="summary-aligned">
+          <Text style={styles.heroOverline}>Confidence</Text>
+          <Text style={styles.heroTitle} accessibilityRole="header">
+            {ALIGNED.title}
+          </Text>
+          <Text style={styles.heroBody}>{ALIGNED.body}</Text>
+        </View>
+      )}
+      <Text style={type.displayLarge} accessibilityRole="header" testID="summary-role">
+        You&apos;re {ROLE[c.role]} learner
+      </Text>
+      {c.answerCount > 0 ? (
+        <Text style={styles.body} testID="summary-based-on">
+          Based on {c.answerCount} answers and how sure you felt about each.
+        </Text>
+      ) : (
+        roleLines.map((line) => (
+          <View key={line} style={styles.bullet}>
+            <View style={styles.dot} />
+            <Text style={styles.body}>{line}</Text>
+          </View>
+        ))
+      )}
+      {start && (
+        <View style={styles.lesson} testID="summary-first-lesson">
+          <IconTile icon="play" active />
+          <View style={styles.lessonText}>
+            <Text style={styles.lessonOverline}>Your first lesson · {AREA_LABEL[start.area]}</Text>
             <Text style={type.titleCard}>{start.title}</Text>
-            <Text style={styles.muted}>{firstLesson}</Text>
-          </RouteStation>
-        )}
-      </View>
+            {c.readyForNext && <Text style={type.labelDefault}>You&apos;re ready for the next lesson</Text>}
+          </View>
+        </View>
+      )}
+      <Text style={styles.muted} testID="summary-disclaimer">
+        This picks lessons for you. It is not investment advice.
+      </Text>
     </>
   );
 }
@@ -105,26 +87,23 @@ export function PathSummary({ categorization: c, unchecked, answered, goalAreas 
 const styles = StyleSheet.create({
   overline: { ...type.overline, color: colors.textMuted },
   muted: { ...type.labelDefault, color: colors.textMuted },
-  gap: { backgroundColor: colors.brandPrimary, borderRadius: radii.card, padding: spacing.mdPlus, gap: spacing.xs },
-  gapOverline: { ...type.overline, color: colors.onBrandMuted },
-  gapTitle: { ...type.titleSection, color: colors.textOnBrand },
-  gapBody: { ...type.bodyDefault, color: colors.textOnBrand },
-  bullet: { flexDirection: 'row', gap: spacing.smPlus, alignItems: 'flex-start', marginTop: spacing.sm },
-  dot: {
-    width: BULLET,
-    height: BULLET,
-    borderRadius: BULLET / 2,
-    backgroundColor: colors.brandPrimary,
-    marginTop: BULLET_TOP,
-  },
-  because: { ...type.bodyDefault, color: colors.textMuted, flex: 1 },
-  card: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.mdPlus,
-    gap: spacing.xxs,
-    backgroundColor: colors.bgSurface,
-    borderWidth: HAIRLINE,
-    borderColor: colors.borderDefault,
+  body: { ...type.bodyDefault, color: colors.textMuted },
+  hero: { backgroundColor: colors.brandPrimary, borderRadius: radii.card, padding: spacing.lg, gap: spacing.sm },
+  heroOverline: { ...type.overline, color: colors.onBrandMuted },
+  heroTitle: { ...type.titleSection, color: colors.textOnBrand },
+  heroBody: { ...type.bodyDefault, color: colors.textOnBrand },
+  bullet: { flexDirection: 'row', gap: spacing.smPlus, alignItems: 'flex-start' },
+  dot: { width: BULLET, height: BULLET, borderRadius: BULLET / 2, backgroundColor: colors.brandPrimary, marginTop: BULLET_TOP },
+  lesson: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.mdPlus,
+    backgroundColor: colors.brandAccentSoft,
+    borderWidth: RULE,
+    borderColor: colors.brandPrimary,
     borderRadius: radii.card,
   },
+  lessonText: { flex: 1, gap: spacing.xxs },
+  lessonOverline: { ...type.overline, color: colors.brandPrimary },
 });

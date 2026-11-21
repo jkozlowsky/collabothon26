@@ -1,38 +1,38 @@
+import { AREAS, CONFIDENCE, JUST_STARTING_BELOW, PROFILE_QUESTIONS, SOLID_ABOVE, SOLID_MIN_ANSWERS } from '@/constants/quickCheck';
 import { api } from '@/lib/api';
 import { groupThousands } from '@/lib/bank/money';
-import { createRng } from '@/lib/bank/seed';
 import { slotValues } from '@/lib/bank/selectors';
+import { USER_ID } from '@/lib/user';
 import type { BankState } from '@/types/bank';
-import type { FocusArea } from '@/types/categorization';
-import { SLOTS, type CheckAnswer, type CheckQuestion, type Drawn, type Slot } from '@/types/quickCheck';
+import type { Facts, FocusArea } from '@/types/categorization';
+import {
+  SLOTS,
+  type CheckQuestion,
+  type HistoryEntry,
+  type Mastery,
+  type ProfileRanges,
+  type Slot,
+  type StepResponse,
+} from '@/types/quickCheck';
 
-/** The areas of each category, in the order the draw looks at them. */
-const AREAS: Record<CheckQuestion['category'], FocusArea[]> = {
-  finance: ['saving', 'debt'],
-  investing: ['investing', 'risk', 'retirement'],
-};
-const CATEGORIES = ['finance', 'investing'] as const;
-const AREAS_PER_CATEGORY = 2;
-const RATE_VS_INFLATION = 'rate-vs-inflation';
-const MAX_INFLATION_RATE = 3;
 const MIN_POSITIONS = 2;
+const MIN_OPTIONS = 2;
 
 const isSlot = (name: string): name is Slot => (SLOTS as readonly string[]).includes(name);
 
 function wellFormed(q: Partial<CheckQuestion> | null): q is CheckQuestion {
-  if (!q || typeof q.id !== 'string' || !q.category || !q.area) return false;
-  const inCategory = Object.hasOwn(AREAS, q.category) && AREAS[q.category].includes(q.area);
-  const accountOk = q.accountPrompt === null || typeof q.accountPrompt === 'string';
-  const prompts = typeof q.genericPrompt === 'string' && accountOk;
-  return inCategory && prompts && Array.isArray(q.slots);
+  if (!q || typeof q.id !== 'string' || !q.area || !AREAS.includes(q.area)) return false;
+  const prompts = typeof q.genericPrompt === 'string' && (q.accountPrompt === null || typeof q.accountPrompt === 'string');
+  const options = Array.isArray(q.options) && q.options.length >= MIN_OPTIONS && q.options.every((o) => typeof o === 'string');
+  return prompts && options && Array.isArray(q.slots);
 }
 
-/** A failed GET counts as no questions and an unusable item as no item; an empty pool skips the Quick check. */
+/** A failed GET counts as no questions and an unusable item as no item; an empty bank skips the Quick check. */
 export async function fetchCheckQuestions(signal: AbortSignal): Promise<CheckQuestion[]> {
   try {
-    const pool = await api<Partial<CheckQuestion>[]>('/api/check-questions', { signal });
-    if (!Array.isArray(pool)) return [];
-    const usable = pool.filter(wellFormed);
+    const bank = await api<Partial<CheckQuestion>[]>('/api/check-questions', { signal });
+    if (!Array.isArray(bank)) return [];
+    const usable = bank.filter(wellFormed);
     // A repeated id would be sent twice and rejected, so the first item of an id wins.
     return usable.filter((q, i) => usable.findIndex((other) => other.id === q.id) === i);
   } catch {
@@ -40,11 +40,21 @@ export async function fetchCheckQuestions(signal: AbortSignal): Promise<CheckQue
   }
 }
 
-/** A numeric EXPO_PUBLIC_QUIZ_SEED repeats the draw for a rehearsed demo; dev builds only. */
-export function quizRng(seed = process.env.EXPO_PUBLIC_QUIZ_SEED, dev = __DEV__) {
-  const numeric = !!seed?.trim() && Number.isFinite(Number(seed));
-  return dev && numeric ? createRng(Number(seed)) : Math.random;
-}
+export type StepBody = {
+  consent: boolean;
+  facts?: Facts | null;
+  profile: ProfileRanges;
+  history: HistoryEntry[];
+  useRules: boolean;
+  stepFellBack: boolean;
+};
+
+export const postStep = (body: StepBody, signal: AbortSignal) =>
+  api<StepResponse>(`/api/users/${encodeURIComponent(USER_ID)}/quick-check/step`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    signal,
+  });
 
 function available(slot: Slot, bank: BankState) {
   const value = slotValues(bank)[slot];
@@ -57,31 +67,7 @@ export function accountUsable(q: CheckQuestion, bank: BankState, consent: boolea
   const quoted = [...q.accountPrompt.matchAll(/\{(\w+)\}/g)].map((match) => match[1]);
   const declared = quoted.every((name) => isSlot(name) && q.slots.includes(name));
   const filled = q.slots.every((name) => isSlot(name) && available(name, bank));
-  const inflationOk = q.id !== RATE_VS_INFLATION || slotValues(bank).savingsInterestRate < MAX_INFLATION_RATE;
-  return declared && filled && inflationOk;
-}
-
-/**
- * Two areas from each category, one question per area, finance first. Within an area a question whose account
- * version is usable wins. A category with fewer than two areas skips the whole Quick check.
- */
-export function drawQuestions(pool: CheckQuestion[], bank: BankState, consent: boolean, rng: () => number): Drawn[] {
-  // Code-unit order, so a seeded draw does not depend on the device's locale.
-  const sorted = [...pool].sort((a, b) => (a.id < b.id ? -1 : 1));
-  const pick = <T>(items: T[]) => items[Math.floor(rng() * items.length)];
-  const drawn: Drawn[] = [];
-  for (const category of CATEGORIES) {
-    const inCategory = sorted.filter((q) => q.category === category);
-    const areas = AREAS[category].filter((area) => inCategory.some((q) => q.area === area));
-    if (areas.length < AREAS_PER_CATEGORY) return [];
-    for (let i = 0; i < AREAS_PER_CATEGORY; i++) {
-      const [area] = areas.splice(Math.floor(rng() * areas.length), 1);
-      const ofArea = inCategory.filter((q) => q.area === area);
-      const usable = ofArea.filter((q) => accountUsable(q, bank, consent));
-      drawn.push({ question: pick(usable.length ? usable : ofArea) });
-    }
-  }
-  return drawn;
+  return declared && filled;
 }
 
 type Part = { text: string; filled: boolean };
@@ -99,7 +85,62 @@ export function promptParts(question: CheckQuestion, bank: BankState, account: b
   return parts.filter((part) => part.text);
 }
 
-export const toAnswer = ({ question, answer }: Drawn): CheckAnswer => ({
-  questionId: question.id,
-  text: answer ?? null,
-});
+const areaOf = (pool: CheckQuestion[], entry: HistoryEntry) => pool.find((q) => q.id === entry.questionId)?.area;
+
+export function answerCounts(history: HistoryEntry[], pool: CheckQuestion[]) {
+  const counts: Partial<Record<FocusArea, number>> = {};
+  for (const h of history) {
+    const area = areaOf(pool, h);
+    if (area) counts[area] = (counts[area] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/** Per area, the mean of the chip values; "Not sure" counts as Guessing. The backend stores the same number. */
+export function confidenceByArea(history: HistoryEntry[], pool: CheckQuestion[]) {
+  const chip = (h: HistoryEntry) => CONFIDENCE.find((c) => c.value === (h.confidence ?? 'guessing'))!.chip;
+  const sums: Partial<Record<FocusArea, number>> = {};
+  const counts = answerCounts(history, pool);
+  for (const h of history) {
+    const area = areaOf(pool, h);
+    if (area) sums[area] = (sums[area] ?? 0) + chip(h);
+  }
+  return Object.fromEntries(Object.entries(sums).map(([area, sum]) => [area, sum / counts[area as FocusArea]!]));
+}
+
+export type Level = 'none' | 'starting' | 'building' | 'solid';
+
+/** Spec Q16 and D7: Solid needs a high mastery and at least two answers. */
+export function levelOf(mastery: number | null | undefined, answers: number): Level {
+  if (mastery == null) return 'none';
+  if (mastery < JUST_STARTING_BELOW) return 'starting';
+  return mastery > SOLID_ABOVE && answers >= SOLID_MIN_ANSWERS ? 'solid' : 'building';
+}
+
+/** The profile questions this run needs, in the spec's fixed order: age band only if life stage was skipped, cover only without consent. */
+export const profileRequired = (consent: boolean, lifeStageSkipped: boolean) => {
+  const needed = { ageBand: lifeStageSkipped, savingsCover: !consent, horizon: true };
+  return PROFILE_QUESTIONS.filter((q) => needed[q.key]);
+};
+
+/** The required profile questions with no answer yet. */
+export const profileToAsk = (profile: ProfileRanges, consent: boolean, lifeStageSkipped: boolean) =>
+  profileRequired(consent, lifeStageSkipped).filter((q) => profile[q.key] === null);
+
+export type AreaMark = { area: FocusArea; mastery: number | null; confidence: number | null; level: Level };
+
+/** One entry per area for the dock and the summary; `fallbackAnswers` stands in for areas missing in `answers`. */
+export function areaMarks(
+  areas: FocusArea[],
+  mastery: Mastery,
+  confidence: Mastery,
+  answers: Partial<Record<FocusArea, number>>,
+  fallbackAnswers: number,
+): AreaMark[] {
+  return areas.map((area) => ({
+    area,
+    mastery: mastery[area] ?? null,
+    confidence: confidence[area] ?? null,
+    level: levelOf(mastery[area], answers[area] ?? fallbackAnswers),
+  }));
+}

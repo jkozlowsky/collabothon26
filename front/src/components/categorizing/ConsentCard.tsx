@@ -7,7 +7,7 @@ import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 type Props = {
   /** The account facts in plain words, exactly what a consent sends. */
   facts: string[];
-  /** The Quick check follows, so its answers are part of what the card promises. */
+  /** The Quick check follows, so what it sends is part of what the card promises. */
   quickCheck: boolean;
 };
 
@@ -57,8 +57,9 @@ export function ConsentCard({ facts, quickCheck }: Props) {
       </View>
       {quickCheck && (
         <Text style={styles.note} testID="consent-quickcheck-note">
-          Your answers to the next questions are sent exactly as you write them, to an AI service that picks your
-          first lesson, so leave out exact amounts. Only the judgement is stored, never your words.
+          Your answers, how sure you felt and the ranges you pick (and, if you allow it, ranges from your accounts) are
+          checked by an external AI provider to pick your first lesson. Exact account numbers never leave this phone. We
+          keep the result and the ranges.
         </Text>
       )}
     </>

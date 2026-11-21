@@ -1,6 +1,6 @@
 -- Glossary: categories, terms, related-term links, per-user favourites and language-level preference.
 -- Definitions are plain text with inline links written as [[slug|visible text]] (see glossary_term.definition_*).
--- The content itself is in V7__glossary_content.sql. V5 is reserved by the categorization branch.
+-- The content itself is in V16__glossary_content.sql. Numbered after main's V14 so existing databases can migrate forward.
 
 -- Fuzzy search ("divdend" finds "Dividend"). Needs a database user that may create extensions.
 CREATE EXTENSION IF NOT EXISTS pg_trgm;

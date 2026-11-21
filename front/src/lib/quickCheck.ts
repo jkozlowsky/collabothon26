@@ -21,17 +21,20 @@ const isSlot = (name: string): name is Slot => (SLOTS as readonly string[]).incl
 
 function wellFormed(q: Partial<CheckQuestion> | null): q is CheckQuestion {
   if (!q || typeof q.id !== 'string' || !q.category || !q.area) return false;
-  const inCategory = AREAS[q.category]?.includes(q.area) === true;
+  const inCategory = Object.hasOwn(AREAS, q.category) && AREAS[q.category].includes(q.area);
   const accountOk = q.accountPrompt === null || typeof q.accountPrompt === 'string';
   const prompts = typeof q.genericPrompt === 'string' && accountOk;
   return inCategory && prompts && Array.isArray(q.slots);
 }
 
-/** A failed GET, or an item the front cannot use, counts as no question; an empty pool skips the Quick check. */
+/** A failed GET counts as no questions, an item the front cannot use as no item; an empty pool skips the Quick check. */
 export async function fetchCheckQuestions(signal: AbortSignal): Promise<CheckQuestion[]> {
   try {
     const pool = await api<Partial<CheckQuestion>[]>('/api/check-questions', { signal });
-    return Array.isArray(pool) ? pool.filter(wellFormed) : [];
+    if (!Array.isArray(pool)) return [];
+    const usable = pool.filter(wellFormed);
+    // A repeated id would be sent twice and rejected, so the first item of an id wins.
+    return usable.filter((q, i) => usable.findIndex((other) => other.id === q.id) === i);
   } catch {
     return [];
   }

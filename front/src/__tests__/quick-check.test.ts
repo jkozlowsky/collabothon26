@@ -25,6 +25,14 @@ test('the draw takes 2 finance then 2 investing, each from a different area, wit
   }
 });
 
+test('the draw looks at the areas in a fixed order, whatever order the pool has', () => {
+  const areas = (pool: CheckQuestion[]) => drawQuestions(pool, seedAccount(), false, () => 0).map((d) => d.question.area);
+  expect(areas(POOL)).toEqual(['saving', 'debt', 'investing', 'risk']);
+  expect(areas([...POOL].reverse())).toEqual(['saving', 'debt', 'investing', 'risk']);
+  const drawn = drawQuestions(POOL, seedAccount(), false, () => 0).map((d) => d.question.category);
+  expect(drawn).toEqual(['finance', 'finance', 'investing', 'investing']);
+});
+
 test('every area of the pool is reachable, retirement included', () => {
   const areas = new Set(SEEDS.flatMap((s) => draw(s).map((d) => d.question.area)));
   expect(areas).toEqual(new Set(['saving', 'debt', 'investing', 'risk', 'retirement']));
@@ -139,7 +147,7 @@ test('a question whose account prompt quotes an unknown or undeclared slot only 
   expect(accountUsable(unknownSlot, bank, true)).toBe(false);
 });
 
-test('pool items the front cannot use are skipped, the rest are kept', async () => {
+test('pool items the front cannot use are skipped and a repeated id keeps its first item, the rest are kept', async () => {
   const good = POOL[0];
   const items = [
     good,
@@ -150,11 +158,16 @@ test('pool items the front cannot use are skipped, the rest are kept', async () 
     { ...good, id: 'area-of-the-other-category', area: 'risk' },
     { ...good, id: 'no-slots', slots: undefined },
     { ...good, id: 'no-prompt', genericPrompt: undefined },
+    { ...good, id: 'prototype-key', category: 'constructor' },
+    { ...good, id: 'prototype-area', area: 'toString' },
+    { ...good },
+    { ...POOL[1] },
+    { ...POOL[1], genericPrompt: 'a second question with the same id' },
   ];
   const answerWith = (body: unknown) =>
     jest.fn(() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) })) as jest.Mock;
   globalThis.fetch = answerWith(items);
-  expect(await fetchCheckQuestions(new AbortController().signal)).toEqual([good]);
+  expect(await fetchCheckQuestions(new AbortController().signal)).toEqual([good, POOL[1]]);
 
   globalThis.fetch = answerWith({ not: 'a list' });
   expect(await fetchCheckQuestions(new AbortController().signal)).toEqual([]);

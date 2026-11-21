@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
@@ -90,7 +89,6 @@ public class CategorizationService {
 				return recent.get();
 			}
 		}
-		String boundary = UUID.randomUUID().toString();
 		List<JevCheckDto> toJudge = new ArrayList<>();
 		List<SharedCheckDto> sharedChecks = new ArrayList<>();
 		for (int i = 0; i < picked.size(); i++) {
@@ -98,10 +96,10 @@ public class CategorizationService {
 			String text = submitted.get(i).text();
 			sharedChecks.add(sharedCheckMapper.toShared(q, text != null));
 			if (text != null) {
-				toJudge.add(jevCheckMapper.toJevCheck(q, boundary + " " + text.strip() + " " + boundary));
+				toJudge.add(jevCheckMapper.toJevCheck(q, text));
 			}
 		}
-		JevResult fromJev = jev.ask(answers, facts, toJudge, boundary);
+		JevResult fromJev = jev.ask(answers, facts, toJudge);
 		Judgement j = fromJev.judgement().orElseGet(() -> CategorizationRules.fallback(answers, facts));
 		SharedWithModelDto shared = fromJev.sent() ? new SharedWithModelDto(facts, answers, sharedChecks) : null;
 		List<CheckDto> checks = new ArrayList<>();

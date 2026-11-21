@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -91,17 +92,22 @@ public class JevClient {
 		this.questions = (ObjectNode) json.readTree(QUESTIONS);
 	}
 
-	public JevResult ask(OnboardingAnswersDto answers, FactsDto facts, List<JevCheckDto> checks, String boundary) {
+	public JevResult ask(OnboardingAnswersDto answers, FactsDto facts, List<JevCheckDto> checks) {
 		if (!properties.callsJev()) {
 			return JevResult.SKIPPED;
 		}
+		String boundary = UUID.randomUUID().toString();
+		List<JevCheckDto> fenced = checks.stream()
+			.map(c -> new JevCheckDto(c.questionId(), c.genericPrompt(), c.criterion(),
+					boundary + " " + c.answer().strip() + " " + boundary))
+			.toList();
 		Map<String, Object> state = new LinkedHashMap<>();
 		state.put("answers", answers);
 		if (facts != null) {
 			state.put("facts", facts);
 		}
-		if (!checks.isEmpty()) {
-			state.put("checks", checks);
+		if (!fenced.isEmpty()) {
+			state.put("checks", fenced);
 		}
 		try {
 			JsonNode response = rest.post()

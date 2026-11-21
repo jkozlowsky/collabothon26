@@ -25,9 +25,10 @@ class AccountControllerTests {
 	@Autowired
 	MockMvc mvc;
 
-	ResultActions complete(String userId, long lessonId, String date) throws Exception {
-		return mvc.perform(post("/api/users/" + userId + "/completions").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"lessonId\":" + lessonId + ",\"completedOn\":\"" + date + "\"}"));
+	ResultActions complete(String userId, String lessonId, String date) throws Exception {
+		return mvc.perform(post("/api/lessons/" + lessonId + "/result").param("userId", userId)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("{\"steps\":[],\"completedOn\":\"" + date + "\"}"));
 	}
 
 	@Test
@@ -52,8 +53,9 @@ class AccountControllerTests {
 
 	@Test
 	void repeatingALessonKeepsTheStreakButEarnsXpOnce() throws Exception {
-		complete("cleo", 1, "2026-11-18").andExpect(jsonPath("$.totalXp").value(50));
-		complete("cleo", 1, "2026-11-19")
+		complete("cleo", "seoul-1", "2026-11-18").andExpect(jsonPath("$.totalXp").value(50));
+		complete("cleo", "seoul-1", "2026-11-19").andExpect(jsonPath("$.xpAwarded").value(0));
+		mvc.perform(get("/api/users/cleo/stats").param("today", "2026-11-19"))
 			.andExpect(jsonPath("$.currentStreak").value(2))
 			.andExpect(jsonPath("$.doneToday").value(true))
 			.andExpect(jsonPath("$.totalXp").value(50))
@@ -66,7 +68,7 @@ class AccountControllerTests {
 
 	@Test
 	void unknownLessonIsRejected() throws Exception {
-		complete("cleo", 999, "2026-11-19").andExpect(status().isNotFound());
+		complete("cleo", "missing", "2026-11-19").andExpect(status().isNotFound());
 	}
 
 	@Test
@@ -75,8 +77,8 @@ class AccountControllerTests {
 			.andExpect(jsonPath("$.currentStreak").value(4))
 			.andExpect(jsonPath("$.doneToday").value(false))
 			.andExpect(jsonPath("$.longestStreak").value(12))
-			.andExpect(jsonPath("$.lessonsCompleted").value(2))
-			.andExpect(jsonPath("$.totalXp").value(120));
+			.andExpect(jsonPath("$.lessonsCompleted").value(0))
+			.andExpect(jsonPath("$.totalXp").value(0));
 	}
 
 }

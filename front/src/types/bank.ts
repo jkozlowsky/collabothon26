@@ -42,7 +42,20 @@ export type BankIconName =
   | 'chevron-left'
   | 'close'
   | 'check'
-  | 'delete';
+  | 'delete'
+  | 'lock'
+  | 'swords'
+  | 'trophy'
+  | 'bot'
+  | 'users'
+  | 'target'
+  | 'timer'
+  | 'brain'
+  | 'wifi-off'
+  | 'coins'
+  | 'flame'
+  | 'refresh'
+  | 'arrow-right';
 
 export type Account = {
   name: string;

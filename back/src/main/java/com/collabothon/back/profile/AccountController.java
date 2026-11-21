@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Pattern;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -30,13 +31,13 @@ class AccountController {
 
 	private final AccountRepository accounts;
 
-	private final LessonCompletionRepository completions;
+	private final JdbcClient jdbc;
 
 	private final DemoProgress demo;
 
-	AccountController(AccountRepository accounts, LessonCompletionRepository completions, DemoProgress demo) {
+	AccountController(AccountRepository accounts, JdbcClient jdbc, DemoProgress demo) {
 		this.accounts = accounts;
-		this.completions = completions;
+		this.jdbc = jdbc;
 		this.demo = demo;
 	}
 
@@ -60,17 +61,6 @@ class AccountController {
 		return statsFor(userId, today);
 	}
 
-	/** Records a finished lesson. A repeat keeps the streak going but earns no XP. Returns the new stats. */
-	@PostMapping("/completions")
-	@Transactional
-	StatsDto complete(@PathVariable String userId, @Valid @RequestBody CompletionRequest req) {
-		int lessonXp = completions.lessonXp(req.lessonId())
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "no such lesson"));
-		int xp = completions.existsByUserIdAndLessonId(userId, req.lessonId()) ? 0 : lessonXp;
-		completions.save(new LessonCompletion(userId, req.lessonId(), req.completedOn(), xp));
-		return statsFor(userId, req.completedOn());
-	}
-
 	/** Demo helper: replaces the user's progress with the demo seed (4-day streak ending yesterday). */
 	@PostMapping("/progress/reset")
 	@Transactional
@@ -85,18 +75,17 @@ class AccountController {
 	}
 
 	private StatsDto statsFor(String userId, LocalDate today) {
-		List<LessonCompletion> done = completions.findByUserId(userId);
-		Streak streak = Streak.of(done.stream().map(LessonCompletion::getCompletedOn).toList(), today);
-		int totalXp = done.stream().mapToInt(LessonCompletion::getXp).sum();
-		long lessonsCompleted = done.stream().map(LessonCompletion::getLessonId).distinct().count();
-		return new StatsDto(streak.current(), streak.longest(), streak.doneToday(), streak.week(), totalXp,
-				lessonsCompleted);
+		List<LocalDate> days = jdbc.sql("SELECT completed_on FROM lesson_activity WHERE user_id = ?")
+			.param(userId).query(LocalDate.class).list();
+		Streak streak = Streak.of(days, today);
+		return jdbc.sql("SELECT COALESCE(SUM(xp), 0) AS xp, COUNT(*) AS completed FROM lesson_completion WHERE user_id = ?")
+			.param(userId)
+			.query((rs, row) -> new StatsDto(streak.current(), streak.longest(), streak.doneToday(),
+					streak.week(), rs.getInt("xp"), rs.getLong("completed")))
+			.single();
 	}
 
 	record AvatarRequest(@NotNull @Pattern(regexp = "[mf][1-3]") String avatar) {
-	}
-
-	record CompletionRequest(@NotNull Long lessonId, @NotNull LocalDate completedOn) {
 	}
 
 	record AccountDto(String userId, String firstName, String lastName, String avatar) {

@@ -25,7 +25,6 @@ export type TermDetail = {
   example: string | null;
   graphicKey: string | null;
   related: TermRef[];
-  lesson: { id: number; title: string } | null;
 };
 
 export type LanguageLevel = 'plain' | 'standard';

@@ -48,13 +48,12 @@ class GlossaryControllerTests {
 			.andExpect(jsonPath("$.definitionStandard").value(org.hamcrest.Matchers.containsString("[[stock|stocks]]")))
 			.andExpect(jsonPath("$.definitionPlain").isNotEmpty())
 			.andExpect(jsonPath("$.related[0].slug").value("stock"))
-			.andExpect(jsonPath("$.related[1].slug").value("bond"))
-			.andExpect(jsonPath("$.lesson").isEmpty());
+			.andExpect(jsonPath("$.related[1].slug").value("bond"));
 	}
 
 	@Test
 	@Transactional
-	void termWithoutPlainVersionReturnsNullAndLinkedLessonIsIncluded() throws Exception {
+	void termWithoutPlainVersionReturnsNull() throws Exception {
 		// Every seeded term has a plain version, so add one without it; the test transaction rolls it back.
 		jdbc.update("""
 				INSERT INTO glossary_term (id, slug, name, category_id, position, short_description, definition_standard)
@@ -63,10 +62,6 @@ class GlossaryControllerTests {
 		mvc.perform(get("/api/glossary/terms/no-plain-yet"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.definitionPlain").isEmpty());
-		mvc.perform(get("/api/glossary/terms/compound-interest"))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.lesson.id").value(2))
-			.andExpect(jsonPath("$.lesson.title").value("Compound interest"));
 	}
 
 	@Test

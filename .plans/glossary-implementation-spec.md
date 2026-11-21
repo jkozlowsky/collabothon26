@@ -65,8 +65,7 @@ CREATE TABLE glossary_term (
     definition_plain    TEXT,                           -- NULL = fall back to standard
     example             TEXT,
     aliases             TEXT[]       NOT NULL DEFAULT '{}',   -- synonyms searched as well
-    graphic_key         VARCHAR(40),                    -- which SVG graphic to draw, NULL = none
-    lesson_id           BIGINT REFERENCES lesson (id) ON DELETE SET NULL  -- "Practise it" card
+    graphic_key         VARCHAR(40)                     -- which SVG graphic to draw, NULL = none
 );
 CREATE INDEX glossary_term_name_trgm ON glossary_term USING gin (name gin_trgm_ops);
 
@@ -138,8 +137,7 @@ Pobierane raz na wejście do zakładki. Front buduje z tego też mapę `slug →
   "category": { "slug": "investing", "name": "Investing" },
   "definitionStandard": "...[[stock|stocks]]...", "definitionPlain": "... lub null",
   "example": "... lub null", "graphicKey": "diversification | null",
-  "related": [{ "slug": "stock", "name": "Stock" }],
-  "lesson": { "id": 2, "title": "Compound interest" } }
+  "related": [{ "slug": "stock", "name": "Stock" }] }
 ```
 
 ### 5.3 Wyszukiwanie
@@ -221,7 +219,7 @@ Przed napisaniem kodu dotykającego Expo / Expo Router zgodnie z `front/AGENTS.m
 - Treść: `definitionPlain ?? definitionStandard` zależnie od trybu. Jeśli hasło nie ma wersji plain, a tryb to plain, pokazujemy standard i przełącznik **nie znika**, tylko wersja "In plain words" jest wtedy nieaktywna (szary tekst) z krótką informacją "No plain version yet" (żeby użytkownik nie myślał, że przełącznik nie działa).
 - `DefinitionText`: zagnieżdżone `<Text>` z `onPress` dla linków (podkreślone, kolor `globeOceanLight`, `fonts.semiBold`, `accessibilityRole="link"`). Czytelne też dla czytników ekranu.
 - Grafika: jeśli `graphicKey != null`, renderuje komponent z rejestru; nieznany klucz = brak grafiki (nigdy crash).
-- Karta "Practise it": tylko gdy `lesson != null`, prowadzi do istniejącej trasy `/lesson/[id]`. (Zmiana względem makiety: karta pojawia się tylko tam, gdzie istnieje powiązana lekcja.)
+- Karta "Practise it": **nie w v1.** Powiązanie hasła z lekcją (`lesson_id`) usunięte przy merge'u z main: tabela `lesson` z `V2__lessons.sql` zniknęła w V5, lekcje są teraz plikami JSON z id typu `berlin-1`.
 - Karta "On your account": **nie implementujemy w v1**, ale w układzie zostaje miejsce (zakomentowana sekcja z odnośnikiem do tego dokumentu).
 - Stopka "Educational content, not investment advice." zawsze widoczna.
 
@@ -246,7 +244,7 @@ Szkic merytoryczny przygotowuje Claude (ze znacznikami linków, obiema wersjami,
 | Credit & debt | APR, Credit score | — |
 | Risk | Volatility, Risk tolerance | — |
 
-- Hasła "kompletne": `definition_plain`, `example`, `related`, `graphic_key`, `lesson_id` (gdzie istnieje lekcja: Emergency fund → 1, Compound interest → 2, Inflation → 3, zgodnie z `V2__lessons.sql`).
+- Hasła "kompletne": `definition_plain`, `example`, `related`, `graphic_key`.
 - Grafiki: `compound-growth` (słupki "€ 1,000 at 5%": Today / 10 / 20 / 30 yrs), `diversification` (jeden koszyk kontra wiele), `inflation-power` (malejąca siła nabywcza).
 - Pozostałe hasła: `definition_standard` + `short_description` + `related`, bez wersji plain i grafiki.
 - Każde hasło ma 0 do 3 aliasów (synonimy do wyszukiwarki, np. Dividend: `payout`; Emergency fund: `rainy day fund`).

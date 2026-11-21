@@ -24,8 +24,7 @@ CREATE TABLE glossary_term (
     definition_plain    TEXT,                          -- NULL = the "in plain words" version does not exist yet
     example             TEXT,
     aliases             TEXT[]       NOT NULL DEFAULT '{}',  -- synonyms matched by search
-    graphic_key         VARCHAR(40),                   -- which small SVG graphic the app draws, NULL = none
-    lesson_id           BIGINT REFERENCES lesson (id) ON DELETE SET NULL  -- "Practise it" card
+    graphic_key         VARCHAR(40)                    -- which small SVG graphic the app draws, NULL = none
 );
 CREATE INDEX glossary_term_category ON glossary_term (category_id, position);
 CREATE INDEX glossary_term_name_trgm ON glossary_term USING gin (lower(name) gin_trgm_ops);

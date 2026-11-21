@@ -11,7 +11,6 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderColumn;
 
-import com.collabothon.back.lesson.Lesson;
 
 /** One glossary entry. Definitions contain inline links written as [[slug|visible text]]. */
 @Entity
@@ -45,10 +44,6 @@ public class GlossaryTerm {
 	private List<String> aliases;
 
 	private String graphicKey;
-
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "lesson_id")
-	private Lesson lesson;
 
 	@ManyToMany
 	@JoinTable(name = "glossary_related", joinColumns = @JoinColumn(name = "term_id"),
@@ -105,10 +100,6 @@ public class GlossaryTerm {
 
 	public String getGraphicKey() {
 		return graphicKey;
-	}
-
-	public Lesson getLesson() {
-		return lesson;
 	}
 
 	public List<GlossaryTerm> getRelated() {

@@ -1,0 +1,75 @@
+[
+  {
+    "id": "seoul",
+    "city": "Seoul",
+    "topic": "Hype & borrowed money",
+    "status": "available",
+    "pin": { "lat": 37.57, "lng": 126.98 },
+    "icon": "message-circle",
+    "color": "violet",
+    "landmark": { "kind": "tower", "at": 0.69 },
+    "character": { "name": "Ji-woo", "age": 27, "role": "Office worker", "place": "Yeouido", "savings": "₩10,000,000" },
+    "intro": "Ji-woo's work chat is buzzing. A stock is up 40% this week, and a paid tip room says it will double. What could happen if she puts in her savings or borrows more?",
+    "words": [
+      { "native": "리딩방", "meaning": "leading room" },
+      { "native": "영끌", "meaning": "yeongkkeul" }
+    ],
+    "currency": { "code": "KRW", "perEur": 1470 },
+    "lessonIds": ["seoul-1", "seoul-2", "seoul-3", "seoul-4", "seoul-5"]
+  },
+  {
+    "id": "berlin",
+    "city": "Berlin",
+    "topic": "Safe money that shrinks",
+    "status": "available",
+    "pin": { "lat": 52.52, "lng": 13.4 },
+    "icon": "shield",
+    "color": "teal",
+    "landmark": { "kind": "gate", "at": 0.62 },
+    "character": { "name": "Lena", "age": 34, "role": "Project manager", "place": "Kreuzberg", "savings": "€18,000" },
+    "intro": "Lena and Jonas keep €18,000 on a savings account that never falls. Mia is two, prices keep rising, and Oma wants to put money aside for Mia. What does \"safe\" cost over 18 years?",
+    "words": [
+      { "native": "Sparbuch", "meaning": "passbook savings" },
+      { "native": "Notgroschen", "meaning": "emergency penny" }
+    ],
+    "currency": { "code": "EUR", "perEur": 1 },
+    "lessonIds": ["berlin-1", "berlin-2", "berlin-3", "berlin-4", "berlin-5"]
+  },
+  {
+    "id": "sao-paulo",
+    "city": "São Paulo",
+    "topic": "Twelve easy payments",
+    "status": "available",
+    "pin": { "lat": -23.55, "lng": -46.63 },
+    "icon": "credit-card",
+    "color": "orange",
+    "landmark": { "kind": "raised", "at": 0.6 },
+    "character": { "name": "Rafa", "age": 22, "role": "Junior designer, first job", "place": "República", "savings": "R$2,800 a month" },
+    "intro": "Rafa just got his first salary and his first flat. Everything comes in 12 easy payments, sem juros. Then the payments start to stack, and the card offers to roll over the rest.",
+    "words": [
+      { "native": "parcelado sem juros", "meaning": "split, no interest" },
+      { "native": "rotativo", "meaning": "rolled-over card debt" },
+      { "native": "CET", "meaning": "total effective cost" }
+    ],
+    "currency": { "code": "BRL", "perEur": 6.3 },
+    "lessonIds": ["sao-paulo-1", "sao-paulo-2", "sao-paulo-3", "sao-paulo-4", "sao-paulo-5"]
+  },
+  {
+    "id": "tokyo",
+    "city": "Tokyo",
+    "topic": "One country or the world",
+    "status": "available",
+    "pin": { "lat": 35.68, "lng": 139.69 },
+    "icon": "globe",
+    "color": "rose",
+    "landmark": { "kind": "lattice", "at": 0.66 },
+    "character": { "name": "Michiko", "age": 58, "role": "School administrator", "place": "Marunouchi", "savings": "¥12,000,000" },
+    "intro": "Michiko retires in seven years with ¥12 million on deposit. Her colleagues open new NISA accounts and buy only Japanese companies. Her father bought at the 1989 peak.",
+    "words": [
+      { "native": "新NISA", "meaning": "new NISA" },
+      { "native": "貯蓄から投資へ", "meaning": "from savings to investment" }
+    ],
+    "currency": { "code": "JPY", "perEur": 165 },
+    "lessonIds": ["tokyo-1", "tokyo-2", "tokyo-3", "tokyo-4", "tokyo-5"]
+  }
+]

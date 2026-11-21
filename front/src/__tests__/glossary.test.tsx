@@ -29,7 +29,6 @@ const details: Record<string, unknown> = {
     example: 'A coffee gets pricier.',
     graphicKey: null,
     related: [{ slug: 'budget', name: 'Budget' }],
-    lesson: null,
   },
   etf: {
     slug: 'etf',
@@ -41,7 +40,6 @@ const details: Record<string, unknown> = {
     example: null,
     graphicKey: null,
     related: [],
-    lesson: null,
   },
 };
 

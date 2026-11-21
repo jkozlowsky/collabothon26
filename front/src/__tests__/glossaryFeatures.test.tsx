@@ -31,7 +31,6 @@ function detail(slug: string, extra: Record<string, unknown> = {}) {
     example: null,
     graphicKey: null,
     related: [],
-    lesson: null,
     ...extra,
   };
 }

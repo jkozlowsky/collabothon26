@@ -11,7 +11,7 @@ test.afterAll(async ({ request }) => {
   await resetOnboarding(request);
 });
 
-test('app opens on the bank; Learn runs onboarding, then Map; Bank comes back; a transfer lowers the balance', async ({ page }) => {
+test('app opens on the bank; Learn runs onboarding, then the globe and a story; Bank comes back; a transfer lowers the balance', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('owner-name')).toHaveText('Alex Krause');
   await expect(page.getByTestId('main-balance')).toHaveText('€ 4,280.52');
@@ -22,7 +22,12 @@ test('app opens on the bank; Learn runs onboarding, then Map; Bank comes back; a
   await page.getByTestId('onboarding-next').click();
   await page.getByTestId('onboarding-skip-all').click();
   await expect(page.getByTestId('screen-learn')).toBeVisible();
+  await expect(page.getByTestId('globe')).toBeVisible();
+
+  // The globe opens on the current story with its callout; Continue leads to the story's lessons.
+  await page.getByTestId('pin-callout-open').click();
   await expect(page.getByTestId(/^lesson-/).first()).toBeVisible();
+  await page.goBack();
 
   // Back to the bank, then send Anna € 25.
   await page.getByTestId('nav-bank').click();

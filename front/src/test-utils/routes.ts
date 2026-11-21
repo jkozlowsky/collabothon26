@@ -6,19 +6,24 @@ import OverviewScreen from '@/app/(main)/(bank)/index';
 import InvestScreen from '@/app/(main)/(bank)/invest';
 import PaymentsScreen from '@/app/(main)/(bank)/payments';
 import LearnLayout from '@/app/(main)/(learn)/_layout';
+import DuelLobbyScreen from '@/app/(main)/(learn)/duel';
 import DefinitionScreen from '@/app/(main)/(learn)/glossary/[slug]';
 import GlossaryLayout from '@/app/(main)/(learn)/glossary/_layout';
 import GlossaryScreen from '@/app/(main)/(learn)/glossary/index';
 import MapScreen from '@/app/(main)/(learn)/map';
 import ProfileScreen from '@/app/(main)/(learn)/profile';
+import DuelMatchScreen from '@/app/duel/match';
+import DuelRankingsScreen from '@/app/duel/rankings';
 import RootLayout from '@/app/_layout';
 import LessonScreen from '@/app/lesson/[id]';
 import OnboardingScreen from '@/app/onboarding';
+import StoryScreen from '@/app/story/[id]';
 
 export const appRoutes = {
   _layout: RootLayout,
   onboarding: OnboardingScreen,
   'lesson/[id]': LessonScreen,
+  'story/[id]': StoryScreen,
   '(main)/_layout': MainLayout,
   '(main)/(bank)/_layout': BankLayout,
   '(main)/(bank)/index': OverviewScreen,
@@ -30,5 +35,8 @@ export const appRoutes = {
   '(main)/(learn)/glossary/_layout': GlossaryLayout,
   '(main)/(learn)/glossary/index': GlossaryScreen,
   '(main)/(learn)/glossary/[slug]': DefinitionScreen,
+  '(main)/(learn)/duel': DuelLobbyScreen,
   '(main)/(learn)/profile': ProfileScreen,
+  'duel/match': DuelMatchScreen,
+  'duel/rankings': DuelRankingsScreen,
 };

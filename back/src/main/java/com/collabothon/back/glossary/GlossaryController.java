@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.collabothon.back.lesson.Lesson;
 
 @RestController
 @RequestMapping("/api/glossary")
@@ -55,17 +54,15 @@ class GlossaryController {
 
 	/**
 	 * definitionPlain is null until the "in plain words" version exists; the definitions contain
-	 * [[slug|text]] links to other terms. lesson is the lesson to practise this term in, or null.
+	 * [[slug|text]] links to other terms.
 	 */
 	record TermDetail(String slug, String name, String fullName, CategoryRef category, String definitionStandard,
-			String definitionPlain, String example, String graphicKey, List<TermRef> related, LessonRef lesson) {
+			String definitionPlain, String example, String graphicKey, List<TermRef> related) {
 		static TermDetail from(GlossaryTerm t) {
-			Lesson l = t.getLesson();
 			return new TermDetail(t.getSlug(), t.getName(), t.getFullName(),
 					new CategoryRef(t.getCategory().getSlug(), t.getCategory().getName()), t.getDefinitionStandard(),
 					t.getDefinitionPlain(), t.getExample(), t.getGraphicKey(),
-					t.getRelated().stream().map(r -> new TermRef(r.getSlug(), r.getName())).toList(),
-					l == null ? null : new LessonRef(l.getId(), l.getTitle()));
+					t.getRelated().stream().map(r -> new TermRef(r.getSlug(), r.getName())).toList());
 		}
 	}
 
@@ -73,9 +70,6 @@ class GlossaryController {
 	}
 
 	record TermRef(String slug, String name) {
-	}
-
-	record LessonRef(Long id, String title) {
 	}
 
 }

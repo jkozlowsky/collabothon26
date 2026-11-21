@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, Long> {
 
 	// open-in-view is off, so everything the detail DTO touches is fetched here.
-	@EntityGraph(attributePaths = { "category", "related", "lesson" })
+	@EntityGraph(attributePaths = { "category", "related" })
 	Optional<GlossaryTerm> findBySlug(String slug);
 
 	// Search uses strpos/starts_with instead of LIKE, so %, _ and \ typed by the user need no escaping.

@@ -13,6 +13,14 @@ const Animated = {
 // Layout animation builders (FadeIn.duration(200), LinearTransition…): chainable no-ops.
 const builder = new Proxy(function () {}, { get: () => () => builder, apply: () => builder });
 
+// Shared values as plain boxes; animations jump straight to their target.
+const sharedValue = (value) => {
+  const sv = { value, get: () => sv.value, set: (v) => (sv.value = v) };
+  return sv;
+};
+const { useState } = require('react');
+const easing = () => (t) => t;
+
 // expo-router/testing-library sets `default.call`, so `default` must be a plain object.
 module.exports = {
   __esModule: true,
@@ -23,6 +31,16 @@ module.exports = {
   // Read by react-native-gesture-handler to tell shared values from plain props.
   isSharedValue: () => false,
   useComposedEventHandler: () => undefined,
+  useSharedValue: (initial) => useState(() => sharedValue(initial))[0],
+  // Computed once per render, so tests still see the projected positions.
+  useAnimatedStyle: (updater) => updater(),
+  useAnimatedReaction: () => {},
+  withTiming: (to) => to,
+  withSpring: (to) => to,
+  withDecay: () => 0,
+  cancelAnimation: () => {},
+  interpolate: (_value, _input, output) => output[0],
+  Easing: new Proxy({}, { get: () => easing }),
   FadeIn: builder,
   FadeOut: builder,
   LinearTransition: builder,

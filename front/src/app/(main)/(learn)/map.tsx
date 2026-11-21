@@ -1,66 +1,49 @@
-import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useMemo, useRef, useState } from 'react';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AsyncContent } from '@/components/AsyncContent';
-import { Screen } from '@/components/Screen';
-import { colors, radii, spacing, type } from '@/constants/theme';
+import { Globe, type GlobeHandle } from '@/components/globe/Globe';
+import { GlobeHint } from '@/components/globe/GlobeHint';
+import { LearnHeader } from '@/components/LearnHeader';
+import { StorySheet } from '@/components/StorySheet';
+import { colors, spacing } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
+import { LEARNER, STORIES, withLessons } from '@/lib/stories';
+import { USER_ID } from '@/lib/user';
 import type { LessonSummary } from '@/types/lessons';
 
+/** Map tab (Figma 3:496): header, the globe with story pins, and the "Your stories" sheet. */
 export default function MapScreen() {
-  const { data, loading, error, reload } = useApi<LessonSummary[]>('/api/lessons');
+  const globe = useRef<GlobeHandle>(null);
+  // Estimates until the first layout pass measures the real values.
+  const window = useWindowDimensions();
+  const [height, setHeight] = useState(window.height);
+  const [sheetTop, setSheetTop] = useState(Math.round(window.height * 0.66));
+  const [hint, setHint] = useState(true);
+  const { data: lessons, reload } = useApi<LessonSummary[]>(`/api/lessons?userId=${encodeURIComponent(USER_ID)}`);
+  // Coming back from a lesson moves the story's progress on.
+  useFocusEffect(reload);
+  const stories = useMemo(() => withLessons(STORIES, lessons), [lessons]);
+
+  const openStory = (id: string) => router.push({ pathname: '/story/[id]', params: { id } });
 
   return (
-    <Screen title="Learn" testID="screen-learn" scroll>
-      <AsyncContent loading={loading} error={error} onRetry={reload}>
-        {() => (
-          <View style={styles.list}>
-            {data?.map((lesson) => (
-              <Pressable
-                key={lesson.id}
-                testID={`lesson-${lesson.id}`}
-                accessibilityRole="button"
-                onPress={() => router.push({ pathname: '/lesson/[id]', params: { id: lesson.id } })}
-                style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-              >
-                <Text style={styles.emoji}>{lesson.emoji}</Text>
-                <View style={styles.cardBody}>
-                  <Text style={styles.title}>{lesson.title}</Text>
-                  <Text style={styles.summary}>{lesson.summary}</Text>
-                  <Text style={styles.meta}>
-                    {lesson.questionCount} questions ·{' '}
-                    <Text style={styles.xp}>+{lesson.xp} XP</Text>
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        )}
-      </AsyncContent>
-    </Screen>
+    <View style={styles.screen} testID="screen-learn" onLayout={(e) => setHeight(e.nativeEvent.layout.height)}>
+      <SafeAreaView edges={['top', 'left', 'right']} onLayout={(e) => setSheetTop(e.nativeEvent.layout.height + spacing.md)}>
+        <LearnHeader learner={LEARNER} />
+        <Globe ref={globe} stories={stories} onOpenStory={openStory} onSpin={() => setHint(false)} />
+        {/* Keeps its space when hidden, so the sheet does not jump. */}
+        <View style={!hint && styles.hidden}>
+          <GlobeHint />
+        </View>
+      </SafeAreaView>
+      <StorySheet stories={stories} height={height} collapsedTop={sheetTop} onSelect={(id) => globe.current?.flyTo(id)} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { gap: spacing.md },
-  // Matches the Figma "Story Card" shell.
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.bgSurface,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    paddingVertical: spacing.md,
-    paddingLeft: spacing.md,
-    paddingRight: 14,
-  },
-  cardPressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
-  emoji: { fontSize: 32 },
-  cardBody: { flex: 1, gap: spacing.xs },
-  title: type.titleCard,
-  summary: { ...type.labelDefault, color: colors.textMuted },
-  meta: { ...type.labelDefault, color: colors.textMuted },
-  xp: { ...type.labelStrong, color: colors.feedbackXp },
+  screen: { flex: 1, backgroundColor: colors.bgCanvas },
+  hidden: { opacity: 0 },
 });

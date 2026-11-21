@@ -101,7 +101,7 @@ The seed customer gives `2-3.5k`, `6+`, `20%+`, true, false, true, true. Facts c
 Skipped experience → no gaps. `because` lines, observations only: "You said: {experience label}. Money goes to savings or investments every month." / "You said: {experience label}. Your accounts cover less than a month of spending." / "You said: {experience label}. Your accounts with us include investment products." / "You said: {experience label}. No investment products in your accounts with us."
 
 ### Jev call
-`POST {jev.base-url}/v1/systemone` with `model: {jev.model}`; header `Authorization: Bearer {jev.api-key}`, omitted when the key is blank. With a blank key and the default base URL the call is skipped (`sharedWithModel: null`, `source: fallback`). The client is built from the injected `RestClient.Builder`; timeouts on the request factory: connect 1 s, read 4 s. `state` = `{answers: OnboardingAnswers, facts (only with bank data)}`. Questions, verbatim:
+`POST {jev.base-url}/v1/systemone` with `model: {jev.model}`; header `Authorization: Bearer {jev.api-key}`, omitted when the key is blank. With a blank key and the default base URL the call is skipped (`sharedWithModel: null`, `source: fallback`). The client is built from the injected `RestClient.Builder`; timeouts on the request factory: connect 1 s, read 8 s (F1b: up to 4 extra check judgements, below the front's 10 s). `state` = `{answers: OnboardingAnswers, facts (only with bank data)}`. Questions, verbatim:
 
 <!-- jev-questions: the backend test compares the Jev request with this block -->
 ```json

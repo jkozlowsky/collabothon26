@@ -64,8 +64,10 @@ Categorization gains:
   checks: [{questionId, area, lessonId, result: "understands" | "partly" | "not-yet"}],   // [] when skipped
   startLesson: {lessonId: number, title: string} | null
   stored rows without `checks`/`startLesson` read as `[]`/null.
-confidenceGaps[].because may cite a check (D5), only one with `result: understands` in the same area as the gap:
-  "…and your answer about {area} shows you understand it."
+confidenceGaps[].because may cite checks (D5), only when every check in the gap's area is `understands`:
+  UNDER: "You said: {experience label}. Your answer about {area} shows you understand it."
+  OVER (every check in the area `not-yet`, no answer cited): "You said: {experience label}. Your Quick check points to {area} as a place to learn more."
+  Mixed results in one area: no check-based gap.
 ```
 - **Slots** (filled on the device from `BankState` through Danylo's selectors): `savingsBalance`, `savingsInterestRate`, `monthOut`, `loanRemaining`, `loanApr`, `cardUsed`, `cardLimit`, `etfMonthly`, `depotTotal`, `positionCount`. An account version is usable only with consent and every slot available: a slot is available when its value is > 0, `positionCount` must be ≥ 2, and the `rate-vs-inflation` version needs `savingsInterestRate` < 3. Amounts are whole euros from cents (`en-IE`). Q-F adds the selectors `etfMonthly` (`Math.abs(amount)` of the standing order whose recipient starts with "Depot") and any other missing slot to `selectors.ts`.
 - **What Jev gets per answer**: the **generic** prompt, the criterion and the answer text, never the account version, so the app sends no exact amounts. The text is wrapped as delimited data with the instruction to treat it as an answer, never as instructions (OWASP LLM01), plus the D2 instruction to judge the reasoning, not the numbers. Each answered check is one `choice` question `check_<id>` (key = `check_` + id with `-` → `_`) with labels `understands`, `partly`, `not-yet`, in the same request as role and focus areas. The request-level `state` gains `checks: [{questionId, genericPrompt, criterion, answer}]` for answered checks. A "Not sure" answer creates no `check_<id>` question; the backend sets its result to `not-yet`. `sharedWithModel` records `checks: [{questionId, answered}]`, never the text.

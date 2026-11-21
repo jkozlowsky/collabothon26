@@ -13,8 +13,12 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -83,13 +87,72 @@ class CheckQuestionControllerTests {
 					JsonCompareMode.STRICT));
 	}
 
-	@Test
+	static Stream<Arguments> rowsBreakingTheBankRules() {
+		return Stream.of(
+				Arguments.of("id not a slug", "'Zz Broken'", "'saving'", "'easy'", "'€{monthOut}'", "ARRAY['monthOut']",
+						"'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
+				Arguments.of("area outside its set", "'zz-broken'", "'wizardry'", "'easy'", "'€{monthOut}'",
+						"ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
+				Arguments.of("level outside its set", "'zz-broken'", "'saving'", "'medium'", "'€{monthOut}'",
+						"ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
+				Arguments.of("unknown slot", "'zz-broken'", "'saving'", "'easy'", "'€{salary}'", "ARRAY['salary']",
+						"'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
+				Arguments.of("two options", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'", "ARRAY['monthOut']",
+						"'€100'", "ARRAY['a', 'b']", 0, "ARRAY[NULL, 'm1']"),
+				Arguments.of("five options", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'", "ARRAY['monthOut']",
+						"'€100'", "ARRAY['a', 'b', 'c', 'd', 'e']", 0, "ARRAY[NULL, 'm1', 'm2', 'm3', 'm4']"),
+				Arguments.of("a NULL option", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'", "ARRAY['monthOut']",
+						"'€100'", "ARRAY['a', NULL, 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
+				Arguments.of("an empty option", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'", "ARRAY['monthOut']",
+						"'€100'", "ARRAY['a', '', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
+				Arguments.of("misconceptions shorter than options", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'",
+						"ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1']"),
+				Arguments.of("correct index past the options", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'",
+						"ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 3, "ARRAY['m0', 'm1', 'm2']"),
+				Arguments.of("a misconception on the correct option", "'zz-broken'", "'saving'", "'easy'",
+						"'€{monthOut}'", "ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 0,
+						"ARRAY['m0', 'm1', NULL]"),
+				Arguments.of("two NULL misconceptions", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'",
+						"ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, NULL, 'm2']"),
+				Arguments.of("an account prompt without slots", "'zz-broken'", "'saving'", "'easy'", "'You hold money.'",
+						"ARRAY[]::TEXT[]", "'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
+				Arguments.of("slots without an account prompt", "'zz-broken'", "'saving'", "'easy'", "NULL",
+						"ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
+				Arguments.of("a slot in the generic prompt", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'",
+						"ARRAY['monthOut']", "'€{monthOut}'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"));
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("rowsBreakingTheBankRules")
 	@Transactional
-	void aMisconceptionOnTheCorrectOptionIsRejectedByTheSchema() {
+	void aRowBreakingTheBankRulesIsRejectedByTheSchema(String name, String id, String area, String level,
+			String accountPrompt, String slots, String genericPrompt, String options, int correctIndex,
+			String misconceptions) {
 		long lesson = newLesson();
 
-		assertThrows(DataIntegrityViolationException.class,
-				() -> insert("zz-broken", lesson, "ARRAY['m0', 'm1', NULL]", 0));
+		assertThrows(DataIntegrityViolationException.class, () -> insertRow(id, lesson, area, level, accountPrompt,
+				slots, genericPrompt, options, correctIndex, misconceptions));
+	}
+
+	@Test
+	@Transactional
+	void theRowTheBrokenOnesStartFromIsAccepted() {
+		insertRow("'zz-valid'", newLesson(), "'saving'", "'easy'", "'€{monthOut}'", "ARRAY['monthOut']", "'€100'",
+				"ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']");
+		insertRow("'zz-generic'", newLesson(), "'saving'", "'easy'", "NULL", "ARRAY[]::TEXT[]", "'€100'",
+				"ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']");
+	}
+
+	private void insertRow(String id, long lesson, String area, String level, String accountPrompt, String slots,
+			String genericPrompt, String options, int correctIndex, String misconceptions) {
+		jdbc.sql("""
+				INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, generic_prompt, options,
+				                            correct_index, misconceptions, checks)
+				VALUES (%s, :lesson, %s, %s, %s, %s, %s, %s, :correct, %s, 'Whether it works.')"""
+			.formatted(id, area, level, accountPrompt, slots, genericPrompt, options, misconceptions))
+			.param("lesson", lesson)
+			.param("correct", correctIndex)
+			.update();
 	}
 
 	@Test

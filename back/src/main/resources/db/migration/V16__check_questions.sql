@@ -15,7 +15,11 @@ CREATE TABLE check_question (
     CHECK (cardinality(misconceptions) = cardinality(options)),
     CHECK (correct_index BETWEEN 0 AND cardinality(options) - 1),
     CHECK (misconceptions[correct_index + 1] IS NULL),
-    CHECK (cardinality(array_positions(misconceptions, NULL)) = 1)
+    CHECK (cardinality(array_positions(misconceptions, NULL)) = 1),
+    -- '' <> ALL is NULL, not false, for a NULL element, so NULLs need their own test.
+    CHECK (array_position(options, NULL) IS NULL AND '' <> ALL (options)),
+    CHECK ((account_prompt IS NULL) = (cardinality(slots) = 0)),
+    CHECK (position('{' IN generic_prompt) = 0)
 );
 
 INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, generic_prompt, options, correct_index, misconceptions, checks) VALUES

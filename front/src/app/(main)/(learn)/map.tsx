@@ -26,7 +26,12 @@ export default function MapScreen() {
   // Coming back from a lesson moves the story's progress on.
   useFocusEffect(reload);
   const startHere = useStartHere();
-  const stories = useMemo(() => withLessons(STORIES, lessons), [lessons]);
+  // One "start" cue: the Quick check's story replaces main's default current story.
+  const startId = startHere?.storyId;
+  const stories = useMemo(() => {
+    const all = withLessons(STORIES, lessons);
+    return startId ? all.map((s) => ({ ...s, current: s.id === startId })) : all;
+  }, [lessons, startId]);
 
   const openStory = (id: string) => router.push({ pathname: '/story/[id]', params: { id } });
 

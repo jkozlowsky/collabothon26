@@ -180,6 +180,10 @@ const DUEL_COUNT = (DUEL_CLOCK - DUEL_PICK_AT) * 2;
 const DUEL_HOLD = 4;
 const DUEL_BEATS = DUEL_COUNT + DUEL_HOLD + 1;
 const DUEL_FADE_MS = 350;
+/** Transitions stay out of StyleSheet.create: its types do not know Reanimated's CSS properties. */
+const TRACK_DRAIN = { transitionProperty: 'width', transitionTimingFunction: 'linear' } satisfies CSSStyle;
+const ANSWER_FADE = { transitionProperty: ['backgroundColor', 'borderColor'], transitionDuration: 250 } satisfies CSSStyle;
+const CHECK_FADE = { transitionProperty: 'opacity', transitionDuration: 250 } satisfies CSSStyle;
 const ROUND_FADE = { transitionProperty: 'opacity', transitionDuration: DUEL_FADE_MS, transitionTimingFunction: EASE_IN_OUT } satisfies CSSStyle;
 
 /**
@@ -251,13 +255,13 @@ export function DuelIllustration() {
           </Text>
           <View style={duel.track}>
             {/* Refills at once while the card is faded out; drains second by second after that. */}
-            <Animated.View style={[duel.trackFill, { width: `${(sec / DUEL_CLOCK) * 100}%`, transitionDuration: fresh ? 0 : DUEL_BEAT_MS * 2 }]} />
+            <Animated.View style={[duel.trackFill, TRACK_DRAIN, { width: `${(sec / DUEL_CLOCK) * 100}%`, transitionDuration: fresh ? 0 : DUEL_BEAT_MS * 2 }]} />
           </View>
           {round.options.map((option, i) => {
             const right = picked && i === round.right;
             return (
-              <Animated.View key={option} style={[duel.answer, right && duel.answerRight]}>
-                <Animated.View style={[hero.check, duel.checkSlot, { opacity: right ? 1 : 0 }]}>
+              <Animated.View key={option} style={[duel.answer, ANSWER_FADE, right && duel.answerRight]}>
+                <Animated.View style={[hero.check, CHECK_FADE, { opacity: right ? 1 : 0 }]}>
                   <Feather name="check" size={11} color="#fff" />
                 </Animated.View>
                 <Text style={[duel.answerText, right && duel.answerTextRight]}>{option}</Text>
@@ -454,7 +458,7 @@ const duel = StyleSheet.create({
   // Two lines kept for both questions, so the card does not change height between rounds.
   question: { ...type.titleCard, color: colors.textPrimary, minHeight: (type.titleCard.lineHeight ?? 22) * 2 },
   track: { height: 6, borderRadius: radii.bar, backgroundColor: colors.brandPrimarySoft, overflow: 'hidden' },
-  trackFill: { height: 6, borderRadius: radii.bar, backgroundColor: colors.feedbackStreak, transitionProperty: 'width', transitionTimingFunction: 'linear' },
+  trackFill: { height: 6, borderRadius: radii.bar, backgroundColor: colors.feedbackStreak },
   answer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -464,11 +468,8 @@ const duel = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.borderDefault,
     backgroundColor: colors.bgSurface,
-    transitionProperty: ['backgroundColor', 'borderColor'],
-    transitionDuration: 250,
   },
   answerRight: { borderColor: colors.feedbackSuccess, backgroundColor: colors.feedbackSuccessSoft },
-  checkSlot: { transitionProperty: 'opacity', transitionDuration: 250 },
   answerText: { ...type.titleCard, color: colors.textPrimary },
   answerTextRight: { color: colors.feedbackSuccess },
 });

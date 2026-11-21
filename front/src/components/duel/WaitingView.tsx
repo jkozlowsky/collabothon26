@@ -1,15 +1,12 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Button } from '@/components/Button';
 import { DotTrack } from '@/components/duel/DotTrack';
-import { DuelHeading } from '@/components/duel/DuelHeading';
 import { DuelPage } from '@/components/duel/DuelPage';
 import { FlowHeader } from '@/components/duel/FlowHeader';
-import { StatusChip } from '@/components/duel/StatusChip';
-import { VersusHero } from '@/components/duel/VersusHero';
-import { colors, elevation, radii, spacing, type } from '@/constants/theme';
-import { formatClock } from '@/lib/duel/meta';
-import { getRivalScore, getYourScore, type DuelMatchState } from '@/lib/duel/reducer';
+import { PlayerAvatar } from '@/components/duel/PlayerAvatar';
+import { Tappable } from '@/components/onboarding/ui';
+import { colors, radii, spacing, type } from '@/constants/theme';
+import { getYourScore, type DuelMatchState } from '@/lib/duel/reducer';
 import type { AvatarId } from '@/types/account';
 
 type Props = {
@@ -18,72 +15,99 @@ type Props = {
   onBackToLobby: () => void;
 };
 
-/** Seconds per question on the server; bounds how long the rival can still take. */
-const QUESTION_SECONDS = 40;
-
-/** You finished first; the rival is still answering (Figma "Duel — Waiting"). */
+/** Waiting screen when player finished all questions and rival is still answering (Figma 157:4376). */
 export function WaitingView({ state, youAvatar, onBackToLobby }: Props) {
   const total = state.questionCount;
   const rival = state.rival;
-  const rivalName = rival?.name ?? 'Rival';
-  const answered = state.rivalProgress?.answered ?? 0;
+  const rivalName = rival?.name ?? 'Rywal';
+  const answered = state.rivalAnswered;
   const rivalQuestion = Math.min(answered + 1, total);
-  const connected = state.rivalProgress?.connected ?? true;
+  const yourScore = getYourScore(state);
+  const xpGained = state.yourFinal?.xpGained ?? yourScore * 5;
 
   return (
     <DuelPage
       testID="duel-waiting"
       header={
-        <FlowHeader onClose={onBackToLobby} closeLabel="Back to lobby" closeTestID="waiting-close" title={`All ${total} answered`} progress={1} />
+        <FlowHeader
+          onClose={onBackToLobby}
+          closeLabel="Wróć do lobby"
+          closeTestID="waiting-close"
+          title="Odpowiedziałeś na wszystkie"
+          progress={1}
+        />
       }
       footer={
-        <>
-          <Button label="Back to lobby" variant="secondary" onPress={onBackToLobby} testID="waiting-back-lobby" />
-          <Text style={styles.note}>Your result is saved either way</Text>
-        </>
+        <View style={styles.footerWrap}>
+          <Tappable
+            onPress={onBackToLobby}
+            accessibilityRole="button"
+            accessibilityLabel="Wróć później do lobby"
+            testID="waiting-back-lobby"
+            style={styles.backLink}
+          >
+            <Text style={styles.backLinkText}>Wróć później</Text>
+          </Tappable>
+          <Text style={styles.footerNote}>Twój wynik jest zapisany i czeka na rywala</Text>
+        </View>
       }
     >
-      <DuelHeading overline={`WAITING FOR ${rivalName.toUpperCase()}`} title="Nice, you're done">
-        <StatusChip label={`${getYourScore(state)} / ${total} correct`} tone="success" icon="check" />
-        <StatusChip label={`max ${formatClock((total - answered) * QUESTION_SECONDS)} left`} tone="xp" icon="timer" />
-      </DuelHeading>
-
-      <VersusHero
-        you={{ avatar: youAvatar, label: 'You · done' }}
-        rival={{ avatar: rival?.avatar, isBot: rival?.isBot, label: `${rivalName} · Q${rivalQuestion}`, dimmed: !connected }}
-      >
-        <Text style={styles.score}>
-          {getYourScore(state)} : {getRivalScore(state)}
+      {/* Navy score block with XP pill */}
+      <View style={styles.navyScoreBlock} testID="waiting-score-block">
+        <Text style={styles.overline}>ŚWIETNIE, SKOŃCZYŁEŚ!</Text>
+        <Text style={styles.scoreText}>
+          {yourScore} / {total} poprawnych
         </Text>
-        <Text style={styles.caption}>so far</Text>
-      </VersusHero>
+        <View style={styles.xpPill}>
+          <Text style={styles.xpPillText}>+{xpGained} XP</Text>
+        </View>
+      </View>
 
-      <View style={styles.card} testID="waiting-rival-card">
-        <View style={styles.cardText}>
-          <Text style={type.titleCard}>
-            {rivalName} is on question {rivalQuestion} of {total}
+      {/* Light rival card */}
+      <View style={styles.rivalCard} testID="waiting-rival-card">
+        <PlayerAvatar avatar={rival?.avatar} size={48} ring="xp" />
+        <View style={styles.rivalContent}>
+          <Text style={styles.rivalTitle}>
+            {rivalName} rozwiązuje pytanie {rivalQuestion} z {total}
           </Text>
           <DotTrack
-            dots={state.rivalProgress?.results ?? Array.from({ length: total }, () => null)}
+            dots={state.rivalDots}
             activeIndex={answered < total ? answered : null}
+            testID="waiting-rival-dots"
           />
         </View>
-        {rival?.isBot ? (
-          <StatusChip label="Bot" tone="bot" icon="bot" />
-        ) : connected ? (
-          <StatusChip label="Online" tone="online" dot />
-        ) : (
-          <StatusChip label="Reconnecting…" tone="offline" icon="wifi-off" testID="waiting-rival-offline" />
-        )}
       </View>
     </DuelPage>
   );
 }
 
 const styles = StyleSheet.create({
-  score: { ...type.displayAmount, color: colors.brandAccent },
-  caption: { ...type.labelDefault, color: colors.onBrandMuted },
-  card: {
+  navyScoreBlock: {
+    backgroundColor: colors.brandPrimary,
+    borderRadius: radii.card,
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  overline: {
+    ...type.overline,
+    color: colors.brandAccent,
+  },
+  scoreText: {
+    ...type.displayAmount,
+    color: colors.textOnBrand,
+  },
+  xpPill: {
+    backgroundColor: colors.brandAccent,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+  },
+  xpPillText: {
+    ...type.labelStrong,
+    color: colors.textOnAccent,
+  },
+  rivalCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
@@ -92,8 +116,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderDefault,
     padding: spacing.lg,
-    ...elevation.low,
   },
-  cardText: { flex: 1, gap: spacing.sm },
-  note: { ...type.labelDefault, color: colors.textMuted, textAlign: 'center' },
+  rivalContent: {
+    flex: 1,
+    gap: spacing.sm,
+  },
+  rivalTitle: {
+    ...type.titleCard,
+    color: colors.textPrimary,
+  },
+  footerWrap: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  backLink: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  backLinkText: {
+    ...type.labelStrong,
+    color: colors.brandPrimary,
+    textDecorationLine: 'underline',
+  },
+  footerNote: {
+    ...type.labelDefault,
+    color: colors.textMuted,
+  },
 });

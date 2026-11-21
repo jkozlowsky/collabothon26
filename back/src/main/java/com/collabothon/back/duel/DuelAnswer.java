@@ -10,22 +10,21 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-/** One answered or timed-out question of a player in a match. */
 @Entity
 @Table(name = "duel_answer")
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-class DuelAnswer {
+public class DuelAnswer {
 
-	enum Outcome {
-
-		ANSWERED, TIMEOUT
-
+	public enum Outcome {
+		ANSWERED,
+		TIMEOUT
 	}
 
 	@Id
@@ -35,19 +34,19 @@ class DuelAnswer {
 	@Column(name = "match_id", nullable = false)
 	private Long matchId;
 
-	@Column(name = "user_id", length = 64, nullable = false)
-	private String userId;
-
-	@Column(name = "question_id", nullable = false)
-	private Long questionId;
-
-	@Column(nullable = false)
+	@Column(name = "position", nullable = false)
 	private int position;
 
-	@Column(name = "chosen_index")
-	private Integer chosenIndex;
+	@Column(name = "question_id", length = 64, nullable = false)
+	private String questionId;
 
-	@Column(nullable = false)
+	@Column(name = "category", length = 32, nullable = false)
+	private String category;
+
+	@Column(name = "chosen_answer", columnDefinition = "text")
+	private String chosenAnswer;
+
+	@Column(name = "correct", nullable = false)
 	private boolean correct;
 
 	@Enumerated(EnumType.STRING)
@@ -57,19 +56,28 @@ class DuelAnswer {
 	@Column(name = "ms_taken")
 	private Integer msTaken;
 
+	@Column(name = "rival_correct")
+	private Boolean rivalCorrect;
+
+	@Column(name = "rival_answer_at")
+	private Instant rivalAnswerAt;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
-	DuelAnswer(Long matchId, String userId, Long questionId, int position, Integer chosenIndex, boolean correct,
-			Outcome outcome, Integer msTaken, Instant createdAt) {
+	public DuelAnswer(Long matchId, int position, String questionId, String category,
+			String chosenAnswer, boolean correct, Outcome outcome, Integer msTaken,
+			Boolean rivalCorrect, Instant rivalAnswerAt, Instant createdAt) {
 		this.matchId = matchId;
-		this.userId = userId;
-		this.questionId = questionId;
 		this.position = position;
-		this.chosenIndex = chosenIndex;
+		this.questionId = questionId;
+		this.category = category;
+		this.chosenAnswer = chosenAnswer;
 		this.correct = correct;
 		this.outcome = outcome;
 		this.msTaken = msTaken;
+		this.rivalCorrect = rivalCorrect;
+		this.rivalAnswerAt = rivalAnswerAt;
 		this.createdAt = createdAt;
 	}
 

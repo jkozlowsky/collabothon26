@@ -10,21 +10,22 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "duel_match")
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-class DuelMatch {
+public class DuelMatch {
 
-	enum Status {
-
-		IN_PROGRESS, FINISHED, ABANDONED
-
+	public enum Status {
+		IN_PROGRESS,
+		FINISHED,
+		ABANDONED
 	}
 
 	@Id
@@ -35,42 +36,34 @@ class DuelMatch {
 	@Column(length = 8, nullable = false)
 	private DuelMode mode;
 
-	@Column(name = "category_id", nullable = false)
-	private Long categoryId;
+	@Column(name = "categories", columnDefinition = "text[]", nullable = false)
+	private String[] categories;
 
-	@Column(name = "player_a", length = 64, nullable = false)
-	private String playerA;
+	@Column(name = "user_id", length = 64, nullable = false)
+	private String userId;
 
-	@Column(name = "player_b", length = 64)
-	private String playerB;
-
-	@Column(name = "bot_name", length = 64)
-	private String botName;
-
-	@Column(name = "bot_level")
-	private Integer botLevel;
+	@Column(name = "rival_user_id", length = 64)
+	private String rivalUserId;
 
 	@Enumerated(EnumType.STRING)
 	@Column(length = 16, nullable = false)
 	private Status status;
 
-	@Column(name = "score_a")
-	private Integer scoreA;
+	@Column(name = "score")
+	private Integer score;
 
-	@Column(name = "score_b")
-	private Integer scoreB;
+	@Column(name = "rival_score")
+	private Integer rivalScore;
 
-	@Column(name = "xp_a")
-	private Integer xpA;
+	@Column(name = "xp_gained", nullable = false)
+	private int xpGained;
 
-	@Column(name = "xp_b")
-	private Integer xpB;
+	@Enumerated(EnumType.STRING)
+	@Column(length = 8)
+	private MatchOutcome outcome;
 
-	@Column(name = "elo_delta_a")
-	private Integer eloDeltaA;
-
-	@Column(name = "elo_delta_b")
-	private Integer eloDeltaB;
+	@Column(name = "seen_by_player", nullable = false)
+	private boolean seenByPlayer;
 
 	@Column(name = "started_at", nullable = false)
 	private Instant startedAt;
@@ -78,37 +71,15 @@ class DuelMatch {
 	@Column(name = "ended_at")
 	private Instant endedAt;
 
-	DuelMatch(DuelMode mode, Long categoryId, String playerA, String playerB, String botName, Integer botLevel,
-			Instant startedAt) {
+	public DuelMatch(DuelMode mode, String[] categories, String userId, String rivalUserId, Instant startedAt) {
 		this.mode = mode;
-		this.categoryId = categoryId;
-		this.playerA = playerA;
-		this.playerB = playerB;
-		this.botName = botName;
-		this.botLevel = botLevel;
+		this.categories = categories;
+		this.userId = userId;
+		this.rivalUserId = rivalUserId;
 		this.status = Status.IN_PROGRESS;
+		this.xpGained = 0;
+		this.seenByPlayer = false;
 		this.startedAt = startedAt;
-	}
-
-	/** Final scores, awarded XP and Elo deltas; {@code scoreB}, {@code xpB} and the deltas are null when not human-vs-human. */
-	void finish(int scoreA, Integer scoreB, int xpA, Integer xpB, Integer eloDeltaA, Integer eloDeltaB,
-			Instant endedAt) {
-		this.status = Status.FINISHED;
-		this.scoreA = scoreA;
-		this.scoreB = scoreB;
-		this.xpA = xpA;
-		this.xpB = xpB;
-		this.eloDeltaA = eloDeltaA;
-		this.eloDeltaB = eloDeltaB;
-		this.endedAt = endedAt;
-	}
-
-	/** Ends a match in which no human was connected at the end: no XP, no Elo. */
-	void abandon(int scoreA, Integer scoreB, Instant endedAt) {
-		this.status = Status.ABANDONED;
-		this.scoreA = scoreA;
-		this.scoreB = scoreB;
-		this.endedAt = endedAt;
 	}
 
 }

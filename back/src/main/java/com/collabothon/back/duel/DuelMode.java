@@ -1,7 +1,6 @@
 package com.collabothon.back.duel;
 
-enum DuelMode {
-
-	HUMAN, BOT, SOLO
-
+public enum DuelMode {
+	HUMAN,
+	SOLO
 }

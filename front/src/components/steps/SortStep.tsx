@@ -10,7 +10,14 @@ import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import { shuffle } from '@/lib/lessonPlayer';
 import type { SortStep as SortStepData, StepOutcome } from '@/types/lessons';
 
-type Props = { step: SortStepData; retry: boolean; onDone: (outcome: StepOutcome) => void };
+type Props = {
+  step: SortStepData | { prompt?: string; buckets: [string, string]; items: { text: string; bucket: 0 | 1 }[]; explanation?: string };
+  retry?: boolean;
+  onDone?: (outcome: StepOutcome) => void;
+  duel?: boolean;
+  disabled?: boolean;
+  onDuelDone?: (result: { mistakes: number }) => void;
+};
 
 /** Drag past this (px) and let go to sort the card; less springs back. */
 const SWIPE_DISTANCE = 90;
@@ -20,7 +27,7 @@ const NATIVE = Platform.OS !== 'web';
  * Cards one at a time: swipe left/right or use the two buttons (web, screen readers). Feedback for each card
  * shows while the next one is up; cards are shuffled on a repeat.
  */
-export function SortStep({ step, retry, onDone }: Props) {
+export function SortStep({ step, retry = false, onDone, duel = false, disabled = false, onDuelDone }: Props) {
   const reduceMotion = useReducedMotion();
   const [order] = useState(() => (retry ? shuffle([...step.items.keys()]) : [...step.items.keys()]));
   const [pos, setPos] = useState(0);
@@ -34,19 +41,27 @@ export function SortStep({ step, retry, onDone }: Props) {
   const [flying, setFlying] = useState(false);
 
   function decide(bucket: 0 | 1) {
-    if (!item) return;
-    const correct = item.bucket === bucket;
-    setLast({ text: item.text, correct, bucket: item.bucket });
-    if (!correct) setMistakes((m) => m + 1);
+    const currentItem = step.items[order[pos]];
+    if (!currentItem || disabled) return;
+    const correct = currentItem.bucket === bucket;
+    if (!duel) {
+      setLast({ text: currentItem.text, correct, bucket: currentItem.bucket });
+    }
+    const newMistakes = correct ? mistakes : mistakes + 1;
+    if (!correct) setMistakes(newMistakes);
     haptic(correct ? 'success' : 'light');
     x.setValue(0);
-    setPos((p) => p + 1);
+    const nextPos = pos + 1;
+    setPos(nextPos);
+    if (duel && nextPos >= order.length) {
+      onDuelDone?.({ mistakes: newMistakes });
+    }
   }
 
   /** Flies the card off to one side, then sorts it. */
   function fling(bucket: 0 | 1) {
-    if (flying) return;
-    if (reduceMotion) return decide(bucket);
+    if (flying || disabled) return;
+    if (reduceMotion || duel) return decide(bucket);
     setFlying(true);
     Animated.timing(x, { toValue: bucket === 0 ? -500 : 500, duration: 180, useNativeDriver: NATIVE }).start(() => {
       setFlying(false);
@@ -56,7 +71,7 @@ export function SortStep({ step, retry, onDone }: Props) {
 
   // Rebuilt each render so it sees the current card; renders only happen between cards, never mid-drag.
   const pan = PanResponder.create({
-    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
+    onMoveShouldSetPanResponder: (_, g) => !disabled && Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
     onPanResponderMove: (_, g) => x.setValue(g.dx),
     onPanResponderRelease: (_, g) => {
       if (Math.abs(g.dx) > SWIPE_DISTANCE) fling(g.dx < 0 ? 0 : 1);
@@ -75,18 +90,20 @@ export function SortStep({ step, retry, onDone }: Props) {
       scroll={false}
       footer={
         done ? (
-          <Feedback
-            correct={mistakes === 0}
-            explanation={step.explanation}
-            onContinue={() => onDone({ correct: mistakes === 0 })}
-          />
+          duel ? undefined : (
+            <Feedback
+              correct={mistakes === 0}
+              explanation={step.explanation}
+              onContinue={() => onDone?.({ correct: mistakes === 0 })}
+            />
+          )
         ) : (
           <View style={styles.buttons}>
             <View style={styles.flex}>
-              <Button label={`← ${step.buckets[0]}`} variant="secondary" onPress={() => fling(0)} disabled={flying} testID="sort-left" />
+              <Button label={`← ${step.buckets[0]}`} variant="secondary" onPress={() => fling(0)} disabled={flying || disabled} testID="sort-left" />
             </View>
             <View style={styles.flex}>
-              <Button label={`${step.buckets[1]} →`} variant="secondary" onPress={() => fling(1)} disabled={flying} testID="sort-right" />
+              <Button label={`${step.buckets[1]} →`} variant="secondary" onPress={() => fling(1)} disabled={flying || disabled} testID="sort-right" />
             </View>
           </View>
         )
@@ -111,7 +128,7 @@ export function SortStep({ step, retry, onDone }: Props) {
           </Animated.View>
         )}
       </View>
-      {last && (
+      {!duel && last && (
         <View style={[styles.last, last.correct ? styles.lastRight : styles.lastWrong]} accessibilityLiveRegion="polite" testID="sort-last">
           <Text style={[styles.lastText, { color: last.correct ? colors.feedbackSuccess : colors.feedbackDanger }]}>
             {last.correct ? '✓ Right' : '✗ Not quite'}: “{last.text}” is {step.buckets[last.bucket].toLowerCase()}.

@@ -11,29 +11,24 @@ import { WaitingView } from '@/components/duel/WaitingView';
 import { useAccount } from '@/hooks/useAccount';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useOpenLearn } from '@/hooks/useOpenLearn';
-import { isCategorySlug, isDuelMode } from '@/lib/duel/meta';
+import { isDuelMode } from '@/lib/duel/meta';
 import { useDuelMatch } from '@/lib/duel/useDuelMatch';
-import type { CategorySlug, DuelMode } from '@/types/duel';
+import type { DuelMode } from '@/types/duel';
 
 export default function DuelMatchScreen() {
   const params = useLocalSearchParams<{
-    category?: string;
+    categories?: string;
     mode?: string;
-    elo?: string;
-    calibrated?: string;
     matchId?: string;
   }>();
 
-  const category = isCategorySlug(params.category) ? params.category : 'psychology';
-  const mode = isDuelMode(params.mode) ? params.mode : 'BOT';
-  const initialElo = params.elo ? Number(params.elo) : undefined;
-  const initialCalibrated = params.calibrated !== '0';
+  const categories = params.categories ? params.categories.split(',').filter(Boolean) : ['berlin'];
+  const mode: DuelMode = isDuelMode(params.mode) ? params.mode : 'HUMAN';
   const reloadMatchId =
-    params.matchId && !params.mode && Number.isFinite(Number(params.matchId))
+    params.matchId && Number.isFinite(Number(params.matchId))
       ? Number(params.matchId)
       : undefined;
 
-  // Match routes sit outside the onboarding guard (so a reload can resume): enforce it here, before any request is made.
   const { loaded, done } = useOnboarding();
   const openLearn = useOpenLearn();
   useEffect(() => {
@@ -45,39 +40,31 @@ export default function DuelMatchScreen() {
 
   return (
     <MatchSession
-      key={`${category}-${mode}-${reloadMatchId ?? ''}`}
-      category={category}
+      key={`${categories.join('-')}-${mode}-${reloadMatchId ?? ''}`}
+      categories={categories}
       mode={mode}
-      initialElo={Number.isFinite(initialElo) ? initialElo : undefined}
-      initialCalibrated={initialCalibrated}
       reloadMatchId={reloadMatchId}
     />
   );
 }
 
 function MatchSession({
-  category,
+  categories,
   mode,
-  initialElo,
-  initialCalibrated,
   reloadMatchId,
 }: {
-  category: CategorySlug;
+  categories: string[];
   mode: DuelMode;
-  initialElo?: number;
-  initialCalibrated: boolean;
   reloadMatchId?: number;
 }) {
   const {
     state,
     secondsLeft,
-    selectOption,
+    submitAnswer,
     nextQuestion,
     leave,
-    playAgain,
     retry,
-    dismissReconnectBanner,
-  } = useDuelMatch({ category, mode, reloadMatchId });
+  } = useDuelMatch({ categories, mode, reloadMatchId });
 
   function exitToLobby() {
     leave();
@@ -89,22 +76,18 @@ function MatchSession({
   }
 
   function openRankings() {
-    router.replace({
-      pathname: '/duel/rankings',
-      params: { scope: 'category', category: state.category },
-    });
+    router.replace('/duel/rankings');
   }
 
-  // The account owns the avatar; the match card is the fallback while it loads.
   const { account } = useAccount();
   const youAvatar = account?.avatar ?? state.you?.avatar ?? 'm1';
 
   if (state.error && state.phase !== 'result') {
     return (
       <DuelPage testID="duel-error" centered>
-        <EmptyState icon="wifi-off" tone="danger" title="Something went wrong" body={state.error.message}>
-          <Button label="Try again" onPress={retry} testID="duel-error-retry" />
-          <Button label="Back to lobby" variant="secondary" onPress={exitToLobby} testID="duel-error-lobby" />
+        <EmptyState icon="wifi-off" tone="danger" title="Coś poszło nie tak" body={state.error.message}>
+          <Button label="Spróbuj ponownie" onPress={retry} testID="duel-error-retry" />
+          <Button label="Wróć do areny" variant="secondary" onPress={exitToLobby} testID="duel-error-lobby" />
         </EmptyState>
       </DuelPage>
     );
@@ -115,8 +98,6 @@ function MatchSession({
       <MatchmakingView
         state={state}
         youAvatar={youAvatar}
-        initialElo={initialElo}
-        initialCalibrated={initialCalibrated}
         onCancel={exitToLobby}
       />
     );
@@ -132,7 +113,7 @@ function MatchSession({
         result={state.result}
         youName={account?.firstName ?? state.you?.name}
         youAvatar={youAvatar}
-        onPlayAgain={playAgain}
+        onPlayAgain={retry}
         onSeeRankings={openRankings}
         onBackToLobby={exitToLobby}
       />
@@ -144,9 +125,8 @@ function MatchSession({
       state={state}
       youAvatar={youAvatar}
       secondsLeft={secondsLeft}
-      onSelectOption={selectOption}
+      onSubmitAnswer={submitAnswer}
       onNextQuestion={nextQuestion}
-      onDismissReconnect={dismissReconnectBanner}
       onExit={exitToLobby}
     />
   );

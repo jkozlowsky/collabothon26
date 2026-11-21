@@ -1,5 +1,6 @@
 package com.collabothon.back.lesson;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Optional;
@@ -8,14 +9,20 @@ import java.util.Set;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
+import com.collabothon.back.xp.XpService;
+import com.collabothon.back.xp.XpSource;
+
 /** Per-user lesson progress (V4 tables). Plain SQL: the upserts are one statement each. */
 @Repository
 class LessonProgress {
 
 	private final JdbcClient jdbc;
 
-	LessonProgress(JdbcClient jdbc) {
+	private final XpService xpService;
+
+	LessonProgress(JdbcClient jdbc, XpService xpService) {
 		this.jdbc = jdbc;
+		this.xpService = xpService;
 	}
 
 	Set<String> completed(String userId) {
@@ -30,9 +37,18 @@ class LessonProgress {
 
 	/** Records the first completion with its XP. Returns false if the lesson was already completed. */
 	boolean complete(String userId, String lessonId, int xp) {
-		return jdbc.sql("""
+		String category = lessonId.replaceAll("-[0-9]+$", "");
+		return complete(userId, lessonId, category, xp);
+	}
+
+	boolean complete(String userId, String lessonId, String category, int xp) {
+		boolean first = jdbc.sql("""
 				INSERT INTO lesson_completion (user_id, lesson_id, xp) VALUES (?, ?, ?)
 				ON CONFLICT (user_id, lesson_id) DO NOTHING""").params(userId, lessonId, xp).update() == 1;
+		if (first && xp > 0) {
+			xpService.record(userId, category, XpSource.LESSON, lessonId, xp, Instant.now());
+		}
+		return first;
 	}
 
 	void recordActivity(String userId, LocalDate date) {
@@ -41,10 +57,7 @@ class LessonProgress {
 	}
 
 	int totalXp(String userId) {
-		return jdbc.sql("SELECT COALESCE(SUM(xp), 0) FROM lesson_completion WHERE user_id = ?")
-			.param(userId)
-			.query(Integer.class)
-			.single();
+		return xpService.totalXp(userId);
 	}
 
 	void recordConcept(String userId, String concept, boolean correctFirstTry) {

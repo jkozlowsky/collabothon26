@@ -27,12 +27,19 @@ export default function MapScreen() {
   const stories = useMemo(() => withLessons(STORIES, lessons), [lessons]);
 
   const openStory = (id: string) => router.push({ pathname: '/story/[id]', params: { id } });
+  const openDuel = () => router.push('/duel');
 
   return (
     <View style={styles.screen} testID="screen-learn" onLayout={(e) => setHeight(e.nativeEvent.layout.height)}>
       <SafeAreaView edges={['top', 'left', 'right']} onLayout={(e) => setSheetTop(e.nativeEvent.layout.height + spacing.md)}>
         <LearnHeader learner={LEARNER} />
-        <Globe ref={globe} stories={stories} onOpenStory={openStory} onSpin={() => setHint(false)} />
+        <Globe
+          ref={globe}
+          stories={stories}
+          onOpenStory={openStory}
+          onSpin={() => setHint(false)}
+          arena={{ onOpen: openDuel }}
+        />
         {/* Keeps its space when hidden, so the sheet does not jump. */}
         <View style={!hint && styles.hidden}>
           <GlobeHint />

@@ -1,49 +1,23 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AsyncContent } from '@/components/AsyncContent';
 import { EmptyState } from '@/components/EmptyState';
-import { Icon } from '@/components/bank/Icon';
 import { IconButton } from '@/components/bank/IconButton';
 import { ListCard } from '@/components/bank/ListCard';
-import { CategoryChips } from '@/components/duel/CategoryChips';
-import { Podium } from '@/components/duel/Podium';
 import { RankingListItem } from '@/components/duel/RankingListItem';
-import { SegmentedTabs } from '@/components/duel/SegmentedTabs';
-import { TopWash } from '@/components/duel/TopWash';
-import { WeekBanner } from '@/components/duel/WeekBanner';
 import { colors, radii, spacing, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
-import { isCategorySlug } from '@/lib/duel/meta';
 import { USER_ID } from '@/lib/user';
-import type { CategorySlug, Rankings, RankingScope } from '@/types/duel';
+import type { Rankings } from '@/types/duel';
 
-const SCOPES: { value: RankingScope; label: string }[] = [
-  { value: 'category', label: 'Category' },
-  { value: 'overall', label: 'Overall' },
-  { value: 'friends', label: 'Friends' },
-  { value: 'weekly', label: 'League' },
-];
+const RANKINGS_PATH = `/api/duel/rankings?userId=${encodeURIComponent(USER_ID)}`;
 
-const isRankingScope = (v: string | undefined): v is RankingScope => SCOPES.some((s) => s.value === v);
-
-function rankingsPath(scope: RankingScope, category: CategorySlug) {
-  const user = `userId=${encodeURIComponent(USER_ID)}`;
-  return scope === 'category'
-    ? `/api/duel/rankings?scope=category&category=${encodeURIComponent(category)}&${user}`
-    : `/api/duel/rankings?scope=${scope}&${user}`;
-}
-
-/** Leaderboards: per category, overall, friends and the weekly league, with "you" pinned at the bottom. */
+/** Weekly overall rankings (Figma 157:4663). Overall weekly only, navy header. */
 export default function DuelRankingsScreen() {
-  const params = useLocalSearchParams<{ scope?: string; category?: string }>();
-  const [scope, setScope] = useState<RankingScope>(isRankingScope(params.scope) ? params.scope : 'weekly');
-  const [category, setCategory] = useState<CategorySlug>(isCategorySlug(params.category) ? params.category : 'instruments');
-  const { data, loading, error, reload } = useApi<Rankings>(rankingsPath(scope, category));
-  const weekly = scope === 'weekly';
+  const { data, loading, error, reload } = useApi<Rankings>(RANKINGS_PATH);
 
   function goBack() {
     if (router.canGoBack()) router.back();
@@ -52,74 +26,66 @@ export default function DuelRankingsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} testID="screen-duel-rankings">
-      <StatusBar style="dark" />
-      <TopWash />
+      <StatusBar style="light" />
 
-      <View style={styles.header}>
-        <IconButton icon="chevron-left" onPress={goBack} label="Back" testID="rankings-back" />
+      {/* Navy Header */}
+      <View style={styles.navyHeader}>
+        <View style={styles.headerTop}>
+          <IconButton icon="chevron-left" onPress={goBack} label="Wróć" testID="rankings-back" />
+        </View>
         <View style={styles.titleBlock}>
-          <Text style={styles.subtitle}>Ranked by Elo · knowledge, never returns</Text>
-          <Text style={type.displayLarge} accessibilityRole="header">
-            Rankings
+          <Text style={styles.subtitle}>Ranking tygodniowy · Wiedza finansowa</Text>
+          <Text style={styles.title} accessibilityRole="header">
+            Tabela ligowa
           </Text>
         </View>
       </View>
-
-      <View style={styles.tabs}>
-        <SegmentedTabs options={SCOPES} value={scope} onChange={setScope} testIDPrefix="rankings-tab" />
-      </View>
-      {scope === 'category' && <CategoryChips value={category} onChange={setCategory} />}
 
       <AsyncContent loading={loading} error={error} onRetry={reload}>
         {() => {
           const top = data?.top ?? [];
           const me = data?.me ?? null;
-          const podium = top.length >= 3 ? ([top[0], top[1], top[2]] as const) : null;
-          const rest = podium ? top.slice(3) : top;
+
           return (
-            <>
-              <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-                {weekly && <WeekBanner />}
+            <View style={styles.content}>
+              <ScrollView
+                contentContainerStyle={styles.scroll}
+                showsVerticalScrollIndicator={false}
+              >
                 {top.length === 0 ? (
                   <View style={styles.emptyCard}>
                     <EmptyState
                       icon="trophy"
-                      title="No one ranked yet"
-                      body={
-                        weekly
-                          ? 'Play a human match this week to take the first spot.'
-                          : 'Players appear here after 5 human matches in a category.'
-                      }
+                      title="Brak graczy w tym tygodniu"
+                      body="Zagraj pojedynek z rywalem, aby zająć pierwsze miejsce w lidze."
                       testID="rankings-empty"
                     />
                   </View>
                 ) : (
-                  <>
-                    {podium && <Podium top3={[...podium]} weekly={weekly} />}
-                    {rest.length > 0 && (
-                      <ListCard testID="rankings-list">
-                        {rest.map((row) => (
-                          <RankingListItem key={`${row.userId}-${row.rank}`} row={row} weekly={weekly} isYou={row.userId === USER_ID} />
-                        ))}
-                      </ListCard>
-                    )}
-                  </>
+                  <ListCard testID="rankings-list">
+                    {top.map((row) => (
+                      <RankingListItem
+                        key={`${row.userId}-${row.rank}`}
+                        row={row}
+                        isYou={row.userId === USER_ID}
+                      />
+                    ))}
+                  </ListCard>
                 )}
               </ScrollView>
 
-              <View style={styles.pinnedWrap}>
-                {me ? (
-                  <RankingListItem row={me} weekly={weekly} isYou variant="pinned" testID="rankings-pinned-me" />
-                ) : (
-                  <View style={styles.unranked} testID="rankings-unranked-me">
-                    <Icon name="timer" size={16} color={colors.brandPrimary} />
-                    <Text style={styles.unrankedText}>
-                      {weekly ? 'Play a human match this week to join the league.' : 'Finish 5 human matches in this category to get ranked.'}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </>
+              {/* Highlighted current user row pinned at bottom */}
+              {me && (
+                <View style={styles.pinnedWrap}>
+                  <RankingListItem
+                    row={me}
+                    isYou
+                    variant="pinned"
+                    testID="rankings-pinned-me"
+                  />
+                </View>
+              )}
+            </View>
           );
         }}
       </AsyncContent>
@@ -128,21 +94,53 @@ export default function DuelRankingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bgCanvas },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.lg },
-  titleBlock: { flex: 1, gap: spacing.xxs },
-  subtitle: { ...type.labelDefault, color: colors.textMuted },
-  tabs: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
-  scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.xs, paddingBottom: spacing.xl, gap: spacing.lg },
-  emptyCard: { backgroundColor: colors.bgSurface, borderRadius: radii.card, borderWidth: 1, borderColor: colors.borderDefault },
-  pinnedWrap: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.lg },
-  unranked: {
+  safe: {
+    flex: 1,
+    backgroundColor: colors.bgCanvas,
+  },
+  navyHeader: {
+    backgroundColor: colors.brandPrimary,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
+    gap: spacing.sm,
+  },
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.brandPrimarySoft,
-    borderRadius: radii.card,
-    padding: spacing.lg,
   },
-  unrankedText: { ...type.bodyDefault, color: colors.brandPrimary, flex: 1 },
+  titleBlock: {
+    gap: spacing.xxs,
+  },
+  subtitle: {
+    ...type.labelDefault,
+    color: colors.brandAccent,
+  },
+  title: {
+    ...type.displayLarge,
+    color: colors.textOnBrand,
+  },
+  content: {
+    flex: 1,
+  },
+  scroll: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
+  },
+  emptyCard: {
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+  },
+  pinnedWrap: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.bgCanvas,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderDefault,
+  },
 });

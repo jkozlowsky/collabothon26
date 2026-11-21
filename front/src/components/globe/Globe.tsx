@@ -17,6 +17,8 @@ import Animated, {
 import Svg, { Circle, Ellipse } from 'react-native-svg';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { ArenaCallout } from '@/components/globe/ArenaCallout';
+import { ArenaPin } from '@/components/globe/ArenaPin';
 import { GlobePin, PIN_BOX } from '@/components/globe/GlobePin';
 import { CALLOUT_WIDTH, PinCallout } from '@/components/globe/PinCallout';
 import { Plane, PLANE_NOSE, PLANE_SIZE } from '@/components/globe/Plane';
@@ -48,12 +50,19 @@ export type GlobeHandle = {
   flyTo: (id: string) => void;
 };
 
+export type ArenaConfig = {
+  pin?: { lat: number; lng: number };
+  onOpen: () => void;
+};
+
 type Props = {
   stories: Story[];
   /** The callout's button: open the story screen. */
   onOpenStory: (id: string) => void;
   /** The user started turning the globe. */
   onSpin?: () => void;
+  /** Extra pin at Rome for the duel arena. */
+  arena?: ArenaConfig;
   ref?: Ref<GlobeHandle>;
 };
 
@@ -93,7 +102,7 @@ function viewCentre(yaw: number, pitch: number): Vec3 {
  * Orientation lives in Reanimated shared values, so dragging, inertia, flights and the overlay all run
  * on the UI thread without React re-renders. Without WebGL it shows a static picture with fixed pins.
  */
-export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
+export function Globe({ stories, onOpenStory, onSpin, arena, ref }: Props) {
   const reduced = useReducedMotion();
   const focused = useIsFocused();
   const window = useWindowDimensions();
@@ -106,7 +115,13 @@ export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
   const [selectedId, setSelectedId] = useState(current.id);
   const [calloutOpen, setCalloutOpen] = useState(true);
 
-  const pins = useMemo(() => Object.fromEntries(stories.map((s) => [s.id, latLngToVector(s.pin)])), [stories]);
+  const arenaVec = useMemo(() => latLngToVector(arena?.pin ?? { lat: 41.89, lng: 12.49 }), [arena?.pin]);
+
+  const pins = useMemo(() => {
+    const map = Object.fromEntries(stories.map((s) => [s.id, latLngToVector(s.pin)]));
+    if (arena) map.arena = arenaVec;
+    return map;
+  }, [stories, arena, arenaVec]);
 
   const start = fallback ? FALLBACK_ORIENTATION : orientationFacing(pins[current.id]);
   const yaw = useSharedValue(start.yaw);
@@ -163,6 +178,7 @@ export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
     if (fallback) {
       // Cities hidden or half-faded on the picture can't show a callout: go straight to the story.
       if (visibility(target, FALLBACK_ORIENTATION.yaw, FALLBACK_ORIENTATION.pitch) >= FADE_BAND) arrive();
+      else if (id === 'arena') arena?.onOpen();
       else onOpenStory(id);
       return;
     }
@@ -257,11 +273,22 @@ export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
                 <GlobePin story={s} state={storyState(s)} onPress={() => flyTo(s.id)} />
               </Slot>
             ))}
+            {arena && (
+              <Slot key="arena" v={arenaVec} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius}>
+                <ArenaPin active={selectedId === 'arena'} onPress={() => flyTo('arena')} />
+              </Slot>
+            )}
             <PlaneSlot {...{ flightT, flying, withPlane, from, to, yaw, pitch, cx, cy, radius }} />
-            {calloutOpen && selected && (
-              <CalloutSlot v={pins[selected.id]} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius} areaWidth={area.width} areaHeight={area.height}>
-                <PinCallout story={selected} state={calloutState(selected)} onOpen={() => onOpenStory(selected.id)} />
-              </CalloutSlot>
+            {calloutOpen && (
+              selectedId === 'arena' && arena ? (
+                <CalloutSlot v={arenaVec} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius} areaWidth={area.width} areaHeight={area.height}>
+                  <ArenaCallout onOpen={arena.onOpen} />
+                </CalloutSlot>
+              ) : selected ? (
+                <CalloutSlot v={pins[selected.id]} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius} areaWidth={area.width} areaHeight={area.height}>
+                  <PinCallout story={selected} state={calloutState(selected)} onOpen={() => onOpenStory(selected.id)} />
+                </CalloutSlot>
+              ) : null
             )}
         </>
       </View>

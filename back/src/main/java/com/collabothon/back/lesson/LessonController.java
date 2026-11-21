@@ -151,7 +151,8 @@ class LessonController {
 		}
 
 		int xp = lesson.path("xp").asInt();
-		boolean first = progress.complete(userId, id, xp);
+		String story = lesson.path("story").asString();
+		boolean first = progress.complete(userId, id, story, xp);
 		progress.recordActivity(userId, req.completedOn() == null ? LocalDate.now(ZoneOffset.UTC) : req.completedOn());
 		return new ResultResponse(first ? xp : 0, first, progress.totalXp(userId), next(lesson));
 	}

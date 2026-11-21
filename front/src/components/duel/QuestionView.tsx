@@ -1,51 +1,46 @@
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
-import { Icon } from '@/components/bank/Icon';
-import { AnswerOption, type AnswerOptionState } from '@/components/duel/AnswerOption';
-import { ConnectionBanner } from '@/components/duel/ConnectionBanner';
-import { DotTrack } from '@/components/duel/DotTrack';
 import { DuelPage } from '@/components/duel/DuelPage';
 import { FeedbackBanner } from '@/components/duel/FeedbackBanner';
 import { FlowHeader } from '@/components/duel/FlowHeader';
 import { ScoreboardCard } from '@/components/duel/ScoreboardCard';
-import { StatusChip } from '@/components/duel/StatusChip';
+import { DuelQuestionView } from '@/components/duel/questions/DuelQuestionView';
 import { colors, radii, spacing, type } from '@/constants/theme';
-import { formatClock, getCategoryMeta } from '@/lib/duel/meta';
+import { formatClock } from '@/lib/duel/meta';
 import { getRivalScore, getYourScore, type DuelMatchState } from '@/lib/duel/reducer';
 import type { AvatarId } from '@/types/account';
+import type { DuelAnswer } from '@/types/duel';
 
 type Props = {
   state: DuelMatchState;
   youAvatar: AvatarId;
   secondsLeft: number;
-  onSelectOption: (option: number) => void;
+  onSubmitAnswer: (answer: DuelAnswer) => void;
   onNextQuestion: () => void;
-  onDismissReconnect: () => void;
   onExit: () => void;
 };
 
-/** Live question and, after answering, its feedback (Figma "Duel — Question" / "Answer feedback"). */
-export function QuestionView({ state, youAvatar, secondsLeft, onSelectOption, onNextQuestion, onDismissReconnect, onExit }: Props) {
-  const cat = getCategoryMeta(state.category);
+/** Question and feedback view (Figma 157:4008 / 157:4130 / 157:4245). */
+export function QuestionView({
+  state,
+  youAvatar,
+  secondsLeft,
+  onSubmitAnswer,
+  onNextQuestion,
+  onExit,
+}: Props) {
   const { question, feedback } = state;
   const isFeedback = state.phase === 'feedback' && feedback !== null;
-  const isSolo = state.mode === 'SOLO' || state.rival === null;
   const yourScore = getYourScore(state);
-  const index = question?.index ?? 0;
+  const rivalScore = getRivalScore(state);
+  const index = question?.index ?? feedback?.index ?? 0;
   const total = state.questionCount;
   const activeIndex = isFeedback ? null : index;
+  const currentCategory = question?.category ?? state.categories[0] ?? 'berlin';
 
-  function optionState(i: number): AnswerOptionState {
-    if (isFeedback && feedback) {
-      if (!feedback.timedOut && i === feedback.chosenOption) return feedback.correct ? 'correct' : 'wrong';
-      return 'dimmed';
-    }
-    return state.selectedOption === i ? 'pending' : 'default';
-  }
-
-  const nextLabel = state.pendingEnd ? 'See results' : index + 1 >= total ? 'Continue' : 'Next question';
-  const chosenText = feedback?.chosenOption != null && question ? question.options[feedback.chosenOption] : null;
+  const nextLabel = index + 1 >= total ? 'Zobacz wynik' : 'Dalej';
 
   return (
     <DuelPage
@@ -53,123 +48,89 @@ export function QuestionView({ state, youAvatar, secondsLeft, onSelectOption, on
       header={
         <FlowHeader
           onClose={onExit}
-          closeLabel="Leave match"
+          closeLabel="Opuść pojedynek"
           closeTestID="match-close"
-          title={`Question ${Math.min(index + 1, total)} of ${total}`}
+          title={`Pytanie ${Math.min(index + 1, total)} z ${total}`}
           titleTestID="question-counter"
           progress={(index + (isFeedback ? 1 : 0)) / Math.max(1, total)}
           right={
-            <StatusChip
-              label={formatClock(secondsLeft)}
-              tone={secondsLeft <= 10 ? 'timerUrgent' : 'timer'}
-              icon="timer"
-              testID="question-timer"
-            />
+            <View style={styles.timerPill} testID="question-timer">
+              <Feather name="clock" size={14} color={colors.textOnAccent} />
+              <Text style={styles.timerText}>{formatClock(secondsLeft)}</Text>
+            </View>
           }
         />
       }
       footer={
         isFeedback && feedback ? (
-          <>
-            <FeedbackBanner outcome={feedback.correct ? 'correct' : feedback.timedOut ? 'timeout' : 'wrong'} chosenText={chosenText} />
+          <View style={styles.feedbackFooter}>
+            <FeedbackBanner
+              outcome={feedback.correct ? 'correct' : feedback.timedOut ? 'timeout' : 'wrong'}
+              xpGained={feedback.xpGained}
+            />
             <Button label={nextLabel} onPress={onNextQuestion} testID="duel-next-question" />
-          </>
+          </View>
         ) : (
-          <View style={styles.speedNote}>
-            <Icon name="timer" size={14} color={colors.textMuted} />
-            <Text style={styles.muted}>Speed never scores, so take your time to think</Text>
+          <View style={styles.footerTip}>
+            <Feather name="info" size={14} color={colors.textMuted} />
+            <Text style={styles.tipText}>Czas nie wpływa na punkty — liczy się poprawność</Text>
           </View>
         )
       }
     >
-      {state.reconnectedNotice && (
-        <ConnectionBanner
-          missedQuestions={state.reconnectedNotice.missedQuestions}
-          resumeQuestion={state.reconnectedNotice.resumeQuestion}
-          onDismiss={onDismissReconnect}
+      {/* Dark Scoreboard Card */}
+      <ScoreboardCard
+        youAvatar={youAvatar}
+        youName={state.you?.name ?? 'Ty'}
+        youLevels={state.you?.levels}
+        rival={state.rival}
+        currentCategory={currentCategory}
+        yourDots={state.yourDots}
+        rivalDots={state.rivalDots}
+        yourScore={yourScore}
+        rivalScore={rivalScore}
+        activeIndex={activeIndex}
+        questionCount={total}
+      />
+
+      {/* Question rendering */}
+      {question && (
+        <DuelQuestionView
+          question={question}
+          onSubmit={onSubmitAnswer}
+          disabled={isFeedback}
         />
-      )}
-
-      {!isSolo && state.rival ? (
-        <ScoreboardCard
-          youAvatar={youAvatar}
-          rival={state.rival}
-          yourDots={state.yourDots}
-          rivalProgress={state.rivalProgress}
-          yourScore={yourScore}
-          rivalScore={getRivalScore(state)}
-          activeIndex={activeIndex}
-          questionCount={total}
-        />
-      ) : (
-        <View style={styles.soloStrip} testID="solo-progress-strip">
-          <View style={styles.soloLabel}>
-            <Icon name="target" size={16} color={colors.brandPrimary} />
-            <Text style={type.labelStrong}>Solo · {yourScore} correct</Text>
-          </View>
-          <DotTrack dots={state.yourDots} activeIndex={activeIndex} testID="your-dots" />
-        </View>
-      )}
-
-      {state.yourDots.includes('timeout') && (
-        <Text style={styles.legend} testID="timeout-legend">
-          Grey dot = no answer (timed out)
-        </Text>
-      )}
-
-      {!question || state.awaitingNext ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.brandPrimary} />
-          <Text style={styles.muted}>Loading the next question…</Text>
-        </View>
-      ) : (
-        <>
-          <View style={styles.questionHead}>
-            <Text style={styles.overline}>
-              {cat.name.toUpperCase()} · {isSolo ? 'SOLO' : `VS ${state.rival?.name.toUpperCase() ?? 'RIVAL'}`}
-            </Text>
-            <Text style={styles.prompt} testID="question-prompt" accessibilityRole="header">
-              {question.prompt}
-            </Text>
-          </View>
-          <View style={styles.options}>
-            {question.options.map((opt, i) => (
-              <AnswerOption
-                key={`${question.index}-${i}`}
-                index={i}
-                text={opt}
-                state={optionState(i)}
-                disabled={isFeedback || state.selectedOption !== null}
-                onPress={() => onSelectOption(i)}
-                testID={`duel-option-${i}`}
-              />
-            ))}
-          </View>
-        </>
       )}
     </DuelPage>
   );
 }
 
 const styles = StyleSheet.create({
-  soloStrip: {
+  timerPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.bgSurface,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    gap: spacing.xs,
+    backgroundColor: colors.brandAccent,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radii.pill,
   },
-  soloLabel: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  legend: { ...type.labelDefault, color: colors.textMuted, marginTop: -spacing.sm },
-  loading: { alignItems: 'center', paddingVertical: spacing.xxxl, gap: spacing.sm },
-  questionHead: { gap: spacing.xs },
-  overline: { ...type.overline, color: colors.feedbackXp },
-  prompt: type.titleSection,
-  options: { gap: spacing.md },
-  speedNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: spacing.xs },
-  muted: { ...type.bodyDefault, color: colors.textMuted },
+  timerText: {
+    ...type.labelStrong,
+    color: colors.textOnAccent,
+  },
+  feedbackFooter: {
+    gap: spacing.md,
+  },
+  footerTip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+  },
+  tipText: {
+    ...type.labelDefault,
+    color: colors.textMuted,
+  },
 });

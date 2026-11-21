@@ -1,6 +1,7 @@
 [
   {
     "id": "seoul",
+    "category": "Hype i dźwignia",
     "city": "Seoul",
     "topic": "Hype & borrowed money",
     "status": "available",
@@ -19,6 +20,7 @@
   },
   {
     "id": "berlin",
+    "category": "Inflacja i oszczędności",
     "city": "Berlin",
     "topic": "Safe money that shrinks",
     "status": "available",
@@ -37,6 +39,7 @@
   },
   {
     "id": "sao-paulo",
+    "category": "Raty i długi",
     "city": "São Paulo",
     "topic": "Twelve easy payments",
     "status": "available",
@@ -56,6 +59,7 @@
   },
   {
     "id": "tokyo",
+    "category": "Dywersyfikacja",
     "city": "Tokyo",
     "topic": "One country or the world",
     "status": "available",

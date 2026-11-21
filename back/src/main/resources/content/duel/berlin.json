@@ -1,0 +1,152 @@
+{
+  "story": "berlin",
+  "questions": [
+    {
+      "id": "berlin-d1",
+      "lessonId": "berlin-1",
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d1",
+        "prompt": "Konto oszczędnościowe oferuje 2% w skali roku, a inflacja wynosi 5%. Co dzieje się z realną wartością tych pieniędzy?",
+        "options": [
+          "Spada o około 3% rocznie, mimo że kwota na koncie rośnie",
+          "Rośnie o 2% rocznie, bo bank regularnie dopisuje odsetki",
+          "Spada dokładnie o 5% rocznie, tracąc całą wartość inflacji",
+          "Nie zmienia się, bo oszczędności w banku są chronione"
+        ],
+        "correctIndex": 0,
+        "explanation": "Realna stopa zwrotu to w przybliżeniu oprocentowanie minus inflacja (2% − 5% = −3%). Choć stan konta nominalnie rośnie, siła nabywcza pieniędzy spada o ok. 3% rocznie."
+      }
+    },
+    {
+      "id": "berlin-d2",
+      "lessonId": "berlin-1",
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d2",
+        "prompt": "Lena trzyma 25 000 € na koncie o oprocentowaniu 0,5% rocznie przy inflacji 3%. Ile realnie (w dzisiejszej sile nabywczej) będzie warte te oszczędności po 10 latach?",
+        "input": {
+          "kind": "slider",
+          "min": 10000,
+          "max": 30000,
+          "step": 500,
+          "unit": "€"
+        },
+        "answer": 19500,
+        "tolerance": 1500,
+        "reveal": "Około 19 500 €. Po 10 latach nominalna kwota wyniesie ok. 26 270 €, ale inflacja obniży jej siłę nabywczą o ponad 22%.",
+        "explanation": "Formuła realnej wartości: 25 000 € × ((1 + 0,005) / (1 + 0,03))^10 = 25 000 € × 0,7798 ≈ 19 494 €. Przy kroku 500 € wartość na suwaku to 19 500 €."
+      }
+    },
+    {
+      "id": "berlin-d3",
+      "lessonId": "berlin-2",
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d3",
+        "prompt": "Dlaczego procent składany przynosi największe zyski dopiero po wielu latach?",
+        "options": [
+          "W kolejnych latach zyski są naliczane także od wcześniej wypracowanych odsetek",
+          "Banki podnoszą stawkę oprocentowania dla długoterminowych klientów",
+          "Wpływ inflacji z czasem całkowicie maleje do zera",
+          "Dopiero po 10 latach inwestycje stają się wolne od podatku"
+        ],
+        "correctIndex": 0,
+        "explanation": "W procencie składanym zyski z poprzednich lat powiększają kapitał i same zaczynają pracować na kolejne zyski. W efekcie wzrost kapitału z roku na rok przyspiesza."
+      }
+    },
+    {
+      "id": "berlin-d4",
+      "lessonId": "berlin-1",
+      "timeLimitMs": null,
+      "step": {
+        "type": "chart",
+        "id": "d4",
+        "prompt": "Wykres pokazuje zmianę siły nabywczej przy zerowym oprocentowaniu i inflacji 3%. Po ilu latach oszczędności stracą około 1/4 (25%) swojej realnej wartości?",
+        "model": "realValue",
+        "params": {
+          "years": {
+            "label": "Lata",
+            "min": 0,
+            "max": 20,
+            "step": 1,
+            "value": 10
+          },
+          "interest": {
+            "label": "Oprocentowanie",
+            "min": 0,
+            "max": 5,
+            "step": 0.5,
+            "value": 0,
+            "unit": "%"
+          },
+          "inflation": {
+            "label": "Inflacja",
+            "min": 0,
+            "max": 8,
+            "step": 0.5,
+            "value": 3,
+            "unit": "%"
+          }
+        },
+        "output": {
+          "label": "Zmiana siły nabywczej",
+          "unit": "%"
+        },
+        "input": {
+          "kind": "slider",
+          "min": 1,
+          "max": 20,
+          "step": 1,
+          "unit": "lat"
+        },
+        "answer": 10,
+        "tolerance": 1,
+        "explanation": "Z wykresu wynika, że przy 3% inflacji spadek siły nabywczej osiąga ok. −25% po 10 latach ((1 / 1,03)^10 − 1 = −25,6%)."
+      }
+    },
+    {
+      "id": "berlin-d5",
+      "lessonId": "berlin-3",
+      "timeLimitMs": null,
+      "step": {
+        "type": "sort",
+        "id": "d5",
+        "prompt": "Przypisz sytuacje do odpowiedniego koszyka finansowego:",
+        "buckets": [
+          "Poduszka finansowa",
+          "Inwestycje długoterminowe"
+        ],
+        "items": [
+          { "text": "Awaria pieca grzewczego zimą", "bucket": 0 },
+          { "text": "Budowa kapitału na emeryturę za 20 lat", "bucket": 1 },
+          { "text": "3 miesiące wydatków po utracie pracy", "bucket": 0 },
+          { "text": "Fundusz na start dla rocznego dziecka", "bucket": 1 },
+          { "text": "Pilna naprawa skrzyni biegów w samochodzie", "bucket": 0 },
+          { "text": "Portfel akcji globalnych na 15 lat", "bucket": 1 }
+        ],
+        "explanation": "Poduszka finansowa (Notgroschen) zabezpiecza nagłe, niespodziewane wydatki i musi być natychmiast dostępna. Pieniądze odkładane na dekady mogą być inwestowane z myślą o wyższym zysku."
+      }
+    },
+    {
+      "id": "berlin-d6",
+      "lessonId": "berlin-3",
+      "timeLimitMs": null,
+      "step": {
+        "type": "match",
+        "id": "d6",
+        "prompt": "Połącz pojęcia finansowe z ich właściwymi definicjami:",
+        "pairs": [
+          ["Poduszka finansowa", "Pieniądze na nagłe wydatki, min. 3 miesiące kosztów życia"],
+          ["Stopa realna", "Oprocentowanie pomniejszone o stopę inflacji"],
+          ["Procent składany", "Naliczanie zysków od kapitału wraz z wcześniejszymi odsetkami"],
+          ["Horyzont czasowy", "Czas, przez jaki pieniądze mogą pozostać zainwestowane"]
+        ],
+        "explanation": "Dobre zrozumienie tych 4 filarów pozwala bezpiecznie planować finanse: poduszka daje spokój, horyzont wyznacza strategię, procent składany buduje kapitał, a stopa realna chroni przed inflacją."
+      }
+    }
+  ]
+}

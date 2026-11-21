@@ -1,7 +1,8 @@
 package com.collabothon.back.duel;
 
-enum MatchOutcome {
-
-	WIN, DRAW, LOSS, SOLO
-
+public enum MatchOutcome {
+	WIN,
+	DRAW,
+	LOSS,
+	SOLO
 }

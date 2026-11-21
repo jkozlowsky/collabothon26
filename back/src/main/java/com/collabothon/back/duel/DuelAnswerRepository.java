@@ -1,35 +1,16 @@
 package com.collabothon.back.duel;
 
-import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
-interface DuelAnswerRepository extends JpaRepository<DuelAnswer, Long> {
+@Repository
+public interface DuelAnswerRepository extends JpaRepository<DuelAnswer, Long> {
 
-	List<DuelAnswer> findByMatchIdAndUserIdOrderByPositionAsc(Long matchId, String userId);
+	List<DuelAnswer> findByMatchIdOrderByPositionAsc(Long matchId);
 
-	@Query("""
-			select q.categoryId as categoryId,
-			       count(a.id) as totalCount,
-			       sum(case when a.correct = true then 1L else 0L end) as correctCount
-			from DuelAnswer a, DuelQuestion q
-			where a.questionId = q.id and a.userId = :userId and a.createdAt >= :since
-			group by q.categoryId
-			""")
-	List<CategoryAccuracy> findAccuracyByCategorySince(@Param("userId") String userId, @Param("since") Instant since);
-
-	/** Read-only projection for per-category accuracy aggregation. */
-	interface CategoryAccuracy {
-
-		Long getCategoryId();
-
-		long getTotalCount();
-
-		long getCorrectCount();
-
-	}
+	Optional<DuelAnswer> findByMatchIdAndPosition(Long matchId, int position);
 
 }

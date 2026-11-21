@@ -35,10 +35,14 @@ class AccountController {
 
 	private final DemoProgress demo;
 
-	AccountController(AccountRepository accounts, JdbcClient jdbc, DemoProgress demo) {
+	private final com.collabothon.back.xp.XpService xpService;
+
+	AccountController(AccountRepository accounts, JdbcClient jdbc, DemoProgress demo,
+			com.collabothon.back.xp.XpService xpService) {
 		this.accounts = accounts;
 		this.jdbc = jdbc;
 		this.demo = demo;
+		this.xpService = xpService;
 	}
 
 	/** 404 if the bank has no such customer. */
@@ -78,11 +82,13 @@ class AccountController {
 		List<LocalDate> days = jdbc.sql("SELECT completed_on FROM lesson_activity WHERE user_id = ?")
 			.param(userId).query(LocalDate.class).list();
 		Streak streak = Streak.of(days, today);
-		return jdbc.sql("SELECT COALESCE(SUM(xp), 0) AS xp, COUNT(*) AS completed FROM lesson_completion WHERE user_id = ?")
+		int totalXp = xpService.totalXp(userId);
+		long completed = jdbc.sql("SELECT COUNT(*) FROM lesson_completion WHERE user_id = ?")
 			.param(userId)
-			.query((rs, row) -> new StatsDto(streak.current(), streak.longest(), streak.doneToday(),
-					streak.week(), rs.getInt("xp"), rs.getLong("completed")))
+			.query(Long.class)
 			.single();
+		return new StatsDto(streak.current(), streak.longest(), streak.doneToday(),
+				streak.week(), totalXp, completed);
 	}
 
 	record AvatarRequest(@NotNull @Pattern(regexp = "[mf][1-3]") String avatar) {

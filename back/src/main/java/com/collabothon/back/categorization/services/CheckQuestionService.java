@@ -52,7 +52,7 @@ public class CheckQuestionService {
 
 	/** The questions behind the answers, in answer order; the messages never repeat what was sent. */
 	List<CheckQuestionProjection> pick(List<CheckAnswerDto> answers, List<CheckQuestionProjection> pool) {
-		if (answers.stream().anyMatch(answer -> !validator.validate(answer).isEmpty())) {
+		if (answers.stream().anyMatch(answer -> answer == null || !validator.validate(answer).isEmpty())) {
 			throw new BadRequestException("Each answer needs a question id and text of 1 to "
 					+ CategorizationConsts.MAX_ANSWER_LENGTH + " characters, or null for Not sure");
 		}

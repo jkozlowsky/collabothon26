@@ -376,7 +376,8 @@ class QuickCheckTests {
 				Arguments.of("blank text", List.of(RUNWAY, s, LOAN, "   ", TIME, s, SPREAD, s)),
 				Arguments.of("empty text", List.of(RUNWAY, s, LOAN, "", TIME, s, SPREAD, s)),
 				Arguments.of("text over 280 UTF-16 units", List.of(RUNWAY, s, LOAN, tooLong, TIME, s, SPREAD, s)),
-				Arguments.of("blank question id", List.of(RUNWAY, s, " ", s, TIME, s, SPREAD, s)));
+				Arguments.of("blank question id", List.of(RUNWAY, s, " ", s, TIME, s, SPREAD, s)),
+				Arguments.of("question id over 64 characters", List.of(RUNWAY, s, s + "x".repeat(60), s, TIME, s, SPREAD, s)));
 	}
 
 	@ParameterizedTest(name = "{0}")

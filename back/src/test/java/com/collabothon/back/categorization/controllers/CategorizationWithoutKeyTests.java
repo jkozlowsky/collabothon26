@@ -61,7 +61,7 @@ class CategorizationWithoutKeyTests {
 			.andExpect(status().isOk());
 
 		mvc.perform(post("/api/users/tom/categorization").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"consent\": true, \"answers\": [{\"questionId\": \"nope\", \"text\": \"  \"}]}"))
+			.content("{\"consent\": true, \"answers\": [null, {\"questionId\": \"nope\", \"text\": \"  \"}]}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.checks").isEmpty());
 		jev.verify();

@@ -12,6 +12,12 @@ public final class CategorizationConsts {
 
 	public static final double FOCUS_THRESHOLD = 0.5;
 
+	/** {@code check_question.id} is VARCHAR(64). */
+	public static final int MAX_QUESTION_ID_LENGTH = 64;
+
+	/** One answer per Quick check question: two per category. */
+	public static final int MAX_ANSWERS = 4;
+
 	/** An answer is 1 to this many UTF-16 code units after trimming. */
 	public static final int MAX_ANSWER_LENGTH = 280;
 

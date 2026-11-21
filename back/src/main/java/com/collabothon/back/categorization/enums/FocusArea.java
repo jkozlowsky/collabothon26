@@ -6,18 +6,25 @@ import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import lombok.Getter;
+
 public enum FocusArea {
 
 	// Goal groups from main's onboarding (front/src/constants/onboarding.ts).
-	SAVING("budget", "money-habits", "banking-basics", "start-saving", "emergency-fund", "inflation"),
-	DEBT("pay-off-debt", "credit-cards", "loans-mortgages"),
-	INVESTING("start-investing", "stocks-etfs", "crypto"),
-	RISK("insurance", "scams"),
-	RETIREMENT("retirement");
+	SAVING("Saving", "budget", "money-habits", "banking-basics", "start-saving", "emergency-fund", "inflation"),
+	DEBT("Borrowing", "pay-off-debt", "credit-cards", "loans-mortgages"),
+	INVESTING("Investing", "start-investing", "stocks-etfs", "crypto"),
+	RISK("Risk", "insurance", "scams"),
+	RETIREMENT("Retirement", "retirement");
+
+	/** The name users see. */
+	@Getter
+	private final String label;
 
 	private final Set<String> goals;
 
-	FocusArea(String... goals) {
+	FocusArea(String label, String... goals) {
+		this.label = label;
 		this.goals = Set.of(goals);
 	}
 

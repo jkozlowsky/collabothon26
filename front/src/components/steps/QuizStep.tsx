@@ -7,6 +7,7 @@ import { LineChart } from '@/components/lesson/LineChart';
 import { StepLayout } from '@/components/lesson/StepLayout';
 import { haptic, Tappable } from '@/components/onboarding/ui';
 import { colors, radii, spacing, type } from '@/constants/theme';
+import { playSfx } from '@/lib/sfx';
 import { formatValue } from '@/lib/models';
 import type { QuizStep as QuizStepData, StepOutcome } from '@/types/lessons';
 
@@ -22,6 +23,7 @@ export function QuizStep({ step, onDone }: Props) {
     if (answered) return;
     setPicked(i);
     haptic(i === step.correctIndex ? 'success' : 'light');
+    playSfx(i === step.correctIndex ? 'correct' : 'wrong');
   }
 
   return (

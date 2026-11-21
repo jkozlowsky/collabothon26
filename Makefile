@@ -5,7 +5,7 @@ SHELL := /bin/bash
 help: ## List commands
 	@grep -E '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
 
-dev: ## Everything at once: Postgres + backend + app with a phone QR (Expo tunnel) and browser at localhost:8081 (Ctrl+C stops)
+dev: db-reset ## Everything at once, starting from an empty database: Postgres + backend + app with a phone QR (Expo tunnel) and browser at localhost:8081 (Ctrl+C stops)
 	./scripts/dev.sh
 
 phone: ## Everything at once + Expo tunnel QR for a phone (Ctrl+C stops)

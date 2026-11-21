@@ -186,3 +186,29 @@ Round 1 (21.11), reports in `.planning/reviews/F1b-diff-{back,front}-2026-11-21.
 | F-K env | `.env.example` carries a value | front/.env.example:5 | fix | key only |
 | F-K commits | red/mixed commits | git log | reject | no history rewrite; brief for next rounds |
 | F-e2e | `duel.spec` stops at the consent card (REAL) | e2e/duel.spec.ts | fix | Jan 21.11: two optional clicks like smoke.spec; Jan tells F8's author |
+
+Round 2 (21.11), reports `.planning/reviews/F1b-diff-{back,front}-r2-2026-11-21.md`. All round-1 `fix` rows landed (back 23/23, front 27/30, the rest below).
+
+| # | finding | file:line | class | reason or commit |
+|---|---|---|---|---|
+| B-N1 | `@Size(max = 4)` runs before the keyless ignore | CategorizationRequestDto:18 | fix | dropped; `pick` rejects 5 with a key (4bcb719) |
+| B-N2/3/4/5 | `questionId` cap, template `deepCopy`, V16 lesson links, three rule cases unpinned | tests | fix | 936c395, 35d7a94, 2d8833f, e70e080 |
+| B-N6 | answered not-yet + Not sure in one area → OVER | CategorizationRules:124 | reject | Not sure counts as not-yet (Q-decision), so the area is all not-yet |
+| B-N7 | POST without answers after 5 min clears checks | CategorizationService:86 | reject | every onboarding recategorises (Q20) |
+| B-N8 | 8 s read leaves ~1 s of the front's 10 s | application.properties | fix | 7 s (bce30a9) |
+| B-N9 | local DBs with an older V16 checksum | V16 | reject | V16 was never applied outside Testcontainers (unpushed branch) |
+| B-N10 | log capture INFO only | QuickCheckTests | fix | DEBUG capture (59f71f6) |
+| B-r2-CR | fence format split service/client; Javadoc, comparator, `cite`, `if`, `assertEquals` | JevClient, CategorizationRules, CategorizationService | fix | 096b369, 9598456, 299bc25 |
+| B-r2-commits | test-only and catch-all commits | git log | reject | no history rewrite |
+| F-N1/N2/N19 | retry without answers hides the D6 line; tests pin neither body | categorizing.tsx:141 | fix | round 2 → Q-F |
+| F-N3 | duel.spec stops at Quick check on a keyed backend | e2e/duel.spec.ts | fix | one `skipQuickCheck` line (beyond Jan's two clicks; reported) |
+| F-N4 | "sent once" false | ConsentCard:60 | fix | drop "once" |
+| F-N5/N6 | web live region pre-filled; focus on disabled Next (WCAG 4.1.3, 2.4.3) | QuickCheckPage, FlowPage | fix | hoist live regions; focus prompt |
+| F-N7/N8 | wall-clock tap guard | useQuickCheck:8,42 | fix | visible disabled state; e2e waits for enabled |
+| F-N9 | decline → Back → accept keeps the no-consent draw | useQuickCheck:33 | fix | redraw while nothing typed |
+| F-N10 | typed text sent after consent withdrawn | — | reject | consent covers bank data; D4 notice covers answers on both paths |
+| F-N11/N12 | goal and Not-sure "why" copy | PathSummary:38 | fix | goals by area; "Your answer helped" only with text |
+| F-N13/N16/N17 | area order, pool robustness, privacy list | quickCheck.ts, tests | fix | round 2 → Q-F |
+| F-N15 | iOS swipe / web Back | — | reject | Android + web; browser Back is the router's |
+| F-r2-CR | chains, literals, alias, count word, tuples, hex, `checkBackend`, test title | several | fix | round 2 → Q-F |
+| F-r2-commits | mixed commits | git log | reject | no history rewrite |

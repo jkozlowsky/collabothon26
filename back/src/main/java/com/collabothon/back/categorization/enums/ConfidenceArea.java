@@ -11,4 +11,8 @@ public enum ConfidenceArea {
 		return WireNames.of(this);
 	}
 
+	public FocusArea focusArea() {
+		return FocusArea.valueOf(name());
+	}
+
 }

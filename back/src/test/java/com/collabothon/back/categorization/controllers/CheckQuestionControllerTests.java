@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,6 +37,12 @@ class CheckQuestionControllerTests {
 
 	private static final Set<String> KNOWN_SLOTS = Set.of("savingsBalance", "savingsInterestRate", "monthOut",
 			"loanRemaining", "loanApr", "cardUsed", "cardLimit", "etfMonthly", "depotTotal", "positionCount");
+
+	private static final String ACCOUNT_PROMPT = "You keep €{savingsBalance} in savings and spend about €{monthOut}"
+			+ " a month. If your income stopped tomorrow, how long would your money last?";
+
+	private static final String GENERIC_PROMPT = "Imagine you keep €5,000 in savings and spend €1,500 a month."
+			+ " If your income stopped tomorrow, how long would your money last, and how did you work it out?";
 
 	private static final Pattern PLACEHOLDER = Pattern.compile("\\{(\\w+)}");
 
@@ -77,11 +84,32 @@ class CheckQuestionControllerTests {
 					[{"id": "card-minimum"}, {"id": "etf-drop"}, {"id": "loan-apr"}, {"id": "one-etf-vs-one-stock"},
 					 {"id": "pension-gap"}, {"id": "rate-vs-inflation"},
 					 {"id": "savings-runway", "category": "finance", "area": "saving", "lessonId": %d,
-					  "accountPrompt": "You keep €{savingsBalance} in savings and spend about €{monthOut} a month. If your income stopped tomorrow, how long would your money last?",
+					  "accountPrompt": "%s",
 					  "slots": ["savingsBalance", "monthOut"],
-					  "genericPrompt": "Imagine you keep €5,000 in savings and spend €1,500 a month. If your income stopped tomorrow, how long would your money last, and how did you work it out?"},
-					 {"id": "time-in-market"}, {"id": "too-good-offer"}]""".formatted(emergencyFund),
+					  "genericPrompt": "%s"},
+					 {"id": "time-in-market"}, {"id": "too-good-offer"}]"""
+						.formatted(emergencyFund, ACCOUNT_PROMPT, GENERIC_PROMPT),
 					JsonCompareMode.LENIENT));
+	}
+
+	@Test
+	void everyQuestionThatShouldTeachALessonIsLinkedToOne() throws Exception {
+		Map<String, Integer> lessonPosition = Map.of("savings-runway", 1, "time-in-market", 2, "rate-vs-inflation", 3);
+
+		for (JsonNode q : pool()) {
+			String id = q.get("id").stringValue();
+			if (lessonPosition.containsKey(id)) {
+				Long expected = jdbc.sql("SELECT id FROM lesson WHERE position = ?")
+					.param(lessonPosition.get(id))
+					.query(Long.class)
+					.single();
+				assertFalse(q.get("lessonId").isNull(), id + " has no lesson");
+				assertEquals(expected, q.get("lessonId").longValue(), id);
+			}
+			else {
+				assertTrue(q.get("lessonId").isNull(), id);
+			}
+		}
 	}
 
 	@Test

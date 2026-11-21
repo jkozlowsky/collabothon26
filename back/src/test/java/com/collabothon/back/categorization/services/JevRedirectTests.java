@@ -60,7 +60,8 @@ class JevRedirectTests {
 
 	@Test
 	void redirectIsNotFollowed() {
-		JevResult result = jev.ask(new OnboardingAnswersDto(null, List.of(), "occasional", false), null, List.of());
+		OnboardingAnswersDto answers = new OnboardingAnswersDto(null, List.of(), "occasional", false);
+		JevResult result = jev.ask(answers, null, List.of());
 
 		assertEquals(1, ASKED.get());
 		assertEquals(0, REDIRECTED.get());

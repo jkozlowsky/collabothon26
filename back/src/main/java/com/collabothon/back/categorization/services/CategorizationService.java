@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 
 import com.collabothon.back.categorization.config.JevProperties;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
-import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.CategorizationDto;
 import com.collabothon.back.categorization.dto.CheckAnswerDto;
 import com.collabothon.back.categorization.dto.CheckDto;
@@ -27,8 +26,11 @@ import com.collabothon.back.categorization.enums.CheckResult;
 import com.collabothon.back.categorization.enums.ExplanationOutput;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.LifeStage;
+import com.collabothon.back.categorization.mappers.CheckMapper;
+import com.collabothon.back.categorization.mappers.JevCheckMapper;
 import com.collabothon.back.categorization.mappers.OnboardingAnswersMapper;
-import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
+import com.collabothon.back.categorization.mappers.SharedCheckMapper;
+import com.collabothon.back.categorization.mappers.StartLessonMapper;
 import com.collabothon.back.categorization.repositories.ProfileAnswersRepository;
 import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 import com.collabothon.back.common.exceptions.NotFoundException;
@@ -59,7 +61,13 @@ public class CategorizationService {
 
 	private final CheckQuestionService checkQuestions;
 
-	private final CheckQuestionRepository checkPool;
+	private final JevCheckMapper jevCheckMapper;
+
+	private final CheckMapper checkMapper;
+
+	private final SharedCheckMapper sharedCheckMapper;
+
+	private final StartLessonMapper startLessonMapper;
 
 	private final JsonMapper json;
 
@@ -73,8 +81,7 @@ public class CategorizationService {
 		Instant now = Instant.now(clock);
 		// Without a judge the answers cannot be used, so they are dropped before any validation.
 		List<CheckAnswerDto> submitted = checkAnswers == null || !jevProperties.callsJev() ? List.of() : checkAnswers;
-		List<CheckQuestionProjection> pool = checkPool.findPool();
-		List<CheckQuestionProjection> picked = submitted.isEmpty() ? List.of() : checkQuestions.pick(submitted, pool);
+		List<CheckQuestionProjection> picked = List.of();
 		if (submitted.isEmpty()) {
 			Optional<CategorizationDto> recent = find(userId)
 				.filter(c -> isRecentJevResult(c, answers, consent, facts, now));
@@ -82,14 +89,17 @@ public class CategorizationService {
 				return recent.get();
 			}
 		}
+		else {
+			picked = checkQuestions.pick(submitted);
+		}
 		List<JevCheckDto> toJudge = new ArrayList<>();
 		List<SharedCheckDto> sharedChecks = new ArrayList<>();
 		for (int i = 0; i < picked.size(); i++) {
 			CheckQuestionProjection q = picked.get(i);
 			String text = submitted.get(i).text();
-			sharedChecks.add(new SharedCheckDto(q.id(), text != null));
+			sharedChecks.add(sharedCheckMapper.toShared(q, text != null));
 			if (text != null) {
-				toJudge.add(new JevCheckDto(q.id(), q.genericPrompt(), q.criterion(), delimited(text)));
+				toJudge.add(jevCheckMapper.toJevCheck(q, text));
 			}
 		}
 		JevResult fromJev = jev.ask(answers, facts, toJudge);
@@ -100,7 +110,7 @@ public class CategorizationService {
 			CheckQuestionProjection q = picked.get(i);
 			CheckResult result = submitted.get(i).text() == null ? CheckResult.NOT_YET : j.checks().get(q.id());
 			if (result != null) {
-				checks.add(new CheckDto(q.id(), q.area(), q.lessonId(), result));
+				checks.add(checkMapper.toCheck(q, result));
 			}
 		}
 
@@ -115,7 +125,8 @@ public class CategorizationService {
 		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, j.role(), lifeStage, focus,
 				CategorizationRules.confidenceGaps(answers, facts, checks),
 				CategorizationRules.lessonVariant(j.role(), lifeStage), explanation, checks,
-				CategorizationRules.startLesson(checks, focus, pool).orElse(null), shared,
+				checkQuestions.startLesson(checks, focus, picked).map(startLessonMapper::toStartLesson).orElse(null),
+				shared,
 				fromJev.judgement().isPresent() ? CategorizationSource.JEV : CategorizationSource.FALLBACK, j.model(),
 				now);
 		// Inserting only while onboarding is completed turns a reset during the Jev call into a 404.
@@ -150,15 +161,10 @@ public class CategorizationService {
 		}
 	}
 
-	// The tags mark the person's text as data; the angle brackets in it are swapped so it cannot close them.
-	private static String delimited(String text) {
-		return "<%1$s>%2$s</%1$s>".formatted(JevConsts.ANSWER_TAG, text.strip().replace('<', '‹').replace('>', '›'));
-	}
-
 	private static boolean isRecentJevResult(CategorizationDto c, OnboardingAnswersDto answers, boolean consent,
 			FactsDto facts, Instant now) {
 		return c.source() == CategorizationSource.JEV && c.consent() == consent && c.sharedWithModel() != null
-				&& c.sharedWithModel().checks().isEmpty() && answers.equals(c.sharedWithModel().answers()) && Objects.equals(facts, c.sharedWithModel().facts())
+				&& answers.equals(c.sharedWithModel().answers()) && Objects.equals(facts, c.sharedWithModel().facts())
 				&& c.categorizedAt().isAfter(now.minus(CategorizationConsts.RECATEGORIZE_AFTER));
 	}
 

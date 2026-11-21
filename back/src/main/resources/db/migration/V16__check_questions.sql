@@ -13,12 +13,12 @@ CREATE TABLE check_question (
 );
 
 INSERT INTO check_question (id, category, area, lesson_id, account_prompt, slots, generic_prompt, criterion) VALUES
-    ('savings-runway', 'finance', 'saving', (SELECT id FROM lesson WHERE position = 1),
+    ('savings-runway', 'finance', 'saving', (SELECT id FROM lesson WHERE position = 1 AND title = 'Emergency fund'),
      'You keep €{savingsBalance} in savings and spend about €{monthOut} a month. If your income stopped tomorrow, how long would your money last?',
      ARRAY['savingsBalance', 'monthOut'],
      'Imagine you keep €5,000 in savings and spend €1,500 a month. If your income stopped tomorrow, how long would your money last, and how did you work it out?',
      'Relates savings to monthly spending (roughly savings ÷ spending) and sees the money as a safety net for emergencies.'),
-    ('rate-vs-inflation', 'finance', 'saving', (SELECT id FROM lesson WHERE position = 3),
+    ('rate-vs-inflation', 'finance', 'saving', (SELECT id FROM lesson WHERE position = 3 AND title = 'Inflation'),
      'Your savings account pays {savingsInterestRate}% a year. If prices rise 3% a year, what happens to what your €{savingsBalance} can buy?',
      ARRAY['savingsInterestRate', 'savingsBalance'],
      'A savings account pays 2% a year while prices rise 3% a year. What happens to what €5,000 can buy?',
@@ -38,7 +38,7 @@ INSERT INTO check_question (id, category, area, lesson_id, account_prompt, slots
      ARRAY['etfMonthly'],
      'Every month €100 goes into a world ETF. If the market falls 20% next month, what happens to that money?',
      'Understands the value can fall and rise and that a short-term fall says little about the long term.'),
-    ('time-in-market', 'investing', 'investing', (SELECT id FROM lesson WHERE position = 2),
+    ('time-in-market', 'investing', 'investing', (SELECT id FROM lesson WHERE position = 2 AND title = 'Compound interest'),
      'Your depot holds €{depotTotal}. Why does how long you stay invested matter?',
      ARRAY['depotTotal'],
      'You invest €1,000. Why does how long you stay invested matter?',

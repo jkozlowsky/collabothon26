@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,6 +9,7 @@ import { LearnHeader } from '@/components/LearnHeader';
 import { StorySheet } from '@/components/StorySheet';
 import { colors, spacing } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
+import { useStartHere } from '@/hooks/useStartHere';
 import { LEARNER, STORIES, withLessons } from '@/lib/stories';
 import { USER_ID } from '@/lib/user';
 import type { LessonSummary } from '@/types/lessons';
@@ -24,7 +25,20 @@ export default function MapScreen() {
   const { data: lessons, reload } = useApi<LessonSummary[]>(`/api/lessons?userId=${encodeURIComponent(USER_ID)}`);
   // Coming back from a lesson moves the story's progress on.
   useFocusEffect(reload);
-  const stories = useMemo(() => withLessons(STORIES, lessons), [lessons]);
+  const startHere = useStartHere();
+  // One "start" cue: the Quick check's story replaces main's default current story.
+  const startId = startHere?.storyId;
+  // The globe picks its first view at mount, before the startHere story is known.
+  useEffect(() => {
+    if (startId) globe.current?.flyTo(startId, true);
+  }, [startId]);
+  const stories = useMemo(() => {
+    const all = withLessons(STORIES, lessons);
+    if (startId) {
+      return all.map((s) => ({ ...s, current: s.id === startId }));
+    }
+    return all;
+  }, [lessons, startId]);
 
   const openStory = (id: string) => router.push({ pathname: '/story/[id]', params: { id } });
   const openDuel = () => router.push('/duel');
@@ -38,6 +52,7 @@ export default function MapScreen() {
           stories={stories}
           onOpenStory={openStory}
           onSpin={() => setHint(false)}
+          startHere={startHere}
           arena={{ onOpen: openDuel }}
         />
         {/* Keeps its space when hidden, so the sheet does not jump. */}
@@ -45,7 +60,7 @@ export default function MapScreen() {
           <GlobeHint />
         </View>
       </SafeAreaView>
-      <StorySheet stories={stories} height={height} collapsedTop={sheetTop} onSelect={(id) => globe.current?.flyTo(id)} />
+      <StorySheet stories={stories} height={height} collapsedTop={sheetTop} onSelect={(id) => globe.current?.flyTo(id)} startHere={startHere} />
     </View>
   );
 }

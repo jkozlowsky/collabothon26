@@ -9,7 +9,6 @@ import jakarta.validation.constraints.Pattern;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -21,29 +20,30 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.collabothon.back.lesson.LessonActivityRepository;
+import com.collabothon.back.lesson.LessonCompletionRepository;
+import com.collabothon.back.xp.XpService;
+
+import lombok.RequiredArgsConstructor;
+
 /**
  * The user's bank account (name, avatar) and learning progress (streak, XP). Dates are the user's
  * local dates, sent by the app, so "today" matches what the user sees on their phone.
  */
 @RestController
 @RequestMapping("/api/users/{userId}")
+@RequiredArgsConstructor
 class AccountController {
 
 	private final AccountRepository accounts;
 
-	private final JdbcClient jdbc;
+	private final LessonActivityRepository activity;
+
+	private final LessonCompletionRepository completions;
 
 	private final DemoProgress demo;
 
-	private final com.collabothon.back.xp.XpService xpService;
-
-	AccountController(AccountRepository accounts, JdbcClient jdbc, DemoProgress demo,
-			com.collabothon.back.xp.XpService xpService) {
-		this.accounts = accounts;
-		this.jdbc = jdbc;
-		this.demo = demo;
-		this.xpService = xpService;
-	}
+	private final XpService xpService;
 
 	/** 404 if the bank has no such customer. */
 	@GetMapping("/account")
@@ -79,16 +79,11 @@ class AccountController {
 	}
 
 	private StatsDto statsFor(String userId, LocalDate today) {
-		List<LocalDate> days = jdbc.sql("SELECT completed_on FROM lesson_activity WHERE user_id = ?")
-			.param(userId).query(LocalDate.class).list();
-		Streak streak = Streak.of(days, today);
+		Streak streak = Streak.of(activity.findDays(userId), today);
 		int totalXp = xpService.totalXp(userId);
-		long completed = jdbc.sql("SELECT COUNT(*) FROM lesson_completion WHERE user_id = ?")
-			.param(userId)
-			.query(Long.class)
-			.single();
-		return new StatsDto(streak.current(), streak.longest(), streak.doneToday(),
-				streak.week(), totalXp, completed);
+		long lessonsCompleted = completions.countByUserId(userId);
+		return new StatsDto(streak.current(), streak.longest(), streak.doneToday(), streak.week(),
+				totalXp, lessonsCompleted);
 	}
 
 	record AvatarRequest(@NotNull @Pattern(regexp = "[mf][1-3]") String avatar) {

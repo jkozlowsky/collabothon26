@@ -19,8 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.collabothon.back.common.BadRequestException;
-import com.collabothon.back.common.NotFoundException;
+import com.collabothon.back.common.exceptions.BadRequestException;
+import com.collabothon.back.common.exceptions.NotFoundException;
 import com.collabothon.back.duel.DuelContent.QuestionDef;
 import com.collabothon.back.duel.DuelDtos.*;
 import com.collabothon.back.lesson.LessonContent;

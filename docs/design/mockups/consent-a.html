@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consent A: Next page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="consent.css">
+<style>
+.head-row { display: flex; align-items: center; gap: 12px; }
+.facts { padding: 4px 14px; }
+.facts .g { padding: 8px 0 0; }
+.facts .g + .g { border-top: 1px solid var(--border); margin-top: 6px; }
+.fact { display: flex; align-items: center; gap: 12px; min-height: 34px; font: 400 13px/18px Inter; color: var(--text); }
+.steps-a { padding: 6px; display: flex; flex-direction: column; gap: 4px; }
+.srow { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px; border-radius: 12px; border: 2px solid transparent; }
+.srow.now { background: var(--accent-soft); border-color: var(--primary); }
+.srow.next .t-card { color: var(--muted); }
+.srow .t { flex: 1; }
+.track { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; margin-top: 6px; }
+.track i { display: block; height: 100%; width: 55%; border-radius: 3px; background: var(--primary); }
+.center { text-align: center; align-items: center; }
+</style>
+</head>
+<body>
+<main class="board">
+<header class="dir-head">
+  <h1>A Next page</h1>
+  <p>The consent card is one more onboarding page: same canvas, header, card and footer buttons as "Got a minute for a few questions?". The facts sit in one card, grouped the way the bank sees them. Loading and error reuse that card as a checklist.</p>
+  <p class="motion"><b>Reduced motion:</b> steps swap without a transition; the spinner turns into a still, closed ring and the progress bar holds its width. Without it: the active row cross-fades in (200 ms ease-out) and the bar grows with each step.</p>
+</header>
+
+<!-- 1 Consent with Tom's facts -->
+<figure class="art"><figcaption>1 Consent: Tom's account facts</figcaption>
+<div class="phone ob">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="body">
+    <div class="head-row"><span class="tile"><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg></span><span class="t-over">Your account · optional</span></div>
+    <h2 class="t-display">Use your account to pick your lessons?</h2>
+    <p class="t-body">Your answers say what you want to learn. Your account shows where you are today.</p>
+    <div class="note"><svg class="i" aria-hidden="true"><use href="icons.svg#eye"/></svg><span class="t-strong">Only these summaries are shared, never your transactions.</span></div>
+    <div class="card facts">
+      <div class="g"><p class="t-over">About you</p>
+        <p class="fact"><span class="tile sm"><svg class="i" aria-hidden="true"><use href="icons.svg#user"/></svg></span>Age group 26–34</p>
+        <p class="fact"><span class="tile sm"><svg class="i" aria-hidden="true"><use href="icons.svg#wallet"/></svg></span>Income of €3,500–5,000 a month</p>
+      </div>
+      <div class="g"><p class="t-over">Last 3 months</p>
+        <p class="fact"><span class="tile sm"><svg class="i" aria-hidden="true"><use href="icons.svg#safe"/></svg></span>Your accounts cover more than 6 months of spending</p>
+        <p class="fact"><span class="tile sm"><svg class="i" aria-hidden="true"><use href="icons.svg#percent"/></svg></span>You keep 20% or more of what you earn</p>
+        <p class="fact"><span class="tile sm"><svg class="i" aria-hidden="true"><use href="icons.svg#card"/></svg></span>Your current account stayed above zero</p>
+        <p class="fact"><span class="tile sm"><svg class="i" aria-hidden="true"><use href="icons.svg#transfer"/></svg></span>No regular transfers to savings yet</p>
+      </div>
+      <div class="g"><p class="t-over">Products</p>
+        <p class="fact"><span class="tile sm"><svg class="i" aria-hidden="true"><use href="icons.svg#trend"/></svg></span>No investment products yet</p>
+        <p class="fact"><span class="tile sm"><svg class="i" aria-hidden="true"><use href="icons.svg#home"/></svg></span>No mortgage or life insurance</p>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <button class="big press">Use my account data</button>
+    <button class="big ghost press">Continue without</button>
+    <p class="t-label" style="text-align:center">Without it, only your answers are used.</p>
+  </div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 2 Consent without account data -->
+<figure class="art"><figcaption>2 Consent: no account data</figcaption>
+<div class="phone ob">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="body">
+    <div class="grow"></div>
+    <span class="tile lg"><svg class="i" aria-hidden="true"><use href="icons.svg#user"/></svg></span>
+    <div style="height:8px"></div>
+    <p class="t-over">Your account · optional</p>
+    <h2 class="t-display">No account data to use</h2>
+    <p class="t-body">We found no bank accounts for this profile, so your answers pick your first lessons. That is enough to start.</p>
+    <div class="card facts" style="margin-top:6px">
+      <div class="g"><p class="t-over">What we use</p>
+        <p class="fact"><span class="mark done"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span>Where you are in life</p>
+        <p class="fact"><span class="mark done"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span>Your goals</p>
+        <p class="fact"><span class="mark done"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span>Your experience and how you like to learn</p>
+        <p class="fact"><span class="mark done"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span>How confident you feel</p>
+      </div>
+    </div>
+    <div class="grow"></div>
+  </div>
+  <div class="foot"><button class="big press">Continue</button></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 3 Loading -->
+<figure class="art"><figcaption>3 Loading: step 2 of 3 active</figcaption>
+<div class="phone ob">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="body" role="status" aria-live="polite">
+    <div class="grow"></div>
+    <span class="tile lg"><svg class="i" aria-hidden="true"><use href="icons.svg#globe"/></svg></span>
+    <div style="height:8px"></div>
+    <h2 class="t-display">Building your learning path…</h2>
+    <p class="t-body">This takes a few seconds.</p>
+    <div class="card steps-a" style="margin-top:6px">
+      <div class="srow done"><span class="mark done"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span><span class="t t-card">Reading your answers</span></div>
+      <div class="srow now" aria-current="step"><span class="mark now"></span><span class="t t-card">Looking at your accounts</span></div>
+      <div class="srow next"><span class="mark next"></span><span class="t t-card">Picking your first lessons</span></div>
+    </div>
+    <div class="track" aria-hidden="true"><i></i></div>
+    <div class="grow"></div>
+  </div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 4 Error -->
+<figure class="art"><figcaption>4 Error: network or server</figcaption>
+<div class="phone ob">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="body" role="alert">
+    <div class="grow"></div>
+    <span class="tile lg danger"><svg class="i" aria-hidden="true"><use href="icons.svg#alert"/></svg></span>
+    <div style="height:8px"></div>
+    <h2 class="t-display">Your learning path didn't load</h2>
+    <p class="t-body">The connection dropped before we finished. Your answers are saved, so trying again takes a few seconds.</p>
+    <div class="card steps-a" style="margin-top:6px">
+      <div class="srow"><span class="mark done"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span><span class="t t-card">Reading your answers</span></div>
+      <div class="srow"><span class="mark done"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span><span class="t t-card">Looking at your accounts</span></div>
+      <div class="srow"><span class="mark fail"><svg class="i sm" aria-hidden="true"><use href="icons.svg#x"/></svg></span><span class="t"><span class="t-card" style="display:block">Picking your first lessons</span><span class="t-label">Not finished</span></span></div>
+    </div>
+    <div class="grow"></div>
+  </div>
+  <div class="foot">
+    <button class="big press"><svg class="i sm" aria-hidden="true"><use href="icons.svg#rotate"/></svg>Retry</button>
+    <button class="big ghost press">Skip for now</button>
+    <p class="t-label" style="text-align:center">You'll start with the general lessons.</p>
+  </div>
+  <span class="home-ind"></span>
+</div></figure>
+</main>
+</body>
+</html>

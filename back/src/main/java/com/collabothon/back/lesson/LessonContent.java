@@ -82,7 +82,7 @@ public class LessonContent {
 	}
 
 	/** Lesson ids of the lesson's story, in order. */
-	List<String> lessonIdsOf(JsonNode story) {
+	public List<String> lessonIdsOf(JsonNode story) {
 		List<String> ids = new ArrayList<>();
 		story.path("lessonIds").forEach(i -> ids.add(i.asString()));
 		return ids;

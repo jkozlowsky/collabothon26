@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consent C: The line</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="consent.css">
+<style>
+.head-row { display: flex; align-items: center; gap: 10px; }
+/* What stays in the bank: redacted rows, never readable */
+.vault { background: var(--tint); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.vault.empty { background: transparent; border: 2px dashed var(--border-strong); align-items: center; text-align: center; padding: 18px 14px; }
+.vault .t-label { color: var(--text); }
+.vrow { display: flex; align-items: center; gap: 10px; height: 20px; }
+.vrow i { display: block; height: 8px; border-radius: 4px; background: var(--border-strong); }
+.vrow i:first-child { width: 20px; height: 20px; border-radius: 6px; }
+.vrow i:last-child { margin-left: auto; width: 48px; }
+/* The boundary between bank and lessons */
+.line { position: relative; display: flex; justify-content: center; margin: 0; }
+.line::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed var(--border-strong); }
+.line span { position: relative; display: flex; gap: 8px; align-items: center; max-width: 300px; padding: 8px 14px; border-radius: 999px;
+  background: var(--surface); box-shadow: 0 2px 6px rgba(0, 31, 41, .08); font: 600 12px/16px Inter; color: var(--primary); }
+.line .i { width: 16px; height: 16px; flex: none; }
+.slip { padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 2px 6px rgba(0, 31, 41, .08); }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { font: 500 12px/16px Inter; color: var(--primary); background: var(--primary-soft); border-radius: 999px; padding: 5px 10px; }
+/* Loading: the path is drawn station by station */
+.route { position: relative; display: flex; flex-direction: column; gap: 22px; padding: 4px 0 0; }
+.route::before { content: ""; position: absolute; left: 15px; top: 20px; bottom: 20px; width: 2px; background: var(--border); }
+.stn { position: relative; display: flex; align-items: center; gap: 14px; }
+.node { width: 32px; height: 32px; border-radius: 16px; flex: none; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--border-strong); color: var(--primary); }
+.node .i { width: 16px; height: 16px; }
+.stn.done .node { background: var(--success); border-color: var(--success); color: #fff; }
+.stn.now .node { background: var(--accent); border-color: var(--primary); }
+.stn.now .node::after { content: ""; position: absolute; left: -6px; top: -6px; width: 44px; height: 44px; border-radius: 22px;
+  border: 2px solid var(--accent); animation: ping 1.4s var(--ease-out) infinite; }
+.stn.fail .node { background: var(--danger); border-color: var(--danger); color: #fff; }
+.stn.next .t-card { color: var(--muted); }
+@keyframes ping { from { transform: scale(.8); opacity: .9; } to { transform: scale(1.25); opacity: 0; } }
+.seg { position: absolute; left: 15px; width: 2px; background: var(--primary); }
+.ghost-cards { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; opacity: .6; }
+.gcard { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.gcard i { display: block; height: 8px; border-radius: 4px; background: var(--border); }
+.gcard .tile { background: rgba(154, 165, 171, .14); color: var(--slate); }
+@media (prefers-reduced-motion: reduce) { .stn.now .node::after { opacity: .5; transform: none; } }
+</style>
+</head>
+<body>
+<main class="board">
+<header class="dir-head">
+  <h1>C The line</h1>
+  <p>The consent card draws the bank's boundary: what stays inside (greyed, unreadable transactions) above a dashed line, and the slip of summaries that crosses it below. The promise is the label on the line itself. Loading draws the learning path station by station, with the first lessons waiting, still locked, at the end.</p>
+  <p class="motion"><b>Reduced motion:</b> the ring around the active station holds still at half strength, the petrol line jumps to the next station, and stations change state without a transition. Without it: the ring pings every 1.4 s and the line grows down to the next station (320 ms ease-in-out).</p>
+</header>
+
+<!-- 1 Consent with Tom's facts -->
+<figure class="art"><figcaption>1 Consent: Tom's account facts</figcaption>
+<div class="phone ob">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="body">
+    <div class="head-row"><span class="tile sm"><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg></span><span class="t-over">Your account · optional</span></div>
+    <h2 class="t-display">This is all your account would share</h2>
+    <div class="vault">
+      <p class="t-strong">Stays in your bank</p>
+      <p class="t-label" style="margin-top:-6px">Every transaction, amount, payee and date</p>
+      <div aria-hidden="true">
+        <div class="vrow"><i></i><i style="width:120px"></i><i></i></div>
+        <div class="vrow" style="margin-top:6px"><i></i><i style="width:90px"></i><i></i></div>
+      </div>
+    </div>
+    <div class="line"><span><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg>Only these summaries are shared, never your transactions.</span></div>
+    <div class="card slip">
+      <p class="t-strong">Shared to pick your lessons <span class="t-label">· last 3 months</span></p>
+      <div class="pills">
+        <span class="pill">Age group 26–34</span>
+        <span class="pill">€3,500–5,000 income a month</span>
+        <span class="pill">Over 6 months of spending covered</span>
+        <span class="pill">Keeps 20% or more of income</span>
+        <span class="pill">Never below zero</span>
+        <span class="pill">No regular savings transfers yet</span>
+        <span class="pill">No investment products yet</span>
+        <span class="pill">No mortgage or life insurance</span>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <button class="big press">Use my account data</button>
+    <button class="big ghost press">Continue without</button>
+  </div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 2 Consent without account data -->
+<figure class="art"><figcaption>2 Consent: no account data</figcaption>
+<div class="phone ob">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="body">
+    <div class="head-row"><span class="tile sm"><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg></span><span class="t-over">Your account · optional</span></div>
+    <h2 class="t-display">No account data to use</h2>
+    <p class="t-body">We found no bank accounts for this profile. Your answers are enough to pick your first lessons.</p>
+    <div class="vault empty">
+      <p class="t-strong">No accounts found</p>
+      <p class="t-label">Nothing from a bank crosses the line.</p>
+    </div>
+    <div class="line"><span><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg>Nothing from your bank is shared</span></div>
+    <div class="card slip">
+      <p class="t-strong">Used to pick your lessons</p>
+      <div class="pills">
+        <span class="pill">Where you are in life</span>
+        <span class="pill">Your goals</span>
+        <span class="pill">Your experience</span>
+        <span class="pill">How you like to learn</span>
+        <span class="pill">How confident you feel</span>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><button class="big press">Continue</button></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 3 Loading -->
+<figure class="art"><figcaption>3 Loading: step 2 of 3 active</figcaption>
+<div class="phone ob">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="body" role="status" aria-live="polite">
+    <div class="grow"></div>
+    <h2 class="t-display">Building your learning path…</h2>
+    <p class="t-body">This takes a few seconds.</p>
+    <div style="height:14px"></div>
+    <div class="route">
+      <span class="seg" aria-hidden="true" style="top:20px;height:54px"></span>
+      <div class="stn done"><span class="node"><svg class="i" aria-hidden="true"><use href="icons.svg#check"/></svg></span><span><span class="t-card" style="display:block">Reading your answers</span><span class="t-label">Done</span></span></div>
+      <div class="stn now" aria-current="step"><span class="node"></span><span><span class="t-card" style="display:block">Looking at your accounts</span><span class="t-label">8 summaries</span></span></div>
+      <div class="stn next"><span class="node"></span><span><span class="t-card" style="display:block">Picking your first lessons</span><span class="t-label">Next</span></span></div>
+    </div>
+    <div class="ghost-cards" aria-hidden="true">
+      <div class="gcard"><span class="tile sm"><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg></span><span style="flex:1"><i style="width:60%"></i><i style="width:35%;margin-top:6px"></i></span></div>
+      <div class="gcard"><span class="tile sm"><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg></span><span style="flex:1"><i style="width:48%"></i><i style="width:30%;margin-top:6px"></i></span></div>
+    </div>
+    <div class="grow"></div>
+  </div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 4 Error -->
+<figure class="art"><figcaption>4 Error: network or server</figcaption>
+<div class="phone ob">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="body" role="alert">
+    <div class="grow"></div>
+    <h2 class="t-display">Your path stopped halfway</h2>
+    <p class="t-body">The connection dropped before we finished. Your answers are saved, so trying again takes a few seconds.</p>
+    <div style="height:14px"></div>
+    <div class="route">
+      <span class="seg" aria-hidden="true" style="top:20px;height:108px"></span>
+      <div class="stn done"><span class="node"><svg class="i" aria-hidden="true"><use href="icons.svg#check"/></svg></span><span><span class="t-card" style="display:block">Reading your answers</span><span class="t-label">Done</span></span></div>
+      <div class="stn done"><span class="node"><svg class="i" aria-hidden="true"><use href="icons.svg#check"/></svg></span><span><span class="t-card" style="display:block">Looking at your accounts</span><span class="t-label">Done</span></span></div>
+      <div class="stn fail"><span class="node"><svg class="i" aria-hidden="true"><use href="icons.svg#x"/></svg></span><span><span class="t-card" style="display:block">Picking your first lessons</span><span class="t-label">Not finished</span></span></div>
+    </div>
+    <div class="grow"></div>
+  </div>
+  <div class="foot">
+    <button class="big press"><svg class="i sm" aria-hidden="true"><use href="icons.svg#rotate"/></svg>Retry</button>
+    <button class="big ghost press">Skip for now</button>
+    <p class="t-label" style="text-align:center">You'll start with the general lessons.</p>
+  </div>
+  <span class="home-ind"></span>
+</div></figure>
+</main>
+</body>
+</html>

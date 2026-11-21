@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { resetOnboarding } from './app';
+import { resetOnboarding, skipQuickCheck } from './app';
 
 // The test needs a user who has not been through onboarding yet, and leaves it that way for the next run.
 test.beforeEach(async ({ request }) => {
@@ -11,7 +11,8 @@ test.afterAll(async ({ request }) => {
   await resetOnboarding(request);
 });
 
-test('app opens on the bank; Learn runs onboarding, then the globe and a story; Bank comes back; a transfer lowers the balance', async ({ page }) => {
+test('app opens on the bank; Learn runs onboarding and the consent card, then the globe and a story; Bank comes back; a transfer lowers the balance', async ({ page, request }) => {
+  await skipQuickCheck(page);
   await page.goto('/');
   await expect(page.getByTestId('owner-name')).toHaveText('Alex Krause');
   await expect(page.getByTestId('main-balance')).toHaveText('€ 4,280.52');
@@ -21,7 +22,13 @@ test('app opens on the bank; Learn runs onboarding, then the globe and a story; 
   await page.getByTestId('onboarding-start').click();
   await page.getByTestId('onboarding-next').click();
   await page.getByTestId('onboarding-skip-all').click();
-  await expect(page.getByTestId('screen-learn')).toBeVisible();
+  // The consent card previews the facts from the bank on screen; sharing them sends exactly those.
+  await expect(page.getByTestId('consent-slip')).toContainText('Over 6 months of spending covered');
+  await page.getByTestId('consent-accept').click();
+  await page.getByTestId('summary-start').click();
+  await expect(page.getByTestId('screen-learn')).toBeVisible({ timeout: 15_000 });
+  const categorization = await (await request.get('/api/users/demo-user/categorization')).json();
+  expect(categorization).toMatchObject({ consent: true, bankData: true, lifeStage: null });
   await expect(page.getByTestId('globe')).toBeVisible();
 
   // The globe opens on the current story with its callout; Continue leads to the story's lessons.

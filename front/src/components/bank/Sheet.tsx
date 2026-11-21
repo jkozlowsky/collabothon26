@@ -13,6 +13,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { GestureDetector, GestureHandlerRootView, ScrollView, usePanGesture } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -62,6 +63,8 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
   // Stays mounted after `visible` turns false until the slide-out has finished.
   const [rendered, setRendered] = useState(visible);
   if (visible && !rendered) setRendered(true);
+  // Reduced motion: every slide is instant, so the sheet appears and disappears in place.
+  const reduced = useReducedMotion();
 
   // translateY of the sheet: 0 = fully open; sheetHeight = just below the screen edge.
   // Starts far below so nothing flashes before the sheet has been measured.
@@ -79,7 +82,7 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
     if (visible && !opened.current) {
       opened.current = true;
       offset.setValue(h);
-      slide(offset, 0, OPEN_MS);
+      slide(offset, 0, reduced ? 0 : OPEN_MS);
     }
   };
 
@@ -91,15 +94,19 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
     if (visible === lastVisible.current) return;
     lastVisible.current = visible;
     if (visible) {
-      if (opened.current) slide(offset, 0, OPEN_MS);
+      if (opened.current) slide(offset, 0, reduced ? 0 : OPEN_MS);
       return;
     }
-    if (!opened.current) return;
-    slide(offset, sheetHeight || screenHeight, CLOSE_MS, () => {
+    // Closed before its first layout: there is nothing to slide out, and without this it would stay mounted off-screen.
+    if (!opened.current) {
+      setRendered(false);
+      return;
+    }
+    slide(offset, sheetHeight || screenHeight, reduced ? 0 : CLOSE_MS, () => {
       opened.current = false;
       setRendered(false);
     });
-  }, [visible, offset, sheetHeight, screenHeight]);
+  }, [visible, offset, sheetHeight, screenHeight, reduced]);
 
   // Drag down to close, with Gesture Handler so it works on Android, where the native scroll view
   // would otherwise take the vertical drag. The pan runs alongside the content's scroll view and
@@ -126,7 +133,7 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
     onDeactivate: (e) => {
       const dy = e.translationY - dragBase.current;
       if (scrollTop.current <= 0 && (dy > CLOSE_DISTANCE || e.velocityY > CLOSE_VELOCITY)) onClose();
-      else slide(offset, 0, SNAP_MS);
+      else slide(offset, 0, reduced ? 0 : SNAP_MS);
     },
   });
 

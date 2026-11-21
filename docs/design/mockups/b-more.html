@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B Quest: more screens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="b.css">
+<style>
+/* Extra B Quest components for the rest of the app */
+.hero-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.icon-chip { display: flex; gap: 8px; }
+.reco { margin-top: 18px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 16px; padding: 14px; }
+.reco h3 { font: 700 18px/24px Inter; margin-top: 4px; }
+.reco p { color: var(--land); margin-top: 4px; }
+.reco .chips { margin-top: 10px; }
+.reco .btn { margin-top: 14px; height: 48px; }
+/* lesson path: story cards on a line */
+.path { position: relative; display: flex; flex-direction: column; gap: 10px; }
+.path::before { content: ""; position: absolute; left: 36px; top: 30px; bottom: 30px; width: 2px; background: var(--border-strong); }
+.path .scard { position: relative; align-items: center; }
+.scard .meta { display: block; font: 400 12px/16px Inter; color: var(--muted); margin-top: 2px; }
+.scard.done .ring { background: var(--land); border-color: var(--land-edge); }
+.scard.active { border: 2px solid var(--primary); padding: 13px; }
+.scard.active .ring { background: var(--accent); border-color: var(--primary); }
+.scard.locked { background: var(--canvas); border-style: dashed; border-color: var(--border-strong); }
+.scard.locked .t > b { color: var(--muted); }
+.scard.locked .ring { border-color: var(--border-strong); color: var(--muted); }
+.tag { font: 600 12px/16px Inter; color: var(--on-accent); background: var(--accent); border-radius: 10px; padding: 2px 8px; flex: none; }
+/* lesson intro */
+.learn-list { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 4px 14px; }
+.learn-list li { list-style: none; display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; font: 500 15px/20px Inter; }
+.learn-list li + li { border-top: 1px solid var(--border); }
+.learn-list .i { color: var(--success); margin-top: -2px; }
+.reason { background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; }
+.reason b { font: 600 13px/18px Inter; display: block; }
+/* quiz feedback */
+.opt.right { border: 2px solid var(--success); padding: 13px 15px; background: var(--land); }
+.opt.right .tick { background: var(--success); border-color: var(--success); color: #fff; }
+.opt.wrong { border: 2px solid var(--danger); padding: 13px 15px; }
+.opt.wrong .tick { background: var(--danger); border-color: var(--danger); color: #fff; }
+.opt.right small { color: var(--primary); }
+.opt small { display: block; font: 500 12px/16px Inter; color: var(--muted); margin-top: 2px; }
+.fb { flex: none; padding: 16px 20px 34px; border-radius: 24px 24px 0 0; display: flex; flex-direction: column; gap: 10px; }
+.fb.good { background: var(--land); }
+.fb.bad { background: var(--accent-soft); }
+.fb-head { display: flex; align-items: center; gap: 10px; }
+.fb-head .dot { width: 32px; height: 32px; border-radius: 16px; display: grid; place-items: center; color: #fff; flex: none; }
+.fb.good .dot { background: var(--success); }
+.fb.bad .dot { background: var(--danger); }
+.fb-head b { font: 700 18px/24px Inter; flex: 1; }
+.fb-head .xp { font: 600 12px/16px Inter; background: var(--primary); color: #fff; border-radius: 10px; padding: 2px 8px; }
+.fb p { font: 400 13px/18px Inter; }
+/* matching */
+.match { display: grid; grid-template-columns: 1fr 1.35fr; gap: 8px; }
+.mt { min-height: 64px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); padding: 10px 12px; font: 600 13px/18px Inter; display: flex; align-items: center; gap: 8px; }
+.mt.def { font-weight: 400; }
+.mt.matched { background: var(--land); border-color: var(--land); color: var(--primary); }
+.mt.matched .i { color: var(--success); }
+.mt.sel { border: 2px solid var(--primary); background: var(--accent-soft); padding: 9px 11px; }
+.counter { font: 500 12px/16px Inter; color: var(--muted); text-align: center; }
+/* story step */
+.story { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.story p { font: 400 15px/22px Inter; }
+.term { display: inline; font: 600 15px/22px Inter; color: var(--primary); background: var(--accent-soft); border-bottom: 2px dotted var(--primary); border-radius: 4px; padding: 0 3px; }
+.chart { position: relative; height: 128px; }
+.chart svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.chart .lab { position: absolute; font: 600 12px/16px Inter; color: var(--text); background: var(--surface); padding: 0 2px; }
+.chart .lab.m { color: var(--muted); font-weight: 500; }
+.hint { display: flex; gap: 8px; align-items: center; font: 400 12px/16px Inter; color: var(--muted); padding: 0 4px; }
+/* bottom sheet over scrim */
+.under { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.scrim { position: absolute; inset: 0; background: rgba(0, 31, 41, .56); }
+.bsheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 24px 24px 0 0; padding: 8px 20px 34px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 -8px 32px rgba(0,31,41,.2); }
+.grab { width: 36px; height: 5px; border-radius: 3px; background: var(--border-strong); margin: 0 auto 8px; }
+.bsheet .display { margin: 0; color: var(--text); }
+.bsheet .def { font: 400 15px/20px Inter; }
+.example { background: var(--canvas); border-radius: 12px; padding: 12px 14px; }
+.example b { display: block; font: 600 12px/16px Inter; color: var(--muted); margin-bottom: 2px; }
+.rel { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.rel span { font: 500 12px/16px Inter; color: var(--muted); }
+.rchip { height: 44px; border-radius: 22px; padding: 0 16px; border: 1px solid var(--border-strong); font: 600 13px/18px Inter; color: var(--primary); }
+.btn.outline { background: var(--surface); color: var(--primary); border: 1px solid var(--border-strong); font-weight: 600; }
+/* decision */
+.conseq { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 16px; padding: 14px; }
+.conseq b { font: 600 15px/20px Inter; display: block; margin-bottom: 4px; }
+.others { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.others p { color: var(--muted); }
+.others p b { display: inline; font: 600 13px/18px Inter; color: var(--text); margin: 0; }
+/* complete */
+.win { color: #fff; text-align: center; padding: 8px 20px 24px; display: flex; flex-direction: column; align-items: center; }
+.badge { width: 88px; height: 88px; border-radius: 44px; background: var(--accent); color: var(--on-accent); display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 0 8px rgba(255,204,0,.16); margin-bottom: 16px; }
+.badge b { font: 700 26px/32px Inter; }
+.badge span { font: 700 10px/12px Inter; }
+.win .chips { justify-content: center; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px; }
+.card > b { display: block; font: 600 15px/20px Inter; }
+.card > p { color: var(--muted); margin-top: 2px; }
+/* before/after bars (single series, direct labels, no legend) */
+.ba { display: flex; align-items: flex-end; gap: 16px; margin-top: 12px; }
+.bars { display: flex; align-items: flex-end; gap: 20px; height: 108px; padding: 0 6px; border-bottom: 1px solid var(--border-strong); flex: none; }
+.bar { width: 40px; display: flex; flex-direction: column; align-items: center; gap: 4px; font: 700 15px/20px Inter; }
+.bar i { display: block; width: 100%; border-radius: 4px 4px 0 0; background: var(--border-strong); }
+.bar.now i { background: var(--primary); }
+.bar-labels { display: flex; gap: 20px; padding: 6px 6px 0; font: 500 12px/16px Inter; color: var(--muted); }
+.bar-labels span { width: 40px; text-align: center; }
+.ba-text { flex: 1; padding-bottom: 22px; }
+.ba-text b { font: 600 15px/20px Inter; display: block; }
+.ba-text p { color: var(--muted); margin-top: 2px; }
+.task { background: var(--surface); border: 2px solid var(--primary); border-radius: 16px; padding: 14px; }
+.task .head { display: flex; gap: 10px; align-items: center; font: 600 12px/16px Inter; color: var(--muted); }
+.task .head .i { color: var(--ocean-light); }
+.task b { display: block; font: 700 18px/24px Inter; margin-top: 8px; }
+.task p { color: var(--muted); margin-top: 4px; }
+.task .btn { margin-top: 12px; height: 44px; }
+/* glossary */
+.search { margin-top: 16px; height: 48px; border-radius: 24px; background: var(--surface); display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--muted); }
+.search input { flex: 1; min-width: 0; border: 0; outline: 0; font: 400 15px/20px Inter; color: var(--text); background: transparent; }
+.search input::placeholder { color: var(--muted); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.fchip { height: 44px; border-radius: 22px; padding: 0 14px; background: rgba(255,255,255,.12); color: #fff; font: 600 13px/18px Inter; }
+.fchip.on { background: var(--accent); color: var(--on-accent); }
+.list { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.li { width: 100%; min-height: 60px; display: flex; align-items: center; gap: 12px; padding: 10px 14px; }
+.li + .li { border-top: 1px solid var(--border); }
+.li .t { flex: 1; min-width: 0; }
+.li .t b { display: block; font: 600 15px/20px Inter; }
+.li .t small { display: block; font: 400 12px/16px Inter; color: var(--muted); }
+.li > .i { color: var(--muted); }
+/* profile gamification */
+.lvl-line { display: flex; justify-content: space-between; align-items: baseline; margin-top: 18px; font: 600 12px/16px Inter; }
+.lvl-line span:last-child { color: var(--land); font-weight: 500; }
+.xpbar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.2); margin-top: 6px; }
+.xpbar span { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+.ltile small { display: block; font: 400 12px/16px Inter; color: var(--muted); margin-top: 8px; }
+.jev { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.jev .top { display: flex; gap: 8px; align-items: center; padding: 14px 14px 4px; }
+.jev .top .schip { background: var(--primary-soft); color: var(--primary); }
+.jev .top .schip .i { color: var(--primary); }
+.jev .top .schip.y { background: var(--accent); }
+.kv2 { display: flex; justify-content: space-between; gap: 12px; padding: 10px 14px; font: 400 13px/18px Inter; }
+.kv2 + .kv2 { border-top: 1px solid var(--border); }
+.kv2 span:first-child { color: var(--muted); }
+.kv2 span:last-child { font-weight: 600; text-align: right; }
+</style>
+</head>
+<body>
+<main class="board">
+<header class="dir-head">
+  <h1>B Quest: more screens</h1>
+  <p>The rest of the app in direction B for Ingrid (58): Learn path, one full lesson "When markets fall", Glossary and a Profile with XP, streak and confidence before and after.</p>
+</header>
+
+<!-- 1 Learn home -->
+<figure class="art"><figcaption>1 Learn home</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="hero" style="padding-bottom:22px">
+    <div class="hero-row">
+      <p class="over">Hi Ingrid · pre-retirement</p>
+      <div class="icon-chip"><span class="schip"><svg class="i sm" aria-hidden="true"><use href="icons.svg#flame"/></svg>4</span><span class="schip"><svg class="i sm" aria-hidden="true"><use href="icons.svg#bolt"/></svg>300 XP</span></div>
+    </div>
+    <p class="display">Where to next?</p>
+    <div class="reco">
+      <p class="over">Recommended for you</p>
+      <h3>When markets fall</h3>
+      <p>Because you're pre-retirement and new to investing.</p>
+      <div class="chips"><span class="schip"><svg class="i sm" aria-hidden="true"><use href="icons.svg#play"/></svg>3 min</span><span class="schip"><svg class="i sm" aria-hidden="true"><use href="icons.svg#bolt"/></svg>+40 XP</span></div>
+      <button class="btn press">Start lesson</button>
+    </div>
+  </div>
+  <div class="sheet"><div class="scroll"><div class="stack">
+    <p class="sh">Your path</p>
+    <p class="sub">Investing for the next 10 years · 6 lessons · 2 done</p>
+    <div class="path">
+      <button class="scard done press"><span class="ring"><svg class="i" aria-hidden="true"><use href="icons.svg#check"/></svg></span><span class="t"><b>What a fund savings plan does</b><span class="meta">Done · +40 XP</span></span></button>
+      <button class="scard done press"><span class="ring"><svg class="i" aria-hidden="true"><use href="icons.svg#check"/></svg></span><span class="t"><b>Spreading your risk</b><span class="meta">Done · +40 XP</span></span></button>
+      <button class="scard active press"><span class="ring"><svg class="i" aria-hidden="true"><use href="icons.svg#play"/></svg></span><span class="t"><b>When markets fall</b><span class="meta">3 min · +40 XP</span></span><span class="tag">Up next</span></button>
+      <button class="scard locked press" aria-disabled="true"><span class="ring"><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg></span><span class="t"><b>What your plan costs each year</b><span class="meta">Opens after lesson 3</span></span></button>
+      <button class="scard locked press" aria-disabled="true"><span class="ring"><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg></span><span class="t"><b>Inflation and your savings</b><span class="meta">Opens after lesson 4</span></span></button>
+      <button class="scard locked press" aria-disabled="true"><span class="ring"><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg></span><span class="t"><b>From saving to drawing down</b><span class="meta">Opens after lesson 5</span></span></button>
+    </div>
+  </div></div></div>
+  <nav class="tabs" aria-label="Tabs">
+    <button class="tab on press" aria-current="page"><svg class="i" aria-hidden="true"><use href="icons.svg#globe"/></svg>Learn</button>
+    <button class="tab press"><svg class="i" aria-hidden="true"><use href="icons.svg#book"/></svg>Glossary</button>
+    <button class="tab press"><svg class="i" aria-hidden="true"><use href="icons.svg#user"/></svg>Profile</button>
+  </nav>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 2 Lesson intro -->
+<figure class="art"><figcaption>2 Lesson intro</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="hero">
+    <div class="hero-top"><button class="icon-btn press" aria-label="Close"><svg class="i" aria-hidden="true"><use href="icons.svg#x"/></svg></button></div>
+    <p class="over">Lesson 3 of 6</p>
+    <p class="display">When markets fall</p>
+    <p class="lead">What a 20% drop means for your money, and what each reaction leads to.</p>
+    <div class="chips"><span class="schip"><svg class="i sm" aria-hidden="true"><use href="icons.svg#play"/></svg>3 min</span><span class="schip"><svg class="i sm" aria-hidden="true"><use href="icons.svg#bolt"/></svg>+40 XP</span><span class="schip">4 steps</span></div>
+  </div>
+  <div class="sheet"><div class="scroll"><div class="stack">
+    <p class="sh">What you'll learn</p>
+    <ul class="learn-list">
+      <li><svg class="i" aria-hidden="true"><use href="icons.svg#check"/></svg>Why a fall is a loss on paper until you sell</li>
+      <li><svg class="i" aria-hidden="true"><use href="icons.svg#check"/></svg>What volatility and drawdown mean</li>
+      <li><svg class="i" aria-hidden="true"><use href="icons.svg#check"/></svg>What holding, selling or adding money each lead to</li>
+    </ul>
+    <div class="reason"><b>Why this lesson</b>Your profile says pre-retirement, risk: beginner. Falls matter more when you'll need the money in 3–10 years.</div>
+  </div></div>
+  <div class="foot"><button class="btn press">Start lesson</button></div></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 3a Quiz -->
+<figure class="art"><figcaption>3a Quiz step</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="hero">
+    <div class="hero-top"><button class="icon-btn press" aria-label="Close"><svg class="i" aria-hidden="true"><use href="icons.svg#x"/></svg></button><span class="story-bar" style="grid-template-columns:repeat(4,1fr)" aria-hidden="true"><i class="f"></i><i></i><i></i><i></i></span><span class="count">1/4</span></div>
+    <p class="display">Your fund drops 20% in a month. What has happened to your money?</p>
+  </div>
+  <div class="sheet"><div class="scroll"><div class="stack">
+    <button class="opt press"><span class="t">I've lost 20% for good</span><span class="tick"></span></button>
+    <button class="opt on press" aria-pressed="true"><span class="t">Its value is down 20%, a loss only if I sell now</span><span class="tick on"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span></button>
+    <button class="opt press"><span class="t">The bank has to pay back the difference</span><span class="tick"></span></button>
+  </div></div>
+  <div class="foot"><button class="btn press">Check</button></div></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 3b Quiz correct -->
+<figure class="art"><figcaption>3b Quiz step: correct</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="hero">
+    <div class="hero-top"><button class="icon-btn press" aria-label="Close"><svg class="i" aria-hidden="true"><use href="icons.svg#x"/></svg></button><span class="story-bar" style="grid-template-columns:repeat(4,1fr)" aria-hidden="true"><i class="f"></i><i></i><i></i><i></i></span><span class="count">1/4</span></div>
+    <p class="display">Your fund drops 20% in a month. What has happened to your money?</p>
+  </div>
+  <div class="sheet"><div class="scroll"><div class="stack">
+    <button class="opt press"><span class="t">I've lost 20% for good</span><span class="tick"></span></button>
+    <button class="opt right press" aria-pressed="true"><span class="t">Its value is down 20%, a loss only if I sell now<small>Your answer</small></span><span class="tick"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span></button>
+    <button class="opt press"><span class="t">The bank has to pay back the difference</span><span class="tick"></span></button>
+  </div></div>
+  <div class="fb good" role="status">
+    <div class="fb-head"><span class="dot"><svg class="i" aria-hidden="true"><use href="icons.svg#check"/></svg></span><b>Correct</b><span class="xp">+10 XP</span></div>
+    <p>A fall is a loss on paper until you sell. Prices can recover, though nobody can promise when.</p>
+    <button class="btn press">Continue</button>
+  </div></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 3c Quiz wrong -->
+<figure class="art"><figcaption>3c Quiz step: wrong + explanation</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="hero">
+    <div class="hero-top"><button class="icon-btn press" aria-label="Close"><svg class="i" aria-hidden="true"><use href="icons.svg#x"/></svg></button><span class="story-bar" style="grid-template-columns:repeat(4,1fr)" aria-hidden="true"><i class="f"></i><i></i><i></i><i></i></span><span class="count">1/4</span></div>
+    <p class="display">Your fund drops 20% in a month. What has happened to your money?</p>
+  </div>
+  <div class="sheet"><div class="scroll"><div class="stack">
+    <button class="opt wrong press" aria-pressed="true"><span class="t">I've lost 20% for good<small>Your answer</small></span><span class="tick"><svg class="i sm" aria-hidden="true"><use href="icons.svg#x"/></svg></span></button>
+    <button class="opt right press"><span class="t">Its value is down 20%, a loss only if I sell now<small>Correct answer</small></span><span class="tick"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span></button>
+    <button class="opt press"><span class="t">The bank has to pay back the difference</span><span class="tick"></span></button>
+  </div></div>
+  <div class="fb bad" role="status">
+    <div class="fb-head"><span class="dot"><svg class="i" aria-hidden="true"><use href="icons.svg#x"/></svg></span><b>Not quite</b></div>
+    <p>The value dropped, but you lock in a loss only when you sell. If you hold, the value moves with the market again, up or down.</p>
+    <button class="btn press">Got it</button>
+  </div></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 4 Matching -->
+<figure class="art"><figcaption>4 Matching tiles</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="hero">
+    <div class="hero-top"><button class="icon-btn press" aria-label="Close"><svg class="i" aria-hidden="true"><use href="icons.svg#x"/></svg></button><span class="story-bar" style="grid-template-columns:repeat(4,1fr)" aria-hidden="true"><i class="f"></i><i class="f"></i><i></i><i></i></span><span class="count">2/4</span></div>
+    <p class="display">Match each word to its meaning</p>
+    <p class="lead">Tap a word, then its meaning.</p>
+  </div>
+  <div class="sheet"><div class="scroll"><div class="stack">
+    <div class="match">
+      <button class="mt matched press" aria-pressed="true"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg>Volatility</button>
+      <button class="mt def matched press" aria-pressed="true"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg>How much prices swing up and down</button>
+      <button class="mt press">Diversification</button>
+      <button class="mt def press">A loss locked in by selling</button>
+      <button class="mt sel press" aria-pressed="true">Time horizon</button>
+      <button class="mt def press">Spreading money across many investments</button>
+      <button class="mt press">Realised loss</button>
+      <button class="mt def press">How long until you need the money</button>
+    </div>
+    <p class="counter">1 of 4 pairs matched</p>
+  </div></div></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 5 Story step -->
+<figure class="art"><figcaption>5 Text / story step</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="hero">
+    <div class="hero-top"><button class="icon-btn press" aria-label="Close"><svg class="i" aria-hidden="true"><use href="icons.svg#x"/></svg></button><span class="story-bar" style="grid-template-columns:repeat(4,1fr)" aria-hidden="true"><i class="f"></i><i class="f"></i><i class="f"></i><i></i></span><span class="count">3/4</span></div>
+    <p class="over">Good to know</p>
+    <p class="display">Why a fall feels worse than it is</p>
+  </div>
+  <div class="sheet"><div class="scroll"><div class="stack">
+    <div class="story">
+      <div class="chart" role="img" aria-label="Example: €10,000 falls to €8,000, a 20% drawdown, then recovers">
+        <svg viewBox="0 0 318 128" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="0" y1="30" x2="318" y2="30" stroke="#C9D2D6" stroke-width="1" stroke-dasharray="4 4"/>
+          <path d="M4 70 C40 60 70 34 96 30 C130 26 150 92 178 98 C210 104 250 60 314 34" fill="none" stroke="#002E3C" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="96" cy="30" r="5" fill="#002E3C" stroke="#fff" stroke-width="2"/>
+          <circle cx="178" cy="98" r="5" fill="#FFCC00" stroke="#002E3C" stroke-width="2"/>
+        </svg>
+        <span class="lab" style="left:64px;top:0">€10,000</span>
+        <span class="lab" style="left:150px;top:108px">€8,000</span>
+        <span class="lab m" style="left:196px;top:68px">−20% drawdown</span>
+      </div>
+      <p>A <button class="term press" data-inline>drawdown</button> is how far an investment falls from its last high. If your plan shows €10,000 and then €8,000, that's a 20% drawdown.</p>
+      <p>World stock markets have fallen 30–50% several times, for example in 2008. Each fall so far was followed by a recovery, but some took years, and the past doesn't promise the future.</p>
+    </div>
+    <p class="hint"><svg class="i sm" aria-hidden="true"><use href="icons.svg#book"/></svg>Tap a highlighted word to see what it means.</p>
+  </div></div>
+  <div class="foot"><button class="btn press">Continue</button></div></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 6 Glossary popup -->
+<figure class="art"><figcaption>6 Glossary term (bottom sheet from the story step)</figcaption>
+<div class="phone">
+  <div class="under" inert>
+    <div class="status"><span>9:41</span><span class="batt"></span></div>
+    <div class="hero">
+      <div class="hero-top"><button class="icon-btn" aria-label="Close"><svg class="i" aria-hidden="true"><use href="icons.svg#x"/></svg></button><span class="story-bar" style="grid-template-columns:repeat(4,1fr)" aria-hidden="true"><i class="f"></i><i class="f"></i><i class="f"></i><i></i></span><span class="count">3/4</span></div>
+      <p class="over">Good to know</p>
+      <p class="display">Why a fall feels worse than it is</p>
+    </div>
+    <div class="sheet"><div class="scroll"><div class="stack">
+      <div class="story"><div class="chart" aria-label="Example: €10,000 falls to €8,000, a 20% drawdown, then recovers">
+        <svg viewBox="0 0 318 128" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="0" y1="30" x2="318" y2="30" stroke="#C9D2D6" stroke-width="1" stroke-dasharray="4 4"/>
+          <path d="M4 70 C40 60 70 34 96 30 C130 26 150 92 178 98 C210 104 250 60 314 34" fill="none" stroke="#002E3C" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="96" cy="30" r="5" fill="#002E3C" stroke="#fff" stroke-width="2"/>
+          <circle cx="178" cy="98" r="5" fill="#FFCC00" stroke="#002E3C" stroke-width="2"/>
+        </svg>
+        <span class="lab" style="left:64px;top:0">€10,000</span>
+        <span class="lab" style="left:150px;top:108px">€8,000</span>
+        <span class="lab m" style="left:196px;top:68px">−20% drawdown</span>
+      </div><p>A <span class="term">drawdown</span> is how far an investment falls from its last high. If your plan shows €10,000 and then €8,000, that's a 20% drawdown.</p></div>
+    </div></div></div>
+  </div>
+  <div class="scrim"></div>
+  <div class="bsheet" role="dialog" aria-label="Drawdown">
+    <span class="grab"></span>
+    <div class="hero-row" style="justify-content:flex-start"><p class="display">Drawdown</p><span class="pchip">Risk</span></div>
+    <p class="def">How far an investment has fallen from its last high point, shown as a percentage.</p>
+    <div class="example"><b>Example</b>€10,000 falls to €8,000: a 20% drawdown. It only becomes a realised loss if you sell at that point.</div>
+    <div class="rel"><span>Related</span><button class="rchip press">Volatility</button><button class="rchip press">Realised loss</button></div>
+    <button class="btn press">Got it</button>
+    <button class="btn ghost press">Open in Glossary</button>
+  </div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 7 Decision scenario -->
+<figure class="art"><figcaption>7 Decision scenario + consequence</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="hero">
+    <div class="hero-top"><button class="icon-btn press" aria-label="Close"><svg class="i" aria-hidden="true"><use href="icons.svg#x"/></svg></button><span class="story-bar" style="grid-template-columns:repeat(4,1fr)" aria-hidden="true"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></span><span class="count">4/4</span></div>
+    <p class="over">Practice decision</p>
+    <p class="display">You have €5,000. The market fell 20%. What do you do?</p>
+    <p class="lead">Your broad world fund now shows €4,000.</p>
+  </div>
+  <div class="sheet"><div class="scroll"><div class="stack">
+    <button class="opt press"><span class="t">Sell everything to stop the loss</span><span class="tick"></span></button>
+    <button class="opt on press" aria-pressed="true"><span class="t">Hold and stick to my plan</span><span class="tick on"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg></span></button>
+    <button class="opt press"><span class="t">Invest more while prices are lower</span><span class="tick"></span></button>
+    <div class="conseq" role="status">
+      <b>What happens if you hold</b>
+      <p>The €1,000 drop stays on paper. If prices recover, your value recovers with them; if they fall further, so does your value. Time matters: money needed in 3–10 years has time to ride out a fall, money needed next year has less.</p>
+      <div class="others">
+        <p><b>If you sell:</b> the €1,000 becomes a realised loss, and you miss any recovery.</p>
+        <p><b>If you invest more:</b> you buy at lower prices, but more of your money is at risk if prices keep falling.</p>
+      </div>
+    </div>
+    <p class="fine"><svg class="i sm" aria-hidden="true"><use href="icons.svg#lock"/></svg>Practice only. There's no single right answer, and this is not advice.</p>
+  </div></div>
+  <div class="foot"><button class="btn press">Finish lesson</button></div></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 8 Lesson complete -->
+<figure class="art"><figcaption>8 Lesson complete: confidence after + real-world step</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="win">
+    <div class="badge"><b>+40</b><span>XP</span></div>
+    <p class="display" style="margin:0">Lesson complete</p>
+    <p class="lead">When markets fall</p>
+    <div class="chips"><span class="schip"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg>4 of 4 steps</span><span class="schip"><svg class="i sm" aria-hidden="true"><use href="icons.svg#flame"/></svg>5-day streak</span></div>
+  </div>
+  <div class="sheet"><div class="scroll"><div class="stack">
+    <div class="card">
+      <b>How confident are you making your own investment decisions now?</b>
+      <div class="scale" role="radiogroup" aria-label="Confidence from 1 to 5" style="margin-top:14px">
+        <button class="press" role="radio" aria-checked="false">1</button>
+        <button class="press" role="radio" aria-checked="false">2</button>
+        <button class="press" role="radio" aria-checked="false">3</button>
+        <button class="on press" role="radio" aria-checked="true">4</button>
+        <button class="press" role="radio" aria-checked="false">5</button>
+      </div>
+      <div class="scale-labels"><span>Not confident</span><span>Very confident</span></div>
+      <div class="ba">
+        <div><div class="bars" role="img" aria-label="Confidence before 2 of 5, now 4 of 5"><span class="bar">2<i style="height:32px"></i></span><span class="bar now">4<i style="height:64px"></i></span></div><div class="bar-labels"><span>Before</span><span>Now</span></div></div>
+        <div class="ba-text"><b>Up from 2 to 4</b><p>Before: your onboarding answer. Now: after this lesson.</p></div>
+      </div>
+    </div>
+    <div class="task">
+      <span class="head"><svg class="i sm" aria-hidden="true"><use href="icons.svg#pin"/></svg>Your real-world step</span>
+      <b>Check what your fund savings plan costs per year</b>
+      <p>Look for "ongoing charges" in the plan's documents or your banking app. It takes about 5 minutes and prepares you for lesson 4.</p>
+      <button class="btn outline press">Mark as done</button>
+    </div>
+  </div></div>
+  <div class="foot"><button class="btn press">Back to your path</button></div></div>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 9 Glossary tab -->
+<figure class="art"><figcaption>9 Glossary tab</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="hero" style="padding-bottom:20px">
+    <p class="display" style="margin:0">Glossary</p>
+    <p class="lead">48 money words in plain language.</p>
+    <label class="search"><svg class="i" aria-hidden="true"><use href="icons.svg#search"/></svg><input type="search" placeholder="Search terms" aria-label="Search terms"></label>
+    <div class="filters"><button class="fchip on press" aria-pressed="true">All</button><button class="fchip press">Saving</button><button class="fchip press">Investing</button><button class="fchip press">Risk</button><button class="fchip press">Retirement</button></div>
+  </div>
+  <div class="sheet"><div class="scroll"><div class="stack">
+    <p class="sh">From your last lesson</p>
+    <div class="list">
+      <button class="li press"><span class="t"><b>Drawdown</b><small>How far an investment fell from its high</small></span><span class="tag">New</span><svg class="i" aria-hidden="true"><use href="icons.svg#chevron"/></svg></button>
+      <button class="li press"><span class="t"><b>Realised loss</b><small>A loss locked in by selling</small></span><span class="tag">New</span><svg class="i" aria-hidden="true"><use href="icons.svg#chevron"/></svg></button>
+      <button class="li press"><span class="t"><b>Volatility</b><small>How much prices swing up and down</small></span><svg class="i" aria-hidden="true"><use href="icons.svg#chevron"/></svg></button>
+    </div>
+    <p class="sh">All terms</p>
+    <div class="list">
+      <button class="li press"><span class="t"><b>Diversification</b><small>Spreading money across many investments</small></span><svg class="i" aria-hidden="true"><use href="icons.svg#chevron"/></svg></button>
+      <button class="li press"><span class="t"><b>Emergency fund</b><small>3–6 months of spending kept aside</small></span><svg class="i" aria-hidden="true"><use href="icons.svg#chevron"/></svg></button>
+      <button class="li press"><span class="t"><b>ETF</b><small>A fund traded on the stock exchange</small></span><svg class="i" aria-hidden="true"><use href="icons.svg#chevron"/></svg></button>
+      <button class="li press"><span class="t"><b>Inflation</b><small>Prices rising, so money buys less</small></span><svg class="i" aria-hidden="true"><use href="icons.svg#chevron"/></svg></button>
+      <button class="li press"><span class="t"><b>Ongoing charges</b><small>What a fund costs you each year</small></span><svg class="i" aria-hidden="true"><use href="icons.svg#chevron"/></svg></button>
+    </div>
+  </div></div></div>
+  <nav class="tabs" aria-label="Tabs">
+    <button class="tab press"><svg class="i" aria-hidden="true"><use href="icons.svg#globe"/></svg>Learn</button>
+    <button class="tab on press" aria-current="page"><svg class="i" aria-hidden="true"><use href="icons.svg#book"/></svg>Glossary</button>
+    <button class="tab press"><svg class="i" aria-hidden="true"><use href="icons.svg#user"/></svg>Profile</button>
+  </nav>
+  <span class="home-ind"></span>
+</div></figure>
+
+<!-- 10 Profile with gamification -->
+<figure class="art"><figcaption>10 Profile tab with progress</figcaption>
+<div class="phone">
+  <div class="status"><span>9:41</span><span class="batt"></span></div>
+  <div class="hero" style="padding-bottom:22px">
+    <div class="me"><span class="ring" style="border-color:var(--teal)">I</span><span><b>Ingrid, 58</b><small>Level 3</small></span></div>
+    <div class="lvl-line"><span>340 XP</span><span>160 XP to level 4</span></div>
+    <div class="xpbar" role="img" aria-label="340 of 500 XP"><span style="width:68%"></span></div>
+    <div class="chips"><span class="schip"><svg class="i sm" aria-hidden="true"><use href="icons.svg#flame"/></svg>5-day streak</span><span class="schip"><svg class="i sm" aria-hidden="true"><use href="icons.svg#check"/></svg>3 lessons done</span></div>
+  </div>
+  <div class="sheet"><div class="scroll"><div class="stack">
+    <p class="sh">Knowledge</p>
+    <div class="tiles">
+      <div class="ltile"><span class="head"><svg class="i sm" aria-hidden="true"><use href="icons.svg#safe"/></svg>Saving</span><b>Advanced</b><span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i></span><small>No lessons yet</small></div>
+      <div class="ltile"><span class="head"><svg class="i sm" aria-hidden="true"><use href="icons.svg#trend"/></svg>Investing</span><b>Intermediate</b><span class="pips"><i class="f"></i><i class="f"></i><i></i></span><small>2 lessons done</small></div>
+      <div class="ltile"><span class="head"><svg class="i sm" aria-hidden="true"><use href="icons.svg#percent"/></svg>Risk</span><b>Beginner</b><span class="pips"><i class="f"></i><i></i><i></i></span><small>1 lesson done</small></div>
+      <div class="ltile"><span class="head"><svg class="i sm" aria-hidden="true"><use href="icons.svg#sprout"/></svg>Retirement</span><b>Intermediate</b><span class="pips"><i class="f"></i><i class="f"></i><i></i></span><small>No lessons yet</small></div>
+    </div>
+    <p class="sh">Confidence</p>
+    <div class="card">
+      <div class="ba" style="margin-top:0">
+        <div><div class="bars" role="img" aria-label="Confidence before 2 of 5, now 4 of 5"><span class="bar">2<i style="height:32px"></i></span><span class="bar now">4<i style="height:64px"></i></span></div><div class="bar-labels"><span>Before</span><span>Now</span></div></div>
+        <div class="ba-text"><b>2 → 4 out of 5</b><p>Before: onboarding, 20 Nov. Now: after "When markets fall".</p></div>
+      </div>
+    </div>
+    <p class="sh">Your profile</p>
+    <div class="jev">
+      <div class="top"><span class="schip y"><svg class="i sm" aria-hidden="true"><use href="icons.svg#bolt"/></svg>Profiled by Jev</span><span class="schip">Jev 91%</span></div>
+      <div class="kv2"><span>Life stage</span><span>Pre-retirement</span></div>
+      <div class="kv2"><span>Goals</span><span>Fund my retirement, grow my wealth</span></div>
+      <div class="kv2"><span>Horizon</span><span>3–10 years</span></div>
+      <button class="li press" style="border-top:1px solid var(--border)"><span class="t"><b>Why Jev decided this</b><small>4 reasons from your bank data and test</small></span><svg class="i" aria-hidden="true"><use href="icons.svg#chevron"/></svg></button>
+    </div>
+    <div class="consent-card">
+      <div class="row"><svg class="i" aria-hidden="true"><use href="icons.svg#lock"/></svg><span class="t"><b>Bank data shared</b><small>Sent to TypeSafe AI for categorisation since 20 Nov 2026</small></span><span class="on-pill">On</span></div>
+      <button class="row press"><svg class="i" aria-hidden="true"><use href="icons.svg#rotate"/></svg><span class="t"><b>Redo onboarding</b><small>Pick another demo customer or withdraw consent</small></span><svg class="i" aria-hidden="true" style="color:var(--muted)"><use href="icons.svg#chevron"/></svg></button>
+    </div>
+    <p class="fine"><svg class="i sm" aria-hidden="true"><use href="icons.svg#lock"/></svg>This profile tailors your lessons. It is not an investment suitability assessment or advice.</p>
+  </div></div></div>
+  <nav class="tabs" aria-label="Tabs">
+    <button class="tab press"><svg class="i" aria-hidden="true"><use href="icons.svg#globe"/></svg>Learn</button>
+    <button class="tab press"><svg class="i" aria-hidden="true"><use href="icons.svg#book"/></svg>Glossary</button>
+    <button class="tab on press" aria-current="page"><svg class="i" aria-hidden="true"><use href="icons.svg#user"/></svg>Profile</button>
+  </nav>
+  <span class="home-ind"></span>
+</div></figure>
+</main>
+</body>
+</html>

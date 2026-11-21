@@ -1,7 +1,5 @@
 package com.collabothon.back.categorization.controllers;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
@@ -19,11 +17,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
@@ -49,6 +44,8 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import com.collabothon.back.TestcontainersConfiguration;
+
+import tools.jackson.databind.json.JsonMapper;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 
 @Import(TestcontainersConfiguration.class)
@@ -58,8 +55,6 @@ import com.collabothon.back.categorization.consts.CategorizationConsts;
 class CategorizationControllerTests {
 
 	private static final String JEV_URL = "https://api.typesafe.ai/v1/systemone";
-
-	private static final String SPEC = "docs/specs/F1-profiling.md";
 
 	private static final String ANSWERS = """
 			{"lifeStage": "building", "goals": ["start-saving", "stocks-etfs"], "experience": "occasional",
@@ -93,6 +88,9 @@ class CategorizationControllerTests {
 	static Clock clock() {
 		return CLOCK;
 	}
+
+	@Autowired
+	JsonMapper json;
 
 	@Autowired
 	MockMvc mvc;
@@ -131,18 +129,6 @@ class CategorizationControllerTests {
 		return jdbc.sql("SELECT id FROM lesson WHERE position = ?").param(position).query(Long.class).single();
 	}
 
-	private static String specQuestions() throws Exception {
-		Path dir = Path.of(System.getProperty("user.dir")).toAbsolutePath();
-		while (!Files.exists(dir.resolve(SPEC))) {
-			dir = dir.getParent();
-			assertNotNull(dir, SPEC + " above the working directory");
-		}
-		var block = Pattern.compile("<!-- jev-questions[^>]*-->\n```json\n(.*?)\n```", Pattern.DOTALL)
-			.matcher(Files.readString(dir.resolve(SPEC)));
-		assertTrue(block.find());
-		return block.group(1);
-	}
-
 	@Test
 	void alexIsCategorisedByJev() throws Exception {
 		onboard("alex", ANSWERS);
@@ -151,7 +137,7 @@ class CategorizationControllerTests {
 			.andExpect(header("Authorization", "Bearer test-key"))
 			.andExpect(content().json("""
 					{"model": "jev-latest", "state": {"answers": %s, "facts": %s}, "questions": %s}"""
-				.formatted(ANSWERS, FACTS, specQuestions()), JsonCompareMode.STRICT))
+				.formatted(ANSWERS, FACTS, SpecBlocks.read(json, SpecBlocks.F1, "jev-questions")), JsonCompareMode.STRICT))
 			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 
 		String expected = """

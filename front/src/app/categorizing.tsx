@@ -13,15 +13,7 @@ import { colors } from '@/constants/theme';
 import { useBank } from '@/hooks/useBank';
 import { continueToLearn } from '@/hooks/useOpenLearn';
 import { useQuickCheck } from '@/hooks/useQuickCheck';
-import {
-  categorize,
-  checkBackend,
-  factLabels,
-  factsFrom,
-  isBadRequest,
-  isRetryable,
-  withTimeout,
-} from '@/lib/categorization';
+import { categorize, checkBackend, factLabels, factsFrom, isRetryable, withTimeout } from '@/lib/categorization';
 import { setSummary } from '@/lib/learningPath';
 import { fetchCheckQuestions } from '@/lib/quickCheck';
 import type { CheckAnswer, CheckQuestion } from '@/types/quickCheck';
@@ -135,19 +127,14 @@ export default function CategorizingScreen() {
     setConsent(withConsent);
     setStep(0);
     setPhase('loading');
-    const judge = (answers: CheckAnswer[]) =>
-      withTimeout(outer, (signal) => categorize(withConsent ? facts : null, signal, answers));
-    // Answers the backend rejects must not cost the user the whole path: once more without them.
-    const judged = judge(checkAnswers).catch((e: unknown) => {
-      if (!isBadRequest(e) || checkAnswers.length === 0) throw e;
-      sent.current = [];
-      return judge([]);
-    });
+    const judged = withTimeout(outer, (signal) => categorize(withConsent ? facts : null, signal, checkAnswers));
     const [result] = await Promise.allSettled([judged, new Promise((r) => setTimeout(r, MIN_MS))]);
     if (outer.aborted) return;
     if (result.status === 'fulfilled') {
-      const answersSent = sent.current.some((a) => a.text !== null);
-      setSummary({ categorization: result.value, answersSent });
+      const { categorization, answersDropped } = result.value;
+      const hadText = checkAnswers.some((a) => a.text !== null);
+      const unchecked = hadText && (answersDropped || categorization.source === 'fallback');
+      setSummary({ categorization, unchecked });
       return router.replace('/learning-path');
     }
     inFlight.current = false;

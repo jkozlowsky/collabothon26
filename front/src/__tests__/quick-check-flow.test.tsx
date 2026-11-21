@@ -405,17 +405,26 @@ test('a double tap on Start learning opens the lesson once', async () => {
   push.mockRestore();
 });
 
-test('a 400 on answers the backend rejects retries once without them, so the user still gets a path', async () => {
-  backend({
-    post: (init) => (JSON.parse(String(init?.body)).answers ? fail(400) : ok(categorization({ checks: [] }))),
-  });
+test('a 400 on rejected answers retries without them, keeps the consent, and the summary says they were not checked', async () => {
+  let withoutAnswers = 0;
+  const rejectAnswers = (init?: RequestInit) => {
+    if ('answers' in JSON.parse(String(init?.body))) return fail(400);
+    return ++withoutAnswers === 1 ? fail(503) : ok(categorization({ checks: [], source: 'jev' }));
+  };
+  backend({ post: rejectAnswers });
   await open();
-  await fireEvent.press(await screen.findByTestId('consent-decline'));
+  await fireEvent.press(await screen.findByTestId('consent-accept'));
   await answerAll(['a', 'b', 'c', 'd']);
 
+  await fireEvent.press(await screen.findByTestId('categorizing-retry', {}, { timeout: 4000 }));
   expect(await screen.findByTestId('learning-path', {}, { timeout: 4000 })).toBeOnTheScreen();
-  expect(bodies().map((body) => 'answers' in body)).toEqual([true, false]);
-  expect(screen.queryByText("We couldn't check your answers this time")).toBeNull();
+  expect(bodies().map((body) => [body.consent, 'facts' in body, 'answers' in body])).toEqual([
+    [true, true, true],
+    [true, true, false],
+    [true, true, true],
+    [true, true, false],
+  ]);
+  expect(screen.getByText("We couldn't check your answers this time")).toBeOnTheScreen();
 });
 
 test('a 400 without answers still ends in the error screen', async () => {

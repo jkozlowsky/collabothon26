@@ -22,18 +22,17 @@ const GAP_TITLE = { under: 'You know more than you think', over: 'There is more 
 
 type Props = {
   categorization: Categorization;
-  /** Some answer was sent to be judged, so a fallback result means the judge was out of reach. */
-  answersSent: boolean;
+  /** The user typed answers that Jev did not judge. */
+  unchecked: boolean;
 };
 
-export function PathSummary({ categorization: c, answersSent }: Props) {
+export function PathSummary({ categorization: c, unchecked }: Props) {
   const gap = c.confidenceGaps[0];
   const areas = c.focusAreas.slice(0, SUMMARY_AREAS);
   const start = c.startLesson;
   const startArea = start && c.checks.find((check) => check.lessonId === start.lessonId)?.area;
   const roleLines = c.explanation.find((e) => e.output === 'role')?.because ?? [];
   const firstLesson = startArea ? `Your first lesson · ${AREA_LABEL[startArea]}` : 'Your first lesson';
-  const judgeFailed = answersSent && c.source === 'fallback';
 
   const why = (area: FocusArea) =>
     c.checks.some((check) => check.area === area)
@@ -44,7 +43,7 @@ export function PathSummary({ categorization: c, answersSent }: Props) {
   return (
     <>
       <Text style={styles.overline}>Your learning path</Text>
-      {judgeFailed && (
+      {unchecked && (
         <Text style={styles.muted} testID="summary-unchecked">
           We couldn&apos;t check your answers this time
         </Text>

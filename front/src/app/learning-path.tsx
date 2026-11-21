@@ -30,7 +30,7 @@ export default function LearningPathScreen() {
   );
 
   if (!summary) return <Redirect href="/map" />;
-  const { categorization, answersSent } = summary;
+  const { categorization, unchecked } = summary;
   return (
     <FlowPage
       testID="learning-path"
@@ -45,7 +45,7 @@ export default function LearningPathScreen() {
         </>
       }
     >
-      <PathSummary categorization={categorization} answersSent={answersSent} />
+      <PathSummary categorization={categorization} unchecked={unchecked} />
     </FlowPage>
   );
 }

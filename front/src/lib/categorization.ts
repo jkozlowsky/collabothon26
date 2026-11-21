@@ -53,28 +53,39 @@ export async function checkBackend(signal: AbortSignal): Promise<void> {
   await api<Categorization>(CATEGORIZATION_PATH, { signal }).catch(nullOn404);
 }
 
-/** `facts` only with consent: the backend refuses account data the user did not agree to share. */
-export async function categorize(
-  facts: Facts | null,
-  signal: AbortSignal,
-  answers: CheckAnswer[] = [],
-): Promise<Categorization> {
-  const consent = facts !== null;
-  const body = JSON.stringify({
-    consent,
-    ...(consent && { facts }),
-    ...(answers.length > 0 && { answers }),
-  });
-  await profileSaved(signal);
+/** POSTs `body`, retrying a transient 404 until the profile write has landed on the backend. */
+async function postCategorization(body: object, signal: AbortSignal): Promise<Categorization> {
   for (let attempt = 1; ; attempt++) {
     try {
-      const stored = await api<Categorization>(CATEGORIZATION_PATH, { method: 'POST', body, signal });
+      const init = { method: 'POST', body: JSON.stringify(body), signal };
+      const stored = await api<Categorization>(CATEGORIZATION_PATH, init);
       // A backend without the Quick check leaves these out.
       return { ...stored, checks: stored.checks ?? [], startLesson: stored.startLesson ?? null };
     } catch (e) {
       if (!isStatus(e, 404) || attempt > PROFILE_RETRIES) throw e;
       await new Promise((r) => setTimeout(r, PROFILE_BACKOFF_MS * attempt));
     }
+  }
+}
+
+/**
+ * `facts` only with consent: the backend refuses account data the user did not agree to share. Answers the backend
+ * rejects (400) must not cost the user the whole path, so they are sent again without them: `answersDropped`.
+ */
+export async function categorize(
+  facts: Facts | null,
+  signal: AbortSignal,
+  answers: CheckAnswer[] = [],
+): Promise<{ categorization: Categorization; answersDropped: boolean }> {
+  const consent = facts !== null;
+  const base = { consent, ...(consent && { facts }) };
+  await profileSaved(signal);
+  try {
+    const withAnswers = answers.length > 0 ? { ...base, answers } : base;
+    return { categorization: await postCategorization(withAnswers, signal), answersDropped: false };
+  } catch (e) {
+    if (!isBadRequest(e) || answers.length === 0) throw e;
+    return { categorization: await postCategorization(base, signal), answersDropped: true };
   }
 }
 

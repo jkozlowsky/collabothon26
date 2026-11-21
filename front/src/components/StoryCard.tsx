@@ -1,6 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { StartHereBadge } from '@/components/StartHereBadge';
 import { motion, Tappable } from '@/components/onboarding/ui';
 import { colors, radii, spacing, storyColors, tints, type } from '@/constants/theme';
 import { storyLabel, type StoryState } from '@/lib/stories';
@@ -35,11 +36,7 @@ export function StoryCard({ story, state, onPress, startHere }: Props) {
         <Feather name={locked ? 'lock' : story.icon} size={22} color={active ? colors.textOnAccent : color} />
       </View>
       <View style={styles.body}>
-        {startHere && (
-          <View style={styles.badge} testID="story-card-start-here">
-            <Text style={styles.badgeText}>Start here</Text>
-          </View>
-        )}
+        {startHere && <StartHereBadge testID="story-card-start-here" />}
         <Text style={styles.title} numberOfLines={1}>
           {story.title}
         </Text>
@@ -99,8 +96,6 @@ const styles = StyleSheet.create({
   body: { flex: 1, gap: spacing.xs },
   title: type.titleCard,
   meta: { ...type.labelDefault, color: colors.textMuted },
-  badge: { alignSelf: 'flex-start', paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radii.pill, backgroundColor: colors.brandAccent },
-  badgeText: { ...type.overline, color: colors.textOnAccent },
   why: { ...type.labelDefault, color: colors.textPrimary },
   track: { width: 150, maxWidth: '100%', height: 5, borderRadius: radii.bar, backgroundColor: colors.borderDefault, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: radii.bar, backgroundColor: colors.brandPrimary },

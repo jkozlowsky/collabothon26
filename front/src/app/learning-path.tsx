@@ -12,14 +12,14 @@ import { useSummary } from '@/hooks/useSummary';
 export default function LearningPathScreen() {
   const summary = useSummary();
   const leaving = useRef(false);
-  // A second tap would close the screen twice or push the lesson twice.
-  const leave = useCallback((lessonId?: string) => {
+  // A second tap would close the screen twice.
+  const leave = useCallback(() => {
     if (leaving.current) return;
     leaving.current = true;
-    continueToLearn(lessonId);
+    continueToLearn();
   }, []);
 
-  // Back must not leave the hand-off to the first lesson half done.
+  // Back leaves like the button.
   useFocusEffect(
     useCallback(() => {
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -38,20 +38,10 @@ export default function LearningPathScreen() {
       </FlowPage>
     );
   }
-  const { categorization } = summary;
   return (
     <FlowPage
       testID="learning-path"
-      footer={
-        <>
-          <Button
-            label="Start learning"
-            onPress={() => leave(categorization.startLesson?.lessonId)}
-            testID="summary-start"
-          />
-          <Button label="See all lessons" variant="ghost" onPress={() => leave()} testID="summary-all" />
-        </>
-      }
+      footer={<Button label="Show my path" onPress={leave} testID="summary-start" />}
     >
       <PathSummary {...summary} />
     </FlowPage>

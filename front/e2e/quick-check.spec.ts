@@ -91,7 +91,7 @@ const toKnowCard = async (page: Page, consent: boolean) => {
   await expect(page.getByTestId('categorizing-know')).toBeVisible();
 };
 
-test('consent, what we know, the time frame, three questions with chips, the summary, then the first lesson', async ({ page }) => {
+test('consent, what we know, the time frame, three questions with chips, the summary, then the map', async ({ page }) => {
   const { steps, finals } = await toConsentCard(page, { lifeStage: true });
   await expect(page.getByTestId('consent-quickcheck-note')).toBeVisible();
   await toKnowCard(page, true);
@@ -141,7 +141,7 @@ test('consent, what we know, the time frame, three questions with chips, the sum
   expect(JSON.stringify(finals[0])).not.toMatch(/12,?500|1,?268/);
 
   await tap(page, 'summary-start');
-  await expect(page).toHaveURL(/\/lesson\/berlin-3$/);
+  await expect(page.getByTestId('screen-learn')).toBeVisible();
 });
 
 test('without consent the savings cover is asked and the questions use example numbers', async ({ page }) => {

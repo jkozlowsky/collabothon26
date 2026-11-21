@@ -719,17 +719,20 @@ test('ready for the next step: the first-lesson card says so; with no start less
   expect(get('summary-first-lesson')).toHaveTextContent("You're ready for the next lesson", { exact: false });
 });
 
-test('no first lesson hides the card and Start learning opens the map', async () => {
+test('no first lesson hides the card and Show my path opens the map', async () => {
   await toSummary(ran({ startLesson: null }));
   expect(screen.queryByTestId('summary-first-lesson')).toBeNull();
   await press('summary-start');
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
 });
 
-test('Start learning opens the first lesson; See all lessons opens the map', async () => {
+test('"Show my path" is the one button and opens the map, not the first lesson', async () => {
   await toSummary(ran());
+  expect(get('summary-start')).toHaveTextContent('Show my path');
+  expect(screen.queryByTestId('summary-all')).toBeNull();
   await press('summary-start');
-  expect(screen).toHavePathname('/lesson/berlin-2');
+  expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
+  expect(screen).toHavePathname('/map');
 });
 
 test('the simpler-check line shows only when the model was asked and then failed', async () => {
@@ -756,7 +759,7 @@ test('a reload of /learning-path rebuilds the summary from the stored row', asyn
   expect(get('summary-based-on')).toHaveTextContent('3 answers', { exact: false });
 });
 
-test('hardware back on the summary leaves for the map like See all lessons', async () => {
+test('hardware back on the summary leaves for the map like Show my path', async () => {
   const add = jest.spyOn(BackHandler, 'addEventListener');
   try {
     await toSummary(ran());

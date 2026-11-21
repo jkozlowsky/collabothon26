@@ -1,6 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { StartHereBadge } from '@/components/StartHereBadge';
 import { Tappable } from '@/components/onboarding/ui';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import type { CalloutState } from '@/lib/stories';
@@ -10,6 +11,8 @@ type Props = {
   story: Story;
   state: CalloutState;
   onOpen: () => void;
+  /** Set on the story the Quick check picked as the first stop. */
+  startHere?: { why: string };
 };
 
 export const CALLOUT_WIDTH = 150;
@@ -21,7 +24,7 @@ const BUTTON: Record<Exclude<CalloutState, 'comingSoon'>, string> = {
 };
 
 /** Figma "Pin Callout" (3:599): city, what comes next, and the way into the story. */
-export function PinCallout({ story, state, onOpen }: Props) {
+export function PinCallout({ story, state, onOpen, startHere }: Props) {
   const { done, total } = story.progress;
   const next = story.nextLesson;
 
@@ -35,9 +38,15 @@ export function PinCallout({ story, state, onOpen }: Props) {
 
   return (
     <View style={styles.card} testID="pin-callout">
+      {startHere && <StartHereBadge testID="callout-start-here" />}
       <Text style={styles.city}>{story.city}</Text>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.meta}>{meta}</Text>
+      {startHere && (
+        <Text style={styles.why} testID="callout-why-here">
+          {startHere.why}
+        </Text>
+      )}
       {state !== 'comingSoon' && (
         <Tappable
           onPress={onOpen}
@@ -67,6 +76,7 @@ const styles = StyleSheet.create({
   },
   city: { ...type.overline, color: colors.brandPrimary },
   title: type.titleCard,
+  why: { ...type.labelDefault, color: colors.textPrimary },
   meta: { ...type.labelDefault, color: colors.textMuted },
   buttonWrap: { alignSelf: 'flex-start', marginTop: spacing.sm },
   button: {

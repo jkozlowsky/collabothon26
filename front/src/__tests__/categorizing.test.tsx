@@ -54,9 +54,9 @@ const posts = () => fetchMock.mock.calls.filter(([url, init]) => url.endsWith('/
 const bodies = () => posts().map(([, init]) => JSON.parse(init.body));
 /** Loading holds for at least 2.4 s, longer than findBy's default wait. */
 const learn = () => screen.findByTestId('screen-learn', {}, { timeout: 4000 });
-/** A categorisation made here ends on the summary; its "See all lessons" is the way on to Learn. */
+/** A categorisation made here ends on the summary; its "Show my path" is the way on to Learn. */
 async function learnViaSummary() {
-  await fireEvent.press(await screen.findByTestId('summary-all', {}, { timeout: 4000 }));
+  await fireEvent.press(await screen.findByTestId('summary-start', {}, { timeout: 4000 }));
   return screen.findByTestId('screen-learn');
 }
 /** Opens /categorizing over the bank once the saved profile has loaded, as a finished onboarding does. */

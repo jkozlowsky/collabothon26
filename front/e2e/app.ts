@@ -57,7 +57,7 @@ export async function goToInvite(page: Page) {
 /** A fresh onboarding continues to the consent card, then the summary; declining account data ends on Learn. */
 export async function passConsent(page: Page) {
   await tap(page, 'consent-decline');
-  await tap(page, 'summary-all');
+  await tap(page, 'summary-start');
   await expect(page.getByTestId('screen-learn')).toBeVisible({ timeout: 15_000 });
 }
 

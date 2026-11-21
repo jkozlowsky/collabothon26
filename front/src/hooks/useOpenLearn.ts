@@ -50,13 +50,9 @@ export function useResumeLearnAfterOnboarding() {
   }, [done, pathname]);
 }
 
-/**
- * Leaves /categorizing or the summary for the Learn screen the user opened onboarding from (the Map by default),
- * then opens `lessonId` if given.
- */
-export function continueToLearn(lessonId?: string) {
+/** Leaves /categorizing or the summary for the Learn screen the user opened onboarding from (the Map by default). */
+export function continueToLearn() {
   const target = pendingTarget ?? '/map';
   pendingTarget = null;
   closeAndGo(target);
-  if (lessonId !== undefined) router.push({ pathname: '/lesson/[id]', params: { id: lessonId } });
 }

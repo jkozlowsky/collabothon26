@@ -38,7 +38,7 @@ beforeEach(() => stubBackend({ onboardingCompleted: false }));
 /** A fresh onboarding continues to the consent card, the loading steps (at least 2.4 s), the summary, then Learn. */
 async function passConsent() {
   await fireEvent.press(await screen.findByTestId('consent-decline'));
-  await fireEvent.press(await screen.findByTestId('summary-all', {}, { timeout: 4000 }));
+  await fireEvent.press(await screen.findByTestId('summary-start', {}, { timeout: 4000 }));
   await screen.findByTestId('screen-learn');
 }
 

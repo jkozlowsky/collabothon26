@@ -54,6 +54,8 @@ type Props = {
   onOpenStory: (id: string) => void;
   /** The user started turning the globe. */
   onSpin?: () => void;
+  /** The story the Quick check picked, with its "Why here" line; its callout carries the badge. */
+  startHere?: { storyId: string; why: string } | null;
   ref?: Ref<GlobeHandle>;
 };
 
@@ -93,7 +95,7 @@ function viewCentre(yaw: number, pitch: number): Vec3 {
  * Orientation lives in Reanimated shared values, so dragging, inertia, flights and the overlay all run
  * on the UI thread without React re-renders. Without WebGL it shows a static picture with fixed pins.
  */
-export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
+export function Globe({ stories, onOpenStory, onSpin, startHere, ref }: Props) {
   const reduced = useReducedMotion();
   const focused = useIsFocused();
   const window = useWindowDimensions();
@@ -260,7 +262,12 @@ export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
             <PlaneSlot {...{ flightT, flying, withPlane, from, to, yaw, pitch, cx, cy, radius }} />
             {calloutOpen && selected && (
               <CalloutSlot v={pins[selected.id]} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius} areaWidth={area.width} areaHeight={area.height}>
-                <PinCallout story={selected} state={calloutState(selected)} onOpen={() => onOpenStory(selected.id)} />
+                <PinCallout
+                  story={selected}
+                  state={calloutState(selected)}
+                  onOpen={() => onOpenStory(selected.id)}
+                  startHere={startHere?.storyId === selected.id ? startHere : undefined}
+                />
               </CalloutSlot>
             )}
         </>

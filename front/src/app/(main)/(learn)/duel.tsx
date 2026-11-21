@@ -20,6 +20,8 @@ import { clearStoredActiveMatch } from '@/lib/duel/useDuelMatch';
 import { USER_ID } from '@/lib/user';
 import type { DuelCategory, DuelMode, MatchSummary, Rankings } from '@/types/duel';
 
+/** A match takes at most this many categories (DuelMatchService.MAX_CATEGORIES). */
+const MAX_CATEGORIES = 4;
 const CATEGORIES_PATH = `/api/duel/categories?userId=${encodeURIComponent(USER_ID)}`;
 const WEEKLY_PATH = `/api/duel/rankings?userId=${encodeURIComponent(USER_ID)}`;
 const MATCHES_PATH = `/api/duel/matches?userId=${encodeURIComponent(USER_ID)}`;
@@ -44,11 +46,11 @@ export default function DuelLobbyScreen() {
   const { data: weekly, reload: reloadWeekly } = useApi<Rankings>(WEEKLY_PATH);
   const { data: matches, loading: matchLoading, error: matchError, reload: reloadMatches } = useApi<MatchSummary[]>(MATCHES_PATH);
 
-  // Default selection: all categories when first loaded
+  // Default selection: the first categories, up to the match limit, when first loaded
   useEffect(() => {
     if (categories && categories.length > 0 && !initializedSelection.current) {
       initializedSelection.current = true;
-      setSelectedCategories(categories.map((c) => c.story));
+      setSelectedCategories(categories.slice(0, MAX_CATEGORIES).map((c) => c.story));
     }
   }, [categories]);
 
@@ -68,7 +70,7 @@ export default function DuelLobbyScreen() {
 
   function toggleCategory(story: string) {
     setSelectedCategories((prev) =>
-      prev.includes(story) ? prev.filter((s) => s !== story) : [...prev, story],
+      prev.includes(story) ? prev.filter((s) => s !== story) : prev.length < MAX_CATEGORIES ? [...prev, story] : prev,
     );
   }
 

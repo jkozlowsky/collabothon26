@@ -158,7 +158,7 @@ public class CategorizationService {
 	private static boolean isRecentJevResult(CategorizationDto c, OnboardingAnswersDto answers, boolean consent,
 			FactsDto facts, Instant now) {
 		return c.source() == CategorizationSource.JEV && c.consent() == consent && c.sharedWithModel() != null
-				&& c.sharedWithModel().checks().isEmpty() && answers.equals(c.sharedWithModel().answers()) && Objects.equals(facts, c.sharedWithModel().facts())
+				&& answers.equals(c.sharedWithModel().answers()) && Objects.equals(facts, c.sharedWithModel().facts())
 				&& c.categorizedAt().isAfter(now.minus(CategorizationConsts.RECATEGORIZE_AFTER));
 	}
 

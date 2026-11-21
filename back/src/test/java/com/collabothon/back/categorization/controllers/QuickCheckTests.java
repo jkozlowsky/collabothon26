@@ -295,17 +295,41 @@ class QuickCheckTests {
 	}
 
 	@Test
-	void repeatedPostWithAnswersAsksJevAgainAndOneWithoutDoesNotReuseTheChecks() throws Exception {
+	void aPostWithAnswersAlwaysAsksJevAgain() throws Exception {
 		onboard();
 		String all = jevAnswer(RUNWAY, "understands", LOAN, "partly", TIME, "partly", SPREAD, "partly");
 		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(all, MediaType.APPLICATION_JSON));
 		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(all, MediaType.APPLICATION_JSON));
-		jev.expect(requestTo(JEV_URL)).andExpect(jsonPath("$.state.checks").doesNotExist()).andRespond(jevReplies());
 
 		categorize(fourAnswers()).andExpect(status().isOk());
 		categorize(fourAnswers()).andExpect(status().isOk());
+	}
+
+	@Test
+	void aPostWithoutAnswersReusesTheStoredChecksWithoutAskingJev() throws Exception {
+		onboard();
+		jev.expect(requestTo(JEV_URL))
+			.andRespond(jevReplies(RUNWAY, "understands", LOAN, "partly", TIME, "partly", SPREAD, "partly"));
+
+		String first = categorize(fourAnswers()).andExpect(status().isOk()).andReturn().getResponse()
+			.getContentAsString();
+
+		categorize("{\"consent\": true}").andExpect(status().isOk())
+			.andExpect(content().json(first, JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void aPostWithAnswersAfterOneWithoutAsksJevWithTheChecks() throws Exception {
+		onboard();
+		jev.expect(requestTo(JEV_URL)).andRespond(jevReplies());
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(jsonPath("$.state.checks.length()").value(4))
+			.andRespond(jevReplies(RUNWAY, "understands", LOAN, "partly", TIME, "partly", SPREAD, "partly"));
+
 		categorize("{\"consent\": true}").andExpect(status().isOk())
 			.andExpect(content().json("{\"checks\": []}", JsonCompareMode.LENIENT));
+		categorize(fourAnswers()).andExpect(status().isOk())
+			.andExpect(MockMvcResultMatchers.jsonPath("$.checks.length()").value(4));
 	}
 
 	@Test

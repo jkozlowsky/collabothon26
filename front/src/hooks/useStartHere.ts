@@ -19,12 +19,13 @@ export function useStartHere() {
       return () => ctrl.abort();
     }, []),
   );
-  return categorization?.startHere ? { startHere: categorization.startHere, why: whyHere(categorization) } : null;
+  return categorization?.startHere ? { storyId: categorization.startHere.storyId, why: whyHere(categorization) } : null;
 }
 
 /** The three "Why here" lines of the spec. */
 function whyHere({ startHere, readyForNext, mastery }: Categorization) {
-  if (readyForNext) return 'Why here: Next on your path';
-  const area = AREA_LABEL[startHere!.area];
-  return mastery[startHere!.area] == null ? `Why here: ${area} is not checked yet` : `Why here: Your answers about ${area}`;
+  const { area: key } = startHere!;
+  if (readyForNext || key === null) return 'Why here: Next on your path';
+  const area = AREA_LABEL[key];
+  return mastery[key] == null ? `Why here: ${area} is not checked yet` : `Why here: Your answers about ${area}`;
 }

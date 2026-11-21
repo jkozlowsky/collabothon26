@@ -9,6 +9,7 @@ import { LearnHeader } from '@/components/LearnHeader';
 import { StorySheet } from '@/components/StorySheet';
 import { colors, spacing } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
+import { useStartHere } from '@/hooks/useStartHere';
 import { LEARNER, STORIES, withLessons } from '@/lib/stories';
 import { USER_ID } from '@/lib/user';
 import type { LessonSummary } from '@/types/lessons';
@@ -24,6 +25,7 @@ export default function MapScreen() {
   const { data: lessons, reload } = useApi<LessonSummary[]>(`/api/lessons?userId=${encodeURIComponent(USER_ID)}`);
   // Coming back from a lesson moves the story's progress on.
   useFocusEffect(reload);
+  const startHere = useStartHere();
   const stories = useMemo(() => withLessons(STORIES, lessons), [lessons]);
 
   const openStory = (id: string) => router.push({ pathname: '/story/[id]', params: { id } });
@@ -38,7 +40,7 @@ export default function MapScreen() {
           <GlobeHint />
         </View>
       </SafeAreaView>
-      <StorySheet stories={stories} height={height} collapsedTop={sheetTop} onSelect={(id) => globe.current?.flyTo(id)} />
+      <StorySheet stories={stories} height={height} collapsedTop={sheetTop} onSelect={(id) => globe.current?.flyTo(id)} startHere={startHere} />
     </View>
   );
 }

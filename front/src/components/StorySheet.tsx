@@ -16,6 +16,8 @@ type Props = {
   /** Distance from the top of that area to the collapsed sheet's top edge. */
   collapsedTop: number;
   onSelect: (id: string) => void;
+  /** The story the Quick check picked, with its "Why here" line. */
+  startHere?: { storyId: string; why: string } | null;
 };
 
 /** Expanded, the sheet leaves this share of the area above it (the dimmed globe). */
@@ -28,7 +30,7 @@ const SPRING = { damping: 26, stiffness: 260 };
  * Figma story list sheet (3:616): two positions, collapsed under the globe and expanded to ~90 %.
  * The handle and header drag it; a tap on the handle toggles it; the list scrolls inside.
  */
-export function StorySheet({ stories, height, collapsedTop, onSelect }: Props) {
+export function StorySheet({ stories, height, collapsedTop, onSelect, startHere }: Props) {
   const expandedTop = Math.round(height * EXPANDED_GAP);
   const [expanded, setExpanded] = useState(false);
   const top = useSharedValue(collapsedTop);
@@ -96,7 +98,13 @@ export function StorySheet({ stories, height, collapsedTop, onSelect }: Props) {
         </GestureDetector>
         <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           {sortStories(stories).map((s) => (
-            <StoryCard key={s.id} story={s} state={storyState(s)} onPress={() => select(s.id)} />
+            <StoryCard
+              key={s.id}
+              story={s}
+              state={storyState(s)}
+              onPress={() => select(s.id)}
+              startHere={startHere?.storyId === s.id ? startHere : undefined}
+            />
           ))}
         </ScrollView>
       </Animated.View>

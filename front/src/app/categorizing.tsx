@@ -12,9 +12,10 @@ import { Button } from '@/components/Button';
 import { colors } from '@/constants/theme';
 import { useBank } from '@/hooks/useBank';
 import { continueToLearn } from '@/hooks/useOpenLearn';
+import { useQuickCheck } from '@/hooks/useQuickCheck';
 import { categorize, checkBackend, factLabels, factsFrom, isRetryable, withTimeout } from '@/lib/categorization';
 import { setSummary } from '@/lib/learningPath';
-import { drawQuestions, fetchCheckQuestions, promptParts, quizRng, toPayload, type Drawn } from '@/lib/quickCheck';
+import { fetchCheckQuestions } from '@/lib/quickCheck';
 import type { CheckAnswer, CheckQuestion } from '@/types/quickCheck';
 
 const STEP_MS = 800;
@@ -45,10 +46,7 @@ export default function CategorizingScreen() {
   const [phase, setPhase] = useState<Phase>('consent');
   const [consent, setConsent] = useState(false);
   const [pool, setPool] = useState<CheckQuestion[]>([]);
-  const [drawn, setDrawn] = useState<{ consent: boolean; items: Drawn[] } | null>(null);
-  // The raw answer text lives only here, on this screen, until the one POST; null = "Not sure".
-  const [answers, setAnswers] = useState<(string | null)[]>([]);
-  const [index, setIndex] = useState(0);
+  const quick = useQuickCheck(pool, bank);
   const sent = useRef<CheckAnswer[]>([]);
   const [step, setStep] = useState(0);
   const [retryable, setRetryable] = useState(true);
@@ -85,12 +83,20 @@ export default function CategorizingScreen() {
     setCheckAttempt((a) => a + 1);
   };
 
+  const { back } = quick;
+  const goBack = useCallback(() => {
+    if (back()) setPhase('consent');
+  }, [back]);
+
   // Leaving with the hardware back button would drop the user out of the flow uncategorised.
   useFocusEffect(
     useCallback(() => {
-      const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (phase === 'quick') goBack();
+        return true;
+      });
       return () => sub.remove();
-    }, []),
+    }, [phase, goBack]),
   );
 
   const ids = consent ? WITH_ACCOUNTS : ANSWERS_ONLY;
@@ -108,6 +114,10 @@ export default function CategorizingScreen() {
     const message = status ?? alert;
     if (Platform.OS !== 'web' && message) AccessibilityInfo.announceForAccessibility(message);
   }, [status, alert]);
+
+  const submit = (payload: CheckAnswer[] | null) => {
+    if (payload) void start(consent, payload);
+  };
 
   const start = async (withConsent: boolean, checkAnswers: CheckAnswer[]) => {
     const outer = visit.current?.signal;
@@ -131,39 +141,25 @@ export default function CategorizingScreen() {
     setPhase('error');
   };
 
-  /** Consent given or declined: draw the questions (or skip them) and move on. */
+  /** Consent given or declined: the questions follow, unless there are none. */
   const decide = (withConsent: boolean) => {
-    const items = drawn?.consent === withConsent ? drawn.items : drawQuestions(pool, bank, withConsent, quizRng());
-    if (!items.length) return void start(withConsent, []);
-    if (drawn?.consent !== withConsent) {
-      setDrawn({ consent: withConsent, items });
-      setAnswers([]);
-    }
+    if (!quick.begin(withConsent)) return void start(withConsent, []);
     setConsent(withConsent);
-    setIndex(0);
     setPhase('quick');
   };
-
-  if (phase === 'quick' && drawn) {
-    const item = drawn.items[index];
-    const answer = (text: string | null) => {
-      const next = answers.slice();
-      next[index] = text;
-      setAnswers(next);
-      if (index < drawn.items.length - 1) setIndex(index + 1);
-      else void start(consent, toPayload(drawn.items, next));
-    };
+  if (phase === 'quick' && quick.view) {
+    const { index, total, account, parts, draft } = quick.view;
     return (
       <QuickCheckPage
-        key={index}
         index={index}
-        total={drawn.items.length}
-        parts={promptParts(item, bank)}
-        account={item.account}
-        initial={answers[index] ?? ''}
-        onNext={answer}
-        onUnsure={() => answer(null)}
-        onBack={() => (index > 0 ? setIndex(index - 1) : setPhase('consent'))}
+        total={total}
+        parts={parts}
+        account={account}
+        value={draft}
+        onChange={quick.setDraft}
+        onNext={(text) => submit(quick.answer(text))}
+        onUnsure={() => submit(quick.answer(null))}
+        onBack={goBack}
       />
     );
   }

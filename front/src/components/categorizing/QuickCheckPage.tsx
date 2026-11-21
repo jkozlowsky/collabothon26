@@ -16,15 +16,16 @@ type Props = {
   parts: { text: string; filled: boolean }[];
   /** The question quotes the account, so the slip line says the numbers stay on the phone. */
   account: boolean;
-  initial: string;
+  value: string;
+  onChange: (text: string) => void;
   onNext: (text: string) => void;
   onUnsure: () => void;
   onBack: () => void;
 };
 
 /** One Quick check question: the route of stations on top, an open answer below, "Not sure" as the way out. */
-export function QuickCheckPage({ index, total, parts, account, initial, onNext, onUnsure, onBack }: Props) {
-  const [text, setText] = useState(initial);
+export function QuickCheckPage({ index, total, parts, account, value, onChange, onNext, onUnsure, onBack }: Props) {
+  const text = value;
   const [focused, setFocused] = useState(false);
   const prompt = parts.map((p) => p.text).join('');
 
@@ -71,7 +72,7 @@ export function QuickCheckPage({ index, total, parts, account, initial, onNext, 
       </Text>
       <TextInput
         value={text}
-        onChangeText={setText}
+        onChangeText={onChange}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         multiline

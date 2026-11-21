@@ -3,14 +3,12 @@ import { createRng } from '@/lib/bank/seed';
 import { groupThousands } from '@/lib/bank/money';
 import { slotValues } from '@/lib/bank/selectors';
 import type { BankState } from '@/types/bank';
-import type { CheckAnswer, CheckQuestion, Slot } from '@/types/quickCheck';
+import type { CheckAnswer, CheckQuestion, Drawn, Slot } from '@/types/quickCheck';
 
 const CATEGORIES = ['finance', 'investing'] as const;
 const AREAS_PER_CATEGORY = 2;
 const MAX_INFLATION_RATE = 3;
 const MIN_POSITIONS = 2;
-
-export type Drawn = { question: CheckQuestion; account: boolean };
 
 /** A failed or malformed GET counts as an empty pool, which skips the Quick check. */
 export async function fetchCheckQuestions(signal: AbortSignal): Promise<CheckQuestion[]> {
@@ -31,7 +29,7 @@ export function quizRng(seed = process.env.EXPO_PUBLIC_QUIZ_SEED, dev = __DEV__)
 const available = (slot: Slot, bank: BankState) =>
   slotValues(bank)[slot] > (slot === 'positionCount' ? MIN_POSITIONS - 1 : 0);
 
-const accountUsable = (q: CheckQuestion, bank: BankState, consent: boolean) =>
+export const accountUsable = (q: CheckQuestion, bank: BankState, consent: boolean) =>
   consent &&
   q.accountPrompt !== null &&
   q.slots.every((s) => available(s, bank)) &&
@@ -55,14 +53,18 @@ export function drawQuestions(pool: CheckQuestion[], bank: BankState, consent: b
       const candidates = byArea.get(area)!;
       const usable = candidates.filter((q) => accountUsable(q, bank, consent));
       const question = pickFrom(usable.length ? usable : candidates);
-      drawn.push({ question, account: usable.includes(question) });
+      drawn.push({ question });
     }
   }
   return drawn;
 }
 
 /** The prompt in pieces, so the numbers taken from the account can be highlighted. */
-export function promptParts({ question, account }: Drawn, bank: BankState): { text: string; filled: boolean }[] {
+export function promptParts(
+  question: CheckQuestion,
+  bank: BankState,
+  account: boolean,
+): { text: string; filled: boolean }[] {
   if (!account) return [{ text: question.genericPrompt, filled: false }];
   const values = slotValues(bank);
   // Splitting on a capture group puts the slot names at the odd indexes.
@@ -72,5 +74,4 @@ export function promptParts({ question, account }: Drawn, bank: BankState): { te
     .filter((p) => p.text);
 }
 
-export const toPayload = (drawn: Drawn[], texts: (string | null)[]): CheckAnswer[] =>
-  drawn.map((d, i) => ({ questionId: d.question.id, text: texts[i] }));
+export const toAnswer = ({ question, answer }: Drawn): CheckAnswer => ({ questionId: question.id, text: answer ?? null });

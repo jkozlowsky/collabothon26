@@ -2,23 +2,29 @@ import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { BackHandler } from 'react-native';
 
+import { createRng, seedAccount } from '@/lib/bank/seed';
 import { setSummary } from '@/lib/learningPath';
-
+import { accountUsable, drawQuestions, promptParts } from '@/lib/quickCheck';
 import { categorization } from '@/test-utils/categorization';
 import { POOL } from '@/test-utils/checkPool';
 import { appRoutes as routes } from '@/test-utils/routes';
 
 const ok = (body: unknown) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 const fail = (status: number) => Promise.resolve({ ok: false, status, statusText: 'Error' });
+const hang = (init?: RequestInit) =>
+  new Promise((_, reject) =>
+    init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))),
+  );
 const PROFILE = { userId: 'demo-user', goals: [], onboardingCompleted: true };
 
 let fetchMock: jest.Mock;
-type Backend = { pool?: () => Promise<unknown>; post?: () => Promise<unknown>; existing?: () => Promise<unknown> };
+type Handler = (init?: RequestInit) => Promise<unknown>;
+type Backend = { pool?: Handler; post?: Handler };
 
-function backend({ pool = () => ok(POOL), post = () => ok(categorization()), existing = () => fail(404) }: Backend = {}) {
+function backend({ pool = () => ok(POOL), post = () => ok(categorization()) }: Backend = {}) {
   fetchMock = jest.fn((url: string, init?: RequestInit) => {
-    if (url.endsWith('/api/check-questions')) return pool();
-    if (url.endsWith('/categorization')) return init?.method === 'POST' ? post() : existing();
+    if (url.endsWith('/api/check-questions')) return pool(init);
+    if (url.endsWith('/categorization')) return init?.method === 'POST' ? post(init) : fail(404);
     if (/\/profile(\/onboarding)?$/.test(url)) return init?.method ? ok({}) : ok(PROFILE);
     if (/\/api\/lessons\/\d+$/.test(url)) return ok({ id: 2, title: 'Compound interest', questions: [] });
     return ok([]);
@@ -26,11 +32,29 @@ function backend({ pool = () => ok(POOL), post = () => ok(categorization()), exi
   globalThis.fetch = fetchMock;
 }
 
-const bodies = () =>
-  fetchMock.mock.calls.filter(([u, i]) => u.endsWith('/categorization') && i?.method === 'POST').map(([, i]) => JSON.parse(i.body));
+const posts = () =>
+  fetchMock.mock.calls.filter(([url, init]) => url.endsWith('/categorization') && init?.method === 'POST');
+const bodies = () => posts().map(([, init]) => JSON.parse(init.body));
 const get = (id: string) => screen.getByTestId(id);
 const press = (id: string) => fireEvent.press(get(id));
 const type = (text: string) => fireEvent.changeText(get('quick-check-input'), text);
+const input = () => get('quick-check-input').props.value;
+/** "Not sure" ignores taps right after a question appears, so a double tap cannot skip one unseen. */
+const unsure = async () => {
+  await act(() => jest.advanceTimersByTimeAsync(400));
+  await press('quick-check-unsure');
+};
+
+// The draw is seeded (EXPO_PUBLIC_QUIZ_SEED, dev builds): the screen shows what the same seed draws here.
+const SEED = 1;
+const draw = (consent: boolean) => drawQuestions(POOL, seedAccount(), consent, createRng(SEED));
+const promptOf = (consent: boolean, i: number) => {
+  const { question } = draw(consent)[i];
+  const account = accountUsable(question, seedAccount(), consent);
+  return promptParts(question, seedAccount(), account)
+    .map((part) => part.text)
+    .join('');
+};
 
 async function open() {
   await renderRouter(routes, { initialUrl: '/' });
@@ -39,20 +63,22 @@ async function open() {
   await act(async () => router.push('/categorizing'));
 }
 const answerAll = async (texts: (string | null)[]) => {
-  for (const t of texts) {
-    if (t === null) await press('quick-check-unsure');
+  for (const text of texts) {
+    if (text === null) await unsure();
     else {
-      await type(t);
+      await type(text);
       await press('quick-check-next');
     }
   }
 };
 
-// A draw of 0s takes the first area and question of each category, by id: card-minimum, rate-vs-inflation, etf-drop,
-// one-etf-vs-one-stock. (Mocking Math.random itself would make the router's generated keys collide.)
-jest.mock('@/lib/quickCheck', () => ({ ...jest.requireActual('@/lib/quickCheck'), quizRng: () => () => 0 }));
-
-beforeEach(() => setSummary(null));
+beforeEach(() => {
+  setSummary(null);
+  process.env.EXPO_PUBLIC_QUIZ_SEED = String(SEED);
+});
+afterEach(() => {
+  delete process.env.EXPO_PUBLIC_QUIZ_SEED;
+});
 
 test('the summary of a user who has not been categorised redirects to the map', async () => {
   backend();
@@ -82,12 +108,12 @@ test('questions come one at a time, 1 of 4, with the privacy copy above the firs
   expect(
     screen.getByText('Your answers are checked by an AI service to pick your first lesson; only the result is kept.'),
   ).toBeOnTheScreen();
-  expect(screen.getByTestId('quick-check-prompt')).toHaveTextContent(
-    'You have used €1,640 of your €3,000 credit card limit. What happens if you pay only the minimum each month?',
-  );
+  expect(screen.getByTestId('quick-check-prompt')).toHaveTextContent(promptOf(true, 0));
+  expect(promptOf(true, 0)).not.toBe(promptOf(false, 0));
   expect(screen.getByText('No need to type exact amounts')).toBeOnTheScreen();
   expect(screen.getByText('Only your answer is sent, never these numbers.')).toBeOnTheScreen();
   expect(screen.getByTestId('quick-check-next')).toBeDisabled();
+  expect(get('quick-check-input').props.maxLength).toBe(280);
 
   await type('   ');
   expect(screen.getByTestId('quick-check-next')).toBeDisabled();
@@ -105,29 +131,103 @@ test('without consent the same questions use example numbers and carry no slip l
   await open();
   await fireEvent.press(await screen.findByTestId('consent-decline'));
 
-  expect(await screen.findByTestId('quick-check-prompt')).toHaveTextContent(/^You owe €1,000 on a credit card\./);
+  expect(await screen.findByTestId('quick-check-prompt')).toHaveTextContent(promptOf(false, 0));
   expect(screen.queryByText('Only your answer is sent, never these numbers.')).toBeNull();
   expect(screen.getByText('Your answers are checked by an AI service to pick your first lesson; only the result is kept.')).toBeOnTheScreen();
 });
 
-test('Back keeps the answers, and Back on question 1 returns to the consent card', async () => {
+test('Back keeps the answers and the draft, and Back on question 1 returns to the consent card', async () => {
   backend();
   await open();
   await fireEvent.press(await screen.findByTestId('consent-accept'));
   await type('first');
   await press('quick-check-next');
-  await press('quick-check-unsure');
-  expect(screen.getByText('3 of 4')).toBeOnTheScreen();
+  await type('half-written');
 
-  await press('quick-check-back');
   await press('quick-check-back');
   expect(screen.getByText('1 of 4')).toBeOnTheScreen();
-  expect(get('quick-check-input').props.value).toBe('first');
+  expect(input()).toBe('first');
+  await press('quick-check-next');
+  expect(input()).toBe('half-written');
 
+  await press('quick-check-back');
   await press('quick-check-back');
   expect(await screen.findByTestId('categorizing-consent')).toBeOnTheScreen();
   await press('consent-accept');
-  expect(get('quick-check-input').props.value).toBe('first');
+  expect(input()).toBe('first');
+});
+
+test('Back to the consent card and the other choice keeps the answers and switches to example numbers', async () => {
+  backend();
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-accept'));
+  expect(screen.getByText('Only your answer is sent, never these numbers.')).toBeOnTheScreen();
+  await type('first');
+  await press('quick-check-back');
+
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+  expect(input()).toBe('first');
+  expect(screen.getByTestId('quick-check-prompt')).toHaveTextContent(draw(true)[0].question.genericPrompt);
+  expect(screen.queryByText('Only your answer is sent, never these numbers.')).toBeNull();
+});
+
+test('hardware back during the questions is the previous question, and from the first one the consent card', async () => {
+  const add = jest.spyOn(BackHandler, 'addEventListener');
+  backend();
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-accept'));
+  await type('first');
+  await press('quick-check-next');
+  const hardwareBack = async () => {
+    const ours = add.mock.calls.filter(([event]) => event === 'hardwareBackPress').at(-1)?.[1] as () => boolean;
+    await act(async () => {
+      expect(ours()).toBe(true);
+    });
+  };
+
+  await hardwareBack();
+  expect(screen.getByText('1 of 4')).toBeOnTheScreen();
+  expect(input()).toBe('first');
+  await hardwareBack();
+  expect(screen.getByTestId('categorizing-consent')).toBeOnTheScreen();
+  add.mockRestore();
+});
+
+test('a double tap on "Not sure" skips one question, not two', async () => {
+  backend();
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-accept'));
+  await act(() => jest.advanceTimersByTimeAsync(400));
+  const { onClick } = get('quick-check-unsure').props;
+
+  await act(async () => {
+    onClick({ nativeEvent: {} });
+  });
+  await act(async () => {
+    onClick({ nativeEvent: {} });
+  });
+  expect(screen.getByText('2 of 4')).toBeOnTheScreen();
+});
+
+test('a pool request that never answers is treated as no questions after 10 s', async () => {
+  backend({ pool: hang });
+  await open();
+
+  await act(() => jest.advanceTimersByTimeAsync(10_000));
+  expect(await screen.findByTestId('consent-decline')).toBeOnTheScreen();
+  expect(screen.queryByTestId('consent-quickcheck-note')).toBeNull();
+});
+
+test('a slow POST keeps the loading screen until it answers', async () => {
+  backend({ post: () => new Promise((resolve) => setTimeout(() => resolve(ok(categorization())), 9_000)) });
+  await open();
+  await fireEvent.press(await screen.findByTestId('consent-decline'));
+  await answerAll(['a', 'b', 'c', 'd']);
+
+  await act(() => jest.advanceTimersByTimeAsync(8_000));
+  expect(screen.getByTestId('categorizing-loading')).toBeOnTheScreen();
+  await act(() => jest.advanceTimersByTimeAsync(1_500));
+  expect(await screen.findByTestId('learning-path')).toBeOnTheScreen();
 });
 
 test('four answers go in one POST with "Not sure" as null and no account amounts, then the summary shows', async () => {
@@ -140,11 +240,12 @@ test('four answers go in one POST with "Not sure" as null and no account amounts
   const [body] = bodies();
   expect(bodies()).toHaveLength(1);
   expect(body.consent).toBe(true);
+  const [first, second, third, fourth] = draw(true).map((d) => d.question.id);
   expect(body.answers).toEqual([
-    { questionId: 'card-minimum', text: 'Interest keeps growing.' },
-    { questionId: 'rate-vs-inflation', text: null },
-    { questionId: 'etf-drop', text: 'It can fall and recover.' },
-    { questionId: 'one-etf-vs-one-stock', text: 'One failing hurts less.' },
+    { questionId: first, text: 'Interest keeps growing.' },
+    { questionId: second, text: null },
+    { questionId: third, text: 'It can fall and recover.' },
+    { questionId: fourth, text: 'One failing hurts less.' },
   ]);
   const sent = JSON.stringify(body);
   for (const amount of ['1,640', '1640', '12,500', '12500', '3,000', '3000']) expect(sent).not.toContain(amount);

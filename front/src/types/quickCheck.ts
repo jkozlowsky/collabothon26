@@ -33,3 +33,6 @@ export type Check = {
   lessonId: number | null;
   result: 'understands' | 'partly' | 'not-yet';
 };
+
+/** A question drawn for this onboarding with the user's answer so far (`null` = "Not sure", undefined = unanswered). */
+export type Drawn = { question: CheckQuestion; answer?: string | null };

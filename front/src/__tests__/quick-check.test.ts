@@ -1,14 +1,17 @@
 import { createRng, seedAccount } from '@/lib/bank/seed';
-import { slotValues } from '@/lib/bank/selectors';
-import { drawQuestions, promptParts, quizRng } from '@/lib/quickCheck';
+import { depotTotal, positionCount, slotValues } from '@/lib/bank/selectors';
+import { accountUsable, drawQuestions, promptParts, quizRng } from '@/lib/quickCheck';
 import { POOL } from '@/test-utils/checkPool';
 import type { BankState } from '@/types/bank';
+import type { Drawn } from '@/types/quickCheck';
 
 const SEEDS = Array.from({ length: 40 }, (_, i) => i);
 const draw = (seed: number, consent = true, bank: BankState = seedAccount(), pool = POOL) =>
   drawQuestions(pool, bank, consent, createRng(seed));
-const text = (d: ReturnType<typeof draw>[number], bank = seedAccount()) =>
-  promptParts(d, bank)
+const quotes = (d: Drawn, consent = true, bank: BankState = seedAccount()) =>
+  accountUsable(d.question, bank, consent);
+const text = (d: Drawn, account: boolean) =>
+  promptParts(d.question, seedAccount(), account)
     .map((p) => p.text)
     .join('');
 
@@ -47,40 +50,41 @@ test('a numeric EXPO_PUBLIC_QUIZ_SEED makes the draw repeatable; anything else, 
 
 test('with consent every question whose slots are filled quotes the account; without consent none does', () => {
   for (const seed of SEEDS) {
-    for (const d of draw(seed)) expect(d.account).toBe(d.question.accountPrompt !== null);
-    for (const d of draw(seed, false)) expect(d.account).toBe(false);
+    for (const d of draw(seed)) expect(quotes(d)).toBe(d.question.accountPrompt !== null);
+    for (const d of draw(seed, false)) expect(quotes(d, false)).toBe(false);
   }
 });
 
 test('account numbers are whole euros from cents, grouped, filled in only when rendering', () => {
   const runway = SEEDS.flatMap((s) => draw(s)).find((d) => d.question.id === 'savings-runway')!;
-  expect(text(runway)).toBe(
+  expect(text(runway, true)).toBe(
     'You keep €12,500 in savings and spend about €1,268 a month. If your income stopped tomorrow, how long would your money last?',
   );
-  expect(promptParts(runway, seedAccount()).filter((p) => p.filled).map((p) => p.text)).toEqual(['12,500', '1,268']);
+  const filled = promptParts(runway.question, seedAccount(), true).filter((p) => p.filled);
+  expect(filled.map((p) => p.text)).toEqual(['12,500', '1,268']);
 
-  const generic = { ...runway, account: false };
-  expect(text(generic)).toBe(POOL[0].genericPrompt);
-  expect(promptParts(generic, seedAccount()).some((p) => p.filled)).toBe(false);
+  expect(text(runway, false)).toBe(POOL[0].genericPrompt);
+  expect(promptParts(runway.question, seedAccount(), false).some((p) => p.filled)).toBe(false);
 });
 
 test('an account version needs every slot above zero, two positions, and a rate under 3%', () => {
   const seed = seedAccount();
   // Alone in its area, so the "usable sibling wins" rule cannot hide it.
-  const find = (id: string, bank: BankState) => {
+  const usableWith = (id: string, bank: BankState) => {
     const area = POOL.find((q) => q.id === id)!.area;
     const pool = POOL.filter((q) => q.id === id || q.area !== area);
-    return SEEDS.flatMap((s) => draw(s, true, bank, pool)).find((d) => d.question.id === id);
+    const drawn = SEEDS.flatMap((s) => draw(s, true, bank, pool)).find((d) => d.question.id === id)!;
+    return quotes(drawn, true, bank);
   };
   const savings = (patch: Partial<BankState['savings']>) => ({ ...seed, savings: { ...seed.savings, ...patch } });
 
-  expect(find('savings-runway', savings({ balance: 0 }))?.account).toBe(false);
-  expect(find('rate-vs-inflation', savings({ rate: 3 }))?.account).toBe(false);
-  expect(find('rate-vs-inflation', savings({ rate: 2.99 }))?.account).toBe(true);
-  expect(find('one-etf-vs-one-stock', { ...seed, holdings: seed.holdings.slice(0, 1) })?.account).toBe(false);
-  expect(find('one-etf-vs-one-stock', { ...seed, holdings: seed.holdings.slice(0, 2) })?.account).toBe(true);
+  expect(usableWith('savings-runway', savings({ balance: 0 }))).toBe(false);
+  expect(usableWith('rate-vs-inflation', savings({ rate: 3 }))).toBe(false);
+  expect(usableWith('rate-vs-inflation', savings({ rate: 2.99 }))).toBe(true);
+  expect(usableWith('one-etf-vs-one-stock', { ...seed, holdings: seed.holdings.slice(0, 1) })).toBe(false);
+  expect(usableWith('one-etf-vs-one-stock', { ...seed, holdings: seed.holdings.slice(0, 2) })).toBe(true);
   const noPlan = seed.standingOrders.filter((o) => !o.recipient.startsWith('Depot'));
-  expect(find('etf-drop', { ...seed, standingOrders: noPlan })?.account).toBe(false);
+  expect(usableWith('etf-drop', { ...seed, standingOrders: noPlan })).toBe(false);
 });
 
 test('within an area, a question with a usable account version wins', () => {
@@ -93,16 +97,21 @@ test('within an area, a question with a usable account version wins', () => {
 });
 
 test('the selectors read the slots from the bank; the monthly ETF is the depot standing order', () => {
-  expect(slotValues(seedAccount())).toEqual({
-    savingsBalance: 12500,
-    savingsInterestRate: 2.25,
-    monthOut: 1268,
-    loanRemaining: 8400,
-    loanApr: 5.9,
-    cardUsed: 1640,
-    cardLimit: 3000,
-    etfMonthly: 100,
-    depotTotal: 6940,
-    positionCount: 4,
+  const bank = seedAccount();
+  const eur = (cents: number) => Math.round(cents / 100);
+  const plan = bank.standingOrders.find((o) => o.recipient.startsWith('Depot'))!;
+  expect(slotValues(bank)).toEqual({
+    savingsBalance: eur(bank.savings.balance),
+    savingsInterestRate: bank.savings.rate,
+    monthOut: eur(bank.account.monthOut),
+    loanRemaining: eur(bank.loan.remaining),
+    loanApr: bank.loan.apr,
+    cardUsed: eur(bank.creditCard.used),
+    cardLimit: eur(bank.creditCard.limit),
+    etfMonthly: eur(Math.abs(plan.amount)),
+    depotTotal: eur(depotTotal(bank)),
+    positionCount: positionCount(bank),
   });
+  const bigger = { ...bank, standingOrders: [{ ...plan, amount: -25000 }] };
+  expect(slotValues(bigger).etfMonthly).toBe(250);
 });

@@ -10,7 +10,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.collabothon.back.common.NotFoundException;
+import com.collabothon.back.common.exceptions.NotFoundException;
 import com.collabothon.back.duel.DuelAnswerRepository.CategoryAccuracy;
 import com.collabothon.back.duel.LevelCurve.LevelInfo;
 import com.collabothon.back.duel.MatchAssembler.MatchResult;

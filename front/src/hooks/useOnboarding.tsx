@@ -24,6 +24,14 @@ const EMPTY_ANSWERS: OnboardingAnswers = { goals: [] };
 const profilePath = `/api/users/${encodeURIComponent(USER_ID)}/profile`;
 const onboardingPath = `${profilePath}/onboarding`;
 
+/** Profile writes run in order, so a reset's DELETE can never land after the next onboarding's PUT. */
+let profileWrites: Promise<unknown> = Promise.resolve();
+/** Resolves once every queued profile write has landed (or failed). */
+export const profileWritesSettled = () => profileWrites;
+function writeProfile(init: RequestInit, failure: string) {
+  profileWrites = profileWrites.then(() => api(onboardingPath, init)).catch((e: unknown) => console.warn(failure, e));
+}
+
 function toAnswers(p: UserProfile): OnboardingAnswers {
   return {
     lifeStage: p.lifeStage ?? undefined,
@@ -67,14 +75,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const complete = useCallback((answers: OnboardingAnswers, skipped: boolean) => {
     // Move on right away; the save runs in the background so a slow network never blocks the user.
     setState({ loaded: true, done: true, answers });
-    api(onboardingPath, { method: 'PUT', body: JSON.stringify({ ...answers, skipped }) }).catch((e: unknown) =>
-      console.warn('Could not save onboarding answers', e),
-    );
+    writeProfile({ method: 'PUT', body: JSON.stringify({ ...answers, skipped }) }, 'Could not save onboarding answers');
   }, []);
 
   const reset = useCallback(() => {
     setState({ loaded: true, done: false, answers: EMPTY_ANSWERS });
-    api(onboardingPath, { method: 'DELETE' }).catch((e: unknown) => console.warn('Could not reset profile', e));
+    writeProfile({ method: 'DELETE' }, 'Could not reset profile');
   }, []);
 
   const value = useMemo(() => ({ ...state, complete, reset }), [state, complete, reset]);

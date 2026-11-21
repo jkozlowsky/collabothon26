@@ -34,8 +34,13 @@ export async function waitForCompletedOnboarding(request: APIRequestContext): Pr
   return getProfile(request);
 }
 
+/** A backend with a Jev key serves the Quick check questions; specs that do not test them run without. */
+export const skipQuickCheck = (page: Page) =>
+  page.route('**/api/check-questions', (route) => route.fulfill({ json: [] }));
+
 /** The app opens on the bank; Finance Quest (and its onboarding, the first time) starts from Learn. */
 export async function openApp(page: Page) {
+  await skipQuickCheck(page);
   await page.goto('/');
   await page.getByTestId('nav-learn').click();
 }
@@ -47,6 +52,13 @@ export async function goToInvite(page: Page) {
   await tap(page, 'onboarding-start');
   await tap(page, 'onboarding-next');
   await expect(page.getByTestId('onboarding-invite')).toBeVisible();
+}
+
+/** A fresh onboarding continues to the consent card, then the summary; declining account data ends on Learn. */
+export async function passConsent(page: Page) {
+  await tap(page, 'consent-decline');
+  await tap(page, 'summary-start');
+  await expect(page.getByTestId('screen-learn')).toBeVisible({ timeout: 15_000 });
 }
 
 export async function expectOnLearn(page: Page) {

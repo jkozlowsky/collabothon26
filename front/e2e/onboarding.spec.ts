@@ -6,6 +6,7 @@ import {
   getProfile,
   goToInvite,
   openApp,
+  passConsent,
   resetOnboarding,
   tap,
   waitForCompletedOnboarding,
@@ -28,6 +29,7 @@ test('a new user can skip the questions; that is saved and onboarding does not c
   await goToInvite(page);
   await expect(page.getByText('Got a minute for a few questions?')).toBeVisible();
   await tap(page, 'onboarding-skip-all');
+  await passConsent(page);
   await expectOnLearn(page);
 
   const profile = await waitForCompletedOnboarding(request);
@@ -78,6 +80,7 @@ test('answers to all three questions are saved on the profile', async ({ page, r
   await expectDisabled(page, 'onboarding-continue');
   await tap(page, 'option-not-saving');
   await tap(page, 'onboarding-continue');
+  await passConsent(page);
   await expectOnLearn(page);
 
   const profile = await waitForCompletedOnboarding(request);
@@ -101,6 +104,7 @@ test('skipping in the middle of the questions keeps the answers given so far', a
   await tap(page, 'onboarding-continue');
   await tap(page, 'goal-budget');
   await tap(page, 'onboarding-skip');
+  await passConsent(page);
   await expectOnLearn(page);
 
   const profile = await waitForCompletedOnboarding(request);
@@ -133,6 +137,7 @@ test('"Restart onboarding" on Profile clears the answers and the flag; onboardin
   await openApp(page);
   await goToInvite(page);
   await tap(page, 'onboarding-skip-all');
+  await passConsent(page);
   await expectOnLearn(page);
   await waitForCompletedOnboarding(request);
 

@@ -15,6 +15,8 @@ import ProfileScreen from '@/app/(main)/(learn)/profile';
 import DuelMatchScreen from '@/app/duel/match';
 import DuelRankingsScreen from '@/app/duel/rankings';
 import RootLayout from '@/app/_layout';
+import CategorizingScreen from '@/app/categorizing';
+import LearningPathScreen from '@/app/learning-path';
 import LessonScreen from '@/app/lesson/[id]';
 import OnboardingScreen from '@/app/onboarding';
 import StoryScreen from '@/app/story/[id]';
@@ -22,6 +24,8 @@ import StoryScreen from '@/app/story/[id]';
 export const appRoutes = {
   _layout: RootLayout,
   onboarding: OnboardingScreen,
+  categorizing: CategorizingScreen,
+  'learning-path': LearningPathScreen,
   'lesson/[id]': LessonScreen,
   'story/[id]': StoryScreen,
   '(main)/_layout': MainLayout,

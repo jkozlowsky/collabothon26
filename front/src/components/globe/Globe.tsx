@@ -44,8 +44,8 @@ import type { Story } from '@/types/stories';
 const GlobeScene = lazy(() => import('@/components/globe/GlobeScene').then((m) => ({ default: m.GlobeScene })));
 
 export type GlobeHandle = {
-  /** Same as tapping the story's pin: fly there and open its callout. */
-  flyTo: (id: string) => void;
+  /** Same as tapping the story's pin: fly there and open its callout. `turnOnly`: never open the story itself (static picture). */
+  flyTo: (id: string, turnOnly?: boolean) => void;
 };
 
 type Props = {
@@ -54,6 +54,8 @@ type Props = {
   onOpenStory: (id: string) => void;
   /** The user started turning the globe. */
   onSpin?: () => void;
+  /** The story the Quick check picked, with its "Why here" line; its callout carries the badge. */
+  startHere?: { storyId: string; why: string } | null;
   ref?: Ref<GlobeHandle>;
 };
 
@@ -93,7 +95,7 @@ function viewCentre(yaw: number, pitch: number): Vec3 {
  * Orientation lives in Reanimated shared values, so dragging, inertia, flights and the overlay all run
  * on the UI thread without React re-renders. Without WebGL it shows a static picture with fixed pins.
  */
-export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
+export function Globe({ stories, onOpenStory, onSpin, startHere, ref }: Props) {
   const reduced = useReducedMotion();
   const focused = useIsFocused();
   const window = useWindowDimensions();
@@ -149,7 +151,7 @@ export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
     arrive();
   };
 
-  const flyTo = (id: string) => {
+  const flyTo = (id: string, turnOnly = false) => {
     if (flying.value) {
       // A tap during a flight skips to its end.
       finishFlight();
@@ -163,7 +165,7 @@ export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
     if (fallback) {
       // Cities hidden or half-faded on the picture can't show a callout: go straight to the story.
       if (visibility(target, FALLBACK_ORIENTATION.yaw, FALLBACK_ORIENTATION.pitch) >= FADE_BAND) arrive();
-      else onOpenStory(id);
+      else if (!turnOnly) onOpenStory(id);
       return;
     }
     cancelAnimation(yaw);
@@ -260,7 +262,12 @@ export function Globe({ stories, onOpenStory, onSpin, ref }: Props) {
             <PlaneSlot {...{ flightT, flying, withPlane, from, to, yaw, pitch, cx, cy, radius }} />
             {calloutOpen && selected && (
               <CalloutSlot v={pins[selected.id]} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius} areaWidth={area.width} areaHeight={area.height}>
-                <PinCallout story={selected} state={calloutState(selected)} onOpen={() => onOpenStory(selected.id)} />
+                <PinCallout
+                  story={selected}
+                  state={calloutState(selected)}
+                  onOpen={() => onOpenStory(selected.id)}
+                  startHere={startHere?.storyId === selected.id ? startHere : undefined}
+                />
               </CalloutSlot>
             )}
         </>

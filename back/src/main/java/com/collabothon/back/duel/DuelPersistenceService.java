@@ -12,8 +12,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.collabothon.back.common.BadRequestException;
-import com.collabothon.back.common.NotFoundException;
+import com.collabothon.back.common.exceptions.BadRequestException;
+import com.collabothon.back.common.exceptions.NotFoundException;
 import com.collabothon.back.duel.LevelCurve.LevelInfo;
 import com.collabothon.back.duel.QuestionSelectionService.SelectedQuestion;
 

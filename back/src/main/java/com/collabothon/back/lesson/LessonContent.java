@@ -24,7 +24,7 @@ import tools.jackson.databind.node.ObjectNode;
  * Fixing content = edit the JSON and restart; no migration.
  */
 @Component
-class LessonContent {
+public class LessonContent {
 
 	private final Map<String, ObjectNode> lessons = new LinkedHashMap<>();
 
@@ -69,11 +69,11 @@ class LessonContent {
 		}
 	}
 
-	Optional<ObjectNode> lesson(String id) {
+	public Optional<ObjectNode> lesson(String id) {
 		return Optional.ofNullable(lessons.get(id));
 	}
 
-	List<JsonNode> stories() {
+	public List<JsonNode> stories() {
 		return stories;
 	}
 
@@ -82,7 +82,7 @@ class LessonContent {
 	}
 
 	/** Lesson ids of the lesson's story, in order. */
-	List<String> lessonIdsOf(JsonNode story) {
+	public List<String> lessonIdsOf(JsonNode story) {
 		List<String> ids = new ArrayList<>();
 		story.path("lessonIds").forEach(i -> ids.add(i.asString()));
 		return ids;

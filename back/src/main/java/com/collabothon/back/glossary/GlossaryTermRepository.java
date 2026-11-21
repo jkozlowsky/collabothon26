@@ -14,6 +14,9 @@ interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, Long> {
 	@EntityGraph(attributePaths = { "category", "related" })
 	Optional<GlossaryTerm> findBySlug(String slug);
 
+	@Query("select t.id from GlossaryTerm t where t.slug = :slug")
+	Optional<Long> findIdBySlug(@Param("slug") String slug);
+
 	// Search uses strpos/starts_with instead of LIKE, so %, _ and \ typed by the user need no escaping.
 	// :q is always trimmed and lower-cased by the caller.
 

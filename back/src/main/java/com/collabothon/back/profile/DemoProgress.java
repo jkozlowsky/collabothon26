@@ -4,9 +4,15 @@ import java.time.LocalDate;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.collabothon.back.lesson.ConceptKnowledgeRepository;
+import com.collabothon.back.lesson.LessonActivityRepository;
+import com.collabothon.back.lesson.LessonCompletionRepository;
+import com.collabothon.back.lesson.ScenarioChoiceRepository;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * Demo progress, relative to "today" so it never goes stale: a 12-day run two
@@ -14,31 +20,33 @@ import org.springframework.transaction.annotation.Transactional;
  * Seeded for the demo user on startup if they have no progress yet, and again by the reset endpoint.
  */
 @Component
+@RequiredArgsConstructor
 class DemoProgress implements ApplicationRunner {
 
 	static final String DEMO_USER = "demo-user";
 
-	private final JdbcClient jdbc;
+	private final LessonActivityRepository activity;
 
-	DemoProgress(JdbcClient jdbc) {
-		this.jdbc = jdbc;
-	}
+	private final LessonCompletionRepository completions;
+
+	private final ConceptKnowledgeRepository concepts;
+
+	private final ScenarioChoiceRepository scenarioChoices;
 
 	@Override
 	@Transactional
 	public void run(ApplicationArguments args) {
-		if (!jdbc.sql("SELECT EXISTS (SELECT 1 FROM lesson_activity WHERE user_id = ?)")
-			.param(DEMO_USER).query(Boolean.class).single()) {
+		if (!activity.existsByUserId(DEMO_USER)) {
 			seed(DEMO_USER, LocalDate.now());
 		}
 	}
 
 	@Transactional
 	void reseed(String userId, LocalDate today) {
-		jdbc.sql("DELETE FROM lesson_activity WHERE user_id = ?").param(userId).update();
-		jdbc.sql("DELETE FROM lesson_completion WHERE user_id = ?").param(userId).update();
-		jdbc.sql("DELETE FROM concept_knowledge WHERE user_id = ?").param(userId).update();
-		jdbc.sql("DELETE FROM scenario_choice WHERE user_id = ?").param(userId).update();
+		activity.deleteByUserId(userId);
+		completions.deleteByUserId(userId);
+		concepts.deleteByUserId(userId);
+		scenarioChoices.deleteByUserId(userId);
 		seed(userId, today);
 	}
 
@@ -52,8 +60,7 @@ class DemoProgress implements ApplicationRunner {
 	}
 
 	private void recordDay(String userId, LocalDate date) {
-		jdbc.sql("INSERT INTO lesson_activity (user_id, completed_on) VALUES (?, ?) ON CONFLICT DO NOTHING")
-			.params(userId, date).update();
+		activity.record(userId, date);
 	}
 
 }

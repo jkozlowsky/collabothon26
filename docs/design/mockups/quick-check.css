@@ -1,0 +1,50 @@
+/* Quick check + learning path summary (F1b, Q-M): shared by quick-check-a/b/c.html,
+   on top of base.css and consent.css (consent direction C "The line"). */
+
+/* Top bar: back (44 px target) and the "1 of 4" count */
+.qtop { display: flex; align-items: center; gap: 8px; height: 44px; margin: 0 -10px 4px; }
+.back { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; color: var(--primary); flex: none; }
+.qtop .count { margin-left: auto; padding-right: 10px; }
+
+/* The answer field. Its 1 px border is --muted, not --border-strong: an input boundary needs 3:1 (WCAG 1.4.11) */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field textarea { width: 100%; min-height: 132px; resize: none; border-radius: 16px; padding: 14px 16px;
+  border: 1px solid var(--muted); background: var(--surface); color: var(--text);
+  font: 400 15px/20px Inter, sans-serif; }
+.field textarea::placeholder { color: var(--muted); }
+.field textarea:focus, .field textarea.focus { outline: none; border: 2px solid var(--primary); padding: 13px 15px; }
+.field .meta { display: flex; justify-content: space-between; gap: 12px; }
+.field .meta .counter { font-variant-numeric: tabular-nums; margin-left: auto; }
+
+/* Inline account numbers: computed on the phone, marked so "it knows me" reads at a glance */
+mark.acct { background: var(--primary-soft); color: var(--primary); border-radius: 4px; box-shadow: 0 0 0 3px var(--primary-soft);
+  box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+
+/* Disabled Next: still legible (muted on tint is 5:1), clearly not the yellow focal point */
+.big:disabled, .big[aria-disabled="true"] { background: var(--tint); color: var(--muted); cursor: not-allowed; }
+.big:disabled:active { transform: none; }
+
+/* Summary building blocks */
+.because { display: flex; flex-direction: column; gap: 6px; list-style: none; }
+.because li { display: flex; gap: 10px; align-items: flex-start; }
+.because li::before { content: ""; width: 6px; height: 6px; border-radius: 3px; background: var(--primary); flex: none; margin-top: 6px; }
+.focus-row { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; }
+.focus-row .tile { width: 40px; height: 40px; }
+.focus-row .tile .i { width: 20px; height: 20px; }
+.focus-row p + p { margin-top: 2px; }
+
+/* Dark hero card: petrol carries the gap, so yellow stays for "Start learning" */
+.gap-hero { background: var(--primary); color: var(--on-brand); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.gap-hero .t-over { color: rgba(255, 255, 255, .8); }
+.gap-hero .t-body { color: rgba(255, 255, 255, .88); }
+
+/* Summary artboards are shown at full length; in the app the body scrolls above the fixed footer */
+.phone.long { height: auto; min-height: 844px; }
+.phone.long .body { overflow: visible; }
+
+/* Entry of summary blocks: short stagger, transform + opacity only */
+.rise { animation: rise 260ms var(--ease-out) both; }
+.rise:nth-child(2) { animation-delay: 50ms; } .rise:nth-child(3) { animation-delay: 100ms; }
+.rise:nth-child(4) { animation-delay: 150ms; } .rise:nth-child(5) { animation-delay: 200ms; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+/* Reduced motion: blocks appear in place (base.css stops all keyframes) */

@@ -1,9 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
-const KEY = 'financequest.sceneMuted';
+import { setSfxMuted, SOUND_MUTED_KEY } from '@/lib/sfx';
 
-/** Scene narration mute, remembered on the device (not in the profile). Sound is on by default. */
+const KEY = SOUND_MUTED_KEY;
+
+/** Sound mute (scene narration and answer sounds), remembered on the device (not in the profile). Sound is on by default. */
 export function useSceneMuted() {
   const [muted, setMuted] = useState(false);
 
@@ -20,6 +22,7 @@ export function useSceneMuted() {
 
   const set = useCallback((next: boolean) => {
     setMuted(next);
+    setSfxMuted(next);
     AsyncStorage.setItem(KEY, next ? '1' : '0').catch(() => {});
   }, []);
 

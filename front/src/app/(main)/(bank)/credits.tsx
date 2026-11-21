@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { BankScreen } from '@/components/bank/BankScreen';
 import { DetailSheet } from '@/components/bank/DetailSheet';
-import { FqTeaserCard } from '@/components/bank/FqTeaserCard';
+import { AtlasNudge } from '@/components/bank/AtlasNudge';
 import { HeroCard } from '@/components/bank/HeroCard';
 import { IconButton } from '@/components/bank/IconButton';
 import { ListCard } from '@/components/bank/ListCard';
@@ -12,7 +12,7 @@ import { ProductSection } from '@/components/bank/ProductSection';
 import { Section } from '@/components/bank/Section';
 import { SpotTarget } from '@/components/spotlight/SpotTarget';
 import { useBank } from '@/hooks/useBank';
-import { useOpenLearnFocus } from '@/hooks/useOpenLearn';
+import { useBankTeasers, useOpenTeaser } from '@/hooks/useBankTeasers';
 import { useToast } from '@/hooks/useToast';
 import { creditProductDetail } from '@/lib/bank/details';
 import type { Detail } from '@/types/bank';
@@ -21,13 +21,19 @@ import type { Detail } from '@/types/bank';
 export default function CreditsScreen() {
   const { state, money, amountsHidden, toggleAmountsHidden } = useBank();
   const { demoOnly } = useToast();
-  const openLearnFocus = useOpenLearnFocus();
+  const { teasers, ready } = useBankTeasers();
+  const openTeaser = useOpenTeaser();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [calculator, setCalculator] = useState(false);
   const { loan } = state;
 
   return (
-    <BankScreen title="Credits" actions={<IconButton icon="calendar" label="Payment calendar" onPress={demoOnly} />} testID="screen-credits">
+    <BankScreen
+      title="Credits"
+      actions={<IconButton icon="calendar" label="Payment calendar" onPress={demoOnly} />}
+      overlay={<AtlasNudge placement="credits" teaser={teasers.credits} ready={ready} onOpen={openTeaser} testID="fq-teaser-credits" />}
+      testID="screen-credits"
+    >
       <HeroCard
         label="Instalment loan · remaining"
         amount={money(loan.remaining)}
@@ -39,8 +45,6 @@ export default function CreditsScreen() {
           { label: 'Interest rate', value: `${loan.apr}% APR` },
         ]}
       />
-
-      <FqTeaserCard teaser={state.teasers.credits} onPress={() => openLearnFocus(state.teasers.credits.focus)} testID="fq-teaser-credits" />
 
       <Section title="Your credit products" action={{ label: 'See all', onPress: demoOnly }}>
         <ListCard>

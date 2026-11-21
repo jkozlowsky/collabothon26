@@ -72,13 +72,13 @@ class AccountControllerTests {
 	}
 
 	@Test
-	void resetGivesTheDemoStateAFourDayStreakAtRisk() throws Exception {
+	void resetStartsAFreshAccountWithNoStreak() throws Exception {
+		complete("dora", "seoul-1", "2026-11-19");
 		mvc.perform(post("/api/users/dora/progress/reset").param("today", "2026-11-20"))
-			.andExpect(jsonPath("$.currentStreak").value(4))
+			.andExpect(jsonPath("$.currentStreak").value(0))
 			.andExpect(jsonPath("$.doneToday").value(false))
-			.andExpect(jsonPath("$.longestStreak").value(12))
-			.andExpect(jsonPath("$.lessonsCompleted").value(0))
-			.andExpect(jsonPath("$.totalXp").value(0));
+			.andExpect(jsonPath("$.longestStreak").value(0))
+			.andExpect(jsonPath("$.lessonsCompleted").value(0));
 	}
 
 }

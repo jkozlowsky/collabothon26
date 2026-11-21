@@ -5,6 +5,7 @@ import { Feedback } from '@/components/lesson/Feedback';
 import { StepLayout } from '@/components/lesson/StepLayout';
 import { haptic, Tappable } from '@/components/onboarding/ui';
 import { colors, radii, spacing, type } from '@/constants/theme';
+import { playSfx } from '@/lib/sfx';
 import { shuffle } from '@/lib/lessonPlayer';
 import type { MatchStep as MatchStepData, StepOutcome } from '@/types/lessons';
 
@@ -51,10 +52,12 @@ export function MatchStep({ step, onDone }: Props) {
       const nextMatched = [...matched, left];
       setMatched(nextMatched);
       haptic('success');
+      playSfx('correct');
     } else {
       setWrong({ left, right });
       setMistakes((m) => m + 1);
       haptic('light');
+      playSfx('wrong');
     }
   }
 

@@ -54,7 +54,7 @@ public class AccountController {
 	@PostMapping("/progress/reset")
 	public ResponseEntity<StatsDto> resetProgress(@PathVariable @NotBlank @Size(max = MAX_USER_ID_LENGTH) String userId,
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate today) {
-		demoProgressService.reseed(userId, today);
+		demoProgressService.reset(userId);
 		return ResponseEntity.ok(accountService.getStats(userId, today));
 	}
 }

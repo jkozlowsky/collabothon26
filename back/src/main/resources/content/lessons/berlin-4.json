@@ -171,7 +171,7 @@
         "id": "v1",
         "title": "One bad year",
         "desc": "Prices go up and down. These swings are called [[volatility]]. A fall is only a real loss if you sell during it. How long your money can wait is your [[time-horizon]].",
-        "duration": 12,
+        "duration": 11.3,
         "camera": "drift",
         "setting": {
           "place": "street",
@@ -194,7 +194,7 @@
           },
           {
             "kind": "tag",
-            "at": 3,
+            "at": 2.6,
             "text": "−20%",
             "tone": "bad",
             "x": 0.35,
@@ -202,7 +202,7 @@
           },
           {
             "kind": "tag",
-            "at": 8.5,
+            "at": 8.8,
             "text": "Wait",
             "tone": "neutral",
             "x": 0.78,
@@ -211,19 +211,20 @@
         ],
         "captions": [
           {
-            "at": 0.5,
+            "at": 0,
             "text": "You invest €5,000. After one bad year, it is worth €4,000."
           },
           {
-            "at": 4.5,
+            "at": 6.0,
             "text": "Swings like this are called volatility."
           },
           {
-            "at": 8,
+            "at": 8.6,
             "text": "If you can wait, the price has time to recover."
           }
         ],
-        "transcript": "t1"
+        "transcript": "t1",
+        "audio": "berlin-4/v1.mp3"
       }
     ],
     "beats": [

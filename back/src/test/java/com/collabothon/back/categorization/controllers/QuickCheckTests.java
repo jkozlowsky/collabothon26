@@ -55,7 +55,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "jev.api-key=test-key")
+// DEBUG shows what Spring and our services log below INFO, which is where a rejected value would surface.
+@SpringBootTest(properties = { "jev.api-key=test-key", "logging.level.org.springframework.web=DEBUG",
+		"logging.level.com.collabothon.back.categorization=DEBUG" })
 @AutoConfigureMockMvc
 @AutoConfigureMockRestServiceServer
 @ExtendWith(OutputCaptureExtension.class)

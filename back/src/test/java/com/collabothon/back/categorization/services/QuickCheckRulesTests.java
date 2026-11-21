@@ -245,11 +245,13 @@ class QuickCheckRulesTests {
 	@Test
 	void aJevLabelWithoutItsPreconditionReadsAsAligned() {
 		List<Answer> sureAndRight = List.of(right(S_EASY_1, Confidence.SURE));
-		assertEquals(Optional.empty(), QuickCheckRules.checkedJevGap(GapDirection.UNDER, sureAndRight));
-		assertEquals(Optional.empty(), QuickCheckRules.checkedJevGap(GapDirection.OVER, sureAndRight));
-		assertEquals(Optional.empty(), QuickCheckRules.checkedJevGap(GapDirection.ALIGNED, sureAndRight));
+		assertEquals(Optional.empty(), QuickCheckRules.checkedJevGap(GapDirection.UNDER, sureAndRight, 0.85));
+		assertEquals(Optional.empty(), QuickCheckRules.checkedJevGap(GapDirection.OVER, sureAndRight, 0.85));
+		assertEquals(Optional.empty(), QuickCheckRules.checkedJevGap(GapDirection.ALIGNED, sureAndRight, 0.85));
 		List<Answer> guessedRight = List.of(right(S_EASY_1, Confidence.GUESSING));
-		assertEquals(Optional.of(GapDirection.UNDER), QuickCheckRules.checkedJevGap(GapDirection.UNDER, guessedRight));
+		assertEquals(Optional.of(GapDirection.UNDER),
+				QuickCheckRules.checkedJevGap(GapDirection.UNDER, guessedRight, 0.4));
+		assertEquals(Optional.empty(), QuickCheckRules.checkedJevGap(GapDirection.UNDER, guessedRight, 0.25));
 	}
 
 	@Test

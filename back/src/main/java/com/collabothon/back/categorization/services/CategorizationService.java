@@ -185,7 +185,7 @@ public class CategorizationService {
 			List<Answer> inArea = QuickCheckRules.inArea(history, area);
 			Optional<GapDirection> gap = fromJev.isPresent()
 					? Optional.ofNullable(fromJev.get().gaps().get(area))
-						.flatMap(label -> QuickCheckRules.checkedJevGap(label, inArea))
+						.flatMap(label -> QuickCheckRules.checkedJevGap(label, inArea, mastery.get(area)))
 					: QuickCheckRules.ruleGap(inArea, mastery.get(area));
 			gap.ifPresent(direction -> gaps.put(area, direction));
 		}

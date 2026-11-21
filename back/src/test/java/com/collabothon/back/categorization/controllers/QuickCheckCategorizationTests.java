@@ -257,6 +257,20 @@ class QuickCheckCategorizationTests {
 			.andExpect(jsonPath("$.confidenceGaps").isEmpty());
 	}
 
+	@ParameterizedTest(name = "saving mastery {0} -> {1} gap cards")
+	@CsvSource({ "0.25, 0", "0.4, 1" })
+	void jevsUnderNeedsTheAreaAtLeastBuildingLikeTheRule(String saving, int cards) throws Exception {
+		jev.expect(requestTo(JEV_URL))
+			.andRespond(withSuccess(jevFinal(choice("gap_saving", "under", "under", "over", "aligned")
+					+ choice("first_lesson", "story_berlin", "story_berlin", "story_sao-paulo")), MediaType.APPLICATION_JSON));
+
+		categorize(QUICK_CHECK.replace(HISTORY, "[{\"questionId\": \"sv-a\", \"optionIndex\": 0, \"confidence\": \"guessing\"}]")
+			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": %s, \"investing\": null}".formatted(saving)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.source").value("jev"))
+			.andExpect(jsonPath("$.confidenceGaps.length()").value(cards));
+	}
+
 	@Test
 	void aBrokenGapAnswerPutsTheWholeCategorisationOnRules() throws Exception {
 		jev.expect(requestTo(JEV_URL))

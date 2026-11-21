@@ -177,14 +177,17 @@ final class QuickCheckRules {
 		if (overHolds(inArea)) {
 			return Optional.of(GapDirection.OVER);
 		}
-		boolean underMastery = mastery != null && mastery >= JUST_STARTING_BELOW;
-		return underHolds(inArea) && underMastery ? Optional.of(GapDirection.UNDER) : Optional.empty();
+		return underHolds(inArea) && atLeastBuilding(mastery) ? Optional.of(GapDirection.UNDER) : Optional.empty();
 	}
 
-	/** A Jev label counts only when the chips back it up; anything else reads as aligned. */
-	static Optional<GapDirection> checkedJevGap(GapDirection label, List<Answer> inArea) {
+	private static boolean atLeastBuilding(Double mastery) {
+		return mastery != null && mastery >= JUST_STARTING_BELOW;
+	}
+
+	/** A Jev label counts only when the chips (and for under, the rule's mastery guard) back it up; else aligned. */
+	static Optional<GapDirection> checkedJevGap(GapDirection label, List<Answer> inArea, Double mastery) {
 		boolean holds = label == GapDirection.OVER ? overHolds(inArea)
-				: label == GapDirection.UNDER && underHolds(inArea);
+				: label == GapDirection.UNDER && underHolds(inArea) && atLeastBuilding(mastery);
 		return holds ? Optional.of(label) : Optional.empty();
 	}
 

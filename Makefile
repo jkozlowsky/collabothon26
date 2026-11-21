@@ -15,7 +15,7 @@ phone-usb: ## Everything at once + Android phone over USB cable (adb reverse, no
 	./scripts/dev.sh --usb
 
 setup: ## One-time: .env + frontend dependencies
-	@test -f .env || cp .env.example .env
+	./scripts/sync-env.sh
 	cd front && npm install
 
 db: ## Postgres in Docker (port from .env, default 5433)

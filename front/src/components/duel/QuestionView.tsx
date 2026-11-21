@@ -96,6 +96,8 @@ export function QuestionView({
       {/* Question rendering */}
       {question && (
         <DuelQuestionView
+          // A new question must start unlocked: remount so the previous answer's state is dropped.
+          key={question.index}
           question={question}
           onSubmit={onSubmitAnswer}
           disabled={isFeedback}

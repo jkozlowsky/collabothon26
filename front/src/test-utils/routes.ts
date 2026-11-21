@@ -6,9 +6,12 @@ import OverviewScreen from '@/app/(main)/(bank)/index';
 import InvestScreen from '@/app/(main)/(bank)/invest';
 import PaymentsScreen from '@/app/(main)/(bank)/payments';
 import LearnLayout from '@/app/(main)/(learn)/_layout';
+import DuelLobbyScreen from '@/app/(main)/(learn)/duel';
 import GlossaryScreen from '@/app/(main)/(learn)/glossary';
 import MapScreen from '@/app/(main)/(learn)/map';
 import ProfileScreen from '@/app/(main)/(learn)/profile';
+import DuelMatchScreen from '@/app/duel/match';
+import DuelRankingsScreen from '@/app/duel/rankings';
 import RootLayout from '@/app/_layout';
 import LessonScreen from '@/app/lesson/[id]';
 import OnboardingScreen from '@/app/onboarding';
@@ -28,5 +31,8 @@ export const appRoutes = {
   '(main)/(learn)/_layout': LearnLayout,
   '(main)/(learn)/map': MapScreen,
   '(main)/(learn)/glossary': GlossaryScreen,
+  '(main)/(learn)/duel': DuelLobbyScreen,
   '(main)/(learn)/profile': ProfileScreen,
+  'duel/match': DuelMatchScreen,
+  'duel/rankings': DuelRankingsScreen,
 };

@@ -52,6 +52,11 @@ export const colors = {
   heroGradientFrom: '#0B4D5E',
   onBrandTile: 'rgba(255, 255, 255, 0.08)',
   onBrandMuted: 'rgba(255, 255, 255, 0.7)',
+  // Duel matchmaking and versus cards: stronger labels, chips and hairlines on petrol.
+  onBrandStrong: 'rgba(255, 255, 255, 0.85)',
+  onBrandChip: 'rgba(255, 255, 255, 0.14)',
+  onBrandHairline: 'rgba(255, 255, 255, 0.16)',
+  onBrandDashed: 'rgba(255, 255, 255, 0.35)',
   cardChipGold: '#E9D49A',
   cardChipOnAccent: 'rgba(0, 46, 60, 0.18)',
   scrim: 'rgba(0, 31, 41, 0.4)',
@@ -64,16 +69,18 @@ export const tints = {
   teal: 'rgba(30, 154, 168, 0.14)',
   orange: 'rgba(232, 131, 58, 0.14)',
   slate: 'rgba(154, 165, 171, 0.2)',
+  xp: 'rgba(181, 139, 0, 0.14)',
+  accent: 'rgba(255, 204, 0, 0.16)',
 } as const;
 
 /** `story/*` colours by key, as stories name them in their data (`color: 'rose'`). */
-export const storyColors: Record<keyof typeof tints, string> = {
+export const storyColors = {
   rose: colors.storyRose,
   violet: colors.storyViolet,
   teal: colors.storyTeal,
   orange: colors.storyOrange,
   slate: colors.storySlate,
-};
+} as const;
 
 export const spacing = {
   xxs: 2,

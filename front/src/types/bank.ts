@@ -43,7 +43,19 @@ export type BankIconName =
   | 'close'
   | 'check'
   | 'delete'
-  | 'lock';
+  | 'lock'
+  | 'swords'
+  | 'trophy'
+  | 'bot'
+  | 'users'
+  | 'target'
+  | 'timer'
+  | 'brain'
+  | 'wifi-off'
+  | 'coins'
+  | 'flame'
+  | 'refresh'
+  | 'arrow-right';
 
 export type Account = {
   name: string;

@@ -1,10 +1,10 @@
 import type Feather from '@expo/vector-icons/Feather';
 import type { ComponentProps } from 'react';
 
-import type { tints } from '@/constants/theme';
+import type { storyColors } from '@/constants/theme';
 
 /** Key of a `story/*` colour in the Design Kit. */
-export type StoryColor = keyof typeof tints;
+export type StoryColor = keyof typeof storyColors;
 
 /** One item of GET /api/stories (.plans/f4-f5-lessons-spec.md §6, extended for the globe in globe-home-spec.md §6). */
 export type Story = {

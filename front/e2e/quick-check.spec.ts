@@ -288,3 +288,78 @@ test('a reload of the summary rebuilds it from the stored row', async ({ page })
   await expect(page.getByTestId('summary-first-lesson')).toContainText('Emergency fund');
   await expect(page.getByTestId('summary-based-on')).toContainText('3 answers');
 });
+
+/** On the first knowledge question, with the dock on screen. */
+async function toKnowledge(page: Page) {
+  const calls = await toConsentCard(page, { lifeStage: true, step: stepper(5) });
+  await toKnowCard(page, true);
+  await tap(page, 'know-start');
+  await tap(page, 'quick-check-option-1');
+  await expect(page.getByTestId('map-dock')).toBeVisible();
+  return calls;
+}
+
+test('the dock fills in as answers come: a screen-reader text per area, then the detail sheet closes by button, Escape and scrim', async ({ page }) => {
+  await toKnowledge(page);
+  await expect(page.getByTestId('dock-sr-saving')).toHaveText('Saving: Not checked yet');
+  await expect(page.getByTestId('dock-sr-investing')).toHaveText('Investing: Not checked yet');
+
+  await answer(page, 0, 'sure');
+  await expect(page.getByText('Question 3 of up to 7')).toBeVisible();
+  await expect(page.getByTestId('dock-sr-saving')).toHaveText('Saving: Building');
+  await expect(page.getByTestId('dock-sr-investing')).toHaveText('Investing: Just starting');
+
+  await tap(page, 'map-dock');
+  await expect(page.getByText('Your map in detail')).toBeVisible();
+  await expect(page.getByText('How sure you felt')).toBeVisible();
+  await expect(page.getByText('What your answers show')).toBeVisible();
+  await expect(page.getByTestId('area-level-saving')).toHaveText('Building');
+  await tap(page, 'sheet-close');
+  await expect(page.getByText('Your map in detail')).toHaveCount(0);
+
+  await tap(page, 'map-dock');
+  await expect(page.getByText('Your map in detail')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByText('Your map in detail')).toHaveCount(0);
+
+  await tap(page, 'map-dock');
+  await expect(page.getByText('Your map in detail')).toBeVisible();
+  await page.mouse.click(20, 20);
+  await expect(page.getByText('Your map in detail')).toHaveCount(0);
+});
+
+test('the bar rises over 700 ms and the diamond moves over 350 ms', async ({ page }) => {
+  await toKnowledge(page);
+  const transition = (id: string) => page.getByTestId(id).evaluate((el) => getComputedStyle(el).transitionDuration);
+  expect(await transition('dock-bar-saving')).toContain('0.7s');
+  expect(await transition('dock-diamond-saving')).toContain('0.35s');
+});
+
+test('with reduced motion the dock markers and the sheet appear in place', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await toKnowledge(page);
+  const transition = (id: string) => page.getByTestId(id).evaluate((el) => getComputedStyle(el).transitionDuration);
+  expect(await transition('dock-bar-saving')).toBe('0s');
+  expect(await transition('dock-diamond-saving')).toBe('0s');
+
+  await tap(page, 'map-dock');
+  const box = await page.getByTestId('map-sheet').boundingBox();
+  const viewport = page.viewportSize()!;
+  expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height + 1);
+});
+
+test('after a reload the summary draws both markers from the stored row', async ({ page }) => {
+  await toConsentCard(page, { lifeStage: true, step: stepper(1) });
+  await toKnowCard(page, true);
+  await tap(page, 'know-start');
+  await tap(page, 'quick-check-option-1');
+  await answer(page, 0);
+  await expect(page.getByTestId('summary-map')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('area-level-saving')).toHaveText('Building');
+
+  await page.route(CATEGORIZATION_URL, (route) => route.fulfill({ json: ran({ readyForNext: true, mastery: { saving: 0.9, investing: 0.2 } }) }));
+  await page.reload();
+  await expect(page.getByTestId('summary-map')).toBeVisible();
+  await expect(page.getByTestId('area-level-saving')).toHaveText('Solid');
+  await expect(page.getByTestId('area-level-investing')).toHaveText('Just starting');
+});

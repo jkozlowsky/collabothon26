@@ -6,6 +6,7 @@ import { ConsentCard } from '@/components/categorizing/ConsentCard';
 import { FlowMessage } from '@/components/categorizing/FlowMessage';
 import { FlowPage } from '@/components/categorizing/FlowPage';
 import { KnowCard } from '@/components/categorizing/KnowCard';
+import { MapDock } from '@/components/categorizing/MapDock';
 import { LiveRegions } from '@/components/categorizing/LiveRegions';
 import { LockedLessons } from '@/components/categorizing/LockedLessons';
 import { PathSteps, type Step } from '@/components/categorizing/PathSteps';
@@ -175,12 +176,12 @@ export default function CategorizingScreen() {
     if (phase === 'quick') {
       return (
         <QuickCheckPage
-          key={quick.view?.key}
           view={quick.view}
           position={quick.position}
           total={quick.total}
           status={quickStatus}
           ready={quick.ready}
+          dock={quick.view?.kind === 'knowledge' ? <MapDock marks={quick.dock} /> : undefined}
           onAnswer={quick.answer}
           onBack={goBack}
         />

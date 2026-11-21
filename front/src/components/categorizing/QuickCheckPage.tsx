@@ -32,26 +32,9 @@ type Props = {
   onBack: () => void;
 };
 
-/** Re-keyed per question by the screen, so the selection and the focus start fresh. */
 export function QuickCheckPage({ view, position, total, status, ready, dock, onAnswer, onBack }: Props) {
-  const [selected, setSelected] = useState<number | null>(null);
-  const promptRef = useRef<ComponentRef<typeof Text>>(null);
-  const profile = view?.kind === 'profile';
-  const off = !ready;
   const filled = status ? position : position - 1;
-
-  // A new question moves focus to its prompt (WCAG 2.2 SC 2.4.3); the screen's live region announces the status.
-  useEffect(() => {
-    const prompt = promptRef.current;
-    if (!prompt) return;
-    if (Platform.OS === 'web') (prompt as unknown as HTMLElement).focus();
-    else AccessibilityInfo.setAccessibilityFocus(findNodeHandle(prompt) ?? 0);
-  }, []);
-
-  const pick = (index: number | null) => {
-    setSelected(index ?? NOT_SURE);
-    if (profile || index === null) onAnswer(index, null);
-  };
+  const profile = view?.kind === 'profile';
 
   return (
     <FlowPage testID="quick-check" footer={dock}>
@@ -82,60 +65,83 @@ export function QuickCheckPage({ view, position, total, status, ready, dock, onA
           <View key={i} style={[styles.segment, i < filled ? styles.done : i === filled && styles.current]} />
         ))}
       </View>
-
-      {view && (
-        <>
-          <Text
-            ref={promptRef}
-            accessibilityLabel={`Question ${position} of up to ${total}. ${view.prompt}`}
-            tabIndex={-1}
-            style={styles.prompt}
-            accessibilityRole="header"
-            testID="quick-check-prompt"
-          >
-            {view.parts.map((p, i) => (
-              <Text key={i} style={p.filled && styles.filled}>
-                {p.text}
-              </Text>
-            ))}
-          </Text>
-          <View style={styles.why} testID="quick-check-why">
-            <Feather name={profile ? 'user' : 'search'} size={14} color={colors.brandPrimary} />
-            <Text style={styles.whyText}>Why this question: {view.why}</Text>
-          </View>
-          <View style={styles.options} accessibilityRole="radiogroup" accessibilityLabel={view.prompt}>
-            {view.options.map((label, i) => (
-              <AnswerTile
-                key={label}
-                label={label}
-                selected={selected === i}
-                disabled={off}
-                onPress={() => pick(i)}
-                testID={`quick-check-option-${i}`}
-              >
-                {selected === i && !profile && <ConfidenceChips disabled={off} onPick={(c) => onAnswer(i, c)} />}
-              </AnswerTile>
-            ))}
-            {!profile && (
-              <AnswerTile
-                label="Not sure"
-                quiet
-                selected={selected === NOT_SURE}
-                disabled={off}
-                onPress={() => pick(null)}
-                testID="quick-check-unsure"
-              />
-            )}
-          </View>
-          <Slip view={view} />
-        </>
-      )}
+      {/* Keyed per question, so the selection and the focus start fresh while the header and the dock stay. */}
+      {view && <Question key={view.key} view={view} position={position} total={total} off={!ready} onAnswer={onAnswer} />}
       {status && (
         <Text style={styles.status} testID="quick-check-status">
           {STATUS_TEXT[status]}
         </Text>
       )}
     </FlowPage>
+  );
+}
+
+type QuestionProps = Pick<Props, 'onAnswer'> & { view: QuestionView; position: number; total: number; off: boolean };
+
+function Question({ view, position, total, off, onAnswer }: QuestionProps) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const promptRef = useRef<ComponentRef<typeof Text>>(null);
+  const profile = view.kind === 'profile';
+
+  // A new question moves focus to its prompt (WCAG 2.2 SC 2.4.3); the screen's live region announces the status.
+  useEffect(() => {
+    const prompt = promptRef.current;
+    if (!prompt) return;
+    if (Platform.OS === 'web') (prompt as unknown as HTMLElement).focus();
+    else AccessibilityInfo.setAccessibilityFocus(findNodeHandle(prompt) ?? 0);
+  }, []);
+
+  const pick = (index: number | null) => {
+    setSelected(index ?? NOT_SURE);
+    if (profile || index === null) onAnswer(index, null);
+  };
+
+  return (
+    <>
+      <Text
+        ref={promptRef}
+        accessibilityLabel={`Question ${position} of up to ${total}. ${view.prompt}`}
+        tabIndex={-1}
+        style={styles.prompt}
+        accessibilityRole="header"
+        testID="quick-check-prompt"
+      >
+        {view.parts.map((p, i) => (
+          <Text key={i} style={p.filled && styles.filled}>
+            {p.text}
+          </Text>
+        ))}
+      </Text>
+      <View style={styles.why} testID="quick-check-why">
+        <Feather name={profile ? 'user' : 'search'} size={14} color={colors.brandPrimary} />
+        <Text style={styles.whyText}>Why this question: {view.why}</Text>
+      </View>
+      <View style={styles.options} accessibilityRole="radiogroup" accessibilityLabel={view.prompt}>
+        {view.options.map((label, i) => (
+          <AnswerTile
+            key={label}
+            label={label}
+            selected={selected === i}
+            disabled={off}
+            onPress={() => pick(i)}
+            testID={`quick-check-option-${i}`}
+          >
+            {selected === i && !profile && <ConfidenceChips disabled={off} onPick={(c) => onAnswer(i, c)} />}
+          </AnswerTile>
+        ))}
+        {!profile && (
+          <AnswerTile
+            label="Not sure"
+            quiet
+            selected={selected === NOT_SURE}
+            disabled={off}
+            onPress={() => pick(null)}
+            testID="quick-check-unsure"
+          />
+        )}
+      </View>
+      <Slip view={view} />
+    </>
   );
 }
 

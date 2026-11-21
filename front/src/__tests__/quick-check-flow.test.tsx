@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
-import { BackHandler } from 'react-native';
+import { BackHandler, StyleSheet } from 'react-native';
 
 import { ANSWER_DELAY_MS, DONE_MS, MAX_QUESTIONS } from '@/constants/quickCheck';
 import { groupThousands } from '@/lib/bank/money';
@@ -741,4 +741,125 @@ test('hardware back on the summary leaves for the map like See all lessons', asy
   } finally {
     add.mockRestore();
   }
+});
+
+/** The markers are hidden from screen readers (the column's text says it), so they are looked up as hidden. */
+const style = (id: string) => StyleSheet.flatten(screen.getByTestId(id, { includeHiddenElements: true }).props.style);
+const BAR_HEIGHT = 44;
+const DIAMOND_HALF = 5;
+
+test('the dock appears with the knowledge questions only, one column per bank area, each with its screen-reader text', async () => {
+  backend();
+  await toProfile();
+  expect(screen.queryByTestId('map-dock')).toBeNull();
+  await ready();
+  await press('quick-check-option-1');
+  await screen.findByTestId('quick-check-unsure');
+
+  expect(get('map-dock')).toBeOnTheScreen();
+  expect(get('dock-sr-saving')).toHaveTextContent('Saving: Not checked yet', { exact: false });
+  expect(get('dock-sr-investing')).toHaveTextContent('Investing: Not checked yet', { exact: false });
+  expect(screen.queryByTestId('dock-area-debt')).toBeNull();
+  expect(style('dock-bar-saving').height).toBe(0);
+  expect(style('dock-diamond-saving').opacity).toBe(0);
+});
+
+test('the diamond follows the chip at once, the bar and the level follow the step', async () => {
+  let release: () => void = () => {};
+  const slow: Handler = (request) =>
+    request.history.length === 1 ? new Promise((resolve) => (release = () => resolve(stepper()(request)))) : stepper()(request);
+  backend({ step: slow });
+  await toFirstQuestion();
+  await answer(0, 'sure');
+
+  expect(style('dock-diamond-saving').opacity).toBe(1);
+  expect(style('dock-diamond-saving').bottom).toBeCloseTo(0.9 * BAR_HEIGHT - DIAMOND_HALF);
+  expect(style('dock-bar-saving').height).toBe(0);
+  await act(async () => release());
+  await question(3);
+  expect(style('dock-bar-saving').height).toBeCloseTo(0.6 * BAR_HEIGHT);
+  expect(style('dock-bar-investing').height).toBeCloseTo(0.25 * BAR_HEIGHT);
+  expect(get('dock-sr-saving')).toHaveTextContent('Saving: Building', { exact: false });
+  expect(get('dock-sr-investing')).toHaveTextContent('Investing: Just starting', { exact: false });
+});
+
+test('"Not sure" counts as Guessing on the diamond', async () => {
+  backend();
+  await toFirstQuestion();
+  await answer('unsure');
+  await question(3);
+  expect(style('dock-diamond-saving').bottom).toBeCloseTo(0.25 * BAR_HEIGHT - DIAMOND_HALF);
+});
+
+test('a tap on the dock opens "Your map in detail" with both markers and the legend; Close closes it', async () => {
+  backend();
+  await toFirstQuestion();
+  await answer(0, 'fairly-sure');
+  await question(3);
+
+  await press('map-dock');
+  expect(await screen.findByText('Your map in detail')).toBeOnTheScreen();
+  expect(get('area-level-saving')).toHaveTextContent('Building');
+  expect(get('area-level-investing')).toHaveTextContent('Just starting');
+  expect(screen.getByText('How sure you felt')).toBeOnTheScreen();
+  expect(screen.getByText('What your answers show')).toBeOnTheScreen();
+  await press('sheet-close');
+  await act(() => jest.advanceTimersByTimeAsync(400));
+  expect(screen.queryByText('Your map in detail')).toBeNull();
+});
+
+test('Solid needs two answers in the area: one high answer reads Building, two read Solid', async () => {
+  const step: Handler = ({ history }) =>
+    ok({ mastery: { saving: 0.9, investing: null }, nextQuestionId: ORDER[history.length], done: false, useRules: false, stepFellBack: false });
+  backend({ step });
+  await toFirstQuestion();
+  await answer(1, 'sure');
+  await question(3);
+  expect(get('dock-sr-saving')).toHaveTextContent('Saving: Building', { exact: false });
+  await answer(1, 'sure');
+  await question(4);
+  expect(get('dock-sr-saving')).toHaveTextContent('Saving: Building', { exact: false });
+  await answer(1, 'sure');
+  await question(5);
+  expect(get('dock-sr-saving')).toHaveTextContent('Saving: Solid', { exact: false });
+});
+
+test('after a reload the summary map comes from the stored row; a ready path reads Solid', async () => {
+  backend({ stored: ran({ readyForNext: true, mastery: { saving: 0.9, investing: 0.8 }, confidence: { saving: 0.9, investing: 0.6 } }) });
+  await renderRouter(routes, { initialUrl: '/' });
+  await screen.findByTestId('screen-overview');
+  await act(async () => {});
+  await act(async () => router.push('/learning-path'));
+
+  expect(await screen.findByTestId('summary-map')).toBeOnTheScreen();
+  expect(get('area-level-saving')).toHaveTextContent('Solid');
+  expect(style('area-bar-saving').width).toBe('90%');
+  expect(style('area-diamond-investing').left).toBe('60%');
+});
+
+test('after a reload a high mastery on a path that is not ready reads Building: the answer counts are gone', async () => {
+  backend({ stored: ran({ mastery: { saving: 0.9, investing: 0.2 } }) });
+  await renderRouter(routes, { initialUrl: '/' });
+  await screen.findByTestId('screen-overview');
+  await act(async () => {});
+  await act(async () => router.push('/learning-path'));
+
+  expect(await screen.findByTestId('summary-map')).toBeOnTheScreen();
+  expect(get('area-level-saving')).toHaveTextContent('Building');
+  expect(get('area-level-investing')).toHaveTextContent('Just starting');
+});
+
+test('right after the test the summary map counts the answers per area: two in Saving read Solid, one in Investing does not', async () => {
+  backend({ step: stepper(3), post: () => ok(ran({ mastery: { saving: 0.9, investing: 0.9 } })) });
+  await toFirstQuestion();
+  await answer(1, 'sure');
+  await question(3);
+  await answer(0, 'sure');
+  await question(4);
+  await answer(1, 'sure');
+  await finish();
+  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
+  // ORDER is Saving, Investing, Saving.
+  expect(get('area-level-saving')).toHaveTextContent('Solid');
+  expect(get('area-level-investing')).toHaveTextContent('Building');
 });

@@ -11,6 +11,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { GestureDetector, GestureHandlerRootView, ScrollView, usePanGesture } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -46,14 +47,19 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
   const { height: screenHeight } = useWindowDimensions();
 
   // Stays mounted after `visible` turns false until the slide-out has finished.
+  const reduced = useReducedMotion();
   const [rendered, setRendered] = useState(visible);
   if (visible && !rendered) setRendered(true);
+  // Reduced motion has no slide-out to wait for.
+  if (!visible && reduced && rendered) setRendered(false);
 
   // 0 = fully open; screenHeight = below the screen.
   const [offset] = useState(() => new Animated.Value(screenHeight));
 
   useEffect(() => {
-    if (visible) {
+    if (reduced) {
+      offset.setValue(visible ? 0 : screenHeight);
+    } else if (visible) {
       Animated.spring(offset, {
         toValue: 0,
         damping: 26,
@@ -70,7 +76,7 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
         if (finished) setRendered(false);
       });
     }
-  }, [visible, offset, screenHeight]);
+  }, [visible, offset, screenHeight, reduced]);
 
   // Drag down to close, with Gesture Handler so it works on Android, where the native scroll view
   // would otherwise take the vertical drag. The pan runs alongside the content's scroll view and

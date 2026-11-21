@@ -1,10 +1,12 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { AreaMap } from '@/components/categorizing/AreaMap';
 import { IconTile } from '@/components/onboarding/ui';
 import { RULE } from '@/constants/path';
-import { AREA_LABEL } from '@/constants/quickCheck';
+import { AREAS, AREA_LABEL, SOLID_MIN_ANSWERS } from '@/constants/quickCheck';
 import { colors, radii, spacing, type } from '@/constants/theme';
 import type { Summary } from '@/lib/learningPath';
+import { areaMarks } from '@/lib/quickCheck';
 import type { Role } from '@/types/categorization';
 
 const BULLET = 6;
@@ -18,13 +20,15 @@ const ALIGNED = {
   body: 'On the areas we checked, your confidence and your answers line up.',
 };
 
-export function PathSummary({ categorization: c, chipped }: Summary) {
+export function PathSummary({ categorization: c, chipped, counts = {} }: Summary) {
   const start = c.startLesson;
   const roleLines = c.explanation.find((e) => e.output === 'role')?.because ?? [];
   // A reload has no history, so the stored confidence stands in for "an answer carried a chip".
   const hasChip = chipped ?? Object.values(c.confidence).some((v) => v != null);
   const showAligned = c.profile !== null && !c.confidenceGaps.length && hasChip;
   const usedModel = c.sharedWithModel !== null;
+  // After a reload the per-area answer counts are gone: Solid shows only when the whole path is ready for the next step.
+  const marks = areaMarks(AREAS.filter((a) => a in c.mastery), c.mastery, c.confidence, counts, c.readyForNext ? SOLID_MIN_ANSWERS : 0);
 
   return (
     <>
@@ -77,6 +81,12 @@ export function PathSummary({ categorization: c, chipped }: Summary) {
           </View>
         </View>
       )}
+      {c.profile !== null && marks.length > 0 && (
+        <View style={styles.map}>
+          <Text style={styles.overline}>Your map</Text>
+          <AreaMap marks={marks} testID="summary-map" />
+        </View>
+      )}
       <Text style={styles.muted} testID="summary-disclaimer">
         This picks lessons for you. It is not investment advice.
       </Text>
@@ -92,6 +102,7 @@ const styles = StyleSheet.create({
   heroOverline: { ...type.overline, color: colors.onBrandMuted },
   heroTitle: { ...type.titleSection, color: colors.textOnBrand },
   heroBody: { ...type.bodyDefault, color: colors.textOnBrand },
+  map: { gap: spacing.sm },
   bullet: { flexDirection: 'row', gap: spacing.smPlus, alignItems: 'flex-start' },
   dot: { width: BULLET, height: BULLET, borderRadius: BULLET / 2, backgroundColor: colors.brandPrimary, marginTop: BULLET_TOP },
   lesson: {

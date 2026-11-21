@@ -445,6 +445,15 @@ class QuickCheckTests {
 	}
 
 	@Test
+	void aQuestionIdOver64CharactersIsRejectedAsAMalformedAnswerNotAsUnknown() throws Exception {
+		onboard();
+
+		categorize(body(RUNWAY, "a", "x".repeat(65), "b", TIME, "c", SPREAD, "d")).andExpect(status().isBadRequest())
+			.andExpect(MockMvcResultMatchers.jsonPath("$.detail")
+				.value("Each answer needs a question id and text of 1 to 280 characters, or null for Not sure"));
+	}
+
+	@Test
 	void anAnswerOfExactly280UnitsIsAccepted() throws Exception {
 		onboard();
 		jev.expect(requestTo(JEV_URL))

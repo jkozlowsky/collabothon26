@@ -48,9 +48,7 @@ class GlossaryUserController {
 		checkUser(userId);
 		Long termId = terms.findIdBySlug(slug)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "unknown term"));
-		if (!favorites.existsById(new GlossaryFavoriteId(userId, termId))) {
-			favorites.save(new GlossaryFavorite(userId, termId));
-		}
+		favorites.add(userId, termId);
 	}
 
 	/** Idempotent: removing something that is not saved is fine. */
@@ -71,10 +69,7 @@ class GlossaryUserController {
 	@PutMapping("/preference")
 	PreferenceDto setPreference(@PathVariable String userId, @Valid @RequestBody PreferenceRequest req) {
 		checkUser(userId);
-		GlossaryPreference preference = preferences.findById(userId)
-			.orElseGet(() -> new GlossaryPreference(userId, req.languageLevel()));
-		preference.setLanguageLevel(req.languageLevel());
-		preferences.save(preference);
+		preferences.choose(userId, req.languageLevel());
 		return new PreferenceDto(req.languageLevel());
 	}
 

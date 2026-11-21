@@ -29,10 +29,4 @@ public class LessonCompletion {
 
 	private int xp;
 
-	public LessonCompletion(String userId, String lessonId, int xp) {
-		this.userId = userId;
-		this.lessonId = lessonId;
-		this.xp = xp;
-	}
-
 }

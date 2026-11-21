@@ -25,16 +25,4 @@ public class ConceptKnowledge {
 
 	private int attempts;
 
-	ConceptKnowledge(String userId, String concept) {
-		this.userId = userId;
-		this.concept = concept;
-	}
-
-	void record(boolean correctFirstTry) {
-		attempts++;
-		if (correctFirstTry) {
-			correct++;
-		}
-	}
-
 }

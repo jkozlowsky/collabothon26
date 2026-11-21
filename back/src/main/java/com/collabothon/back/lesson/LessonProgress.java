@@ -33,17 +33,11 @@ public class LessonProgress {
 
 	/** Records the first completion with its XP. Returns false if the lesson was already completed. */
 	boolean complete(String userId, String lessonId, int xp) {
-		if (completions.existsById(new LessonCompletionId(userId, lessonId))) {
-			return false;
-		}
-		completions.save(new LessonCompletion(userId, lessonId, xp));
-		return true;
+		return completions.insertFirst(userId, lessonId, xp) == 1;
 	}
 
 	void recordActivity(String userId, LocalDate date) {
-		if (!activity.existsById(new LessonActivityId(userId, date))) {
-			activity.save(new LessonActivity(userId, date));
-		}
+		activity.record(userId, date);
 	}
 
 	int totalXp(String userId) {
@@ -51,9 +45,7 @@ public class LessonProgress {
 	}
 
 	void recordConcept(String userId, String concept, boolean correctFirstTry) {
-		ConceptKnowledge knowledge = concepts.findById(new ConceptKnowledgeId(userId, concept))
-			.orElseGet(() -> concepts.save(new ConceptKnowledge(userId, concept)));
-		knowledge.record(correctFirstTry);
+		concepts.record(userId, concept, correctFirstTry ? 1 : 0);
 	}
 
 	void recordScenarioChoice(String userId, String lessonId, String stepId, int choice) {

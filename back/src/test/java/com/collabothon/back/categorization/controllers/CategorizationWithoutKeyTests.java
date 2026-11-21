@@ -10,6 +10,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.restclient.test.autoconfigure.AutoConfigureMockRestServiceServer;
@@ -21,9 +24,13 @@ import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import com.collabothon.back.Race;
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.categorization.repositories.CategorizationRepository;
 import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
 
 // The default for teammates: no key, so nothing may reach the hosted API.
@@ -42,6 +49,12 @@ class CategorizationWithoutKeyTests {
 
 	@Autowired
 	CheckQuestionRepository questions;
+
+	@Autowired
+	CategorizationRepository categorizations;
+
+	@Autowired
+	TransactionTemplate tx;
 
 	@Test
 	void fallsBackWithoutCallingJev() throws Exception {
@@ -92,4 +105,22 @@ class CategorizationWithoutKeyTests {
 		jev.verify();
 	}
 
+	@Test
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
+	void aDoubleTapOnCategorizeKeepsOneResultAndFailsNothing() throws Exception {
+		String userId = "tap-" + UUID.randomUUID();
+		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"goals\": [\"stocks-etfs\"], \"experience\": \"occasional\", \"skipped\": false}"))
+			.andExpect(status().isOk());
+
+		int second = Race.secondDuringFirst(tx, () -> categorize(userId), () -> categorize(userId));
+
+		assertEquals(200, second);
+		assertTrue(categorizations.findData(userId).isPresent());
+	}
+
+	private int categorize(String userId) throws Exception {
+		return mvc.perform(post("/api/users/{id}/categorization", userId).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"consent\": false}")).andReturn().getResponse().getStatus();
+	}
 }

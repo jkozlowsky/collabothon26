@@ -41,11 +41,8 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.TestcontainersConfiguration;
-import com.collabothon.back.categorization.entities.Categorization;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
 import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
-import com.collabothon.back.lesson.LessonCompletion;
-import com.collabothon.back.lesson.LessonCompletionId;
 import com.collabothon.back.lesson.LessonCompletionRepository;
 import com.collabothon.back.lesson.LessonContent;
 
@@ -152,9 +149,7 @@ class QuickCheckCategorizationTests {
 
 	private void complete(String... lessonIds) {
 		for (String lessonId : lessonIds) {
-			if (!completions.existsById(new LessonCompletionId(userId, lessonId))) {
-				completions.save(new LessonCompletion(userId, lessonId, 10));
-			}
+			completions.insertFirst(userId, lessonId, 10);
 		}
 	}
 
@@ -361,11 +356,9 @@ class QuickCheckCategorizationTests {
 		completeStory("sao-paulo");
 		stored().andExpect(jsonPath("$.startHere.lessonId").value("berlin-1"));
 
-		Categorization row = categorizations.findById(userId).orElseThrow();
-		ObjectNode data = (ObjectNode) json.readTree(row.getData());
+		ObjectNode data = (ObjectNode) json.readTree(categorizations.findData(userId).orElseThrow());
 		data.set("pathStoryIds", json.readTree("[\"gone\", \"tokyo\"]"));
-		row.setData(json.writeValueAsString(data));
-		categorizations.save(row);
+		categorizations.saveIfOnboarded(userId, json.writeValueAsString(data));
 		stored().andExpect(jsonPath("$.startHere.storyId").value("tokyo"));
 	}
 
@@ -413,13 +406,13 @@ class QuickCheckCategorizationTests {
 
 	@Test
 	void aRowFromBeforeTheQuickCheckReadsWithDefaults() throws Exception {
-		categorizations.save(new Categorization(userId, """
+		categorizations.saveIfOnboarded(userId, """
 					{"userId": "%s", "consent": false, "bankData": false, "role": "novice", "lifeStage": null,
 					 "focusAreas": ["saving"], "confidenceGaps": [], "checks": [],
 					 "lessonVariant": {"persona": null, "level": "beginner", "lang": "plain"}, "explanation": [],
 					 "startLesson": {"lessonId": 1, "title": "Emergency fund"}, "pathLessonIds": [1],
 					 "sharedWithModel": null, "source": "fallback", "model": null,
-					 "categorizedAt": "%s"}""".formatted(userId, Instant.now(clock))));
+					 "categorizedAt": "%s"}""".formatted(userId, Instant.now(clock)));
 
 		stored().andExpect(status().isOk())
 			.andExpect(content().json("""

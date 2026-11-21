@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.lesson.ConceptKnowledgeRepository;
-import com.collabothon.back.lesson.LessonActivity;
 import com.collabothon.back.lesson.LessonActivityRepository;
 import com.collabothon.back.lesson.LessonCompletionRepository;
 import com.collabothon.back.lesson.ScenarioChoiceRepository;
@@ -61,7 +60,7 @@ class DemoProgress implements ApplicationRunner {
 	}
 
 	private void recordDay(String userId, LocalDate date) {
-		activity.save(new LessonActivity(userId, date));
+		activity.record(userId, date);
 	}
 
 }

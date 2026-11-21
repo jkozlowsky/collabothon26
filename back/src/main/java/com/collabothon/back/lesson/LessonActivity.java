@@ -7,7 +7,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
 
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -16,7 +15,6 @@ import lombok.NoArgsConstructor;
 @IdClass(LessonActivityId.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
 public class LessonActivity {
 
 	@Id

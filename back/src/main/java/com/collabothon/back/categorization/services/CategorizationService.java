@@ -24,7 +24,6 @@ import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
 import com.collabothon.back.categorization.dto.ProfileRangesDto;
 import com.collabothon.back.categorization.dto.SharedWithModelDto;
 import com.collabothon.back.categorization.dto.StartLessonDto;
-import com.collabothon.back.categorization.entities.Categorization;
 import com.collabothon.back.categorization.enums.CategorizationSource;
 import com.collabothon.back.categorization.enums.ExplanationOutput;
 import com.collabothon.back.categorization.enums.FocusArea;
@@ -165,13 +164,10 @@ public class CategorizationService {
 				now);
 		ObjectNode row = json.valueToTree(c);
 		row.remove("startHere");
-		// Checked again after the Jev call, so a reset meanwhile is a 404.
-		// ponytail: check then save is not atomic; a reset in that gap leaves a row the next onboarding deletes.
-		onboarding(userId);
-		String data = json.writeValueAsString(row);
-		Categorization stored = categorizations.findById(userId).orElseGet(() -> new Categorization(userId, data));
-		stored.setData(data);
-		categorizations.save(stored);
+		// Saved only while onboarding is completed, so a reset during the Jev call is a 404.
+		if (categorizations.saveIfOnboarded(userId, json.writeValueAsString(row)) == 0) {
+			throw new NotFoundException(NO_PROFILE);
+		}
 		return c.withStartHere(startHere(c, stories, lessons, completed));
 	}
 

@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface LessonActivityRepository extends JpaRepository<LessonActivity, LessonActivityId> {
 
@@ -13,6 +14,13 @@ public interface LessonActivityRepository extends JpaRepository<LessonActivity, 
 	List<LocalDate> findDays(String userId);
 
 	boolean existsByUserId(String userId);
+
+	@Transactional
+	@Modifying
+	@Query(nativeQuery = true, value = """
+			INSERT INTO lesson_activity (user_id, completed_on) VALUES (:userId, :completedOn)
+			ON CONFLICT DO NOTHING""")
+	void record(String userId, LocalDate completedOn);
 
 	@Modifying
 	@Query("delete from LessonActivity a where a.userId = :userId")

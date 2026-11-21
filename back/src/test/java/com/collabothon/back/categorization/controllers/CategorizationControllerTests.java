@@ -46,7 +46,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
-import com.collabothon.back.categorization.entities.Categorization;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
 import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
 import com.collabothon.back.lesson.LessonContent;
@@ -427,7 +426,7 @@ class CategorizationControllerTests {
 	@Test
 	void unreadableStoredResultIs404() throws Exception {
 		onboard("alex", ANSWERS);
-		categorizations.save(new Categorization("alex", "{\"role\": \"wizard\"}"));
+		categorizations.saveIfOnboarded("alex", "{\"role\": \"wizard\"}");
 
 		mvc.perform(get("/api/users/alex/categorization")).andExpect(status().isNotFound());
 	}

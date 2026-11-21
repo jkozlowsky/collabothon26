@@ -26,9 +26,4 @@ class GlossaryFavorite {
 	@Column(insertable = false, updatable = false)
 	private Instant createdAt;
 
-	GlossaryFavorite(String userId, Long termId) {
-		this.userId = userId;
-		this.termId = termId;
-	}
-
 }

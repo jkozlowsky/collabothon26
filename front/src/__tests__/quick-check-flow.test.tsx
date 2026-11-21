@@ -3,6 +3,7 @@ import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testin
 import { AccessibilityInfo, BackHandler, Platform, StyleSheet } from 'react-native';
 
 import { ANSWER_DELAY_MS } from '@/hooks/useQuickCheck';
+import { colors } from '@/constants/theme';
 import { groupThousands } from '@/lib/bank/money';
 import { createRng, seedAccount } from '@/lib/bank/seed';
 import { slotValues } from '@/lib/bank/selectors';
@@ -299,7 +300,9 @@ test('the summary leads with the gap, then the level and why, then up to three a
   expect(screen.getByTestId('summary-gap')).toHaveTextContent(/your answer about investing shows you understand it\.$/);
   expect(screen.getByText("You're an intermediate learner")).toBeOnTheScreen();
   expect(screen.getByText('Money goes to savings or investments every month.')).toBeOnTheScreen();
-  for (const area of ['investing', 'debt', 'risk']) expect(screen.getByTestId(`summary-area-${area}`)).toBeOnTheScreen();
+  for (const area of ['investing', 'debt', 'risk']) {
+    expect(screen.getByTestId(`summary-area-${area}`)).toBeOnTheScreen();
+  }
   expect(screen.getByText('Compound interest')).toBeOnTheScreen();
   expect(screen.queryByTestId('summary-area-saving')).toBeNull();
   expect(screen.queryByText("We couldn't check your answers this time")).toBeNull();
@@ -319,7 +322,9 @@ test('Start learning opens the first lesson of the weakest area', async () => {
 test('See all lessons opens the map; Start learning without a start lesson does too', async () => {
   backend({
     post: () =>
-      ok(categorization({ startLesson: null, confidenceGaps: [], checks: [], focusAreas: ['investing', 'retirement'] })),
+      ok(
+        categorization({ startLesson: null, confidenceGaps: [], checks: [], focusAreas: ['investing', 'retirement'] }),
+      ),
   });
   await open();
   await fireEvent.press(await screen.findByTestId('consent-decline'));
@@ -407,21 +412,24 @@ test('four "Not sure" answers followed by a Jev failure do not claim the answers
   expect(screen.queryByText("We couldn't check your answers this time")).toBeNull();
 });
 
-test('hardware back on the summary does the hand-off Start learning would: on to Learn', async () => {
+test('hardware back on the summary leaves for the map like See all lessons, not for the bank', async () => {
   const add = jest.spyOn(BackHandler, 'addEventListener');
-  backend({ pool: () => ok([]) });
-  await open();
-  await fireEvent.press(await screen.findByTestId('consent-decline'));
-  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
+  try {
+    backend({ pool: () => ok([]) });
+    await open();
+    await fireEvent.press(await screen.findByTestId('consent-decline'));
+    await screen.findByTestId('learning-path', {}, { timeout: 4000 });
 
-  const ours = add.mock.calls.filter(([event]) => event === 'hardwareBackPress').at(-1)?.[1] as () => boolean;
-  let handled = false;
-  await act(async () => {
-    handled = ours();
-  });
-  expect(handled).toBe(true);
-  expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
-  add.mockRestore();
+    const ours = add.mock.calls.filter(([event]) => event === 'hardwareBackPress').at(-1)?.[1] as () => boolean;
+    let handled = false;
+    await act(async () => {
+      handled = ours();
+    });
+    expect(handled).toBe(true);
+    expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
+  } finally {
+    add.mockRestore();
+  }
 });
 
 test('a double tap on Start learning opens the lesson once', async () => {
@@ -481,15 +489,20 @@ function contrast(a: string, b: string) {
   return (light + 0.05) / (dark + 0.05);
 }
 
-test('the answer field is a 3:1 shape against the page and the card, and keeps the keyboard and autofill out of it', async () => {
+test('the answer field edge is 3:1 against the page and the card, focused or not, and autofill stays out of it', async () => {
   backend();
   await open();
   await fireEvent.press(await screen.findByTestId('consent-decline'));
 
   const field = get('quick-check-input');
-  const { borderColor } = StyleSheet.flatten(field.props.style);
-  expect(contrast(borderColor, '#F5F7F7')).toBeGreaterThanOrEqual(3);
-  expect(contrast(borderColor, '#FFFFFF')).toBeGreaterThanOrEqual(3);
+  const edge = () => StyleSheet.flatten(get('quick-check-input').props.style).borderColor;
+  for (const background of [colors.bgCanvas, colors.bgSurface]) {
+    expect(contrast(edge(), background)).toBeGreaterThanOrEqual(3);
+  }
+  await fireEvent(field, 'focus');
+  for (const background of [colors.bgCanvas, colors.bgSurface]) {
+    expect(contrast(edge(), background)).toBeGreaterThanOrEqual(3);
+  }
   expect(field.props).toMatchObject({ autoComplete: 'off', importantForAutofill: 'no', autoCorrect: false });
 });
 
@@ -550,7 +563,13 @@ test.each(['ios', 'android'] as const)('on %s focus moves to the prompt of each 
 });
 
 /** A goal in each area, as the onboarding offers them. */
-const GOAL_OF = { saving: 'start-saving', debt: 'pay-off-debt', investing: 'start-investing', risk: 'scams', retirement: 'retirement' };
+const GOAL_OF = {
+  saving: 'start-saving',
+  debt: 'pay-off-debt',
+  investing: 'start-investing',
+  risk: 'scams',
+  retirement: 'retirement',
+};
 
 describe('why each area is on the path', () => {
   const areasDrawn = () => draw(true).map((d) => d.question.area);

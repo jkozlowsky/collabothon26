@@ -1,12 +1,12 @@
 import { Fragment } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { RULE } from '@/constants/path';
 import { colors, spacing, type } from '@/constants/theme';
 
 type Props = { current: number; total: number };
 
 const DOT = 28;
-const RULE = 2;
 
 /** The loading screen's stations laid flat: petrol once answered, never green, because no answer is "correct". */
 export function QuestionTrack({ current, total }: Props) {

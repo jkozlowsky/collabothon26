@@ -2,6 +2,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { RouteStation } from '@/components/categorizing/RouteStation';
+import { GLYPH, HAIRLINE } from '@/constants/path';
 import { colors, radii, spacing, type } from '@/constants/theme';
 import type { Categorization, FocusArea, Role } from '@/types/categorization';
 
@@ -44,7 +45,7 @@ export function PathSummary({ categorization: c, unchecked, answered, goalAreas 
     if (goalAreas.includes(area)) return `You picked ${AREA_LABEL[area]} as a goal.`;
     return 'It fits the answers you gave.';
   };
-  const icon = (name: 'eye' | 'user' | 'play') => <Feather name={name} size={16} color={colors.brandPrimary} />;
+  const icon = (name: 'eye' | 'user' | 'play') => <Feather name={name} size={GLYPH} color={colors.brandPrimary} />;
 
   return (
     <>
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.mdPlus,
     gap: spacing.xxs,
     backgroundColor: colors.bgSurface,
-    borderWidth: 1,
+    borderWidth: HAIRLINE,
     borderColor: colors.borderDefault,
     borderRadius: radii.card,
   },

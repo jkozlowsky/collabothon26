@@ -27,7 +27,7 @@ function wellFormed(q: Partial<CheckQuestion> | null): q is CheckQuestion {
   return inCategory && prompts && Array.isArray(q.slots);
 }
 
-/** A failed GET counts as no questions, an item the front cannot use as no item; an empty pool skips the Quick check. */
+/** A failed GET counts as no questions and an unusable item as no item; an empty pool skips the Quick check. */
 export async function fetchCheckQuestions(signal: AbortSignal): Promise<CheckQuestion[]> {
   try {
     const pool = await api<Partial<CheckQuestion>[]>('/api/check-questions', { signal });
@@ -90,10 +90,13 @@ type Part = { text: string; filled: boolean };
 export function promptParts(question: CheckQuestion, bank: BankState, account: boolean): Part[] {
   if (!account) return [{ text: question.genericPrompt, filled: false }];
   const values = slotValues(bank);
-  const part = (text: string, i: number): Part =>
-    // Splitting on a capture group puts the slot names at the odd indexes.
-    i % 2 ? { text: groupThousands(values[text as Slot]), filled: true } : { text, filled: false };
-  return question.accountPrompt!.split(/\{(\w+)\}/).map(part).filter((p) => p.text);
+  // Splitting on a capture group puts the slot names at the odd indexes.
+  const pieces = question.accountPrompt!.split(/\{(\w+)\}/);
+  const parts = pieces.map((text, i): Part => {
+    const isSlot = i % 2 === 1;
+    return isSlot ? { text: groupThousands(values[text as Slot]), filled: true } : { text, filled: false };
+  });
+  return parts.filter((part) => part.text);
 }
 
 export const toAnswer = ({ question, answer }: Drawn): CheckAnswer => ({

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { RULE } from '@/constants/path';
 import { colors, spacing } from '@/constants/theme';
 
 type Props = {
@@ -33,14 +34,14 @@ const styles = StyleSheet.create({
     width: NODE,
     height: NODE,
     borderRadius: NODE / 2,
-    borderWidth: 2,
+    borderWidth: RULE,
     borderColor: colors.brandPrimary,
     backgroundColor: colors.bgSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   nodeEnd: { backgroundColor: colors.brandAccentSoft },
-  line: { flex: 1, width: 2, backgroundColor: colors.brandPrimary },
+  line: { flex: 1, width: RULE, backgroundColor: colors.brandPrimary },
   content: { flex: 1, minHeight: NODE, justifyContent: 'center' },
   gap: { paddingBottom: spacing.mdPlus },
 });

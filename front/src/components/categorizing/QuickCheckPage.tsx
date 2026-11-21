@@ -14,15 +14,14 @@ import {
 import { Button } from '@/components/Button';
 import { FlowPage } from '@/components/categorizing/FlowPage';
 import { QuestionTrack } from '@/components/categorizing/QuestionTrack';
+import { GLYPH, HAIRLINE, RULE } from '@/constants/path';
 import { colors, radii, spacing, type } from '@/constants/theme';
 
 const MAX_LENGTH = 280;
 const TOUCH_TARGET = 44;
 const ICON = 20;
 const MIN_INPUT_HEIGHT = 132;
-const BORDER = 1;
-const BORDER_FOCUSED = 2;
-const COUNT_WORD = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
+const NUMBER_WORD: Record<number, string> = { 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five', 6: 'Six' };
 
 type Props = {
   index: number;
@@ -40,8 +39,18 @@ type Props = {
   onBack: () => void;
 };
 
-export function QuickCheckPage({ index, total, parts, account, ready, value, onChange, onNext, onUnsure, onBack }: Props) {
-  const text = value;
+export function QuickCheckPage({
+  index,
+  total,
+  parts,
+  account,
+  ready,
+  value,
+  onChange,
+  onNext,
+  onUnsure,
+  onBack,
+}: Props) {
   const [focused, setFocused] = useState(false);
   const prompt = parts.map((p) => p.text).join('');
   const promptRef = useRef<ComponentRef<typeof Text>>(null);
@@ -58,7 +67,12 @@ export function QuickCheckPage({ index, total, parts, account, ready, value, onC
       testID="quick-check"
       footer={
         <>
-          <Button label="Next" onPress={() => onNext(text.trim())} disabled={!ready || !text.trim()} testID="quick-check-next" />
+          <Button
+            label="Next"
+            onPress={() => onNext(value.trim())}
+            disabled={!ready || !value.trim()}
+            testID="quick-check-next"
+          />
           <Button label="Not sure" variant="ghost" onPress={onUnsure} disabled={!ready} testID="quick-check-unsure" />
         </>
       }
@@ -82,14 +96,20 @@ export function QuickCheckPage({ index, total, parts, account, ready, value, onC
       {index === 0 && (
         <>
           <Text style={styles.muted}>
-            {COUNT_WORD[total]} quick questions so we know where to start. There are no wrong answers.
+            {NUMBER_WORD[total] ?? total} quick questions so we know where to start. There are no wrong answers.
           </Text>
           <Text style={styles.muted}>
             Your answers are checked by an AI service to pick your first lesson; only the result is kept.
           </Text>
         </>
       )}
-      <Text ref={promptRef} tabIndex={-1} style={styles.prompt} accessibilityRole="header" testID="quick-check-prompt">
+      <Text
+        ref={promptRef}
+        tabIndex={-1}
+        style={styles.prompt}
+        accessibilityRole="header"
+        testID="quick-check-prompt"
+      >
         {parts.map((p, i) => (
           <Text key={i} style={p.filled && styles.filled}>
             {p.text}
@@ -97,7 +117,7 @@ export function QuickCheckPage({ index, total, parts, account, ready, value, onC
         ))}
       </Text>
       <TextInput
-        value={text}
+        value={value}
         onChangeText={onChange}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
@@ -115,12 +135,12 @@ export function QuickCheckPage({ index, total, parts, account, ready, value, onC
       <View style={styles.meta}>
         <Text style={styles.hint}>No need to type exact amounts</Text>
         <Text style={styles.hint}>
-          {text.length} / {MAX_LENGTH}
+          {value.length} / {MAX_LENGTH}
         </Text>
       </View>
       {account && (
         <View style={styles.slip}>
-          <Feather name="lock" size={16} color={colors.brandPrimary} />
+          <Feather name="lock" size={GLYPH} color={colors.brandPrimary} />
           <Text style={styles.slipText}>Only your answer is sent, never these numbers.</Text>
         </View>
       )}
@@ -146,15 +166,15 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     padding: spacing.mdPlus,
     borderRadius: radii.card,
-    borderWidth: BORDER,
+    borderWidth: HAIRLINE,
     // borderStrong is 1.5:1 on white; a control's edge needs 3:1 (WCAG 2.2 SC 1.4.11).
     borderColor: colors.textMuted,
     backgroundColor: colors.bgSurface,
   },
   inputFocused: {
-    borderWidth: BORDER_FOCUSED,
+    borderWidth: RULE,
     borderColor: colors.brandPrimary,
-    padding: spacing.mdPlus - (BORDER_FOCUSED - BORDER),
+    padding: spacing.mdPlus - (RULE - HAIRLINE),
   },
   meta: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
   hint: { ...type.labelDefault, color: colors.textMuted },
@@ -165,7 +185,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radii.card,
     backgroundColor: colors.bgSurface,
-    borderWidth: 1,
+    borderWidth: HAIRLINE,
     borderColor: colors.borderDefault,
   },
   slipText: { ...type.labelStrong, color: colors.brandPrimary, flexShrink: 1 },

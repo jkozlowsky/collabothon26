@@ -346,3 +346,53 @@ v1 "To confirm" and both v1 triage rounds: `.planning/reviews/F1b-v1-triage.md` 
 | 3 | Q-C rows: the keyed option was the longest in 6 of 8 rows, a test-wise cue that inflates correct answers and so the measured confidence gap | V16 (`emergency-cushion-purpose`, `compound-extra-year`, `time-in-market`, `short-term-fall`, `compound-rate-vs-time`) | fix | Distractors lengthened or the keyed option shortened; misconceptions unchanged. |
 | 4 | Q-C rows: `correct_index` was 1 in 5 of 8 rows (options are not shuffled) | V16 (`compound-extra-year`, `short-term-fall`) | fix | Keyed option moved to index 0 and 2; spread is now 0×2, 1×3, 2×3, misconceptions realigned so the NULL sits at `correct_index`. |
 | 5 | Q-C added `CHECK (slots <@ ARRAY[…ten slots…])`, not in "Bank rules" | V16 `check_question.slots` | reject | Kept: "DB CHECKs hold the lengths, ranges and sets" covers it, the front fills exactly these ten slots, and a new slot needs a front change and a migration anyway. Whether every `{slot}` in a prompt is declared stays with the backend slot test. |
+
+### Q-B diff review, round 1 (21.11; reports: adversarial A, edge-case E, verification-gap V, conformance C)
+| # | finding | where | class | reason / action |
+|---|---|---|---|---|
+| A1 | one step fallback sets `useRules`, so the final Jev call is skipped and the D2 line shows (contradicts Q12) | QuickCheckService:54, CategorizationService:112 | fix | split: `useRules` = opt-out (D5) or no key; step fallback only switches later steps (`stepFellBack`); final call runs unless `useRules` |
+| A2/E1 | final `mastery` older than the history's last answer leaves answered areas null | CategorizationService:97-100 | fix | fill answered areas with null/missing mastery from the rule; store every bank area |
+| A3 | step endpoint is an answer-key oracle (rule mastery reveals right/wrong) | QuickCheckService:43-44 | reject | known limit with no auth (D10); recorded under Never; GET hiding the key is not a security claim |
+| A4 | the live dock tells right/wrong after each answer, against "Never: verdict per question" | StepResponseDto.mastery, dock | defer | decision for Jan (To confirm) |
+| A5/C3 | `readyForNext` true when non-Solid areas' lessons were all completed | QuickCheckRules:246-250 | fix | `readyForNext` = every area Solid |
+| A6/E3/V15 | answered area without a `mastery_<area>` prompt gets null on the Jev path | JevClient:147-151 | fix | fall back to the rule mean for that area; test that every bank area has a step prompt or falls back |
+| A7/C1/V14 | final call uses `state.checkAnswers`, spec says `state.answers` | JevClient:246 | fix | spec updated: `checkAnswers`, because F1's `answers` holds onboarding |
+| A8 | `stepCallsMade` trusted from the client; restart can exceed 6 → stuck 400 | CategorizationService:125-128 | fix | count on send, keep across D3 restarts, clamp instead of 400 |
+| A9 | opted-out user whose first step fails falls to F1 and the F1 Jev call runs | CategorizationService:112, front flow | fix | skip path sends `useRules: true` after opt-out; backend honours `useRules` without profile (test) |
+| A10/E5 | 5-minute reuse ignores `profile` and `useRules` | CategorizationService:86-92 | fix | no reuse when `profile != null` or `useRules` |
+| A11 | `profile` with empty history counts as ran ("Based on 0 answers") | CategorizationService:94 | fix | ran = profile and non-empty history; otherwise the skip path |
+| A12/C2 | 3 s limit is a Future timeout; executor never closed; spec says second client | JevClient:118-176 | fix | `@PreDestroy` close; spec records the Future-timeout choice and that the HTTP read may run to 7 s |
+| A13 | D10 says history caps calls, false for a stateless endpoint | spec D10 | fix | D10 reworded: no cap on Jev calls; acceptable only without a public deployment |
+| A14 | `short-term-fall` keyed answer ("one month of 20 years, keeps compounding") is the wrong lesson for within-1y users | V16, D8 | defer | decision for Jan (To confirm), MiFID II |
+| A15 | no CHECKs for NULL/empty options, prompt/slots pairing, `{slot}` in generic prompt | V16 | fix | add the three CHECKs |
+| A16 | over-budget step ends the test by the rule's 4, ignoring Jev's `enough` | QuickCheckService:59-60 | fix | `done` from Jev's `enough` when it is in hand |
+| A17 | mastery jumps from Jev to rule values after a fallback | QuickCheckService:43-54 | fix | spec states it: after a fallback the rule recomputes all answers |
+| A18 | final POST validates history without profile; bank change makes Retry loop on 400 | CheckQuestionService:41-47 | fix | no validation when profile is null; front: 400 on final POST → F1 path |
+| A19 | Jackson coerces `1.7` to 1 and `"true"` to true | DTOs | reject | default Jackson coercion, no user impact; not worth a mapper change |
+| A20/E6 | skip path: `startLesson` from goal order, not the judged focus order | CategorizationService:96-120 | fix | without the Quick check, order by `focusAreas`; why line "{Area} is not checked yet" |
+| E2 | `sharedWithModel` lists onboarding answers when only steps reached Jev | CategorizationService:125-128 | fix | onboarding answers only when the final call was sent |
+| E4 | history without profile is checked then dropped | CategorizationService:94-95 | fix | covered by A18 |
+| E7 | `first_lesson` gate counts answered-area candidates only | CategorizationService:106-109 | reject | follows Reference "answered areas first" |
+| C4 | stored row has `"startHere": null` | CategorizationService:141 | fix | key absent from the stored JSON |
+| C5/V3 | no step test without a key | CategorizationWithoutKeyTests | fix | keyless step: `useRules: true`, rule next, `ExpectedCount.never()` |
+| C6 | two tests read seeded lessons/bank | CategorizationControllerTests:128-167, CategorizationWithoutKeyTests:52 | fix | tests insert their own rows |
+| C7 | Hamcrest `contains` | QuickCheckCategorizationTests:297 | fix | JUnit assertion |
+| C8 | literal dates in tests | QuickCheckCategorizationTests:301,314,346 | fix | from the `Clock` |
+| C9 | `if` validation against the bank | CategorizationService:82, CheckQuestionService:45,48 | reject | needs the DB; a domain check in the service, not input shape; Bean Validation covers the shape |
+| C10 | literal `2` for "a Jev choice needs 2+ options" in three places | JevClient:152, CategorizationService:107, QuickCheckRules:253 | fix | named constant |
+| C11 | `new BankLesson(…)` five fields by hand | QuickCheckRules:203 | fix | MapStruct mapper |
+| C12 | ~35 Javadoc lines restating names | FocusArea:20, QuickCheckRules:198,243, LessonPlan:5, Answer:35, QuickCheckService:21, JevClient:133-136 | fix | remove; keep only non-obvious one-liners |
+| C13 | import order | CategorizationControllerTests:46-49 | fix | group as elsewhere |
+| C14 | V16 rewritten in place | V16 | reject | Jan's Q4; not on any remote branch; compose reset documented |
+| V1 | >6 history 400 tests fail for another reason | StepRequestDto, CategorizationRequestDto | fix | 7 distinct valid ids in the test bank |
+| V2 | `useRules` no-Jev test cannot fail (mock error swallowed) | QuickCheckStepTests | fix | `ExpectedCount.never()` |
+| V4 | Jev `first_lesson` pick never distinguished from the rule's | QuickCheckCategorizationTests:176 | fix | Jev picks a lesson the rule would not |
+| V5 | one candidate → no `first_lesson` question untested | CategorizationService | fix | test |
+| V6 | no final POST with consent and history | QuickCheckCategorizationTests | fix | test facts reach Jev and gaps are chip-only |
+| V7 | `savingsCover`/`ageBand` into fallback focus untested end to end | CategorizationService | fix | two `useRules` tests |
+| V8 | `readyForNext: true` and null `startHere` never observed via endpoints | CategorizationService | fix | tests |
+| V9 | seeded bank not checked for `short-term-fall` | V16 | fix | seeded-bank test |
+| V10 | Jev-path null mastery key not asserted | QuickCheckStepTests | fix | STRICT with `investing: null` |
+| V11 | final POST with a null mastery value never sent | CategorizationRequestDto | fix | test 200 and read-back |
+| V12 | timing assertion with 300 ms margin | QuickCheckStepTests:3622 | fix | drop the elapsed assertion |
+| V13 | only one of the V16 CHECKs tested | CheckQuestionControllerTests | fix | parameterised violations |

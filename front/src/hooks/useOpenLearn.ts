@@ -7,7 +7,7 @@ import { useOnboarding } from '@/hooks/useOnboarding';
 let pendingTarget: Href | null = null;
 
 /**
- * Opens the Finance Quest module from the bank. The first time (onboarding not done yet) the
+ * Opens the Atlas module from the bank. The first time (onboarding not done yet) the
  * onboarding flow opens instead, and the user lands on `target` when it is finished.
  *
  * @returns open(target, go) — `go` performs the switch when onboarding is done (defaults to navigating to `target`).

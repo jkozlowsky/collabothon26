@@ -5,7 +5,7 @@ import { colors } from '@/constants/theme';
 import { useResumeLearnAfterOnboarding } from '@/hooks/useOpenLearn';
 
 /**
- * The two sides of the app: the bank shell and the Finance Quest module. Both are tabs of one
+ * The two sides of the app: the bank shell and the Atlas module. Both are tabs of one
  * navigator so each keeps its own tab and scroll position while you switch, and the one
  * FloatingNav stays mounted to morph between them.
  */

@@ -126,6 +126,8 @@ function textStyle(fontFamily: string, fontSize: number, lineHeight: number, let
 
 /** Figma text styles. Spread one into a StyleSheet entry and override only the colour. */
 export const type = {
+  // Not in the Figma scale: the Atlas wordmark on the welcome screen.
+  displayHero: textStyle(fonts.bold, 56, 60, -2.5),
   displayAmount: textStyle(fonts.bold, 32, 38, -1.5),
   displayLarge: textStyle(fonts.bold, 26, 32, -1),
   titleSection: textStyle(fonts.bold, 18, 24),

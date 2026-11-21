@@ -2,7 +2,7 @@ import { TopTabs } from 'expo-router/js-top-tabs';
 
 import { colors } from '@/constants/theme';
 
-/** Finance Quest tabs as a pager (slide + swipe, like the bank side). The bar is the shared FloatingNav. */
+/** Atlas tabs as a pager (slide + swipe, like the bank side). The bar is the shared FloatingNav. */
 export default function LearnLayout() {
   return (
     <TopTabs tabBar={() => null} screenOptions={{ swipeEnabled: true, sceneStyle: { backgroundColor: colors.bgCanvas } }}>

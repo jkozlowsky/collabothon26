@@ -408,6 +408,7 @@ test('restarting onboarding waits for the old profile and categorisation to be d
   await fireEvent.press(await screen.findByTestId('nav-learn'));
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
   await fireEvent.press(screen.getByTestId('onboarding-next'));
+  await fireEvent.press(screen.getByTestId('onboarding-challenge-next'));
   await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
 
   // While the slow DELETE runs, the PUT and the existence check both wait for it.
@@ -436,6 +437,7 @@ test('a profile write that never finishes still ends in Retry after 10 s', async
     await fireEvent.press(await screen.findByTestId('nav-learn'));
     await fireEvent.press(await screen.findByTestId('onboarding-start'));
     await fireEvent.press(screen.getByTestId('onboarding-next'));
+    await fireEvent.press(screen.getByTestId('onboarding-challenge-next'));
     await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
 
     expect(await screen.findByTestId('categorizing-checking')).toBeOnTheScreen();

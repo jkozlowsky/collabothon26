@@ -469,3 +469,10 @@ PR #31 (`origin/main` d4b2a22) changed what F1b v2 was built on:
 ### Announcements (Jan)
 - Lessons author (PR #31): `LessonContent` and `LessonProgress.completed` are now public, read-only, for F1b. `StorySheet`/`StoryCard` get an optional `startHere` prop.
 - Danylo: bank questions point to JSON lesson ids. Debt (São Paulo) and risk (Seoul, Tokyo) now have lessons, so the bank can grow there.
+
+### v2.1 diff review (21.11, one round, high/critical only)
+| # | finding | where | severity | class | reason / action |
+|---|---|---|---|---|---|
+| V21-1 | origin/main 0a58d13 (PR #29) added V15/V16 glossary migrations; ours collide, backend would not start after merge | db/migration | critical | fix (b0ba5a8, 1a1f6e8) | merged main, renumbered to V17/V18, decisions.md updated |
+| V21-2 | story sheet highlighted Seoul (main's `current`) while Start here sat on Berlin | front map.tsx | high | fix (b132549) | the startHere story is the only `current` when present |
+| V21-3 | stale `.expo/types/router.d.ts` makes `tsc` fail on `/glossary/[slug]` until Expo runs once | front, local | — | reject | generated, gitignored file; ENV |

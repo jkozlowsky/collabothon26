@@ -14,8 +14,6 @@ public final class CategorizationConsts {
 
 	public static final int MAX_QUESTION_ID_LENGTH = 64;
 
-	public static final int MAX_ANSWERS = 4;
-
 	public static final int MAX_ANSWER_LENGTH = 280;
 
 	public static final int CHECKS_PER_CATEGORY = 2;

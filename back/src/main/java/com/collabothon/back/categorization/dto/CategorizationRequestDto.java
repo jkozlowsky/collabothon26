@@ -5,9 +5,6 @@ import java.util.List;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
-
-import com.collabothon.back.categorization.consts.CategorizationConsts;
 
 public record CategorizationRequestDto(
 		@NotNull
@@ -15,7 +12,6 @@ public record CategorizationRequestDto(
 		@Valid
 		FactsDto facts,
 		// The answers themselves are validated by CheckQuestionService, so a deployment without a judge ignores them.
-		@Size(max = CategorizationConsts.MAX_ANSWERS)
 		List<CheckAnswerDto> answers
 ) {
 

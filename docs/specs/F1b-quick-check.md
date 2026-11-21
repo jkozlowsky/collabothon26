@@ -68,7 +68,7 @@ Still valid from v1 (21.11):
 - Q9/Q18 A summary screen (`/learning-path`) comes before Learn.
 - Q17 The bank lives in the backend next to the lessons (migration); the front fills account numbers in only when rendering.
 - Q20 Every new onboarding recategorises (no seen-state).
-- Migrations: `V15__categorization.sql`, `V16__check_questions.sql`; no `outOfOrder`.
+- Migrations: `V17__categorization.sql`, `V18__check_questions.sql` (renumbered from V15/V16 after main's `V15__glossary.sql`/`V16__glossary_content.sql`); no `outOfOrder`.
 - Backend tests use JUnit assertions only (`org.junit.jupiter.api.Assertions`).
 - D6 If the final Jev call fails, the whole categorisation falls back to rules (F1 rule).
 - All copy in English; the model is never named; educate, never advise (MiFID II): no named product in any question.
@@ -440,7 +440,7 @@ PR #31 (`origin/main` d4b2a22) changed what F1b v2 was built on:
 - **J4** `area` names the area that picked the story; all Solid → first story in stories.json, area null.
 
 ### Contract changes (supersede the v2 text above where they differ)
-1. **V16 bank:** `lesson_id VARCHAR(64) NOT NULL`, no foreign key (the `lesson` table is gone). Rewrite V16 in place (Q4 still holds: V16 is on no remote branch). Remap:
+1. **V18 bank** (was V16; main's glossary took V15/V16): `lesson_id VARCHAR(64) NOT NULL`, no foreign key (the `lesson` table is gone). Rewrite V18 in place (Q4 still holds: neither V17 nor V18 is on any remote branch). Remap:
    - `inflation-*` → `berlin-1`
    - `compound-*` → `berlin-2`
    - `emergency-*`, `fall-before-you-need-it` → `berlin-3` (Jan's A14 put it on the emergency-fund lesson; `berlin-3` covers emergency fund and time horizon)
@@ -449,7 +449,7 @@ PR #31 (`origin/main` d4b2a22) changed what F1b v2 was built on:
    The questions' wording stays. A backend test checks that every bank `lesson_id` exists in the lesson content.
 2. **Lesson lookup:** categorization reads lessons through `com.collabothon.back.lesson`. Make the smallest read-only surface public there: `LessonContent` (`stories()`, `lessonIdsOf(story)`, `lesson(id)`) and `LessonProgress.completed(userId)`. Do not copy the JSON loading, and do not query `lesson_completion` separately. This touches another topic's package, so tell its author (Announcements).
 3. **Candidates and path:** a candidate story is the story of a bank question's lesson in a non-Solid area. The story's start lesson is its first lesson in story order that is not completed; a story with all lessons done is not a candidate. `first_lesson` in the Jev final block becomes a choice among candidate **stories** (`story_<id>` labels, criterion = the story's `topic`). It is asked only with 2+ candidates; today the bank is all Berlin, so it is not asked. The rule picks the story of the weakest question in the weakest area. All Solid (`readyForNext`): the first story in `stories.json` order with a lesson not done.
-4. **Stored row:** `pathLessonIds` becomes a list of story ids in path order. Rename it to `pathStoryIds` in the entity, the DTO and the front types; the V15 column changes in place, same rule as V16.
+4. **Stored row:** `pathLessonIds` becomes a list of story ids in path order. Rename it to `pathStoryIds` in the entity, the DTO and the front types; the V17 column changes in place, same rule as V18.
 5. **Response `startLesson`:** `{ lessonId: string, title, area, storyId, storyCity }`, where `title` is the lesson's and `storyCity` is `stories.json` `city`. `startHere` on read is the same shape (plus the existing reason fields), recomputed from `pathStoryIds` and the current completions. It is null when every path story is done.
 6. **Role cap (J3)** goes in the service after the role is chosen (Jev or rule), with a test for each side of the Building threshold.
 

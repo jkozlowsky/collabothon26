@@ -1,17 +1,16 @@
 import { Redirect, useFocusEffect } from 'expo-router';
 import { useCallback, useRef } from 'react';
-import { BackHandler } from 'react-native';
+import { ActivityIndicator, BackHandler } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { FlowPage } from '@/components/categorizing/FlowPage';
 import { PathSummary } from '@/components/categorizing/PathSummary';
+import { colors } from '@/constants/theme';
 import { continueToLearn } from '@/hooks/useOpenLearn';
-import { useOnboarding } from '@/hooks/useOnboarding';
-import { currentSummary, goalAreas } from '@/lib/learningPath';
+import { useSummary } from '@/hooks/useSummary';
 
 export default function LearningPathScreen() {
-  const summary = currentSummary();
-  const { answers } = useOnboarding();
+  const summary = useSummary();
   const leaving = useRef(false);
   // A second tap would close the screen twice or push the lesson twice.
   const leave = useCallback((lessonId?: number) => {
@@ -31,8 +30,15 @@ export default function LearningPathScreen() {
     }, [leave]),
   );
 
-  if (!summary) return <Redirect href="/map" />;
-  const { categorization, unchecked, answered } = summary;
+  if (summary === null) return <Redirect href="/map" />;
+  if (summary === undefined) {
+    return (
+      <FlowPage testID="learning-path-loading" center>
+        <ActivityIndicator color={colors.brandPrimary} accessibilityLabel="Loading your learning path" />
+      </FlowPage>
+    );
+  }
+  const { categorization } = summary;
   return (
     <FlowPage
       testID="learning-path"
@@ -47,12 +53,7 @@ export default function LearningPathScreen() {
         </>
       }
     >
-      <PathSummary
-        categorization={categorization}
-        unchecked={unchecked}
-        answered={answered}
-        goalAreas={goalAreas(answers.goals)}
-      />
+      <PathSummary {...summary} />
     </FlowPage>
   );
 }

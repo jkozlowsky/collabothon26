@@ -4,9 +4,9 @@ import { positionCount } from '@/lib/bank/selectors';
 import { USER_ID } from '@/lib/user';
 import type { BankState } from '@/types/bank';
 import type { Categorization, Facts } from '@/types/categorization';
-import type { CheckAnswer } from '@/types/quickCheck';
+import type { QuickResult } from '@/types/quickCheck';
 
-const CATEGORIZATION_PATH = `/api/users/${encodeURIComponent(USER_ID)}/categorization`;
+export const CATEGORIZATION_PATH = `/api/users/${encodeURIComponent(USER_ID)}/categorization`;
 
 export const TIMEOUT_MS = 10_000;
 /** A 404 that arrives after the profile write has settled can still be transient on the backend, so it is retried. */
@@ -14,8 +14,6 @@ const PROFILE_RETRIES = 3;
 const PROFILE_BACKOFF_MS = 400;
 
 const isStatus = (e: unknown, status: number) => e instanceof ApiError && e.status === status;
-/** The backend refused the request itself, so sending it again unchanged fails the same way. */
-const isBadRequest = (e: unknown) => isStatus(e, 400);
 const nullOn404 = (e: unknown) => {
   if (isStatus(e, 404)) return null;
   throw e;
@@ -57,10 +55,7 @@ export async function checkBackend(signal: AbortSignal): Promise<void> {
 async function postCategorization(body: object, signal: AbortSignal): Promise<Categorization> {
   for (let attempt = 1; ; attempt++) {
     try {
-      const init = { method: 'POST', body: JSON.stringify(body), signal };
-      const stored = await api<Categorization>(CATEGORIZATION_PATH, init);
-      // A backend without the Quick check leaves these out.
-      return { ...stored, checks: stored.checks ?? [], startLesson: stored.startLesson ?? null };
+      return await api<Categorization>(CATEGORIZATION_PATH, { method: 'POST', body: JSON.stringify(body), signal });
     } catch (e) {
       if (!isStatus(e, 404) || attempt > PROFILE_RETRIES) throw e;
       await new Promise((r) => setTimeout(r, PROFILE_BACKOFF_MS * attempt));
@@ -69,23 +64,30 @@ async function postCategorization(body: object, signal: AbortSignal): Promise<Ca
 }
 
 /**
- * `facts` only with consent: the backend refuses account data the user did not agree to share. Answers the backend
- * rejects (400) must not cost the user the whole path, so they are sent again without them: `answersDropped`.
+ * `facts` only with consent: the backend refuses account data the user did not agree to share. `quick` is absent
+ * when the Quick check was skipped (the backend then runs the F1 path); after an opt-out it is just `{ useRules: true }`.
+ * A 400 on the Quick check's answers (the bank changed under it) must not strand the user in Retry: F1 runs instead.
  */
 export async function categorize(
   facts: Facts | null,
   signal: AbortSignal,
-  answers: CheckAnswer[] = [],
-): Promise<{ categorization: Categorization; answersDropped: boolean }> {
+  quick?: Partial<QuickResult>,
+): Promise<Categorization> {
   const consent = facts !== null;
-  const base = { consent, ...(consent && { facts }) };
+  const { useRules, stepCallsMade } = quick ?? {};
+  // The F1 resend keeps stepCallsMade: the backend discloses what the steps sent to the model even without a profile.
+  const base = {
+    consent,
+    ...(consent && { facts }),
+    ...(useRules && { useRules }),
+    ...(stepCallsMade !== undefined && { stepCallsMade }),
+  };
   await profileSaved(signal);
   try {
-    const withAnswers = answers.length > 0 ? { ...base, answers } : base;
-    return { categorization: await postCategorization(withAnswers, signal), answersDropped: false };
+    return await postCategorization({ ...base, ...quick }, signal);
   } catch (e) {
-    if (!isBadRequest(e) || answers.length === 0) throw e;
-    return { categorization: await postCategorization(base, signal), answersDropped: true };
+    if (!isStatus(e, 400) || !quick?.profile) throw e;
+    return postCategorization(base, signal);
   }
 }
 

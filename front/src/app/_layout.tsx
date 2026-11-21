@@ -55,7 +55,7 @@ export default function RootLayout() {
  * button (useOpenLearn), never forced at launch, and closed by useResumeLearnAfterOnboarding.
  */
 function RootStack() {
-  const { done } = useOnboarding();
+  const { done, loaded } = useOnboarding();
   return (
     <Stack
       screenOptions={{
@@ -65,7 +65,8 @@ function RootStack() {
     >
       <Stack.Screen name="(main)" options={{ animation: 'fade' }} />
       <Stack.Screen name="onboarding" options={{ animation: 'slide_from_bottom' }} />
-      <Stack.Protected guard={done}>
+      {/* Until the profile has loaded, a reload of /learning-path must not bounce to the bank. */}
+      <Stack.Protected guard={done || !loaded}>
         {/* A fresh onboarding (finished or skipped) continues here; useResumeLearnAfterOnboarding opens it. */}
         <Stack.Screen name="categorizing" options={{ animation: 'fade' }} />
         <Stack.Screen name="learning-path" options={{ animation: 'fade' }} />

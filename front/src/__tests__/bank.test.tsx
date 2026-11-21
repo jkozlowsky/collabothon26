@@ -182,7 +182,7 @@ describe('bank shell', () => {
     ) as jest.Mock;
     await renderRouter(appRoutes, { initialUrl: '/' });
     const card = await popup('fq-teaser-home');
-    expect(card).toHaveTextContent('You have € 12,500 in savings at 2.25% a year. Does it keep up with prices?', { exact: false });
+    expect(card).toHaveTextContent('You have € 12,500 in savings at 2.25% a year. Learn how to keep it from losing value.', { exact: false });
     expect(card).toHaveTextContent('Berlin · Saving', { exact: false });
     // A tap leads into onboarding first.
     await fireEvent.press(card);

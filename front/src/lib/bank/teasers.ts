@@ -49,7 +49,7 @@ export function newcomerTeaser(placement: FqTeaserPlacement, story: Story, state
   const minutes = story.nextLesson?.minutes;
   const top = largestPosition(state);
   const title = {
-    home: `You have ${money(state.savings.balance, { whole: true })} in savings at ${state.savings.rate}% a year. Does it keep up with prices?`,
+    home: `You have ${money(state.savings.balance, { whole: true })} in savings at ${state.savings.rate}% a year. Learn how to keep it from losing value.`,
     credits: `Your loan costs ${state.loan.apr}% a year. See what that adds up to over all the instalments.`,
     invest: `${Math.round(top.share * 100)}% of your depot is in ${top.name}. What does that mean for your risk?`,
   }[placement];

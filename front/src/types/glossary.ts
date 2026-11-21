@@ -20,14 +20,10 @@ export type TermDetail = {
   fullName: string | null;
   category: { slug: string; name: string };
   definitionStandard: string;
-  /** Null until the "in plain words" version has been written. */
-  definitionPlain: string | null;
   example: string | null;
   graphicKey: string | null;
   related: TermRef[];
 };
-
-export type LanguageLevel = 'plain' | 'standard';
 
 // GET /api/glossary/search?q=
 export type TermHit = { slug: string; name: string; category: { slug: string; name: string }; shortDescription: string };

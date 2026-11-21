@@ -2,9 +2,13 @@ package com.collabothon.back.categorization.services;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
@@ -12,18 +16,25 @@ import org.springframework.stereotype.Service;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 import com.collabothon.back.categorization.dto.CategorizationDto;
 import com.collabothon.back.categorization.dto.CategorizationRequestDto;
+import com.collabothon.back.categorization.dto.ConfidenceGapDto;
 import com.collabothon.back.categorization.dto.ExplanationDto;
 import com.collabothon.back.categorization.dto.FactsDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
+import com.collabothon.back.categorization.dto.ProfileRangesDto;
 import com.collabothon.back.categorization.dto.SharedWithModelDto;
 import com.collabothon.back.categorization.dto.StartLessonDto;
 import com.collabothon.back.categorization.enums.CategorizationSource;
 import com.collabothon.back.categorization.enums.ExplanationOutput;
 import com.collabothon.back.categorization.enums.FocusArea;
+import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.LifeStage;
+import com.collabothon.back.categorization.mappers.JevAnswerMapper;
 import com.collabothon.back.categorization.mappers.OnboardingAnswersMapper;
 import com.collabothon.back.categorization.mappers.StartLessonMapper;
+import com.collabothon.back.categorization.repositories.CompletedLessonRepository;
 import com.collabothon.back.categorization.repositories.ProfileAnswersRepository;
+import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
+import com.collabothon.back.common.exceptions.BadRequestException;
 import com.collabothon.back.common.exceptions.NotFoundException;
 
 import lombok.AccessLevel;
@@ -52,6 +63,10 @@ public class CategorizationService {
 
 	private final StartLessonMapper startLessonMapper;
 
+	private final JevAnswerMapper jevAnswerMapper;
+
+	private final CompletedLessonRepository completedLessons;
+
 	private final JsonMapper json;
 
 	private final Clock clock;
@@ -59,32 +74,71 @@ public class CategorizationService {
 	public CategorizationDto categorize(String userId, CategorizationRequestDto request) {
 		boolean consent = request.consent();
 		FactsDto facts = request.facts();
+		ProfileRangesDto profile = request.profile();
 		OnboardingAnswersDto answers = onboarding(userId);
-		Instant now = Instant.now(clock);
-		Optional<CategorizationDto> recent = find(userId)
-			.filter(c -> isRecentJevResult(c, answers, consent, facts, now));
-		if (recent.isPresent()) {
-			return recent.get();
+		List<CheckQuestionProjection> bank = checkQuestions.bank();
+		List<Answer> resolved = checkQuestions.resolve(request.history(), bank);
+		Set<String> bankAreas = bank.stream().map(q -> q.area().wire()).collect(Collectors.toSet());
+		if (!bankAreas.containsAll(request.mastery().keySet())) {
+			throw new BadRequestException("Mastery is only kept for areas with questions");
 		}
-		JevResult fromJev = jev.ask(answers, facts);
-		Judgement j = fromJev.judgement().orElseGet(() -> CategorizationRules.fallback(answers, facts));
-		SharedWithModelDto shared = fromJev.sent() ? new SharedWithModelDto(facts, answers, null, 0, 0) : null;
+		Instant now = Instant.now(clock);
+		if (resolved.isEmpty()) {
+			Optional<CategorizationDto> recent = find(userId)
+				.filter(c -> isRecentJevResult(c, answers, consent, facts, now));
+			if (recent.isPresent()) {
+				return recent.get();
+			}
+		}
+		// The Quick check ran when it sent the ranges; without it F1 applies unchanged.
+		boolean ran = profile != null;
+		List<Answer> history = ran ? resolved : List.of();
+		List<FocusArea> order = QuickCheckRules.areaOrder(answers.goals(), ran ? profile.horizon() : null, bank);
+		Map<FocusArea, Double> mastery = new LinkedHashMap<>();
+		if (ran) {
+			order.forEach(area -> mastery.put(area, request.mastery().get(area.wire())));
+		}
+		Set<Long> completed = completedLessons.findLessonIds(userId);
+		List<BankLesson> lessons = QuickCheckRules.lessons(bank);
+		List<BankLesson> candidates = QuickCheckRules.candidates(lessons, order, mastery, history, completed);
+		List<BankLesson> pool = QuickCheckRules.pool(candidates, history);
+		List<FocusArea> gapAreas = QuickCheckRules.chipAreas(order, history);
+		Map<Long, String> lessonChoice = new LinkedHashMap<>();
+		if (pool.size() >= 2) {
+			pool.forEach(l -> lessonChoice.put(l.id(), l.summary()));
+		}
+		JevQuickCheck quickCheck = ran ? new JevQuickCheck(profile, answers.goals(),
+				history.stream().map(jevAnswerMapper::toJev).toList(), gapAreas, lessonChoice) : null;
+		JevResult fromJev = request.useRules() ? JevResult.SKIPPED : jev.ask(answers, facts, quickCheck);
 
-		LifeStage lifeStage = LifeStage.fromAnswer(answers.lifeStage());
+		LifeStage lifeStage = answers.lifeStage() == null && ran ? LifeStage.fromAgeBand(profile.ageBand())
+				: LifeStage.fromAnswer(answers.lifeStage());
+		String savingsCover = ran ? profile.savingsCover() : null;
+		Judgement j = fromJev.judgement()
+			.orElseGet(() -> CategorizationRules.fallback(answers, facts, lifeStage, savingsCover));
+		BankLesson picked = pool.stream().filter(l -> l.id().equals(j.firstLesson())).findFirst().orElse(null);
+		LessonPlan plan = QuickCheckRules.plan(lessons, candidates, picked, order, mastery, history, completed);
+		FocusArea startArea = plan.start() == null ? null : plan.start().area();
+		List<ConfidenceGapDto> gaps = ran
+				? QuickCheckRules.gapCards(gaps(order, history, mastery, fromJev.judgement()), history, startArea)
+				: CategorizationRules.confidenceGaps(answers, facts);
+		boolean sent = fromJev.sent() || request.stepCallsMade() > 0;
+		SharedWithModelDto shared = sent
+				? new SharedWithModelDto(facts, answers, profile, history.size(), request.stepCallsMade())
+				: null;
+
 		List<FocusArea> focus = j.focusAreas();
 		List<ExplanationDto> explanation = List.of(
 				new ExplanationDto(ExplanationOutput.ROLE, j.roleProbabilities(),
 						CategorizationRules.roleBecause(answers, facts)),
 				new ExplanationDto(ExplanationOutput.FOCUS_AREAS, j.focusProbabilities(),
 						CategorizationRules.focusBecause(focus, answers, facts)));
-
-		StartLessonDto startLesson = CategorizationRules.earliestLessonQuestion(focus, checkQuestions.bank())
-			.map(startLessonMapper::toStartLesson)
-			.orElse(null);
-		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, j.role(), lifeStage, focus,
-				CategorizationRules.confidenceGaps(answers, facts),
-				CategorizationRules.lessonVariant(j.role(), lifeStage), explanation, null, null, null, null,
-				startLesson, null, null, null, shared,
+		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, j.role(), lifeStage, focus, gaps,
+				CategorizationRules.lessonVariant(j.role(), lifeStage), explanation, profile,
+				ran ? request.mastery() : Map.of(),
+				ran ? QuickCheckRules.byWire(QuickCheckRules.confidence(order, history)) : Map.of(),
+				history.size(), plan.start() == null ? null : startLessonMapper.toStartLesson(plan.start()),
+				plan.readyForNext(), plan.pathLessonIds(), null, shared,
 				fromJev.judgement().isPresent() ? CategorizationSource.JEV : CategorizationSource.FALLBACK, j.model(),
 				now);
 		// Inserting only while onboarding is completed turns a reset during the Jev call into a 404.
@@ -97,7 +151,32 @@ public class CategorizationService {
 		if (saved == 0) {
 			throw new NotFoundException(NO_PROFILE);
 		}
-		return c;
+		return c.withStartHere(startHere(c.pathLessonIds(), lessons, completed));
+	}
+
+	/** Jev's labels where its call answered, each checked against the chips; the rule otherwise. In area order. */
+	private static Map<FocusArea, GapDirection> gaps(List<FocusArea> order, List<Answer> history,
+			Map<FocusArea, Double> mastery, Optional<Judgement> fromJev) {
+		Map<FocusArea, GapDirection> gaps = new LinkedHashMap<>();
+		for (FocusArea area : order) {
+			List<Answer> inArea = QuickCheckRules.inArea(history, area);
+			Optional<GapDirection> gap = fromJev.isPresent()
+					? Optional.ofNullable(fromJev.get().gaps().get(area))
+						.flatMap(label -> QuickCheckRules.checkedJevGap(label, inArea))
+					: QuickCheckRules.ruleGap(inArea, mastery.get(area));
+			gap.ifPresent(direction -> gaps.put(area, direction));
+		}
+		return gaps;
+	}
+
+	/** The first lesson of the path that still exists and is not completed; read fresh, never stored. */
+	private StartLessonDto startHere(List<Long> path, List<BankLesson> lessons, Set<Long> completed) {
+		return path.stream()
+			.filter(id -> !completed.contains(id))
+			.flatMap(id -> lessons.stream().filter(l -> l.id().equals(id)))
+			.findFirst()
+			.map(startLessonMapper::toStartLesson)
+			.orElse(null);
 	}
 
 	/** Skipped onboarding counts; no finished onboarding is a 404. */
@@ -110,7 +189,9 @@ public class CategorizationService {
 			.param(userId)
 			.query(String.class)
 			.optional()
-			.flatMap(this::read);
+			.flatMap(this::read)
+			.map(c -> c.withStartHere(startHere(c.pathLessonIds(), QuickCheckRules.lessons(checkQuestions.bank()),
+					completedLessons.findLessonIds(userId))));
 	}
 
 	private Optional<CategorizationDto> read(String data) {

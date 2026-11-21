@@ -2,6 +2,7 @@ package com.collabothon.back.categorization.enums;
 
 import java.util.Arrays;
 
+import com.collabothon.back.categorization.consts.CategorizationConsts;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,14 @@ public enum LifeStage {
 	@JsonValue
 	public String wire() {
 		return WireNames.of(this);
+	}
+
+	/** Only the clear ends of the range (D1); no family status is inferred from an age band. */
+	public static LifeStage fromAgeBand(String ageBand) {
+		if (CategorizationConsts.AGE_18_25.equals(ageBand)) {
+			return STUDENT;
+		}
+		return CategorizationConsts.AGE_60_PLUS.equals(ageBand) ? PRE_RETIREMENT : null;
 	}
 
 	/** Null stays null; an unknown answer is an error, never a silent mapping. */

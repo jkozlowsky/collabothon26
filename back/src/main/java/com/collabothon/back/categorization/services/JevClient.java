@@ -41,6 +41,7 @@ import com.collabothon.back.categorization.dto.JevRequestDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
 import com.collabothon.back.categorization.dto.ProfileRangesDto;
 import com.collabothon.back.categorization.enums.FocusArea;
+import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.Role;
 import com.collabothon.back.categorization.enums.WireNames;
 
@@ -89,6 +90,21 @@ public class JevClient {
 			}
 			""";
 
+	// Verbatim from docs/specs/F1b-quick-check.md ("Jev final call"); one gap question per area, criteria per request.
+	private static final String FINAL_QUESTIONS = """
+			{
+			  "gap_<area>": {"type": "choice",
+			    "instructions": "In this area, how does how sure this person felt compare with how well they answered?",
+			    "criteria": {
+			      "under": "Their answers in this area are mostly right, yet they said they were guessing or only fairly sure.",
+			      "over": "They said they were sure, yet their answers in this area show gaps.",
+			      "aligned": "How sure they felt roughly matches how well they answered."}},
+			  "first_lesson": {"type": "choice",
+			    "instructions": "Which lesson should this person start with, given which ideas their answers show they have not mastered yet?",
+			    "criteria": {}}
+			}
+			""";
+
 	private final RestClient rest;
 
 	private final JevProperties properties;
@@ -96,6 +112,8 @@ public class JevClient {
 	private final ObjectNode questions;
 
 	private final ObjectNode stepQuestions;
+
+	private final ObjectNode finalQuestions;
 
 	// ponytail: the 3 s step limit is a Future timeout, not a second request factory: Boot binds MockRestServiceServer
 	// to the one injected builder's factory, so a second factory would send test calls to the real API.
@@ -109,6 +127,7 @@ public class JevClient {
 		this.properties = properties;
 		this.questions = (ObjectNode) json.readTree(QUESTIONS);
 		this.stepQuestions = (ObjectNode) json.readTree(STEP_QUESTIONS);
+		this.finalQuestions = (ObjectNode) json.readTree(FINAL_QUESTIONS);
 	}
 
 	/**
@@ -209,7 +228,8 @@ public class JevClient {
 			.body(JsonNode.class);
 	}
 
-	public JevResult ask(OnboardingAnswersDto answers, FactsDto facts) {
+	/** {@code quickCheck} null = the Quick check did not run, so the request is F1's exactly. */
+	public JevResult ask(OnboardingAnswersDto answers, FactsDto facts, JevQuickCheck quickCheck) {
 		if (!properties.callsJev()) {
 			return JevResult.SKIPPED;
 		}
@@ -218,9 +238,26 @@ public class JevClient {
 		if (facts != null) {
 			state.put("facts", facts);
 		}
+		ObjectNode asked = questions;
+		if (quickCheck != null) {
+			state.put("profile", quickCheck.profile());
+			state.put("goals", quickCheck.goals());
+			// F1 already names the onboarding answers `answers`, so the knowledge answers get their own key.
+			state.put("checkAnswers", quickCheck.answers());
+			asked = questions.deepCopy();
+			for (FocusArea area : quickCheck.gapAreas()) {
+				asked.set(gapKey(area), finalQuestions.get("gap_<area>").deepCopy());
+			}
+			if (!quickCheck.lessons().isEmpty()) {
+				ObjectNode firstLesson = (ObjectNode) finalQuestions.get("first_lesson").deepCopy();
+				ObjectNode criteria = firstLesson.putObject("criteria");
+				quickCheck.lessons().forEach((id, summary) -> criteria.put(lessonLabel(id), summary));
+				asked.set("first_lesson", firstLesson);
+			}
+		}
 		try {
-			JsonNode response = post(new JevRequestDto(properties.model(), state, questions));
-			Optional<Judgement> judgement = parse(response);
+			JsonNode response = post(new JevRequestDto(properties.model(), state, asked));
+			Optional<Judgement> judgement = parse(response, quickCheck);
 			if (judgement.isEmpty()) {
 				log.warn("Jev answer broke the contract, using the rules fallback");
 			}
@@ -244,7 +281,15 @@ public class JevClient {
 			.anyMatch(cause -> NOT_SENT.stream().anyMatch(type -> type.isInstance(cause)));
 	}
 
-	private static Optional<Judgement> parse(JsonNode response) {
+	private static String gapKey(FocusArea area) {
+		return "gap_" + area.wire();
+	}
+
+	private static String lessonLabel(Long lessonId) {
+		return "lesson_" + lessonId;
+	}
+
+	private static Optional<Judgement> parse(JsonNode response, JevQuickCheck quickCheck) {
 		if (response == null) {
 			return Optional.empty();
 		}
@@ -263,10 +308,30 @@ public class JevClient {
 		if (role == null) {
 			return Optional.empty();
 		}
+		Map<FocusArea, GapDirection> gaps = new EnumMap<>(FocusArea.class);
+		Long firstLesson = null;
+		if (quickCheck != null) {
+			for (FocusArea area : quickCheck.gapAreas()) {
+				JevChoice<GapDirection> gap = choice(answers.path(gapKey(area)), GapDirection.values());
+				if (gap == null) {
+					return Optional.empty();
+				}
+				gaps.put(area, gap.value());
+			}
+			if (!quickCheck.lessons().isEmpty()) {
+				Map<String, Long> byLabel = new LinkedHashMap<>();
+				quickCheck.lessons().keySet().forEach(id -> byLabel.put(lessonLabel(id), id));
+				JevChoice<Long> lesson = choice(answers.path("first_lesson"), byLabel);
+				if (lesson == null) {
+					return Optional.empty();
+				}
+				firstLesson = lesson.value();
+			}
+		}
 		JsonNode model = response.path("model");
 		boolean validModel = model.isString() && MODEL_ID.matcher(model.stringValue()).matches();
 		return Optional.of(new Judgement(role.value(), role.probabilities(), CategorizationRules.focusFromNoul(noul),
-				focus, validModel ? model.stringValue() : null));
+				focus, validModel ? model.stringValue() : null, gaps, firstLesson));
 	}
 
 	private static <E extends Enum<E>> JevChoice<E> choice(JsonNode answer, E[] values) {

@@ -12,19 +12,25 @@ import java.util.regex.Pattern;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Reads a JSON block that the F1b spec marks with {@code <!-- marker ... -->}, so tests pin the verbatim text. */
+/** Reads a JSON block that a spec marks with {@code <!-- marker ... -->}, so tests pin the verbatim text. */
 final class SpecBlocks {
 
-	private static final String SPEC = "docs/specs/F1b-quick-check.md";
+	static final String F1 = "docs/specs/F1-profiling.md";
+
+	static final String F1B = "docs/specs/F1b-quick-check.md";
 
 	static JsonNode read(JsonMapper json, String marker) throws IOException {
+		return read(json, F1B, marker);
+	}
+
+	static JsonNode read(JsonMapper json, String spec, String marker) throws IOException {
 		Path dir = Path.of(System.getProperty("user.dir")).toAbsolutePath();
-		while (!Files.exists(dir.resolve(SPEC))) {
+		while (!Files.exists(dir.resolve(spec))) {
 			dir = dir.getParent();
-			assertNotNull(dir, SPEC + " above the working directory");
+			assertNotNull(dir, spec + " above the working directory");
 		}
 		Matcher block = Pattern.compile("<!-- " + marker + "[^>]*-->\n```json\n(.*?)\n```", Pattern.DOTALL)
-			.matcher(Files.readString(dir.resolve(SPEC)));
+			.matcher(Files.readString(dir.resolve(spec)));
 		assertTrue(block.find(), marker);
 		return json.readTree(block.group(1));
 	}

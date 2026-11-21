@@ -29,7 +29,6 @@ import com.collabothon.back.categorization.enums.LessonLang;
 import com.collabothon.back.categorization.enums.LessonLevel;
 import com.collabothon.back.categorization.enums.LifeStage;
 import com.collabothon.back.categorization.enums.Role;
-import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 
 final class CategorizationRules {
 
@@ -61,9 +60,11 @@ final class CategorizationRules {
 
 	private static final Set<Experience> SAYS_INVESTING = EnumSet.of(Experience.INVESTING, Experience.PLANNING);
 
-	static Judgement fallback(OnboardingAnswersDto a, FactsDto f) {
+	/** {@code savingsCover}, picked in the Quick check, stands in for the buffer fact without bank data. */
+	static Judgement fallback(OnboardingAnswersDto a, FactsDto f, LifeStage lifeStage, String savingsCover) {
 		Role role = fallbackRole(a, f);
-		return new Judgement(role, Map.of(), fallbackFocus(a, f, role), Map.of(), null);
+		return new Judgement(role, Map.of(), fallbackFocus(a, f, role, lifeStage, savingsCover), Map.of(), null,
+				Map.of(), null);
 	}
 
 	/** The declaration decides; facts only lift someone who saves now and then but does so every month. */
@@ -77,7 +78,8 @@ final class CategorizationRules {
 		};
 	}
 
-	static List<FocusArea> fallbackFocus(OnboardingAnswersDto a, FactsDto f, Role role) {
+	static List<FocusArea> fallbackFocus(OnboardingAnswersDto a, FactsDto f, Role role, LifeStage lifeStage,
+			String savingsCover) {
 		Set<FocusArea> areas = new LinkedHashSet<>();
 		if (f != null) {
 			if (f.inOverdraft() || f.hasLoan()) {
@@ -90,7 +92,10 @@ final class CategorizationRules {
 				areas.add(FocusArea.INVESTING);
 			}
 		}
-		if (LifeStage.fromAnswer(a.lifeStage()) == LifeStage.PRE_RETIREMENT) {
+		else if (savingsCover != null && SHORT_BUFFER.contains(savingsCover)) {
+			areas.add(FocusArea.SAVING);
+		}
+		if (lifeStage == LifeStage.PRE_RETIREMENT) {
 			areas.add(FocusArea.RETIREMENT);
 		}
 		if (role == Role.NOVICE) {
@@ -142,16 +147,6 @@ final class CategorizationRules {
 
 	private static ConfidenceGapDto gap(FocusArea area, GapDirection direction, Experience said, String shows) {
 		return new ConfidenceGapDto(area, direction, said.saidLine() + " " + shows);
-	}
-
-	static Optional<CheckQuestionProjection> earliestLessonQuestion(List<FocusArea> focus,
-			List<CheckQuestionProjection> bank) {
-		return focus.stream()
-			.flatMap(area -> bank.stream()
-				.filter(q -> q.area() == area)
-				.min(Comparator.comparing(CheckQuestionProjection::lessonId))
-				.stream())
-			.findFirst();
 	}
 
 	static LessonVariantDto lessonVariant(Role role, LifeStage lifeStage) {

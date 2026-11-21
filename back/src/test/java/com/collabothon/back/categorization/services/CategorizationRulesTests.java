@@ -10,6 +10,7 @@ import static com.collabothon.back.categorization.services.CategorizationRules.l
 import static com.collabothon.back.categorization.services.CategorizationRules.roleBecause;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -129,14 +130,35 @@ class CategorizationRulesTests {
 		OnboardingAnswersDto goals = new OnboardingAnswersDto(null, List.of("insurance", "budget"), "not-saving",
 				false);
 		assertEquals(List.of(FocusArea.DEBT, FocusArea.SAVING, FocusArea.RISK),
-				fallbackFocus(goals, LENA, Role.NOVICE));
+				fallbackFocus(goals, LENA, Role.NOVICE, null, null));
 		OnboardingAnswersDto laterLife = new OnboardingAnswersDto("later-life", List.of("stocks-etfs"), "planning",
 				false);
 		assertEquals(List.of(FocusArea.DEBT, FocusArea.RETIREMENT, FocusArea.INVESTING),
-				fallbackFocus(laterLife, ALEX, Role.ADVANCED));
-		assertEquals(List.of(FocusArea.RETIREMENT, FocusArea.INVESTING), fallbackFocus(laterLife, null, Role.ADVANCED));
-		assertEquals(List.of(FocusArea.INVESTING), fallbackFocus(SKIPPED, TOM, Role.ADVANCED));
-		assertEquals(List.of(FocusArea.SAVING), fallbackFocus(SKIPPED, null, Role.ADVANCED));
+				fallbackFocus(laterLife, ALEX, Role.ADVANCED, LifeStage.PRE_RETIREMENT, null));
+		assertEquals(List.of(FocusArea.RETIREMENT, FocusArea.INVESTING),
+				fallbackFocus(laterLife, null, Role.ADVANCED, LifeStage.PRE_RETIREMENT, null));
+		assertEquals(List.of(FocusArea.INVESTING), fallbackFocus(SKIPPED, TOM, Role.ADVANCED, null, null));
+		assertEquals(List.of(FocusArea.SAVING), fallbackFocus(SKIPPED, null, Role.ADVANCED, null, null));
+	}
+
+	@Test
+	void theQuickChecksSavingsCoverStandsInForTheBufferOnlyWithoutBankData() {
+		OnboardingAnswersDto etfs = new OnboardingAnswersDto(null, List.of("stocks-etfs"), "planning", false);
+		assertEquals(List.of(FocusArea.INVESTING), fallbackFocus(etfs, null, Role.ADVANCED, null, "6+"));
+		assertEquals(List.of(FocusArea.SAVING, FocusArea.INVESTING),
+				fallbackFocus(etfs, null, Role.ADVANCED, null, "<1"));
+		assertEquals(List.of(FocusArea.INVESTING), fallbackFocus(etfs, TOM, Role.ADVANCED, null, "<1"));
+	}
+
+	@Test
+	void anAgeBandGivesALifeStageOnlyAtTheEnds() {
+		assertEquals(LifeStage.STUDENT, LifeStage.fromAgeBand("18-25"));
+		assertNull(LifeStage.fromAgeBand("26-40"));
+		assertNull(LifeStage.fromAgeBand("41-59"));
+		assertEquals(LifeStage.PRE_RETIREMENT, LifeStage.fromAgeBand("60+"));
+		assertNull(LifeStage.fromAgeBand(null));
+		assertEquals(List.of(FocusArea.SAVING, FocusArea.RETIREMENT),
+				fallbackFocus(SKIPPED, null, Role.ADVANCED, LifeStage.PRE_RETIREMENT, "1-3"));
 	}
 
 	@Test

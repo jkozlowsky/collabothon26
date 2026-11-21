@@ -1,0 +1,175 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: back
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: maven
+          cache-dependency-path: back/pom.xml
+
+      - name: Run backend tests
+        run: ./mvnw test
+
+      - name: Package backend jar
+        run: ./mvnw package -DskipTests
+
+      - name: Upload backend jar artifact
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: backend-jar
+          path: back/target/back-*.jar
+          if-no-files-found: error
+          retention-days: 1
+
+  test-and-build-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: front
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: front/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check Expo dependencies
+        run: npx expo install --check
+
+      - name: Run frontend tests
+        run: npm test
+
+      # EXPO_PUBLIC_API_URL is omitted so resolveApiUrl() uses window.location.origin
+      - name: Export web bundle (same-origin API)
+        run: npx expo export --platform web
+
+      - name: Upload web export artifact
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: frontend-web
+          path: front/dist
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    needs: [test-and-build-backend, test-and-build-frontend]
+    # workflow_dispatch can run on any branch; only main may reach production.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download backend jar
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
+        with:
+          name: backend-jar
+          path: dist-backend
+
+      - name: Download frontend web export
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
+        with:
+          name: frontend-web
+          path: dist-frontend
+
+      - name: Prepare deploy payload
+        run: |
+          jars=(dist-backend/back-*.jar)
+          if [ "${#jars[@]}" -ne 1 ]; then
+            echo "::error::Expected exactly one backend jar, found ${#jars[@]}"
+            exit 1
+          fi
+          mkdir -p payload
+          cp "${jars[0]}" payload/back.jar
+          cp -r dist-frontend payload/web
+          test -f payload/web/index.html
+
+      - name: Deploy to production host over SSH
+        env:
+          SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
+        run: |
+          # $staging is built only from GITHUB_SHA and run IDs (hex/digits), so expanding
+          # it client-side into the remote commands (SC2029) is intended.
+          for name in SSH_HOST SSH_USER SSH_KEY SSH_KNOWN_HOSTS; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing deploy secret for ${name}"
+              exit 1
+            fi
+          done
+
+          umask 077
+          ssh_dir="$(mktemp -d "$RUNNER_TEMP/ssh.XXXXXX")"
+          staging="/home/deploy/staging-${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          target="${SSH_USER}@${SSH_HOST}"
+          ssh_opts=(
+            -i "$ssh_dir/key"
+            -o IdentitiesOnly=yes
+            -o BatchMode=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$ssh_dir/known_hosts"
+            -o ConnectTimeout=20
+          )
+          cleanup() {
+            # shellcheck disable=SC2029
+            ssh "${ssh_opts[@]}" "$target" "rm -rf -- '$staging'" || true
+            rm -rf -- "$ssh_dir"
+          }
+          trap cleanup EXIT
+
+          printf '%s\n' "$SSH_KEY" > "$ssh_dir/key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$ssh_dir/known_hosts"
+          chmod 600 "$ssh_dir/key" "$ssh_dir/known_hosts"
+
+          # shellcheck disable=SC2029
+          ssh "${ssh_opts[@]}" "$target" "mkdir -m 700 -- '$staging'"
+          scp -q -r "${ssh_opts[@]}" payload/back.jar payload/web "$target:$staging/"
+          # shellcheck disable=SC2029
+          ssh "${ssh_opts[@]}" "$target" "sudo -n /usr/local/sbin/financequest-deploy --staging '$staging'"
+
+      - name: Verify production endpoint from runner
+        env:
+          DOMAIN: ${{ vars.PROD_DOMAIN || 'listening-together.duckdns.org' }}
+        run: |
+          code="$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 3 --retry-all-errors --max-time 10 "https://${DOMAIN}/api/lessons")" || true
+          if [ "$code" != "200" ]; then
+            echo "::error::https://${DOMAIN}/api/lessons returned HTTP ${code:-none}"
+            exit 1
+          fi
+          echo "Production is serving /api/lessons (HTTP 200)."

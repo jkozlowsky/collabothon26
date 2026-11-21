@@ -1,14 +1,13 @@
 {
   "id": "berlin-4",
   "story": "berlin",
-  "title": "The scary first year",
-  "place": "Your investments · a bad year",
-  "topic": "Falls, and the time to wait",
+  "title": "Growth on growth",
+  "place": "Your savings · over many years",
+  "topic": "How time grows money",
   "minutes": 4,
-  "xp": 60,
+  "xp": 50,
   "concepts": [
-    "volatility",
-    "drawdown",
+    "compound-interest",
     "time-horizon"
   ],
   "steps": [
@@ -16,151 +15,176 @@
       "type": "text",
       "id": "t1",
       "phase": "learn",
-      "kicker": "Ups and downs",
-      "title": "A fall is not the end",
-      "body": "You invest €5,000. After one bad year, it is worth €4,000. Swings like this are called [[volatility]]. A fall becomes a real loss when you sell during it. If you can wait, the price has time to recover. But nobody can promise that it will. How long your money can wait is your [[time-horizon]]."
+      "kicker": "Compound interest",
+      "title": "Time does the heavy lifting",
+      "body": "€10,000 earns 5% a year. In year one, that is €500. In year two, the €500 earns interest too. Growth on growth is called [[compound-interest]]. After 30 years, there is about €43,000. Most of it is growth, not money you paid in. Time does the heavy lifting.",
+      "stat": {
+        "value": "€43,219",
+        "label": "€10,000 after 30 years at 5% a year",
+        "tone": "good"
+      }
     },
     {
       "type": "slider-chart",
       "id": "s1",
       "phase": "learn",
       "concepts": [
-        "drawdown"
+        "compound-interest"
       ],
-      "prompt": "After a fall, the price must rise more than it fell to get back to the start. Move the slider to find the loss that needs a rise of 25%.",
-      "model": "drawdownRecovery",
+      "prompt": "Move the years. When does the growth become bigger than the €10,000 paid in?",
+      "model": "compoundGrowth",
+      "visual": "split",
       "params": {
-        "loss": {
-          "label": "Loss",
-          "min": -80,
-          "max": 0,
-          "step": 5,
-          "value": -5,
+        "years": {
+          "label": "Years",
+          "min": 1,
+          "max": 40,
+          "step": 1,
+          "value": 5,
+          "unit": " years"
+        },
+        "start": {
+          "label": "Paid in once",
+          "min": 10000,
+          "max": 10000,
+          "step": 500,
+          "value": 10000,
+          "unit": "€"
+        },
+        "rate": {
+          "label": "Interest per year",
+          "min": 1,
+          "max": 8,
+          "step": 0.5,
+          "value": 5,
           "unit": "%"
         }
       },
       "output": {
-        "label": "Rise needed to get back to the start",
-        "unit": "%"
+        "label": "Value after these years",
+        "unit": "€"
       },
       "goal": {
         "condition": {
           "of": "output",
-          "min": 25,
-          "max": 25
+          "min": 20000
         },
-        "hint": "Try a loss of 20%."
+        "hint": "At 5% a year, it takes about 15 years for the growth to pass the money paid in."
       }
     },
     {
-      "type": "scenario",
-      "id": "sc1",
+      "type": "predict",
+      "id": "p1",
       "phase": "challenge",
       "concepts": [
-        "time-horizon",
-        "volatility"
+        "compound-interest"
       ],
-      "prompt": "Imagine you put €5,000 in a fund. After one bad year, it is worth €4,000. What do you do? Choose, and see the result after 17 years.",
-      "unit": "€k",
-      "periodLabel": "17 years",
-      "choices": [
-        {
-          "label": "Sell now and keep the money as cash",
-          "series": [
-            5,
-            4,
-            4.1,
-            4.2,
-            4.3,
-            4.4,
-            4.5,
-            4.6,
-            4.7,
-            4.8,
-            4.9,
-            5,
-            5.1
-          ],
-          "ending": "At the end, you have €5,100. Selling turned a fall on paper into a real loss. The cash then barely kept up with prices."
-        },
-        {
-          "label": "Keep the fund and check it less often",
-          "series": [
-            5,
-            4,
-            4.6,
-            5.3,
-            5.9,
-            6.6,
-            7.2,
-            7.9,
-            8.6,
-            9.4,
-            10.2,
-            11,
-            11.8
-          ],
-          "ending": "At the end, you have €11,800, after a hard first year. In this example, the market recovered. Past returns do not tell you what the next 17 years will bring."
-        },
-        {
-          "label": "Never invest the €5,000",
-          "series": [
-            5,
-            5.1,
-            5.1,
-            5.2,
-            5.3,
-            5.4,
-            5.5,
-            5.6,
-            5.7,
-            5.8,
-            5.9,
-            6.2,
-            6.4
-          ],
-          "ending": "At the end, you have €6,400. The value never fell, but it grew less. You get less worry for less growth."
-        }
-      ]
+      "prompt": "€10,000 grows by 5% a year, and each year's growth grows too. How much is there after 18 years?",
+      "input": {
+        "kind": "slider",
+        "min": 10000,
+        "max": 40000,
+        "step": 500,
+        "unit": "€"
+      },
+      "answer": 24000,
+      "reveal": "About €24,000. Without growth on growth, it would be €19,000. The extra €5,000 is interest earned on interest."
     },
     {
       "type": "quiz",
       "id": "q1",
       "phase": "challenge",
       "concepts": [
-        "drawdown"
+        "compound-interest",
+        "time-horizon"
       ],
-      "prompt": "True or false: a fund that lost 20% needs a 20% rise to get back to the start.",
+      "prompt": "Anna saves €100 a month from age 25 to 35, then stops. Ben saves €100 a month from 35 to 65. Both earn 7% a year. Who has more at 65?",
       "options": [
-        "True",
-        "False"
+        "Anna, though she paid in €24,000 less",
+        "Ben, because he paid in three times as much",
+        "Both have about the same"
       ],
-      "correctIndex": 1,
-      "explanation": "False. €4,000 × 1.25 = €5,000. The rise starts from the smaller amount, so it must be bigger than the fall. It needs 25%. This is how a [[drawdown]] works."
+      "correctIndex": 0,
+      "explanation": "Anna ends with about €140,000, Ben with about €122,000. Anna's money had 10 more years to grow. With [[compound-interest]], an early start can beat a bigger amount. The 7% is an example, not a promise."
     },
     {
       "type": "quiz",
       "id": "q2",
       "phase": "challenge",
       "concepts": [
-        "time-horizon"
+        "compound-interest"
       ],
-      "prompt": "Why does a 20% fall hurt money for a child's studies in 17 years less than money for next month's rent?",
+      "prompt": "True or false: with compound interest, money grows by the same amount every year.",
       "options": [
-        "The money for studies has 17 years to recover, and nobody needs to sell it now",
-        "Money for children cannot fall",
-        "A 20% fall is a small loss"
+        "True",
+        "False"
       ],
-      "correctIndex": 0,
-      "explanation": "Rent money would have to be sold at the low price. Money that can wait has time for the price to recover, but nothing guarantees that it will."
+      "correctIndex": 1,
+      "explanation": "False. Each year, the interest is paid on a bigger amount, so the growth itself grows."
     },
     {
       "type": "text",
       "id": "t2",
       "phase": "you",
-      "kicker": "Your investments",
-      "title": "A bad year for your account",
-      "body": "Your investment account holds **{depotTotal}**. After a 20% fall, it would be worth about **{depotAfterFall}**. To get back to today's value, it would then need a rise of 25%."
+      "kicker": "Your savings",
+      "title": "Your interest grows too",
+      "body": "Your savings account holds **{savingsBalance}** at **{savingsRate}** a year. The bank adds the interest to your balance, and next year that interest earns interest too. A long [[time-horizon]] makes the effect bigger.",
+      "stat": {
+        "value": "{savingsBalance}",
+        "label": "growing at {savingsRate} a year",
+        "tone": "good"
+      }
+    },
+    {
+      "type": "slider-chart",
+      "id": "s2",
+      "phase": "you",
+      "concepts": [
+        "compound-interest"
+      ],
+      "prompt": "Your savings, at your rate. See what time adds on top of your money.",
+      "model": "compoundGrowth",
+      "visual": "split",
+      "params": {
+        "years": {
+          "label": "Years",
+          "min": 1,
+          "max": 40,
+          "step": 1,
+          "value": 20,
+          "unit": " years"
+        },
+        "start": {
+          "label": "Starting amount",
+          "min": 0,
+          "max": 50000,
+          "step": 500,
+          "value": 10000,
+          "unit": "€",
+          "fromBank": "savingsBalance"
+        },
+        "rate": {
+          "label": "Interest per year",
+          "min": 0,
+          "max": 8,
+          "step": 0.25,
+          "value": 2,
+          "unit": "%",
+          "fromBank": "savingsRate"
+        }
+      },
+      "output": {
+        "label": "Value after these years",
+        "unit": "€"
+      },
+      "goal": {
+        "condition": {
+          "of": "output",
+          "min": -1000000
+        },
+        "hint": "Move a slider to see the result change."
+      },
+      "note": "The amount and the rate start at your real numbers. This is an example, not a forecast. It does not count rising prices."
     }
   ],
   "video": {
@@ -169,13 +193,13 @@
       {
         "type": "scene",
         "id": "v1",
-        "title": "One bad year",
-        "desc": "Prices go up and down. These swings are called [[volatility]]. A fall is only a real loss if you sell during it. How long your money can wait is your [[time-horizon]].",
-        "duration": 11.3,
-        "camera": "drift",
+        "title": "Growth on growth",
+        "desc": "Each year's interest earns interest too. This is [[compound-interest]]. The longer the money waits, the stronger it gets.",
+        "duration": 13,
+        "camera": "pull",
         "setting": {
-          "place": "street",
-          "time": "dusk"
+          "place": "cafe",
+          "time": "day"
         },
         "layers": [
           {
@@ -183,64 +207,70 @@
             "at": 1,
             "len": 8,
             "series": [
-              5000,
-              4000,
-              4600,
-              5300,
-              5900,
-              6600
+              10000,
+              12763,
+              16289,
+              20789,
+              26533,
+              33864,
+              43219
             ],
             "unit": "€"
           },
           {
             "kind": "tag",
-            "at": 2.6,
-            "text": "−20%",
-            "tone": "bad",
-            "x": 0.35,
+            "at": 3.5,
+            "text": "+€500",
+            "tone": "good",
+            "x": 0.3,
             "y": 0.6
           },
           {
-            "kind": "tag",
-            "at": 8.8,
-            "text": "Wait",
-            "tone": "neutral",
-            "x": 0.78,
-            "y": 0.25
+            "kind": "amount",
+            "at": 9,
+            "len": 3.5,
+            "from": 10000,
+            "to": 43219,
+            "currency": "EUR",
+            "label": "After 30 years at 5%"
           }
         ],
         "captions": [
           {
-            "at": 0,
-            "text": "You invest €5,000. After one bad year, it is worth €4,000."
+            "at": 0.5,
+            "text": "€10,000 earns 5% a year. In year one, that is €500."
           },
           {
-            "at": 6.0,
-            "text": "Swings like this are called volatility."
+            "at": 4,
+            "text": "In year two, the €500 earns interest too."
           },
           {
-            "at": 8.6,
-            "text": "If you can wait, the price has time to recover."
+            "at": 7,
+            "text": "Growth on growth is called compound interest."
+          },
+          {
+            "at": 10,
+            "text": "After 30 years, there is about €43,000."
           }
         ],
-        "transcript": "t1",
-        "audio": "berlin-4/v1.mp3"
+        "transcript": "t1"
       }
     ],
     "beats": [
       "v1",
       "s1",
-      "sc1",
+      "p1",
       "q1",
       "q2",
-      "t2"
+      "t2",
+      "s2"
     ]
   },
   "variants": {
     "level:beginner": {
       "s1": {
         "goal": {
-          "hint": "Set the loss to −20%."
+          "hint": "Move the years slider to 15 or more."
         }
       }
     }

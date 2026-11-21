@@ -2,40 +2,51 @@
   "id": "sao-paulo-5",
   "story": "sao-paulo",
   "title": "Your own limit",
-  "place": "Your stop · today",
+  "place": "Mission 5 · Your limit",
   "topic": "Cap your repayments with your bank data",
   "minutes": 3,
   "xp": 70,
-  "concepts": ["committed-income", "revolving-credit"],
+  "concepts": [
+    "committed-income",
+    "revolving-credit"
+  ],
   "steps": [
     {
       "type": "text",
       "id": "t1",
-      "kicker": "Rafa's phone wallpaper",
-      "title": "\"Parcelas: max 20% of my pay. The card bill: always in full.\"",
-      "body": "After the fridge, the stack and the rotativo, Rafa set two rules. They don't stop him buying things. They keep his [[committed-income]] small enough that one bad month doesn't roll into the next. His rules, not a recipe."
+      "kicker": "Two rules",
+      "title": "“Instalments: max 20% of my pay. The card bill: always in full.”",
+      "body": "Rules like these don't stop you buying things. They keep your [[committed-income]] small enough that one bad month doesn't roll into the next. Your rules, not a recipe."
     },
     {
       "type": "quiz",
       "id": "q1",
-      "concepts": ["committed-income"],
-      "prompt": "Rafa earns R$2,800. His rule is \"max 20% in installments\". How much can he commit each month?",
-      "options": ["R$560", "R$280", "R$1,400"],
+      "concepts": [
+        "committed-income"
+      ],
+      "prompt": "You earn €2,000. Your rule is “max 20% in instalments”. How much can you commit each month?",
+      "options": [
+        "€400",
+        "€200",
+        "€1,000"
+      ],
       "correctIndex": 0,
-      "explanation": "20% of R$2,800 is R$560. His four installments were R$710, so the rule would have said no to the last one."
+      "explanation": "20% of €2,000 is €400. The four instalments from mission 2 were €420, so the rule would have said no to the last one."
     },
     {
       "type": "quiz",
       "id": "q2",
-      "concepts": ["revolving-credit"],
-      "prompt": "Why does \"always pay the card bill in full\" matter more than the exact limit?",
+      "concepts": [
+        "revolving-credit"
+      ],
+      "prompt": "Why does “always pay the card bill in full” matter more than the exact limit?",
       "options": [
         "Rolled-over card debt is usually the most expensive credit there is",
         "Because the card stops working otherwise",
         "Because paying in full earns interest"
       ],
       "correctIndex": 0,
-      "explanation": "The [[revolving-credit|rotativo]] grows on top of itself. Paying in full keeps the card a payment tool, not a loan."
+      "explanation": "[[revolving-credit]] grows on top of itself. Paying in full keeps the card a payment tool, not a loan."
     },
     {
       "type": "action",

@@ -16,8 +16,8 @@ test('the map slide explains the pins on the globe', async ({ page }) => {
 
   await expect(page.getByText('Every pin is a field of finance')).toBeVisible();
   const card = page.getByTestId('globe-card');
-  await expect(card).toContainText('FRANKFURT');
-  await expect(card).toContainText('Your first share');
+  await expect(card).toContainText('BERLIN');
+  await expect(card).toContainText('Safe money that shrinks');
   for (const state of ['Done', 'Up next', 'Locked']) {
     await expect(page.getByText(state, { exact: true })).toBeVisible();
   }

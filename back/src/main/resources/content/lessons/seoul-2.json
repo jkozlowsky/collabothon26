@@ -1,8 +1,8 @@
 {
   "id": "seoul-2",
   "story": "seoul",
-  "title": "Pulling everything in",
-  "place": "Gangnam · after work",
+  "title": "Borrowing to invest",
+  "place": "Mission 2 · Leverage",
   "topic": "Borrowing to invest",
   "minutes": 4,
   "xp": 60,
@@ -12,41 +12,16 @@
   ],
   "steps": [
     {
-      "type": "chat",
-      "id": "c1",
-      "title": "Min-jun",
-      "messages": [
-        {
-          "from": "Min-jun",
-          "text": "XYZ dipped today. Perfect time to buy more"
-        },
-        {
-          "from": "Min-jun",
-          "text": "I'm doing 영끌 this time. Loan + savings, all in"
-        },
-        {
-          "from": "Ji-woo",
-          "me": true,
-          "text": "All in? With a loan?"
-        },
-        {
-          "from": "Min-jun",
-          "text": "The bank charges 6% a year. XYZ makes that in a week"
-        }
-      ]
-    },
-    {
-      "type": "text",
-      "id": "t0",
-      "title": "After work",
-      "body": "Gangnam, after work. Min-jun has a new plan. This time he wants to borrow and put in everything. Ji-woo has ₩10 million of her own."
-    },
-    {
       "type": "text",
       "id": "t1",
-      "kicker": "Word from Seoul",
-      "title": "영끌 · yeongkkeul",
-      "body": "Koreans have a word for this: yeongkkeul. Pulling in everything, even your soul. Korean media used it in 2020–21, when many young people borrowed all they could to buy homes and shares. Her own ₩10 million, plus ₩10 million borrowed. Investing with borrowed money is called [[leverage]]."
+      "kicker": "Leverage",
+      "title": "Bigger bets, bigger falls",
+      "body": "Some people borrow to buy more of a share they believe in. Investing with borrowed money is called [[leverage]]. It makes every move bigger, up and down, and the loan stays the same size either way.",
+      "stat": {
+        "value": "−60%",
+        "label": "your own money after a 30% fall, with as much borrowed as you own",
+        "tone": "bad"
+      }
     },
     {
       "type": "slider-chart",
@@ -54,7 +29,7 @@
       "concepts": [
         "leverage"
       ],
-      "prompt": "Ji-woo invests her ₩10M and borrows more on top. Move the price: what happens to her own money? Find a fall that wipes out everything she had.",
+      "prompt": "You invest €10,000 of your own and borrow more on top. Move the price: find a fall that wipes out all of your own money.",
       "model": "leverage",
       "params": {
         "move": {
@@ -66,7 +41,7 @@
           "unit": "%"
         },
         "borrowed": {
-          "label": "Borrowed, as % of her own money",
+          "label": "Borrowed, as % of your own money",
           "min": 0,
           "max": 200,
           "step": 50,
@@ -75,7 +50,7 @@
         }
       },
       "output": {
-        "label": "Result on her own ₩10M",
+        "label": "Result on your own €10,000",
         "unit": "%"
       },
       "goal": {
@@ -83,7 +58,7 @@
           "of": "output",
           "max": -100
         },
-        "hint": "With as much borrowed as she owns, the price only has to halve."
+        "hint": "With as much borrowed as you own, the price only has to halve."
       },
       "note": "Simplified: no interest or fees."
     },
@@ -94,12 +69,12 @@
         "leverage",
         "risk-capacity"
       ],
-      "prompt": "XYZ is all over the chat. What does Ji-woo do with her ₩10M? Pick one and jump 6 months ahead.",
-      "unit": "₩M",
+      "prompt": "A share is everywhere online. What do you do with €10,000 of savings? Pick one and jump 6 months ahead.",
+      "unit": "€k",
       "periodLabel": "6 months",
       "choices": [
         {
-          "label": "All in, plus a ₩10M loan",
+          "label": "All in, plus a €10,000 loan",
           "series": [
             10,
             13,
@@ -115,10 +90,10 @@
             -4,
             -4
           ],
-          "ending": "XYZ was pumped and dumped. Her shares are now worth ₩6M, but she still owes ₩10M. Ji-woo is ₩4M in debt and repays it for the next two years."
+          "ending": "The hype ended and the price crashed. The shares are worth €6,000, but the loan is still €10,000. You are €4,000 in debt."
         },
         {
-          "label": "Only ₩1M she can afford to lose",
+          "label": "Only €1,000 you could afford to lose",
           "series": [
             10,
             10.2,
@@ -134,7 +109,7 @@
             9.3,
             9.3
           ],
-          "ending": "She lost ₩700,000. It stings, but her savings are safe, and she saw how a hype room works for the price of a nice dinner."
+          "ending": "You lost €700. It stings, but your savings are safe and you saw how hype works."
         },
         {
           "label": "Skip it",
@@ -153,7 +128,7 @@
             10,
             10
           ],
-          "ending": "Her friends teased her in March. By June nobody in the chat talked about XYZ any more. Her ₩10M is still there."
+          "ending": "Nothing happened to your €10,000. Six months later, nobody talks about the share any more."
         }
       ]
     },
@@ -163,14 +138,14 @@
       "concepts": [
         "leverage"
       ],
-      "prompt": "Ji-woo invests ₩10M of her own and ₩10M borrowed. The price falls 30%. What happens to her own money?",
+      "prompt": "You invest €10,000 of your own and €10,000 borrowed. The price falls 30%. What happens to your own money?",
       "options": [
-        "It falls 30%",
         "It falls 60%",
+        "It falls 30%",
         "It falls 15%"
       ],
-      "correctIndex": 1,
-      "explanation": "She holds ₩20M of shares. A 30% fall is ₩6M, and all of it comes out of her own ₩10M, because the loan still has to be repaid in full: −60%."
+      "correctIndex": 0,
+      "explanation": "You hold €20,000 of shares. A 30% fall is €6,000, and all of it comes out of your own money, because the loan is repaid in full."
     },
     {
       "type": "quiz",
@@ -178,417 +153,16 @@
       "concepts": [
         "risk-capacity"
       ],
-      "prompt": "Which money can Ji-woo put into a risky bet without hurting her life?",
+      "prompt": "Which money can go into a risky bet without hurting your life?",
       "options": [
-        "Money she could lose completely and still pay rent and bills",
-        "Her rent for next month",
+        "Money you could lose completely and still pay rent and bills",
+        "Next month's rent",
         "Money borrowed at a low rate"
       ],
       "correctIndex": 0,
       "explanation": "Your [[risk-capacity]] is what you could lose without it changing your daily life. Rent money and borrowed money are not part of it."
-    },
-    {
-      "type": "text",
-      "id": "t2",
-      "title": "The loan stays",
-      "body": "Borrowed money makes every move twice as big. A 30% fall takes 60% of her own money. The loan stays the same size either way."
     }
   ],
-  "video": {
-    "minutes": 5,
-    "scenes": [
-      {
-        "type": "scene",
-        "id": "v1",
-        "title": "After work",
-        "desc": "Min-jun wants to buy more XYZ, this time with a loan. Ji-woo has ₩10M of her own.",
-        "duration": 12,
-        "camera": "push",
-        "setting": {
-          "place": "street",
-          "time": "dusk"
-        },
-        "layers": [
-          {
-            "kind": "character",
-            "pose": "phone",
-            "x": 0.24,
-            "name": "Ji-woo"
-          },
-          {
-            "kind": "phone",
-            "x": 0.72,
-            "messages": [
-              {
-                "from": "Min-jun",
-                "text": "XYZ dipped today. Time to buy more",
-                "at": 1
-              },
-              {
-                "from": "Min-jun",
-                "text": "I'm doing 영끌 this time",
-                "at": 3.5
-              },
-              {
-                "from": "Ji-woo",
-                "me": true,
-                "text": "All in? With a loan?",
-                "at": 6
-              },
-              {
-                "from": "Min-jun",
-                "text": "The bank charges 6% a year",
-                "at": 8.5
-              }
-            ]
-          }
-        ],
-        "captions": [
-          {
-            "at": 0.5,
-            "text": "Gangnam, after work. Min-jun has a new plan."
-          },
-          {
-            "at": 4.5,
-            "text": "This time he wants to borrow and put in everything."
-          },
-          {
-            "at": 8.5,
-            "text": "Ji-woo has ₩10 million of her own."
-          }
-        ],
-        "transcript": "t0"
-      },
-      {
-        "type": "scene",
-        "id": "v2",
-        "title": "영끌 · yeongkkeul",
-        "desc": "Investing with borrowed money is called [[leverage]]. In Korea, borrowing all you can to invest has its own word: 영끌.",
-        "duration": 12,
-        "camera": "drift",
-        "setting": {
-          "place": "cafe",
-          "time": "night"
-        },
-        "layers": [
-          {
-            "kind": "character",
-            "pose": "sit",
-            "x": 0.22
-          },
-          {
-            "kind": "tag",
-            "at": 1.5,
-            "text": "영끌",
-            "tone": "neutral",
-            "x": 0.62,
-            "y": 0.34
-          },
-          {
-            "kind": "amount",
-            "at": 6,
-            "len": 3,
-            "from": 10000000,
-            "to": 20000000,
-            "currency": "KRW",
-            "label": "₩10M own + ₩10M loan"
-          },
-          {
-            "kind": "tag",
-            "at": 9.5,
-            "text": "×2",
-            "tone": "neutral",
-            "x": 0.78,
-            "y": 0.62
-          }
-        ],
-        "captions": [
-          {
-            "at": 0.5,
-            "text": "Koreans have a word for this: yeongkkeul."
-          },
-          {
-            "at": 4,
-            "text": "Pulling in everything, even your soul."
-          },
-          {
-            "at": 7.5,
-            "text": "Her own ₩10 million, plus ₩10 million borrowed."
-          }
-        ],
-        "transcript": "t1"
-      },
-      {
-        "type": "scene",
-        "id": "v3",
-        "title": "June",
-        "desc": "Six months later. The ending follows Ji-woo's choice.",
-        "duration": 12,
-        "camera": "push",
-        "setting": {
-          "place": "home",
-          "time": "night"
-        },
-        "layers": [
-          {
-            "kind": "character",
-            "pose": "sit",
-            "x": 0.2
-          },
-          {
-            "kind": "chart",
-            "at": 1,
-            "len": 5,
-            "series": [
-              10,
-              10,
-              10,
-              10
-            ],
-            "labels": [
-              "Jan",
-              "Mar",
-              "May",
-              "Jun"
-            ],
-            "unit": "₩M"
-          },
-          {
-            "kind": "amount",
-            "at": 6,
-            "len": 2,
-            "from": 10000000,
-            "to": 10000000,
-            "currency": "KRW",
-            "label": "Her savings"
-          },
-          {
-            "kind": "tag",
-            "at": 8.5,
-            "text": "No change",
-            "tone": "neutral",
-            "x": 0.62,
-            "y": 0.4
-          }
-        ],
-        "captions": [
-          {
-            "at": 0.5,
-            "text": "June. Nobody in the chat talks about XYZ any more."
-          },
-          {
-            "at": 4.5,
-            "text": "She missed the rise in March, and the fall after."
-          },
-          {
-            "at": 8.5,
-            "text": "Her ₩10 million is still where it was."
-          }
-        ],
-        "byChoice": {
-          "step": "sc1",
-          "0": {
-            "desc": "All in with a ₩10M loan: her shares fell below what she owes.",
-            "layers": [
-              {
-                "kind": "character",
-                "pose": "sit",
-                "x": 0.2
-              },
-              {
-                "kind": "chart",
-                "at": 1,
-                "len": 5,
-                "series": [
-                  10,
-                  24,
-                  6,
-                  -4
-                ],
-                "labels": [
-                  "Jan",
-                  "Mar",
-                  "May",
-                  "Jun"
-                ],
-                "unit": "₩M"
-              },
-              {
-                "kind": "tag",
-                "at": 2.5,
-                "text": "+140%",
-                "tone": "good",
-                "x": 0.36,
-                "y": 0.56
-              },
-              {
-                "kind": "amount",
-                "at": 6,
-                "len": 3,
-                "from": 10000000,
-                "to": -4000000,
-                "currency": "KRW",
-                "label": "Her shares minus the loan"
-              },
-              {
-                "kind": "tag",
-                "at": 9,
-                "text": "In debt",
-                "tone": "bad",
-                "x": 0.8,
-                "y": 0.62
-              }
-            ],
-            "captions": [
-              {
-                "at": 0.5,
-                "text": "June. XYZ rose fast, then fell faster."
-              },
-              {
-                "at": 4,
-                "text": "Her shares are worth ₩6 million. The loan is ₩10 million."
-              },
-              {
-                "at": 8,
-                "text": "She owes ₩4 million and repays it for two years."
-              }
-            ]
-          },
-          "1": {
-            "desc": "Only ₩1M she could afford to lose: the bet shrank, her savings did not.",
-            "layers": [
-              {
-                "kind": "character",
-                "pose": "sit",
-                "x": 0.2
-              },
-              {
-                "kind": "chart",
-                "at": 1,
-                "len": 5,
-                "series": [
-                  10,
-                  10.7,
-                  9.5,
-                  9.3
-                ],
-                "labels": [
-                  "Jan",
-                  "Mar",
-                  "May",
-                  "Jun"
-                ],
-                "unit": "₩M"
-              },
-              {
-                "kind": "amount",
-                "at": 6,
-                "len": 2,
-                "from": 10000000,
-                "to": 9300000,
-                "currency": "KRW",
-                "label": "Her savings"
-              },
-              {
-                "kind": "tag",
-                "at": 8,
-                "text": "−₩700K",
-                "tone": "bad",
-                "x": 0.78,
-                "y": 0.62
-              }
-            ],
-            "captions": [
-              {
-                "at": 0.5,
-                "text": "June. Her ₩1 million bet went up, then down."
-              },
-              {
-                "at": 4,
-                "text": "She lost ₩700,000 of it."
-              },
-              {
-                "at": 7.5,
-                "text": "The rest of her savings never moved."
-              }
-            ]
-          },
-          "2": {
-            "desc": "She skipped it: no gain in March, no loss in June."
-          }
-        }
-      },
-      {
-        "type": "scene",
-        "id": "v4",
-        "title": "The loan stays",
-        "desc": "With a loan, gains and losses both land on her own money. The loan stays the same size.",
-        "duration": 10,
-        "camera": "pull",
-        "setting": {
-          "place": "office",
-          "time": "day"
-        },
-        "layers": [
-          {
-            "kind": "character",
-            "pose": "stand",
-            "x": 0.16
-          },
-          {
-            "kind": "amount",
-            "at": 1,
-            "len": 3,
-            "from": 20000000,
-            "to": 14000000,
-            "currency": "KRW",
-            "label": "Shares: ₩10M own + ₩10M loan"
-          },
-          {
-            "kind": "tag",
-            "at": 4,
-            "text": "−30%",
-            "tone": "bad",
-            "x": 0.5,
-            "y": 0.6
-          },
-          {
-            "kind": "tag",
-            "at": 7,
-            "text": "Own −60%",
-            "tone": "bad",
-            "x": 0.78,
-            "y": 0.42
-          }
-        ],
-        "captions": [
-          {
-            "at": 0.5,
-            "text": "Borrowed money makes every move twice as big."
-          },
-          {
-            "at": 4,
-            "text": "A 30% fall takes 60% of her own money."
-          },
-          {
-            "at": 7,
-            "text": "The loan stays the same size either way."
-          }
-        ],
-        "transcript": "t2"
-      }
-    ],
-    "beats": [
-      "v1",
-      "v2",
-      "s1",
-      "sc1",
-      "v3",
-      "q1",
-      "q2",
-      "v4"
-    ]
-  },
   "variants": {
     "level:beginner": {
       "s1": {

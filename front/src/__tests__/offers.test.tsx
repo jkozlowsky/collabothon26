@@ -75,7 +75,7 @@ test('end of a story: a check, the bank offers, then the Invest tab', async () =
 
   // Part 2: the bank's products in this area, each tied to a lesson, with the line that it is not a recommendation.
   expect(screen.getByTestId('offer-etf-plan')).toBeOnTheScreen();
-  expect(screen.getByText('Stop 5 · Your monthly plan')).toBeOnTheScreen();
+  expect(screen.getByText('Mission 5 · Your monthly plan')).toBeOnTheScreen();
   expect(screen.getByTestId('offers-disclaimer')).toHaveTextContent('not a recommendation', { exact: false });
   await fireEvent.press(screen.getByTestId('offers-open-bank'));
 

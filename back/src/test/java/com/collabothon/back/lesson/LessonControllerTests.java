@@ -47,13 +47,15 @@ class LessonControllerTests {
 			.andExpect(jsonPath("$[0].status").value("available"))
 			.andExpect(jsonPath("$[1].status").value("locked"))
 			.andExpect(jsonPath("$.length()").value(23))
-			.andExpect(jsonPath("$[0].video.minutes").value(5))
-			.andExpect(jsonPath("$[2].video").isEmpty());
+			// Video tracks live in the Saving and Investing paths; berlin-1 is the sixth lesson in story order.
+			.andExpect(jsonPath("$[0].video").isEmpty())
+			.andExpect(jsonPath("$[5].id").value("berlin-1"))
+			.andExpect(jsonPath("$[5].video.minutes").value(5));
 		mvc.perform(get("/api/stories"))
 			.andExpect(jsonPath("$[0].id").value("seoul"))
 			.andExpect(jsonPath("$[0].current").value(true))
 			.andExpect(jsonPath("$[0].nextLesson.id").value("seoul-1"))
-			.andExpect(jsonPath("$[0].lessons[0].video.minutes").value(5))
+			.andExpect(jsonPath("$[1].lessons[0].video.minutes").value(5))
 			.andExpect(jsonPath("$[1].id").value("berlin"))
 			.andExpect(jsonPath("$[1].status").value("available"))
 			.andExpect(jsonPath("$[1].current").value(false));
@@ -61,26 +63,24 @@ class LessonControllerTests {
 
 	@Test
 	void returnsLessonWithBothOrdersGlossaryAndStoryLook() throws Exception {
-		mvc.perform(get("/api/lessons/seoul-1").param("userId", "newcomer"))
+		mvc.perform(get("/api/lessons/berlin-1").param("userId", "newcomer"))
 			.andExpect(status().isOk())
 			// Classic order in steps, video order in beats, in one response.
-			.andExpect(jsonPath("$.steps[0].type").value("chat"))
-			.andExpect(jsonPath("$.steps[7].prompt")
-				.value("XYZ fell 50%. What rise does it need to get back to its old price?"))
+			.andExpect(jsonPath("$.steps[0].type").value("text"))
+			.andExpect(jsonPath("$.steps[5].prompt").value("Checkpoint 1 of 3 · What does an inflation rate of 3% mean?"))
 			.andExpect(jsonPath("$.video.beats[0]").value("v1"))
-			.andExpect(jsonPath("$.video.beats[1]").value("p1"))
-			.andExpect(jsonPath("$.video.beats[7]").value("v4"))
-			.andExpect(jsonPath("$.video.scenes.length()").value(4))
-			.andExpect(jsonPath("$.video.scenes[3].noData.captions[0].text").value("Ji-woo's savings today."))
+			.andExpect(jsonPath("$.video.beats[1]").value("t2"))
+			.andExpect(jsonPath("$.video.beats[9]").value("s2"))
+			.andExpect(jsonPath("$.video.scenes.length()").value(1))
 			.andExpect(jsonPath("$.startMode").value("video"))
-			.andExpect(jsonPath("$.color").value("violet"))
-			.andExpect(jsonPath("$.city").value("Seoul"))
-			.andExpect(jsonPath("$.landmark.kind").value("tower"))
+			.andExpect(jsonPath("$.color").value("teal"))
+			.andExpect(jsonPath("$.city").value("Berlin"))
+			.andExpect(jsonPath("$.landmark.kind").value("gate"))
 			.andExpect(jsonPath("$.audioBase").value("/audio/"))
 			.andExpect(jsonPath("$.lang").doesNotExist())
 			.andExpect(jsonPath("$.variants").doesNotExist())
-			.andExpect(jsonPath("$.next").value("seoul-2"))
-			.andExpect(jsonPath("$.glossary.drawdown.term").value("Drawdown"));
+			.andExpect(jsonPath("$.next").value("berlin-2"))
+			.andExpect(jsonPath("$.glossary.inflation.term").value("Inflation"));
 		mvc.perform(get("/api/lessons/seoul-3"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.video").isEmpty())
@@ -91,11 +91,11 @@ class LessonControllerTests {
 	void lessonModeIsRememberedPerUser() throws Exception {
 		mvc.perform(put("/api/users/reader/lesson-mode").contentType(MediaType.APPLICATION_JSON)
 			.content("{\"mode\":\"classic\"}")).andExpect(status().isNoContent());
-		mvc.perform(get("/api/lessons/seoul-1").param("userId", "reader"))
+		mvc.perform(get("/api/lessons/berlin-1").param("userId", "reader"))
 			.andExpect(jsonPath("$.startMode").value("classic"));
 		mvc.perform(put("/api/users/reader/lesson-mode").contentType(MediaType.APPLICATION_JSON)
 			.content("{\"mode\":\"video\"}")).andExpect(status().isNoContent());
-		mvc.perform(get("/api/lessons/seoul-1").param("userId", "reader"))
+		mvc.perform(get("/api/lessons/berlin-1").param("userId", "reader"))
 			.andExpect(jsonPath("$.startMode").value("video"));
 
 		mvc.perform(put("/api/users/reader/lesson-mode").contentType(MediaType.APPLICATION_JSON)

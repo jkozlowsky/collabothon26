@@ -24,10 +24,12 @@ export const CLIP_SIZE = { width: 1236, height: 2516 };
 export const LESSON = (() => {
   const raw = JSON.parse(readFileSync(path.resolve('../back/src/main/resources/content/lessons/berlin-1.json'), 'utf8')) as {
     title: string;
-    steps: { type: string; options?: string[]; correctIndex?: number }[];
+    steps: { type: string; options?: string[]; correctIndex?: number; items?: { text: string; bucket: 0 | 1 }[] }[];
   };
   const correct = new Set(raw.steps.filter((st) => st.type === 'quiz').map((st) => normalise(st.options![st.correctIndex!])));
-  return { title: raw.title, correct };
+  // Myth or fact: the bucket of each statement, by its text.
+  const bucket = new Map(raw.steps.flatMap((st) => st.items ?? []).map((it) => [normalise(it.text), it.bucket] as const));
+  return { title: raw.title, correct, bucket };
 })();
 
 const CATEGORIZATION_URL = '**/api/users/demo-user/categorization';
@@ -165,8 +167,8 @@ export const visible = (page: Page, testId: string) => page.getByTestId(testId).
 /**
  * Plays berlin-1 in video mode (content: back/src/main/resources/content/lessons/berlin-1.json): the scene plays,
  * then each beat's step. Steps are recognised by their testIDs, quiz answers come from the lesson file, so the
- * order of the beats can change. Alex underestimates the loss, finds the rate that keeps buying power flat, gets both
- * quizzes right, then tries a lower price rise on his own savings.
+ * order of the beats can change. Alex finds the rate that keeps the basket full, sorts the myths from the facts, picks a
+ * fixed-term deposit for his flat money, gets the checkpoint right, then tries a lower price rise on his own savings.
  */
 /** Returns whether the glossary word was opened. */
 export async function playLesson(page: Page, { glossary }: { glossary?: string } = {}): Promise<boolean> {
@@ -199,6 +201,17 @@ export async function playLesson(page: Page, { glossary }: { glossary?: string }
       await beat(page, 3500);
       await drag(page, 'slider-inflation', 3, 2, 0, 8);
       await next(3000);
+    } else if (await step('sort-card').isVisible()) {
+      // Myth or fact: Alex reads each statement and sorts it right. The top card is the last one in the stack.
+      const text = normalise((await page.getByTestId('sort-card').last().innerText()).split('\n').pop() ?? '');
+      await beat(page, 2200);
+      await tap(page, LESSON.bucket.get(text.replace(/^["“]|["”]$/g, '')) === 1 ? 'sort-right' : 'sort-left', 300);
+    } else if (await step('choice-0').isVisible()) {
+      // The decision: the money is for a flat in 3 years, so Alex tries the fixed-term deposit.
+      await beat(page, 4000);
+      await tap(page, 'choice-2', 600);
+      await expect(page.getByTestId('scenario-ending')).toBeVisible();
+      await next(5000);
     } else if (await step('option-0').isVisible()) {
       const options = page.locator('[data-testid^="option-"]').filter({ visible: true });
       const texts = (await options.allInnerTexts()).map(normalise);

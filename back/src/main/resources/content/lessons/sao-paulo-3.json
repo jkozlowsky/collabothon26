@@ -1,78 +1,128 @@
 {
   "id": "sao-paulo-3",
   "story": "sao-paulo",
-  "title": "The rotativo",
-  "place": "Avenida Paulista · card bill",
+  "title": "The minimum payment",
+  "place": "Mission 3 · Card debt",
   "topic": "Card debt that rolls over",
   "minutes": 4,
   "xp": 60,
-  "concepts": ["revolving-credit", "compound-interest"],
+  "concepts": [
+    "revolving-credit",
+    "compound-interest"
+  ],
   "steps": [
-    {
-      "type": "chat",
-      "id": "c1",
-      "title": "Card app",
-      "messages": [
-        { "from": "Card", "text": "Your bill is ready: R$1,000. Due Friday" },
-        { "from": "Card", "text": "Minimum payment: R$150" },
-        { "from": "Rafa", "me": true, "text": "Only R$150? That's easy this month" },
-        { "from": "Card", "text": "The rest moves to the rotativo" }
-      ]
-    },
     {
       "type": "text",
       "id": "t1",
-      "kicker": "Word from São Paulo",
-      "title": "rotativo",
-      "body": "When you pay less than the full card bill, the rest rolls into the next month: [[revolving-credit]]. In Brazil its interest has often been above 10% a month. Since 2024 the law caps interest and fees at the size of the original debt. Simplified from real data."
+      "kicker": "Credit cards",
+      "title": "“Pay only €30 this month”",
+      "body": "When you pay less than the full card bill, the rest rolls into the next month: [[revolving-credit]]. In Germany, rolled-over card debt often costs 15–20% a year. The minimum payment keeps you paying for a long time.",
+      "stat": {
+        "value": "€830",
+        "from": 1000,
+        "label": "still owed on a €1,000 bill after a year of minimum payments",
+        "tone": "bad"
+      }
     },
     {
       "type": "scenario",
       "id": "sc1",
-      "concepts": ["revolving-credit", "compound-interest"],
-      "prompt": "How does Rafa handle the R$1,000 bill? Pick one and see what's left to pay over a year.",
-      "unit": "R$",
+      "concepts": [
+        "revolving-credit",
+        "compound-interest"
+      ],
+      "prompt": "How do you handle a €1,000 card bill? Pick one and see what's left to pay over a year.",
+      "unit": "€",
       "periodLabel": "12 months",
       "choices": [
         {
           "label": "Pay it all now",
-          "series": [1000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-          "ending": "Done in one month, nothing extra paid. It meant skipping a concert and cooking at home for a few weeks."
+          "series": [
+            1000,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "ending": "Done in one month, nothing extra paid. It may mean a tighter month."
         },
         {
           "label": "Pay the minimum every month",
-          "series": [1000, 952, 906, 863, 821, 782, 744, 709, 675, 642, 611, 582, 554],
-          "ending": "After a year Rafa has paid about R$1,560 and still owes R$554. The interest on what's left almost eats each payment."
+          "series": [
+            1000,
+            985,
+            969,
+            954,
+            940,
+            925,
+            911,
+            897,
+            883,
+            869,
+            856,
+            843,
+            830
+          ],
+          "ending": "After a year you have paid about €340 and still owe €830. At 18% a year, most of each payment covers interest."
         },
         {
-          "label": "Switch to a 12-month payment plan",
-          "series": [1000, 937, 871, 802, 729, 653, 573, 489, 400, 307, 210, 108, 0],
-          "ending": "R$113 a month at about 5% a month. The debt is gone in a year, and he paid about R$1,350 for a R$1,000 bill."
+          "label": "Switch to a 12-month instalment plan at 8%",
+          "series": [
+            1000,
+            920,
+            839,
+            757,
+            675,
+            593,
+            510,
+            426,
+            342,
+            258,
+            172,
+            86,
+            0
+          ],
+          "ending": "€87 a month. The debt is gone in a year, and you paid about €1,044 for a €1,000 bill."
         }
       ]
     },
     {
       "type": "quiz",
       "id": "q1",
-      "concepts": ["revolving-credit"],
-      "prompt": "Rafa pays the minimum for a year. Why is most of the bill still there?",
+      "concepts": [
+        "revolving-credit"
+      ],
+      "prompt": "You pay only the minimum for a year. Why is most of the bill still there?",
       "options": [
-        "Interest is added to what's left each month, so most of each payment covers interest",
+        "Interest is added to what's left each month, so much of each payment covers interest",
         "The minimum payment is a fee, not a repayment",
         "The card adds new purchases automatically"
       ],
       "correctIndex": 0,
-      "explanation": "At about 12% a month, the interest on R$1,000 is R$120. A R$150 payment barely gets past it: interest on interest, working against you."
+      "explanation": "At 1.5% a month, a €1,000 balance costs €15 a month in interest. A €30 payment only cuts half of that off the debt."
     },
     {
       "type": "quiz",
       "id": "q2",
-      "concepts": ["compound-interest"],
-      "prompt": "Which works the same way as compound growth on savings, but against you?",
-      "options": ["Card debt that rolls over", "A one-off fee", "A fixed monthly subscription"],
+      "concepts": [
+        "compound-interest"
+      ],
+      "prompt": "Which works like compound growth on savings, but against you?",
+      "options": [
+        "Card debt that rolls over",
+        "A one-off fee",
+        "A fixed monthly subscription"
+      ],
       "correctIndex": 0,
       "explanation": "[[compound-interest]] grows savings on top of earlier growth. Rolled-over debt grows on top of earlier interest, the same maths in reverse."
     }
-  ],
-  "variants": {}
+  ]
 }

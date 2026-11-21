@@ -2,22 +2,42 @@
   "id": "berlin-1",
   "story": "berlin",
   "title": "Safe money that shrinks",
-  "place": "Your savings account · today",
-  "topic": "Inflation and what your money can buy",
-  "minutes": 4,
-  "xp": 50,
+  "place": "Mission 1 · Inflation",
+  "topic": "Why safe money can lose value",
+  "minutes": 5,
+  "xp": 60,
   "concepts": [
     "inflation",
-    "real-return"
+    "real-return",
+    "fixed-term-deposit",
+    "time-horizon"
   ],
   "steps": [
     {
       "type": "text",
       "id": "t1",
       "phase": "learn",
-      "kicker": "Prices and savings",
-      "title": "Your balance and what it can buy",
-      "body": "Prices go up over time. This is called [[inflation]]. In 10 years, prices can rise by about a third. Then €10,000 buys only what about €7,400 buys today. The balance in a savings account does not fall. But if prices rise faster than the interest the account pays, the money buys less each year."
+      "kicker": "Inflation",
+      "title": "Same money, less to buy",
+      "body": "Since 2020, prices in Germany have risen by about a fifth. In 2022 alone, they rose by almost 7%. This is called [[inflation]]. Your balance stays the same, but it buys less. What €10,000 bought in 2020 costs about €12,200 today.",
+      "stat": {
+        "value": "+22%",
+        "label": "prices in Germany, 2020 to 2025",
+        "tone": "bad"
+      }
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "phase": "learn",
+      "kicker": "How it is measured",
+      "title": "A basket of 650 things",
+      "body": "Statisticians follow the prices of about 650 kinds of goods and services that households buy: food, rent, energy, travel, haircuts. Inflation is how much more this basket costs than a year earlier. Not every price moves the same way: in 2022, energy rose far faster than clothes. The European Central Bank aims for about 2% a year. Money only keeps its value when it earns at least that. What it earns after inflation is its [[real-return]].",
+      "stat": {
+        "value": "2%",
+        "label": "the price rise the ECB aims for each year",
+        "tone": "neutral"
+      }
     },
     {
       "type": "slider-chart",
@@ -26,22 +46,15 @@
       "concepts": [
         "real-return"
       ],
-      "prompt": "The chart shows how much savings can buy over the years. Move the interest slider. Find the interest rate where the money keeps the same buying power.",
+      "prompt": "This basket holds what €100 buys today. Move the interest until the basket stays full after 10 years.",
       "model": "realValue",
+      "visual": "basket",
       "params": {
-        "years": {
-          "label": "Years",
-          "min": 0,
-          "max": 20,
-          "step": 1,
-          "value": 10,
-          "unit": " years"
-        },
         "interest": {
           "label": "Interest per year",
           "min": 0,
           "max": 5,
-          "step": 0.5,
+          "step": 0.25,
           "value": 0.5,
           "unit": "%"
         },
@@ -52,6 +65,14 @@
           "step": 0.5,
           "value": 3,
           "unit": "%"
+        },
+        "years": {
+          "label": "Years",
+          "min": 0,
+          "max": 20,
+          "step": 1,
+          "value": 10,
+          "unit": " years"
         }
       },
       "output": {
@@ -63,65 +84,188 @@
           "of": "output",
           "min": 0
         },
-        "hint": "The interest must be at least as high as the price rise."
-      }
+        "hint": "The interest has to be at least as high as the price rise."
+      },
+      "note": "Try the price rise at 7%, like in 2022, and watch the basket empty."
     },
     {
-      "type": "predict",
-      "id": "p1",
+      "type": "sort",
+      "id": "so1",
       "phase": "challenge",
       "concepts": [
-        "inflation"
+        "inflation",
+        "real-return"
       ],
-      "prompt": "Prices rise by 3% each year. A savings account pays 0.5% each year. After 10 years, how much less can €18,000 buy than today?",
-      "input": {
-        "kind": "slider",
-        "min": -50,
-        "max": 0,
-        "step": 1,
-        "unit": "%"
-      },
-      "answer": -22,
-      "reveal": "About 22% less. The balance grows to about €18,900. Prices grow faster, so the money buys what about €14,000 buys today."
+      "prompt": "Myth or fact? Swipe each statement.",
+      "buckets": [
+        "Myth",
+        "Fact"
+      ],
+      "items": [
+        {
+          "text": "My balance never falls, so inflation cannot touch my money",
+          "bucket": 0
+        },
+        {
+          "text": "At 2% inflation, money loses half its buying power in about 35 years",
+          "bucket": 1
+        },
+        {
+          "text": "Inflation means every price rises by the same amount",
+          "bucket": 0
+        },
+        {
+          "text": "Interest above inflation means your money buys more each year",
+          "bucket": 1
+        },
+        {
+          "text": "Cash at home is the safest place when prices rise",
+          "bucket": 0
+        },
+        {
+          "text": "The European Central Bank aims for about 2% inflation a year",
+          "bucket": 1
+        }
+      ],
+      "explanation": "The number on the screen can stay the same while what it buys shrinks. Only interest above [[inflation]] keeps buying power growing."
+    },
+    {
+      "type": "scenario",
+      "id": "sc1",
+      "phase": "challenge",
+      "concepts": [
+        "fixed-term-deposit",
+        "time-horizon"
+      ],
+      "prompt": "€10,000 is for a flat deposit in 3 years. Prices rise 2.5% a year. Where does it wait? Pick one, then jump 3 years ahead.",
+      "unit": "€",
+      "periodLabel": "3 years",
+      "choices": [
+        {
+          "label": "On the current account, at 0%",
+          "series": [
+            10000,
+            9756,
+            9518,
+            9286
+          ],
+          "ending": "The balance still says €10,000, but it buys what €9,286 buys today. Money with no interest loses to prices every year."
+        },
+        {
+          "label": "In the savings account, at 2.25%",
+          "series": [
+            10000,
+            9976,
+            9951,
+            9927
+          ],
+          "ending": "Almost even: the interest nearly keeps up with prices. The rate can change at any time, and the money is ready any day."
+        },
+        {
+          "label": "In a fixed-term deposit, 3% fixed",
+          "series": [
+            10000,
+            10049,
+            10098,
+            10147
+          ],
+          "ending": "The money buys a little more than today. The rate is fixed, but the money is locked until the end of the term. That fits money with a known date."
+        },
+        {
+          "label": "In a stock fund",
+          "series": [
+            10000,
+            10800,
+            9100,
+            10600
+          ],
+          "ending": "In this example it ends up ahead, but in year 2 it was down. Over 3 years a fund can just as well be down on the day you need the money. A short [[time-horizon]] leaves no time to wait."
+        }
+      ]
     },
     {
       "type": "quiz",
       "id": "q1",
       "phase": "challenge",
       "concepts": [
-        "real-return"
+        "inflation"
       ],
-      "prompt": "True or false: money in a savings account cannot lose value.",
+      "prompt": "Checkpoint 1 of 3 · What does an inflation rate of 3% mean?",
       "options": [
-        "True",
-        "False"
+        "On average, the basket of goods costs 3% more than a year ago",
+        "Every price rose by exactly 3%",
+        "The bank takes 3% of your balance"
       ],
-      "correctIndex": 1,
-      "explanation": "False. The balance does not fall, but prices rise. If the interest is lower than the price rise, the money buys less each year. The difference between interest and price rise is the [[real-return]]."
+      "correctIndex": 0,
+      "explanation": "[[inflation]] is an average over a basket. Some prices rise much more, some less, some even fall."
     },
     {
       "type": "quiz",
       "id": "q2",
       "phase": "challenge",
       "concepts": [
-        "inflation"
+        "real-return"
       ],
-      "prompt": "An account pays 1% a year. Prices rise by 3% a year. What happens to the money?",
+      "prompt": "Checkpoint 2 of 3 · Savings earn 2%. Prices rise 3%. What happens to what the money can buy?",
       "options": [
-        "The balance grows, but it buys about 2% less each year",
-        "Nothing, because the balance never falls",
-        "The balance falls by 3% each year"
+        "It shrinks by about 1% a year",
+        "It grows by 2% a year",
+        "It stays the same, the balance never falls"
       ],
       "correctIndex": 0,
-      "explanation": "The balance rises by 1%. Prices rise by 3%. So the money buys about 2% less each year, even though the number on the screen goes up."
+      "explanation": "The [[real-return]] is the interest minus inflation: 2% − 3% ≈ −1%. The balance grows, the buying power shrinks."
+    },
+    {
+      "type": "quiz",
+      "id": "q3",
+      "phase": "challenge",
+      "concepts": [
+        "fixed-term-deposit",
+        "time-horizon"
+      ],
+      "prompt": "Checkpoint 3 of 3 · Which money fits a fixed-term deposit?",
+      "options": [
+        "Money you will not need until a known date",
+        "Money for a car repair next week",
+        "Your safety net for surprises"
+      ],
+      "correctIndex": 0,
+      "explanation": "A [[fixed-term-deposit]] pays a fixed rate but locks the money until the end. That suits money with a clear [[time-horizon]], not money for surprises."
     },
     {
       "type": "text",
-      "id": "t2",
+      "id": "t3",
       "phase": "you",
-      "kicker": "Your savings",
-      "title": "What your savings can buy",
-      "body": "You have **{savingsBalance}** in your savings account. It pays **{savingsRate}** interest a year. If prices rise by 3% a year, your savings buy a little less each year."
+      "kicker": "Your situation",
+      "title": "Your accounts through this lesson",
+      "body": "This is what inflation means for your money today, if prices rise by the ECB's 2% a year. These are facts from your accounts, not a grade.",
+      "stat": {
+        "value": "{realRate}",
+        "label": "real return on your savings at 2% inflation",
+        "tone": "neutral"
+      },
+      "facts": [
+        {
+          "label": "Savings account",
+          "value": "{savingsBalance}",
+          "note": "at {savingsRate} a year"
+        },
+        {
+          "label": "Its buying power in 3 years",
+          "value": "{savingsReal3y}",
+          "note": "in today's money"
+        },
+        {
+          "label": "Current account",
+          "value": "{accountBalance}",
+          "note": "at 0% interest"
+        },
+        {
+          "label": "Buying power it loses per year",
+          "value": "{accountInflationCost}",
+          "note": "at 2% inflation"
+        }
+      ]
     },
     {
       "type": "slider-chart",
@@ -130,17 +274,10 @@
       "concepts": [
         "real-return"
       ],
-      "prompt": "Your savings account pays {savingsRate} a year. Move the sliders to see what your savings can buy after some years, with different price rises.",
+      "prompt": "Your basket, at your real interest rate. Try other price rises and years.",
       "model": "realValue",
+      "visual": "basket",
       "params": {
-        "years": {
-          "label": "Years",
-          "min": 0,
-          "max": 20,
-          "step": 1,
-          "value": 10,
-          "unit": " years"
-        },
         "interest": {
           "label": "Your interest per year",
           "min": 0,
@@ -155,8 +292,16 @@
           "min": 0,
           "max": 8,
           "step": 0.5,
-          "value": 3,
+          "value": 2,
           "unit": "%"
+        },
+        "years": {
+          "label": "Years",
+          "min": 0,
+          "max": 20,
+          "step": 1,
+          "value": 3,
+          "unit": " years"
         }
       },
       "output": {
@@ -170,76 +315,81 @@
         },
         "hint": "Move a slider to see the result change."
       },
-      "note": "The interest slider starts at your real rate. This is an example, not a forecast."
+      "note": "The interest starts at your real rate. This is an example, not a forecast."
     }
   ],
   "video": {
-    "minutes": 4,
+    "minutes": 5,
     "scenes": [
       {
         "type": "scene",
         "id": "v1",
-        "title": "Same balance, higher prices",
-        "desc": "Prices go up over time. This is called [[inflation]]. Your balance does not fall, but after 10 years the same money buys less.",
-        "duration": 12.6,
+        "title": "Same money, less to buy",
+        "desc": "Prices go up over time. This is called [[inflation]]. Your balance stays the same, but it buys less. What money earns after inflation is its [[real-return]].",
+        "duration": 13,
         "camera": "push",
         "setting": {
-          "place": "home",
+          "place": "street",
           "time": "day"
         },
         "layers": [
           {
-            "kind": "amount",
+            "kind": "tag",
             "at": 1,
-            "len": 3,
-            "from": 10000,
-            "to": 10000,
-            "currency": "EUR",
-            "label": "Balance after 10 years, no interest"
+            "text": "2020",
+            "tone": "neutral",
+            "x": 0.25,
+            "y": 0.3
           },
           {
             "kind": "tag",
-            "at": 3.9,
-            "text": "+34%",
+            "at": 3.5,
+            "text": "+22%",
             "tone": "bad",
-            "x": 0.75,
+            "x": 0.72,
             "y": 0.25
           },
           {
             "kind": "amount",
-            "at": 7.2,
-            "len": 3,
+            "at": 8.5,
+            "len": 4,
             "from": 10000,
-            "to": 7400,
+            "to": 8200,
             "currency": "EUR",
-            "label": "What it buys in today's money"
+            "label": "What €10,000 from 2020 buys today"
           }
         ],
         "captions": [
           {
-            "at": 0,
-            "text": "Prices go up over time. This is called inflation."
+            "at": 0.5,
+            "text": "Since 2020, prices in Germany have risen by about a fifth."
           },
           {
-            "at": 3.9,
-            "text": "In 10 years, prices can rise by about a third."
+            "at": 3.5,
+            "text": "In 2022 alone, they rose by almost 7%."
           },
           {
-            "at": 7.2,
-            "text": "Then €10,000 buys only what about €7,400 buys today."
+            "at": 6.5,
+            "text": "This is called inflation."
+          },
+          {
+            "at": 9,
+            "text": "Your balance stays the same, but it buys less."
           }
         ],
-        "transcript": "t1",
-        "audio": "berlin-1/v1.mp3"
+        "transcript": "t1"
       }
     ],
     "beats": [
       "v1",
+      "t2",
       "s1",
-      "p1",
+      "so1",
+      "sc1",
       "q1",
       "q2",
-      "t2",
+      "q3",
+      "t3",
       "s2"
     ]
   },

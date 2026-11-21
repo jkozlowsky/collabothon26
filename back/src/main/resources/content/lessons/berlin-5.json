@@ -1,13 +1,14 @@
 {
   "id": "berlin-5",
   "story": "berlin",
-  "title": "Your own split",
-  "place": "Your stop · today",
-  "topic": "Split your savings with your bank data",
+  "title": "Three pots, one plan",
+  "place": "Your stop · your plan",
+  "topic": "Split your savings and automate them",
   "minutes": 4,
-  "xp": 70,
+  "xp": 60,
   "concepts": [
     "emergency-fund",
+    "standing-order",
     "inflation"
   ],
   "steps": [
@@ -15,9 +16,42 @@
       "type": "text",
       "id": "t1",
       "phase": "learn",
-      "kicker": "Two parts",
-      "title": "Your emergency fund, and the rest",
-      "body": "Many people split their savings into two parts. First, a few months of costs, ready any day. This part is the [[emergency-fund]]. Second, money that can wait for years. If that part stays in savings, [[inflation]] makes it buy less whenever the interest is lower than the price rise."
+      "kicker": "Your plan",
+      "title": "Three pots for your money",
+      "body": "Many people split their savings into three pots. Pot one is the safety net: a few months of costs, ready any day. Pot two is for goals in the next few years, like a trip or a new laptop. Pot three is money that can wait 10 years or more. If it stays in savings, [[inflation]] eats into it. A [[standing-order]] on payday fills the pots by itself.",
+      "stat": {
+        "value": "3",
+        "label": "pots: safety net, goals, long term",
+        "tone": "neutral"
+      }
+    },
+    {
+      "type": "match",
+      "id": "m1",
+      "phase": "challenge",
+      "concepts": [
+        "emergency-fund",
+        "standing-order"
+      ],
+      "prompt": "Match each pot with the money that belongs in it.",
+      "pairs": [
+        [
+          "Safety net",
+          "The boiler breaks tomorrow"
+        ],
+        [
+          "Goal pot",
+          "A trip next summer"
+        ],
+        [
+          "Long-term pot",
+          "Money for age 60"
+        ],
+        [
+          "Standing order",
+          "Moves money on payday by itself"
+        ]
+      ]
     },
     {
       "type": "quiz",
@@ -33,7 +67,7 @@
         "Round amounts earn less interest"
       ],
       "correctIndex": 0,
-      "explanation": "An emergency fund buys time. Months of costs tell you how much time it buys."
+      "explanation": "An [[emergency-fund]] replaces income for a while, so its size follows what life costs you each month."
     },
     {
       "type": "quiz",
@@ -48,25 +82,30 @@
         "False"
       ],
       "correctIndex": 1,
-      "explanation": "False. The balance never falls, but prices rise. If the interest stays lower than [[inflation]], the money buys less each year."
+      "explanation": "False. Over 20 years, [[inflation]] can take a big bite when the interest is lower than the price rise. That is why long-term money often sits in its own pot."
     },
     {
       "type": "text",
       "id": "t2",
       "phase": "you",
-      "kicker": "Your money",
-      "title": "Your savings today",
-      "body": "You have **{totalAssets}** with us. **{savingsShareOfAssets}** of it is in your savings account, at **{savingsRate}** interest a year. That covers about **{bufferMonths}** months of your costs."
+      "kicker": "Your savings today",
+      "title": "Where your money sits",
+      "body": "You have **{totalAssets}** with us. **{savingsShareOfAssets}** of it is in your savings account, at **{savingsRate}** a year. That covers about **{bufferMonths}** months of your costs.",
+      "stat": {
+        "value": "{savingsShareOfAssets}",
+        "label": "of your money sits in savings",
+        "tone": "neutral"
+      }
     },
     {
       "type": "action",
       "id": "a1",
       "phase": "decide",
       "title": "Your decision",
-      "body": "Your savings account holds **{savingsBalance}**. How much of it do you want to keep ready any day? The rest is money that can wait. You decide. This app explains how money works. It does not recommend products.",
-      "bodyNoData": "How much of your savings do you want to keep ready any day? The rest is money that can wait. You decide. This app explains how money works. It does not recommend products.",
+      "body": "Your savings account holds **{savingsBalance}**. How much of it is your safety net, ready any day? The rest can go to goals or wait for the long term. You decide. This app explains how money works. It does not recommend products.",
+      "bodyNoData": "How much of your savings is your safety net, ready any day? The rest can go to goals or wait for the long term. You decide. This app explains how money works. It does not recommend products.",
       "rule": {
-        "label": "Savings to keep ready any day",
+        "label": "Safety net share of my savings",
         "min": 10,
         "max": 100,
         "step": 5,
@@ -75,7 +114,7 @@
         "appliesTo": "savingsBalance",
         "result": "= {amount} ready any day"
       },
-      "cta": "Save my rule"
+      "cta": "Save my plan"
     }
   ],
   "video": {
@@ -84,52 +123,64 @@
       {
         "type": "scene",
         "id": "v1",
-        "title": "Two parts",
-        "desc": "Many people split their savings into an [[emergency-fund]] and money that can wait.",
-        "duration": 9.2,
-        "camera": "push",
+        "title": "Three pots",
+        "desc": "A safety net, a goal pot and a long-term pot. A [[standing-order]] fills them, and the long-term pot is where [[inflation]] hurts most. The safety net is your [[emergency-fund]].",
+        "duration": 13,
+        "camera": "drift",
         "setting": {
-          "place": "office",
-          "time": "day"
+          "place": "home",
+          "time": "dusk"
         },
         "layers": [
           {
             "kind": "tag",
-            "at": 3.2,
-            "text": "Emergency",
-            "tone": "neutral",
-            "x": 0.28,
-            "y": 0.25
+            "at": 1,
+            "text": "Safety",
+            "tone": "good",
+            "x": 0.2,
+            "y": 0.3
           },
           {
             "kind": "tag",
-            "at": 6.7,
-            "text": "Can wait",
-            "tone": "good",
-            "x": 0.72,
-            "y": 0.25
+            "at": 4,
+            "text": "Goals",
+            "tone": "neutral",
+            "x": 0.5,
+            "y": 0.3
+          },
+          {
+            "kind": "tag",
+            "at": 7,
+            "text": "Long term",
+            "tone": "neutral",
+            "x": 0.8,
+            "y": 0.3
           }
         ],
         "captions": [
           {
-            "at": 0,
-            "text": "Many people split their savings into two parts."
+            "at": 0.5,
+            "text": "Many people split their savings into three pots."
           },
           {
-            "at": 2.9,
-            "text": "First, a few months of costs, ready any day."
+            "at": 3.5,
+            "text": "Pot one is the safety net: a few months of costs, ready any day."
           },
           {
             "at": 6.5,
-            "text": "Second, money that can wait for years."
+            "text": "Pot three is money that can wait 10 years or more."
+          },
+          {
+            "at": 10,
+            "text": "A standing order on payday fills the pots by itself."
           }
         ],
-        "transcript": "t1",
-        "audio": "berlin-5/v1.mp3"
+        "transcript": "t1"
       }
     ],
     "beats": [
       "v1",
+      "m1",
       "q1",
       "q2",
       "t2",

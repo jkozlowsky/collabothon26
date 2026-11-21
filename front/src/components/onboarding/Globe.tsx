@@ -44,11 +44,11 @@ export type GlobePin = {
 
 /** Lesson paths on the onboarding globe: one pin per topic, set in a real place. */
 export const GLOBE_PINS: GlobePin[] = [
-  { x: 82, y: 108, color: '#9AA6AB', icon: 'lock-closed', city: 'Reykjavik', topic: 'Risk & scams', title: 'Too good to be true', meta: 'Unlocks after 2 more lessons', state: 'locked' },
-  { x: 132, y: 92, color: '#D9577A', icon: 'flower', city: 'Amsterdam', topic: 'Bubbles & hype', title: 'Tulip mania', meta: 'Completed · 6 of 6', state: 'done' },
-  { x: 170, y: 106, color: colors.brandAccent, icon: 'trending-up', city: 'Frankfurt', topic: 'Investing', title: 'Your first share', meta: 'Lesson 3 of 6 · 4 min', state: 'active' },
+  { x: 82, y: 108, color: '#9AA6AB', icon: 'lock-closed', city: 'Reykjavik', topic: 'Retirement', title: 'Money for later', meta: 'Coming soon', state: 'locked' },
+  { x: 132, y: 92, color: '#D9577A', icon: 'flower', city: 'Amsterdam', topic: 'Risk', title: 'When a price only goes up', meta: 'Completed · 5 of 5', state: 'done' },
+  { x: 170, y: 106, color: colors.brandAccent, icon: 'shield-checkmark', city: 'Berlin', topic: 'Saving', title: 'Safe money that shrinks', meta: 'Mission 1 of 5 · 5 min', state: 'active' },
   { x: 240, y: 162, color: '#E8833A', icon: 'server', city: 'Mumbai', topic: 'Gold & safe havens', title: 'Why gold glitters', meta: '5 lessons · 3 min each' },
-  { x: 140, y: 182, color: '#7A5AF8', icon: 'wallet', city: 'Lagos', topic: 'Budgeting', title: 'Where does it all go?', meta: '4 lessons · 3 min each' },
+  { x: 140, y: 182, color: '#7A5AF8', icon: 'wallet', city: 'Lagos', topic: 'Borrowing', title: 'Twelve easy payments', meta: '5 missions · 4 min each' },
   { x: 172, y: 238, color: '#1F9AA0', icon: 'leaf', city: 'Nairobi', topic: 'Saving', title: 'Saving on the go', meta: '5 lessons · 4 min each' },
   { x: 52, y: 214, color: '#D64545', icon: 'pricetag', city: 'Buenos Aires', topic: 'Inflation', title: 'When prices run away', meta: '4 lessons · 4 min each' },
 ];

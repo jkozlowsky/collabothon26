@@ -1,0 +1,199 @@
+{
+  "id": "mumbai-1",
+  "story": "mumbai",
+  "title": "Why gold glitters",
+  "place": "A jewellery shop · festival season",
+  "topic": "Gold as an investment",
+  "minutes": 4,
+  "xp": 50,
+  "concepts": [
+    "volatility",
+    "drawdown",
+    "diversification"
+  ],
+  "steps": [
+    {
+      "type": "text",
+      "id": "t1",
+      "phase": "learn",
+      "kicker": "Gold in India",
+      "title": "Gold feels safe",
+      "body": "In India, many families buy gold for weddings and festivals. They often see gold as safe money. Over many decades, gold has kept its value well. But gold pays no interest. You gain only when the price goes up."
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "phase": "learn",
+      "kicker": "The price moves",
+      "title": "Gold can fall for years",
+      "body": "The gold price can move a lot. This is called [[volatility]]. In 2011, the price reached a high. By 2015, it was about 40% lower. This kind of fall from a high is a [[drawdown]]. The price went above the 2011 high again only in 2020."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s1",
+      "phase": "learn",
+      "concepts": [
+        "drawdown"
+      ],
+      "prompt": "After a fall, the price must rise by more than it fell to get back. Move the slider to a loss of 40%, like gold from 2011 to 2015.",
+      "model": "drawdownRecovery",
+      "params": {
+        "loss": {
+          "label": "Loss",
+          "min": -80,
+          "max": 0,
+          "step": 5,
+          "value": -10,
+          "unit": "%"
+        }
+      },
+      "output": {
+        "label": "Rise needed to get back to the start",
+        "unit": "%"
+      },
+      "goal": {
+        "condition": {
+          "of": "loss",
+          "min": -40,
+          "max": -40
+        },
+        "hint": "Move the slider to −40%."
+      }
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "phase": "challenge",
+      "concepts": [
+        "volatility"
+      ],
+      "prompt": "The chart shows the average gold price each year, in US dollars for one ounce. What does it show?",
+      "options": [
+        "The price fell for some years before it rose again",
+        "The price rose every year",
+        "The price stayed about the same"
+      ],
+      "correctIndex": 0,
+      "explanation": "The price fell from 2012 to 2015. It rose again from 2019. Gold can go up over a long time, but it does not go up every year.",
+      "chart": {
+        "series": [
+          1572,
+          1669,
+          1411,
+          1266,
+          1160,
+          1251,
+          1257,
+          1268,
+          1393,
+          1770,
+          1799,
+          1800
+        ],
+        "labels": [
+          "2011",
+          "2012",
+          "2013",
+          "2014",
+          "2015",
+          "2016",
+          "2017",
+          "2018",
+          "2019",
+          "2020",
+          "2021",
+          "2022"
+        ],
+        "unit": "$",
+        "caption": "Average gold price per year, in US dollars per ounce. Rounded."
+      }
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "phase": "challenge",
+      "concepts": [
+        "volatility"
+      ],
+      "prompt": "True or false: gold pays you interest while you keep it.",
+      "options": [
+        "True",
+        "False"
+      ],
+      "correctIndex": 1,
+      "explanation": "False. Gold pays no interest. You gain only if you sell it for more than you paid."
+    },
+    {
+      "type": "quiz",
+      "id": "q3",
+      "phase": "challenge",
+      "concepts": [
+        "diversification"
+      ],
+      "prompt": "Why do some people keep a small part of their money in gold?",
+      "options": [
+        "Gold often moves differently from shares, so it spreads the risk",
+        "Gold always goes up",
+        "Gold pays a high interest"
+      ],
+      "correctIndex": 0,
+      "explanation": "Gold often does not move in the same way as shares. When you hold different things, one bad year hurts less. This is [[diversification]]."
+    },
+    {
+      "type": "text",
+      "id": "t3",
+      "phase": "you",
+      "kicker": "Your money",
+      "title": "Where your money is",
+      "body": "You have **{totalAssets}** in your accounts here. **{largestPlaceShare}** of it is in **{largestPlaceName}**. Gold would be one more place for money. It pays no interest, and its price can move a lot."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s2",
+      "phase": "you",
+      "concepts": [
+        "diversification"
+      ],
+      "prompt": "Imagine part of your money is in gold. Gold falls by 40%, and the rest of your money does not change. Move the gold share to see the change of all your money.",
+      "model": "countryMix",
+      "params": {
+        "homeShare": {
+          "label": "Money in gold",
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "value": 50,
+          "unit": "%"
+        },
+        "homeMove": {
+          "label": "Change in the gold price",
+          "min": -60,
+          "max": 60,
+          "step": 5,
+          "value": -40,
+          "unit": "%"
+        },
+        "worldMove": {
+          "label": "Change in the rest of your money",
+          "min": -20,
+          "max": 20,
+          "step": 1,
+          "value": 0,
+          "unit": "%"
+        }
+      },
+      "output": {
+        "label": "Change of all your money",
+        "unit": "%"
+      },
+      "goal": {
+        "condition": {
+          "of": "output",
+          "min": -10
+        },
+        "hint": "Try a gold share of 25% or less."
+      },
+      "note": "This is an example, not a forecast."
+    }
+  ]
+}

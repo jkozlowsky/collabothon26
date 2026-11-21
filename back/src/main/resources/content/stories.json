@@ -71,5 +71,53 @@
     "currency": { "code": "EUR", "perEur": 1 },
     "lessonIds": ["tokyo-1", "tokyo-2", "tokyo-3", "tokyo-4", "tokyo-5"],
     "personal": true
+  },
+  {
+    "id": "buenos-aires",
+    "area": "Money basics",
+    "category": "Fast inflation",
+    "city": "Buenos Aires",
+    "topic": "When prices run away",
+    "status": "available",
+    "pin": { "lat": -34.6, "lng": -58.38 },
+    "icon": "tag",
+    "color": "orange",
+    "landmark": { "kind": "tower", "at": 0.64 },
+    "intro": "A short lesson about prices that rise fast. You learn how fast prices can double and what this means for money that pays little interest.",
+    "currency": { "code": "EUR", "perEur": 1 },
+    "lessonIds": ["buenos-aires-1"],
+    "personal": true
+  },
+  {
+    "id": "nairobi",
+    "area": "Saving",
+    "category": "Small savings",
+    "city": "Nairobi",
+    "topic": "Saving on the go",
+    "status": "available",
+    "pin": { "lat": -1.29, "lng": 36.82 },
+    "icon": "smartphone",
+    "color": "violet",
+    "landmark": { "kind": "raised", "at": 0.6 },
+    "intro": "A short lesson about saving small amounts often. You learn why small amounts add up and how to save before you spend.",
+    "currency": { "code": "EUR", "perEur": 1 },
+    "lessonIds": ["nairobi-1"],
+    "personal": true
+  },
+  {
+    "id": "mumbai",
+    "area": "Investing",
+    "category": "Gold",
+    "city": "Mumbai",
+    "topic": "Why gold glitters",
+    "status": "available",
+    "pin": { "lat": 19.08, "lng": 72.88 },
+    "icon": "database",
+    "color": "orange",
+    "landmark": { "kind": "gate", "at": 0.62 },
+    "intro": "A short lesson about gold. You learn why many people trust gold, how much its price can move, and how it fits next to other money.",
+    "currency": { "code": "EUR", "perEur": 1 },
+    "lessonIds": ["mumbai-1"],
+    "personal": true
   }
 ]

@@ -82,5 +82,13 @@
   "currency-risk": {
     "term": "Currency risk",
     "definition": "When you own something priced in another currency, exchange-rate moves change its value in your money, up or down."
+  },
+  "rule-of-72": {
+    "term": "Rule of 72",
+    "definition": "A quick way to guess how fast something doubles. Divide 72 by the yearly rise in %. At 6% a year, prices or savings double in about 12 years."
+  },
+  "pay-yourself-first": {
+    "term": "Pay yourself first",
+    "definition": "Moving a fixed amount to savings on the day your pay arrives, before you spend anything. You then spend what is left."
   }
 }

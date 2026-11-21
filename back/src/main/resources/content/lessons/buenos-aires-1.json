@@ -1,0 +1,206 @@
+{
+  "id": "buenos-aires-1",
+  "story": "buenos-aires",
+  "title": "How fast prices double",
+  "place": "Your savings account · today",
+  "topic": "Fast inflation",
+  "minutes": 4,
+  "xp": 50,
+  "concepts": [
+    "inflation",
+    "rule-of-72"
+  ],
+  "steps": [
+    {
+      "type": "text",
+      "id": "t1",
+      "phase": "learn",
+      "kicker": "Prices in Argentina",
+      "title": "When prices run away",
+      "body": "In most of Europe, prices rise by about 2 to 3% a year. This is called [[inflation]]. In Argentina, prices rose by more than 200% in 2023. Something that cost 100 pesos in January cost about 300 pesos in December. If your money pays no interest, it then buys only a third of what it bought before."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s1",
+      "phase": "learn",
+      "concepts": [
+        "inflation"
+      ],
+      "prompt": "The chart shows what money with no interest can buy over the years. Move the price rise slider. Find a price rise where the money buys only half as much after 2 years.",
+      "model": "realValue",
+      "params": {
+        "years": {
+          "label": "Years",
+          "min": 0,
+          "max": 10,
+          "step": 1,
+          "value": 2,
+          "unit": " years"
+        },
+        "interest": {
+          "label": "Interest per year",
+          "min": 0,
+          "max": 20,
+          "step": 1,
+          "value": 0,
+          "unit": "%"
+        },
+        "inflation": {
+          "label": "Price rise per year",
+          "min": 0,
+          "max": 120,
+          "step": 5,
+          "value": 5,
+          "unit": "%"
+        }
+      },
+      "output": {
+        "label": "Change in what the money can buy",
+        "unit": "%"
+      },
+      "goal": {
+        "condition": {
+          "of": "output",
+          "max": -50
+        },
+        "hint": "Move the price rise above 40%."
+      }
+    },
+    {
+      "type": "text",
+      "id": "t2",
+      "phase": "learn",
+      "kicker": "A quick rule",
+      "title": "The rule of 72",
+      "body": "You can guess how fast prices double with the [[rule-of-72]]. Divide 72 by the price rise per year. The result is the number of years until prices double. At 3% a year, prices double in about 24 years. At 36% a year, prices double in about 2 years."
+    },
+    {
+      "type": "quiz",
+      "id": "q1",
+      "phase": "challenge",
+      "concepts": [
+        "rule-of-72"
+      ],
+      "prompt": "Prices rise by 6% each year. About how many years does it take until prices double?",
+      "options": [
+        "About 12 years",
+        "About 6 years",
+        "About 24 years"
+      ],
+      "correctIndex": 0,
+      "explanation": "72 divided by 6 is 12. So prices double in about 12 years."
+    },
+    {
+      "type": "quiz",
+      "id": "q2",
+      "phase": "challenge",
+      "concepts": [
+        "inflation"
+      ],
+      "prompt": "True or false: if prices rise by 100% in one year, the same money buys half as much at the end of the year.",
+      "options": [
+        "True",
+        "False"
+      ],
+      "correctIndex": 0,
+      "explanation": "True. A rise of 100% means prices double. So each peso buys half as much as before."
+    },
+    {
+      "type": "quiz",
+      "id": "q3",
+      "phase": "challenge",
+      "concepts": [
+        "inflation"
+      ],
+      "prompt": "The chart shows how much prices rose each year in Argentina. What happened in 2023?",
+      "options": [
+        "Prices about tripled in one year",
+        "Prices fell",
+        "Prices rose by about 2%"
+      ],
+      "correctIndex": 0,
+      "explanation": "Prices rose by about 211% in 2023. A rise of 200% means prices are three times as high. In 2024, prices still rose by about 118%.",
+      "chart": {
+        "series": [
+          25,
+          48,
+          54,
+          36,
+          51,
+          95,
+          211,
+          118
+        ],
+        "labels": [
+          "2017",
+          "2018",
+          "2019",
+          "2020",
+          "2021",
+          "2022",
+          "2023",
+          "2024"
+        ],
+        "unit": "%",
+        "caption": "Price rise in Argentina, December to December. Source: INDEC."
+      }
+    },
+    {
+      "type": "text",
+      "id": "t3",
+      "phase": "you",
+      "kicker": "Your savings",
+      "title": "Your savings and prices",
+      "body": "You have **{savingsBalance}** in your savings account. It pays **{savingsRate}** interest a year. When the interest is lower than the price rise, your savings buy a little less each year. The faster prices rise, the faster this happens."
+    },
+    {
+      "type": "slider-chart",
+      "id": "s2",
+      "phase": "you",
+      "concepts": [
+        "inflation"
+      ],
+      "prompt": "Your savings account pays {savingsRate} a year. Move the price rise slider. See what your savings can buy after some years.",
+      "model": "realValue",
+      "params": {
+        "years": {
+          "label": "Years",
+          "min": 0,
+          "max": 10,
+          "step": 1,
+          "value": 5,
+          "unit": " years"
+        },
+        "interest": {
+          "label": "Your interest per year",
+          "min": 0,
+          "max": 5,
+          "step": 0.25,
+          "value": 2,
+          "unit": "%",
+          "fromBank": "savingsRate"
+        },
+        "inflation": {
+          "label": "Price rise per year",
+          "min": 0,
+          "max": 60,
+          "step": 1,
+          "value": 3,
+          "unit": "%"
+        }
+      },
+      "output": {
+        "label": "Change in what your savings can buy",
+        "unit": "%"
+      },
+      "goal": {
+        "condition": {
+          "of": "output",
+          "min": -1000000
+        },
+        "hint": "Move a slider to see the result change."
+      },
+      "note": "The interest slider starts at your real rate. This is an example, not a forecast."
+    }
+  ]
+}

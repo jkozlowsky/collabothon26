@@ -53,13 +53,13 @@ test('takes story progress from the backend lessons and opens the story with its
   expect(screen.queryByTestId('lesson-seoul-3')).toBeNull();
 });
 
-test('a coming-soon story has a callout without a button', async () => {
+test('a city with one lesson has a callout with an open button', async () => {
   await renderRouter(appRoutes, { initialUrl: '/map' });
 
   await fireEvent.press(await screen.findByTestId('globe-pin-nairobi'));
   const callout = await screen.findByTestId('pin-callout');
-  expect(within(callout).getByText('Coming soon')).toBeOnTheScreen();
-  expect(within(callout).queryByTestId('pin-callout-open')).toBeNull();
+  expect(within(callout).queryByText('Coming soon')).toBeNull();
+  expect(within(callout).getByTestId('pin-callout-open')).toBeOnTheScreen();
 });
 
 test('the Rome Arena pin opens the Arena callout and navigates to duel tab', async () => {

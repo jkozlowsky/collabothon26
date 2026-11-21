@@ -19,12 +19,11 @@ public record CategorizationDto(
 		Role role,
 		LifeStage lifeStage,
 		List<FocusArea> focusAreas,
-		List<ConfidenceGapDto> confidenceGaps,
+		List<GapDto> gaps,
 		LessonVariantDto lessonVariant,
 		List<ExplanationDto> explanation,
 		ProfileRangesDto profile,
 		Map<String, Double> mastery,
-		Map<String, Double> confidence,
 		Integer answerCount,
 		StartLessonDto startLesson,
 		Boolean readyForNext,
@@ -39,7 +38,7 @@ public record CategorizationDto(
 
 	public CategorizationDto {
 		mastery = mastery == null ? Map.of() : mastery;
-		confidence = confidence == null ? Map.of() : confidence;
+		gaps = gaps == null ? List.of() : gaps;
 		answerCount = answerCount == null ? 0 : answerCount;
 		readyForNext = Boolean.TRUE.equals(readyForNext);
 		pathStoryIds = pathStoryIds == null ? List.of() : pathStoryIds;

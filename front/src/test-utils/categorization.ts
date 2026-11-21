@@ -9,10 +9,10 @@ export function categorization(patch: Partial<Categorization> = {}): Categorizat
     role: 'intermediate',
     lifeStage: null,
     focusAreas: ['investing', 'debt', 'risk', 'saving'],
-    confidenceGaps: [
+    gaps: [
       {
         area: 'investing',
-        direction: 'under',
+        direction: 'habit-ahead',
         because:
           'You said: I save regularly. Your accounts with us include investment products, ' +
           'and your answer about investing shows you understand it.',
@@ -33,7 +33,6 @@ export function categorization(patch: Partial<Categorization> = {}): Categorizat
     ],
     profile: null,
     mastery: {},
-    confidence: {},
     answerCount: 0,
     startLesson: { lessonId: 'berlin-2', title: 'Compound interest', area: 'investing', storyId: 'berlin', storyCity: 'Berlin' },
     readyForNext: false,

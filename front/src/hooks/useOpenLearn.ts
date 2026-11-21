@@ -13,14 +13,16 @@ let pendingTarget: Href | null = null;
  * @returns open(target, go) — `go` performs the switch when onboarding is done (defaults to navigating to `target`).
  */
 export function useOpenLearn() {
-  const { done } = useOnboarding();
+  const { loaded, done } = useOnboarding();
   return useCallback(
     (target: Href = '/map', go: () => void = () => router.navigate(target)) => {
+      // Until the profile has loaded nobody knows whether onboarding is behind this user.
+      if (!loaded) return;
       if (done) return go();
       pendingTarget = target;
       router.push('/onboarding');
     },
-    [done],
+    [loaded, done],
   );
 }
 
@@ -33,7 +35,7 @@ function closeAndGo(target: Href) {
 /**
  * Mount once inside the main layout. Onboarding is a plain stack screen on top of the bank (not a
  * protected one: removing a protected screen rebuilds the stack and loses the bank's tab and scroll),
- * so when it completes this closes it and moves on to the consent card, which then calls continueToLearn.
+ * so when it completes this closes it and moves on to /categorizing (the quick check and the path), which then calls continueToLearn.
  */
 export function useResumeLearnAfterOnboarding() {
   const { done } = useOnboarding();

@@ -33,19 +33,20 @@ export const LESSON = (() => {
 })();
 
 const CATEGORIZATION_URL = '**/api/users/demo-user/categorization';
-/** Jev asks these one by one after the time-frame question; three answers are enough to place Alex. */
-const ORDER = ['inflation-real-value', 'emergency-cushion-purpose', 'time-in-market'];
-const MASTERY = { saving: 0.35, investing: 0.25 };
+/** The Quick check asks these one by one; three answers are enough to place Alex. */
+const ORDER = ['berlin-1/q2', 'berlin-2/q1', 'seoul-1/q2'];
+const MASTERY = { saving: 0.55, investing: 0.25 };
+const correct = (id: string) => POOL.find((q) => q.id === id)!.correctIndex;
 
 /** What Jev "concludes" about Alex: saves regularly, invests timidly, mixes up real interest. */
 export const ALEX = categorization({
   role: 'novice',
   focusAreas: ['saving', 'investing'],
-  confidenceGaps: [
+  gaps: [
     {
       area: 'investing',
-      direction: 'under',
-      because: 'You said: I save and invest. Money goes into an ETF every month, but you rated yourself as guessing.',
+      direction: 'habit-ahead',
+      because: 'Your account shows you already invest. Your Investing answers leave a few things open to explore.',
     },
   ],
   explanation: [
@@ -54,7 +55,6 @@ export const ALEX = categorization({
   ],
   profile: { ageBand: null, savingsCover: null, horizon: '1-5y' },
   mastery: MASTERY,
-  confidence: { saving: 0.25, investing: 0.25 },
   answerCount: 3,
   startLesson: { lessonId: 'berlin-1', title: LESSON.title, area: 'saving', storyId: 'berlin', storyCity: 'Berlin' },
   startHere: { lessonId: 'berlin-1', title: LESSON.title, area: 'saving', storyId: 'berlin', storyCity: 'Berlin' },
@@ -315,7 +315,7 @@ export function today() {
 }
 
 /**
- * Clips 01–05: the everyday bank, Learn, onboarding with the Quick check, "How we see you", then the globe to Berlin
+ * Clips 01–05: the everyday bank, Learn, onboarding, the Quick check, "How we see you", then the globe to Berlin
  * and its first lesson (the one the summary starts with). Ends with berlin-1 opening.
  */
 export async function onboardToFirstLesson(page: Page, rec: ClipRecorder, { realJev }: { realJev: boolean }) {
@@ -329,7 +329,7 @@ export async function onboardToFirstLesson(page: Page, rec: ClipRecorder, { real
   await tap(page, 'nav-learn', 800);
   await beat(page, 600);
 
-  // 2. Onboarding: welcome, the map and duel slides, three profile questions.
+  // 2. Onboarding: welcome, the map and duel slides, consent to the bank data, two questions.
   await rec.start('02-onboarding');
   await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
   await beat(page, 1800);
@@ -340,53 +340,39 @@ export async function onboardToFirstLesson(page: Page, rec: ClipRecorder, { real
   await expect(page.getByTestId('onboarding-challenge')).toBeVisible();
   await beat(page, 2000);
   await tap(page, 'onboarding-challenge-next');
-  await tap(page, 'onboarding-personalise', 1200);
-
-  await tap(page, 'option-building', 1000);
+  await expect(page.getByTestId('onboarding-consent')).toBeVisible();
+  await beat(page, 2500);
+  await tap(page, 'consent-accept');
+  // What the money is for, and when: a flat in 2–3 years → "1–5 years".
+  await tap(page, 'option-home', 1000);
   await tap(page, 'onboarding-continue');
-  for (const goal of ['start-saving', 'inflation', 'stocks-etfs']) await tap(page, `goal-${goal}`, 400);
-  await tap(page, 'onboarding-continue', 800);
-  await tap(page, 'option-investing', 1000);
+  await tap(page, 'option-1-5y', 1000);
   await tap(page, 'onboarding-continue');
   await beat(page, 600);
 
-  // 3. Consent to the bank data, what Jev already knows, the Quick check.
-  await rec.start('03-consent-quick-check');
-  await expect(page.getByTestId('categorizing-consent')).toBeVisible({ timeout: 20_000 });
+  // 3. The Quick check: after each answer the right one shows with the lesson's explanation.
+  await rec.start('03-quick-check');
+  await expect(page.getByTestId('onboarding-check-intro')).toBeVisible({ timeout: 20_000 });
   await beat(page, 2000);
-  await tap(page, 'consent-accept');
-  await expect(page.getByTestId('categorizing-know')).toBeVisible({ timeout: 20_000 });
-  await beat(page, 3000);
-  await tap(page, 'know-start');
-
-  // Time frame: the flat in 2–3 years → "1–5 years". No confidence chip on profile questions.
-  await beat(page, 1500);
-  await tap(page, 'quick-check-option-1');
+  await tap(page, 'check-start');
+  const answer = async (testId: string) => {
+    await beat(page, 2500); // reading the question
+    await tap(page, testId);
+    await beat(page, 3000); // the right answer and why
+    await tap(page, 'quick-check-continue', 300);
+  };
   if (!realJev) {
-    // Real interest: Alex gets it wrong and says he is guessing.
-    await beat(page, 2500);
-    await tap(page, 'quick-check-option-0');
-    await tap(page, 'confidence-guessing', 900);
-    // Emergency fund: right, fairly sure.
-    await beat(page, 2500);
-    await tap(page, 'quick-check-option-0');
-    await tap(page, 'confidence-fairly-sure', 900);
-    // Time in the market: right, but guessing.
-    await beat(page, 2500);
-    await tap(page, 'quick-check-option-2');
-    await tap(page, 'confidence-guessing', 900);
+    // Real return: Alex mixes it up. Emergency fund: right. A share that fell by half: not sure.
+    await answer(`quick-check-option-${correct(ORDER[0]) + 1}`);
+    await answer(`quick-check-option-${correct(ORDER[1])}`);
+    await answer('quick-check-unsure');
   } else {
-    // Jev picks the questions, so answer whatever comes until the summary shows.
+    // Jev picks the lessons, so answer whatever comes until the summary shows.
     const summary = page.getByTestId('learning-path');
+    const option = page.getByTestId('quick-check-option-0');
     while (!(await summary.isVisible())) {
-      const option = page.getByTestId('quick-check-option-0');
-      if (await option.isVisible()) {
-        await beat(page, 2000);
-        await act(page);
-        await option.click();
-        const chip = page.getByTestId('confidence-guessing');
-        if (await chip.isVisible({ timeout: 1500 }).catch(() => false)) await tap(page, 'confidence-guessing', 700);
-      }
+      // An answered question keeps its options on screen, disabled, until "Continue".
+      if ((await option.isVisible()) && (await option.getAttribute('aria-disabled')) !== 'true') await answer('quick-check-option-0');
       await page.waitForTimeout(300);
     }
   }

@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -89,6 +90,26 @@ class CheckQuestionControllerTests {
 					 {"id": "time-in-market"}, {"id": "too-good-offer"}]"""
 						.formatted(emergencyFund, ACCOUNT_PROMPT, GENERIC_PROMPT),
 					JsonCompareMode.LENIENT));
+	}
+
+	@Test
+	void everyQuestionThatShouldTeachALessonIsLinkedToOne() throws Exception {
+		Map<String, Integer> lessonPosition = Map.of("savings-runway", 1, "time-in-market", 2, "rate-vs-inflation", 3);
+
+		for (JsonNode q : pool()) {
+			String id = q.get("id").stringValue();
+			if (lessonPosition.containsKey(id)) {
+				Long expected = jdbc.sql("SELECT id FROM lesson WHERE position = ?")
+					.param(lessonPosition.get(id))
+					.query(Long.class)
+					.single();
+				assertFalse(q.get("lessonId").isNull(), id + " has no lesson");
+				assertEquals(expected, q.get("lessonId").longValue(), id);
+			}
+			else {
+				assertTrue(q.get("lessonId").isNull(), id);
+			}
+		}
 	}
 
 	@Test

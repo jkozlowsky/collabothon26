@@ -13,7 +13,7 @@ import com.collabothon.back.categorization.dto.HistoryEntryDto;
 import com.collabothon.back.categorization.mappers.CheckQuestionMapper;
 import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
 import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
-import com.collabothon.back.common.exceptions.BadRequestException;
+import com.collabothon.back.exceptions.BusinessException;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -42,10 +42,10 @@ public class CheckQuestionService {
 		for (HistoryEntryDto entry : history) {
 			CheckQuestionProjection question = byId.remove(entry.questionId());
 			if (question == null) {
-				throw new BadRequestException("Answer each known question once");
+				throw new BusinessException(CategorizationErrorCode.ANSWER_EACH_QUESTION_ONCE);
 			}
 			if (entry.optionIndex() != null && entry.optionIndex() >= question.options().size()) {
-				throw new BadRequestException("Pick one of the question's options");
+				throw new BusinessException(CategorizationErrorCode.PICK_ONE_OPTION);
 			}
 			answers.add(new Answer(question, entry.optionIndex(), entry.confidence()));
 		}

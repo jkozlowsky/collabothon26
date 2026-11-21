@@ -2,51 +2,111 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { PlayerAvatar } from '@/components/duel/PlayerAvatar';
 import { colors, radii, spacing, type } from '@/constants/theme';
-import { formatNumber, formatSigned } from '@/lib/duel/meta';
 import type { RankingRow } from '@/types/duel';
 
 type Props = {
   row: RankingRow;
-  /** Weekly values are Elo gained (signed, green/red); the others are Elo. */
-  weekly: boolean;
-  isYou: boolean;
-  /** `pinned` is the highlighted "you" card under the list. */
-  variant?: 'row' | 'pinned';
+  isYou?: boolean;
+  variant?: 'default' | 'pinned';
   testID?: string;
 };
 
-/** Rank, avatar, name with level and Elo, and the ranked value. */
-export function RankingListItem({ row, weekly, isYou, variant = 'row', testID }: Props) {
-  const pinned = variant === 'pinned';
-  const valueColor = !weekly ? colors.textPrimary : row.value > 0 ? colors.feedbackSuccess : row.value < 0 ? colors.feedbackDanger : colors.textMuted;
+/** Weekly ranking list row (Figma 153:3824). Weekly XP only, no Elo. */
+export function RankingListItem({ row, isYou = false, variant = 'default', testID }: Props) {
+  const isPinned = variant === 'pinned';
+
   return (
-    <View style={[styles.row, pinned && styles.pinned]} testID={testID}>
-      <Text style={[styles.rank, pinned && styles.rankPinned]}>{row.rank}</Text>
-      <PlayerAvatar avatar={row.avatar} size={40} />
-      <View style={styles.body}>
-        <Text style={type.titleCard} numberOfLines={1}>
-          {isYou ? `${row.name} (you)` : row.name}
-        </Text>
-        <Text style={styles.meta}>
-          Lv {row.level} · {formatNumber(row.elo)} Elo
+    <View
+      style={[
+        styles.row,
+        isYou && styles.youRow,
+        isPinned && styles.pinnedRow,
+      ]}
+      testID={testID ?? `ranking-row-${row.rank}`}
+    >
+      <Text style={[styles.rank, isYou && styles.youRank]} testID={`ranking-pos-${row.rank}`}>
+        {row.rank}
+      </Text>
+
+      <PlayerAvatar avatar={row.avatar} size={36} ring={isYou ? 'accent' : 'none'} />
+
+      <View style={styles.main}>
+        <View style={styles.nameRow}>
+          <Text style={[styles.name, isYou && styles.youName]} numberOfLines={1}>
+            {row.name} {isYou ? '(You)' : ''}
+          </Text>
+        </View>
+        <Text style={styles.level}>Level {row.level}</Text>
+      </View>
+
+      <View style={styles.scoreWrap}>
+        <Text style={[styles.xpValue, isYou && styles.youXpValue]}>
+          {row.weeklyXp} XP
         </Text>
       </View>
-      <Text style={[styles.value, { color: valueColor }]}>{weekly ? formatSigned(row.value) : formatNumber(row.value)}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: 10, minHeight: 60 },
-  pinned: {
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.bgSurface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  youRow: {
     backgroundColor: colors.brandAccentSoft,
+  },
+  pinnedRow: {
+    backgroundColor: colors.bgSurface,
     borderRadius: radii.card,
     borderWidth: 2,
-    borderColor: colors.brandPrimary,
+    borderColor: colors.brandAccent,
   },
-  rank: { ...type.labelStrong, width: 24, textAlign: 'center', color: colors.textMuted },
-  rankPinned: { color: colors.brandPrimary },
-  body: { flex: 1, gap: spacing.xxs },
-  meta: { ...type.labelDefault, color: colors.textMuted },
-  value: type.titleCard,
+  rank: {
+    ...type.labelStrong,
+    color: colors.textMuted,
+    width: 24,
+    textAlign: 'center',
+  },
+  youRank: {
+    color: colors.brandPrimary,
+    fontWeight: '700',
+  },
+  main: {
+    flex: 1,
+    gap: 2,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  name: {
+    ...type.titleCard,
+    color: colors.textPrimary,
+  },
+  youName: {
+    color: colors.brandPrimary,
+    fontWeight: '700',
+  },
+  level: {
+    ...type.labelDefault,
+    color: colors.textMuted,
+  },
+  scoreWrap: {
+    alignItems: 'flex-end',
+  },
+  xpValue: {
+    ...type.labelStrong,
+    color: colors.brandPrimary,
+  },
+  youXpValue: {
+    fontWeight: '700',
+  },
 });

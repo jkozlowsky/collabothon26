@@ -38,7 +38,7 @@ import com.collabothon.back.categorization.entities.CheckQuestion;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.QuestionLevel;
 import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
-import com.collabothon.back.lesson.LessonContent;
+import com.collabothon.back.lesson.repositories.LessonContentRepository;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -66,7 +66,7 @@ class CheckQuestionControllerTests {
 	JsonMapper json;
 
 	@Autowired
-	LessonContent lessonContent;
+	LessonContentRepository lessonContent;
 
 	private static final String LESSON = "berlin-1";
 

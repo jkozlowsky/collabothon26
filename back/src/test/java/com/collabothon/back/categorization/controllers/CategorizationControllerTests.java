@@ -48,7 +48,7 @@ import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
 import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
-import com.collabothon.back.lesson.LessonContent;
+import com.collabothon.back.lesson.repositories.LessonContentRepository;
 
 import tools.jackson.databind.json.JsonMapper;
 
@@ -97,7 +97,7 @@ class CategorizationControllerTests {
 	JsonMapper json;
 
 	@Autowired
-	LessonContent lessonContent;
+	LessonContentRepository lessonContent;
 
 	@Autowired
 	MockMvc mvc;

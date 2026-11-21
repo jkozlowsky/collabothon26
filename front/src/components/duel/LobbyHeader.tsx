@@ -5,22 +5,21 @@ import { colors, spacing, type } from '@/constants/theme';
 import { formatNumber } from '@/lib/duel/meta';
 
 type Props = {
-  /** Account first name; omitted until the account loads. */
   firstName?: string;
   streak: number;
   xp: number;
 };
 
-/** "Hi Alex · 1v1 knowledge duels / Ready to duel?" with the streak and XP chips (Figma "Duel — Lobby"). */
+/** Lobby header with streak and XP chips (Figma 157:3800). */
 export function LobbyHeader({ firstName, streak, xp }: Props) {
   return (
     <View style={styles.row}>
       <View style={styles.text}>
         <Text style={styles.greeting} numberOfLines={1} testID="duel-greeting">
-          {firstName ? `Hi ${firstName} · 1v1 knowledge duels` : '1v1 knowledge duels'}
+          {firstName ? `Hi ${firstName} · 1v1 Duels` : '1v1 Knowledge Duels'}
         </Text>
         <Text style={type.displayLarge} accessibilityRole="header">
-          Ready to duel?
+          Ready for a duel?
         </Text>
       </View>
       <View style={styles.chips}>

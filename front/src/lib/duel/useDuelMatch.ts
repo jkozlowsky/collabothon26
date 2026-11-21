@@ -9,34 +9,29 @@ import {
 } from '@/lib/duel/reducer';
 import { USER_ID } from '@/lib/user';
 import type {
-  AnswerRequest,
   AnswerResult,
-  CategorySlug,
+  DuelAnswer,
   DuelMode,
-  Lang,
   MatchEnd,
   MatchStart,
   MatchState,
-  ServerMessage,
   StartMatchRequest,
 } from '@/types/duel';
 
-const FEEDBACK_AUTO_ADVANCE_MS = 3000;
+const FEEDBACK_AUTO_ADVANCE_MS = 1200;
 const COUNTDOWN_TICK_MS = 250;
 const POLL_INTERVAL_MS = 1000;
-/** A human match shows "Finding a rival…" for a moment so the search reads as real. */
 const FINDING_RIVAL_MS = 1500;
-const MAX_POLL_FAILURES = 3;
 const ACTIVE_MATCH_STORAGE_KEY = `fq_duel_active_match:${USER_ID}`;
 
 type StoredActiveMatch = {
   matchId: number;
-  category: CategorySlug;
+  categories: string[];
   mode: DuelMode;
   yourDots: LocalDot[];
 };
 
-function readStoredMatch(category: CategorySlug, mode: DuelMode): StoredActiveMatch | null {
+function readStoredMatch(categories: string[], mode: DuelMode): StoredActiveMatch | null {
   try {
     if (typeof window === 'undefined' || !window.sessionStorage) return null;
     const raw = window.sessionStorage.getItem(ACTIVE_MATCH_STORAGE_KEY);
@@ -45,18 +40,17 @@ function readStoredMatch(category: CategorySlug, mode: DuelMode): StoredActiveMa
     if (
       typeof parsed.matchId === 'number' &&
       Number.isFinite(parsed.matchId) &&
-      parsed.category === category &&
       parsed.mode === mode
     ) {
       return {
         matchId: parsed.matchId,
-        category: parsed.category,
+        categories: Array.isArray(parsed.categories) ? parsed.categories : categories,
         mode: parsed.mode,
         yourDots: Array.isArray(parsed.yourDots) ? (parsed.yourDots as LocalDot[]) : [],
       };
     }
   } catch {
-    // Ignore storage errors (private mode / non-web).
+    // Ignore storage errors
   }
   return null;
 }
@@ -66,7 +60,7 @@ function writeStoredMatch(data: StoredActiveMatch): void {
     if (typeof window === 'undefined' || !window.sessionStorage) return;
     window.sessionStorage.setItem(ACTIVE_MATCH_STORAGE_KEY, JSON.stringify(data));
   } catch {
-    // Ignore storage errors.
+    // Ignore storage errors
   }
 }
 
@@ -75,71 +69,51 @@ export function clearStoredActiveMatch(): void {
     if (typeof window === 'undefined' || !window.sessionStorage) return;
     window.sessionStorage.removeItem(ACTIVE_MATCH_STORAGE_KEY);
   } catch {
-    // Ignore storage errors.
+    // Ignore storage errors
   }
 }
 
 export type UseDuelMatchParams = {
-  category: CategorySlug;
+  categories: string[];
   mode: DuelMode;
-  /** When set, loads a finished match result via REST instead of starting a match. */
   reloadMatchId?: number;
-  lang?: Lang;
 };
 
 export type UseDuelMatchResult = {
   state: DuelMatchState;
-  /** Seconds remaining on the current question, derived from the server's deadline timestamp. */
   secondsLeft: number;
-  selectOption: (option: number) => void;
+  submitAnswer: (answer: DuelAnswer) => void;
   nextQuestion: () => void;
   leave: () => void;
-  playAgain: () => void;
-  /** After a failed request: resume the match by id, or start over when there is none to resume. */
   retry: () => void;
-  dismissReconnectBanner: () => void;
 };
-
-const userQuery = (lang: Lang) => `userId=${encodeURIComponent(USER_ID)}&lang=${lang}`;
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-function errorMessage(err: unknown): ServerMessage {
-  if (err instanceof ApiError && err.status === 404) {
-    return { type: 'error', code: 'MATCH_NOT_FOUND', message: 'This match is no longer available.' };
-  }
-  const message = err instanceof Error ? err.message : 'Request failed';
-  return { type: 'error', code: 'REQUEST_FAILED', message };
-}
-
 export function useDuelMatch({
-  category,
+  categories,
   mode,
   reloadMatchId,
-  lang = 'en',
 }: UseDuelMatchParams): UseDuelMatchResult {
   const [sessionKey, setSessionKey] = useState(0);
   const [state, dispatch] = useReducer(duelReducer, undefined, () => {
-    const stored = !reloadMatchId ? readStoredMatch(category, mode) : null;
+    const stored = !reloadMatchId ? readStoredMatch(categories, mode) : null;
     return createInitialDuelState(
-      category,
+      categories,
       mode,
       stored ? { matchId: stored.matchId, yourDots: stored.yourDots } : undefined,
     );
   });
-  const [secondsLeft, setSecondsLeft] = useState(40);
+  const [secondsLeft, setSecondsLeft] = useState(30);
 
-  // The poll and the answer handler read the latest state without being recreated on every change.
   const latestRef = useRef(state);
   useEffect(() => {
     latestRef.current = state;
   }, [state]);
-  // Bumped whenever an answer is sent, so a poll that started earlier cannot overwrite what the answer produced.
-  const answerEpochRef = useRef(0);
-  const pollFailuresRef = useRef(0);
-  const startRef = useRef<{ key: number; promise: Promise<MatchStart> } | null>(null);
 
-  // Persist active matchId + local dots in sessionStorage so a page reload mid-match resumes cleanly.
+  const answeringRef = useRef(false);
+
+  // Persist active match in sessionStorage
   useEffect(() => {
     if (state.error?.code === 'MATCH_NOT_FOUND') {
       clearStoredActiveMatch();
@@ -148,189 +122,217 @@ export function useDuelMatch({
     if (state.matchId !== null && state.phase !== 'result') {
       writeStoredMatch({
         matchId: state.matchId,
-        category: state.category,
+        categories: state.categories,
         mode: state.mode,
         yourDots: state.yourDots,
       });
-    }
-  }, [state.matchId, state.phase, state.category, state.mode, state.yourDots, state.error?.code]);
-
-  const loadResult = useCallback(
-    async (matchId: number) => {
-      const result = await api<MatchEnd>(`/api/duel/matches/${matchId}?${userQuery(lang)}`);
+    } else if (state.phase === 'result') {
       clearStoredActiveMatch();
-      dispatch({ type: 'match.end', ...result });
-    },
-    [lang],
-  );
+    }
+  }, [state.matchId, state.categories, state.mode, state.yourDots, state.phase, state.error]);
 
-  /** Fetch the match snapshot and feed it to the reducer, or load the result if it already finished. */
-  const resume = useCallback(
-    async (matchId: number) => {
-      const snapshot = await api<MatchState>(`/api/duel/matches/${matchId}/state?${userQuery(lang)}`);
-      if (snapshot.finished) {
-        await loadResult(matchId);
+  const fetchResult = useCallback(async (matchId: number) => {
+    try {
+      const res = await api<MatchEnd>(`/api/duel/matches/${matchId}?userId=${encodeURIComponent(USER_ID)}`);
+      dispatch({ type: 'match.end', result: res });
+      clearStoredActiveMatch();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        // Not finished yet
         return;
       }
-      dispatch({ type: 'match.state', ...snapshot });
-    },
-    [lang, loadResult],
-  );
-
-  // Finished match opened by id (/duel/match?matchId=...)
-  useEffect(() => {
-    if (!reloadMatchId || sessionKey > 0) return;
-    let cancelled = false;
-    api<MatchEnd>(`/api/duel/matches/${reloadMatchId}?${userQuery(lang)}`)
-      .then((res) => {
-        if (!cancelled) dispatch({ type: 'rest.matchEnd', result: res });
-      })
-      .catch((err: Error) => {
-        if (!cancelled) dispatch({ type: 'error', code: 'LOAD_FAILED', message: err.message });
+      dispatch({
+        type: 'error',
+        code: 'RESULT_ERROR',
+        message: err instanceof Error ? err.message : 'Failed to load result',
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [reloadMatchId, lang, sessionKey]);
-
-  // Start a match, or resume the one remembered for this tab.
-  useEffect(() => {
-    if (reloadMatchId && sessionKey === 0) return;
-    let cancelled = false;
-    const resumeId = latestRef.current.matchId;
-
-    if (resumeId !== null) {
-      resume(resumeId).catch((err: unknown) => {
-        if (!cancelled) dispatch(errorMessage(err));
-      });
-      return () => {
-        cancelled = true;
-      };
     }
+  }, []);
 
-    // One request per session even when React runs this effect twice (StrictMode).
-    if (startRef.current?.key !== sessionKey) {
-      const body: StartMatchRequest = { userId: USER_ID, category, mode, lang };
-      const request = api<MatchStart>('/api/duel/matches', { method: 'POST', body: JSON.stringify(body) });
-      const promise =
-        mode === 'HUMAN' ? Promise.all([request, wait(FINDING_RIVAL_MS)]).then(([start]) => start) : request;
-      startRef.current = { key: sessionKey, promise };
-    }
-    startRef.current.promise
-      .then((start) => {
-        if (cancelled) return;
-        const { question, ...match } = start;
-        dispatch({ type: 'match.start', ...match });
-        dispatch({ type: 'question', ...question });
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) dispatch(errorMessage(err));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [category, mode, lang, sessionKey, reloadMatchId, resume]);
-
-  // Poll the snapshot every second while playing or waiting: it carries the rival's progress, resolves the
-  // server-side question timeouts and tells us when the match is settled.
-  const polling =
-    state.matchId !== null &&
-    state.error === null &&
-    (state.phase === 'question' || state.phase === 'feedback' || state.phase === 'waiting');
-  const matchId = state.matchId;
+  // Match initialization / start / resume
   useEffect(() => {
-    if (!polling || matchId === null) return;
     let cancelled = false;
-    const tick = async () => {
-      const epoch = answerEpochRef.current;
-      try {
-        const snapshot = await api<MatchState>(`/api/duel/matches/${matchId}/state?${userQuery(lang)}`);
-        if (cancelled || epoch !== answerEpochRef.current) return;
-        pollFailuresRef.current = 0;
-        if (snapshot.finished) {
-          await loadResult(matchId);
+
+    async function initMatch() {
+      // 1. Resuming by reloadMatchId
+      if (reloadMatchId) {
+        try {
+          const matchState = await api<MatchState>(
+            `/api/duel/matches/${reloadMatchId}/state?userId=${encodeURIComponent(USER_ID)}`,
+          );
+          if (cancelled) return;
+          dispatch({ type: 'match.state', state: matchState });
+          if (matchState.finished) {
+            await fetchResult(reloadMatchId);
+          }
+        } catch (err) {
+          if (cancelled) return;
+          const is404 = err instanceof ApiError && err.status === 404;
+          dispatch({
+            type: 'error',
+            code: is404 ? 'MATCH_NOT_FOUND' : 'RESUME_FAILED',
+            message: is404 ? 'Match not found or expired.' : 'Failed to resume match.',
+          });
+        }
+        return;
+      }
+
+      // 2. Resuming stored match
+      const stored = readStoredMatch(categories, mode);
+      if (stored) {
+        try {
+          const matchState = await api<MatchState>(
+            `/api/duel/matches/${stored.matchId}/state?userId=${encodeURIComponent(USER_ID)}`,
+          );
+          if (cancelled) return;
+          dispatch({ type: 'match.state', state: matchState });
+          if (matchState.finished) {
+            await fetchResult(stored.matchId);
+          }
           return;
-        }
-        if (snapshot.rivalProgress) dispatch({ type: 'rival.progress', ...snapshot.rivalProgress });
-
-        const local = latestRef.current;
-        if (local.phase !== 'question' || !local.question || local.selectedOption !== null) return;
-        const localIndex = local.question.index;
-        const serverIndex = snapshot.question?.index ?? null;
-        if (serverIndex === localIndex) return;
-        if (serverIndex === localIndex + 1 || (serverIndex === null && localIndex === local.questionCount - 1)) {
-          // The question ran out while we were looking at it.
-          dispatch({ type: 'answer.result', index: localIndex, correct: false, timedOut: true });
-          if (snapshot.question) dispatch({ type: 'question', ...snapshot.question });
-          else dispatch({ type: 'match.waiting' });
-        } else {
-          dispatch({ type: 'match.state', ...snapshot });
-        }
-      } catch (err) {
-        if (cancelled) return;
-        pollFailuresRef.current += 1;
-        if ((err instanceof ApiError && err.status === 404) || pollFailuresRef.current >= MAX_POLL_FAILURES) {
-          dispatch(errorMessage(err));
+        } catch {
+          clearStoredActiveMatch();
         }
       }
-    };
-    const id = setInterval(tick, POLL_INTERVAL_MS);
+
+      // 3. Starting new match
+      if (mode === 'HUMAN') {
+        await wait(FINDING_RIVAL_MS);
+      }
+      if (cancelled) return;
+
+      try {
+        const body: StartMatchRequest = {
+          userId: USER_ID,
+          categories,
+          mode,
+        };
+        const start = await api<MatchStart>('/api/duel/matches', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        if (cancelled) return;
+        dispatch({ type: 'match.start', payload: start });
+      } catch (err) {
+        if (cancelled) return;
+        dispatch({
+          type: 'error',
+          code: 'START_FAILED',
+          message: err instanceof Error ? err.message : 'Failed to start match.',
+        });
+      }
+    }
+
+    initMatch();
+
     return () => {
       cancelled = true;
-      clearInterval(id);
     };
-  }, [polling, matchId, lang, loadResult]);
+  }, [categories, mode, reloadMatchId, sessionKey, fetchResult]);
 
-  // Countdown drawn directly from the server's deadline timestamp (no local drift).
-  const deadline = state.question?.deadline ?? null;
-  const questionActive = state.phase === 'question' || state.phase === 'feedback';
+  // Submit answer
+  const submitAnswer = useCallback(
+    async (answer: DuelAnswer) => {
+      const current = latestRef.current;
+      if (current.phase !== 'question' || !current.question || current.matchId === null) {
+        return;
+      }
+      if (answeringRef.current) return;
+      answeringRef.current = true;
 
+      const qIndex = current.question.index;
+      try {
+        const payload = {
+          userId: USER_ID,
+          index: qIndex,
+          ...answer,
+        };
+        const result = await api<AnswerResult>(`/api/duel/matches/${current.matchId}/answers`, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        dispatch({
+          type: 'answer.result',
+          index: result.index,
+          correct: result.correct,
+          timedOut: result.timedOut,
+          nextQuestion: result.nextQuestion,
+          rivalProgress: result.rivalProgress,
+          yourFinal: result.yourFinal,
+          finished: result.finished,
+        });
+
+        if (result.finished) {
+          fetchResult(current.matchId);
+        }
+      } catch (err) {
+        dispatch({
+          type: 'error',
+          code: 'ANSWER_FAILED',
+          message: err instanceof Error ? err.message : 'Failed to submit answer.',
+        });
+      } finally {
+        answeringRef.current = false;
+      }
+    },
+    [fetchResult],
+  );
+
+  // Auto advance after feedback
   useEffect(() => {
-    if (!questionActive || deadline === null) return;
-    const update = () => {
-      const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-      setSecondsLeft(remaining);
-    };
-    update();
-    if (state.phase === 'feedback') return;
-    const id = setInterval(update, COUNTDOWN_TICK_MS);
-    return () => clearInterval(id);
-  }, [deadline, questionActive, state.phase]);
-
-  // Auto-advance from feedback screen after 3 s (user can also tap "Next question" sooner).
-  const feedbackIndex = state.feedback?.index ?? null;
-  useEffect(() => {
-    if (state.phase !== 'feedback' || feedbackIndex === null) return;
+    if (state.phase !== 'feedback') return;
     const timer = setTimeout(() => {
       dispatch({ type: 'ui.advance' });
     }, FEEDBACK_AUTO_ADVANCE_MS);
     return () => clearTimeout(timer);
-  }, [state.phase, feedbackIndex]);
+  }, [state.phase]);
 
-  const selectOption = useCallback(
-    (option: number) => {
-      if (state.phase !== 'question' || state.selectedOption !== null) return;
-      if (state.matchId === null || !state.question) return;
-      const { matchId: id, question } = state;
-      dispatch({ type: 'ui.selectOption', option });
-      answerEpochRef.current += 1;
-      const body: AnswerRequest = { userId: USER_ID, index: question.index, option };
-      api<AnswerResult>(`/api/duel/matches/${id}/answers`, { method: 'POST', body: JSON.stringify(body) })
-        .then(async (res) => {
-          dispatch({ type: 'answer.result', index: res.index, correct: res.correct, timedOut: res.timedOut });
-          if (res.rivalProgress) dispatch({ type: 'rival.progress', ...res.rivalProgress });
-          if (res.nextQuestion) {
-            dispatch({ type: 'question', ...res.nextQuestion });
-          } else if (res.finished) {
-            await loadResult(id);
-          } else {
-            dispatch({ type: 'match.waiting' });
-          }
-        })
-        .catch((err: unknown) => dispatch(errorMessage(err)));
-    },
-    [state, loadResult],
-  );
+  // Countdown timer on active question
+  useEffect(() => {
+    if (state.phase !== 'question' || !state.question) return;
+    const deadline = state.question.deadline;
+
+    function tick() {
+      const remainingMs = deadline - Date.now();
+      const sec = Math.max(0, Math.ceil(remainingMs / 1000));
+      setSecondsLeft(sec);
+      if (remainingMs <= 0) {
+        // Timeout
+        submitAnswer({ option: -1 });
+      }
+    }
+
+    tick();
+    const interval = setInterval(tick, COUNTDOWN_TICK_MS);
+    return () => clearInterval(interval);
+  }, [state.phase, state.question, submitAnswer]);
+
+  // Polling on waiting screen
+  useEffect(() => {
+    if (state.phase !== 'waiting' || state.matchId === null || state.finished) return;
+
+    let active = true;
+    const matchId = state.matchId;
+
+    async function poll() {
+      try {
+        const ms = await api<MatchState>(`/api/duel/matches/${matchId}/state?userId=${encodeURIComponent(USER_ID)}`);
+        if (!active) return;
+        dispatch({ type: 'match.state', state: ms });
+        if (ms.finished) {
+          await fetchResult(matchId);
+        }
+      } catch {
+        // Polling failure, will retry next interval
+      }
+    }
+
+    const interval = setInterval(poll, POLL_INTERVAL_MS);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [state.phase, state.matchId, state.finished, fetchResult]);
 
   const nextQuestion = useCallback(() => {
     dispatch({ type: 'ui.advance' });
@@ -340,38 +342,17 @@ export function useDuelMatch({
     clearStoredActiveMatch();
   }, []);
 
-  const playAgain = useCallback(() => {
-    clearStoredActiveMatch();
-    startRef.current = null;
-    dispatch({ type: 'ui.reset', category, mode });
-    setSessionKey((k) => k + 1);
-  }, [category, mode]);
-
   const retry = useCallback(() => {
-    const current = latestRef.current;
-    if (current.matchId === null || current.error?.code === 'MATCH_NOT_FOUND') {
-      playAgain();
-      return;
-    }
-    const id = current.matchId;
-    pollFailuresRef.current = 0;
-    answerEpochRef.current += 1;
     dispatch({ type: 'ui.clearError' });
-    resume(id).catch((err: unknown) => dispatch(errorMessage(err)));
-  }, [playAgain, resume]);
-
-  const dismissReconnectBanner = useCallback(() => {
-    dispatch({ type: 'ui.dismissReconnectBanner' });
+    setSessionKey((k) => k + 1);
   }, []);
 
   return {
     state,
     secondsLeft,
-    selectOption,
+    submitAnswer,
     nextQuestion,
     leave,
-    playAgain,
     retry,
-    dismissReconnectBanner,
   };
 }

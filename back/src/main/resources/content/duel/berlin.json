@@ -1,0 +1,152 @@
+{
+  "story": "berlin",
+  "questions": [
+    {
+      "id": "berlin-d1",
+      "lessonId": "berlin-1",
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d1",
+        "prompt": "A savings account offers 2% per year, while inflation is 5%. What happens to the real value of this money?",
+        "options": [
+          "It falls by about 3% per year, even though the account balance grows",
+          "It grows by 2% per year because the bank regularly adds interest",
+          "It falls by exactly 5% per year, losing all value to inflation",
+          "It does not change because bank savings are protected"
+        ],
+        "correctIndex": 0,
+        "explanation": "The real rate of return is approximately interest minus inflation (2% − 5% = −3%). Although the account balance nominally grows, the purchasing power of the money drops by about 3% per year."
+      }
+    },
+    {
+      "id": "berlin-d2",
+      "lessonId": "berlin-1",
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d2",
+        "prompt": "Lena keeps €25,000 in an account with 0.5% annual interest while inflation is 3%. How much will these savings realistically be worth (in today's purchasing power) after 10 years?",
+        "input": {
+          "kind": "slider",
+          "min": 10000,
+          "max": 30000,
+          "step": 500,
+          "unit": "€"
+        },
+        "answer": 19500,
+        "tolerance": 1500,
+        "reveal": "Around €19,500. After 10 years, the nominal amount will be around €26,270, but inflation will reduce its purchasing power by more than 22%.",
+        "explanation": "Real value formula: €25,000 × ((1 + 0.005) / (1 + 0.03))^10 = €25,000 × 0.7798 ≈ €19,494. With a €500 step, the slider value is €19,500."
+      }
+    },
+    {
+      "id": "berlin-d3",
+      "lessonId": "berlin-2",
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d3",
+        "prompt": "Why does compound interest generate the largest gains only after many years?",
+        "options": [
+          "In subsequent years, returns are also earned on previously accumulated interest",
+          "Banks raise interest rates for long-term clients",
+          "The impact of inflation decreases to zero over time",
+          "Investments become tax-free only after 10 years"
+        ],
+        "correctIndex": 0,
+        "explanation": "With compound interest, gains from previous years increase the principal and start generating returns themselves. As a result, capital growth accelerates year over year."
+      }
+    },
+    {
+      "id": "berlin-d4",
+      "lessonId": "berlin-1",
+      "timeLimitMs": null,
+      "step": {
+        "type": "chart",
+        "id": "d4",
+        "prompt": "The chart shows the change in purchasing power with 0% interest and 3% inflation. After how many years will savings lose about 1/4 (25%) of their real value?",
+        "model": "realValue",
+        "params": {
+          "years": {
+            "label": "Years",
+            "min": 0,
+            "max": 20,
+            "step": 1,
+            "value": 10
+          },
+          "interest": {
+            "label": "Interest",
+            "min": 0,
+            "max": 5,
+            "step": 0.5,
+            "value": 0,
+            "unit": "%"
+          },
+          "inflation": {
+            "label": "Inflation",
+            "min": 0,
+            "max": 8,
+            "step": 0.5,
+            "value": 3,
+            "unit": "%"
+          }
+        },
+        "output": {
+          "label": "Purchasing power change",
+          "unit": "%"
+        },
+        "input": {
+          "kind": "slider",
+          "min": 1,
+          "max": 20,
+          "step": 1,
+          "unit": "years"
+        },
+        "answer": 10,
+        "tolerance": 1,
+        "explanation": "The chart shows that with 3% inflation, the drop in purchasing power reaches approx. −25% after 10 years ((1 / 1.03)^10 − 1 = −25.6%)."
+      }
+    },
+    {
+      "id": "berlin-d5",
+      "lessonId": "berlin-3",
+      "timeLimitMs": null,
+      "step": {
+        "type": "sort",
+        "id": "d5",
+        "prompt": "Assign each situation to the appropriate financial bucket:",
+        "buckets": [
+          "Emergency fund",
+          "Long-term investments"
+        ],
+        "items": [
+          { "text": "Heating boiler breakdown in winter", "bucket": 0 },
+          { "text": "Building retirement capital for 20 years away", "bucket": 1 },
+          { "text": "3 months of expenses after job loss", "bucket": 0 },
+          { "text": "Starter fund for a one-year-old child", "bucket": 1 },
+          { "text": "Urgent car gearbox repair", "bucket": 0 },
+          { "text": "Global equity portfolio for 15 years", "bucket": 1 }
+        ],
+        "explanation": "An emergency fund (Notgroschen) covers sudden, unexpected expenses and must be immediately accessible. Money set aside for decades can be invested for higher returns."
+      }
+    },
+    {
+      "id": "berlin-d6",
+      "lessonId": "berlin-3",
+      "timeLimitMs": null,
+      "step": {
+        "type": "match",
+        "id": "d6",
+        "prompt": "Match the financial terms with their correct definitions:",
+        "pairs": [
+          ["Emergency fund", "Money for unexpected expenses, at least 3 months of living costs"],
+          ["Real rate", "Interest rate minus the inflation rate"],
+          ["Compound interest", "Earning returns on capital along with previously earned interest"],
+          ["Time horizon", "The duration for which money can remain invested"]
+        ],
+        "explanation": "A good understanding of these 4 pillars enables safe financial planning: an emergency fund provides peace of mind, the time horizon defines strategy, compound interest builds capital, and the real rate protects against inflation."
+      }
+    }
+  ]
+}

@@ -7,6 +7,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.collabothon.back.profile.services.Streak;
+
 class StreakTests {
 
 	/** A Thursday. */

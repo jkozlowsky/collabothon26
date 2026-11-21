@@ -474,6 +474,21 @@ class QuickCheckTests {
 			.andExpect(jsonPath("$.startLesson").isEmpty());
 	}
 
+	@Test
+	void anUnderstoodAnswerShowsAGapEvenWithoutConsent() throws Exception {
+		onboard("alex");
+		jev.expect(requestTo(JEV_URL))
+			.andRespond(jevReplies(RUNWAY, "understands", LOAN, "partly", TIME, "partly", SPREAD, "partly"));
+
+		categorize("alex", fourAnswers().replace("\"consent\":true", "\"consent\":false")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.bankData").value(false))
+			.andExpect(jsonPath("$.confidenceGaps.length()").value(1))
+			.andExpect(jsonPath("$.confidenceGaps[0].area").value("saving"))
+			.andExpect(jsonPath("$.confidenceGaps[0].direction").value("under"))
+			.andExpect(jsonPath("$.confidenceGaps[0].because").value(
+					"You said: I save now and then, and your answer about saving shows you understand it."));
+	}
+
 	private long lessonAt(int position) {
 		return jdbc.sql("SELECT id FROM lesson WHERE position = ?").param(position).query(Long.class).single();
 	}

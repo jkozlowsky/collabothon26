@@ -113,13 +113,23 @@ final class CategorizationRules {
 		return picked.isEmpty() ? sorted.subList(0, 1) : picked;
 	}
 
-	/** Where what the user said about themselves and what their accounts show point different ways. */
-	static List<ConfidenceGapDto> confidenceGaps(OnboardingAnswersDto a, FactsDto f) {
+	/** Where what the user said about themselves and what their accounts or their Quick check answers show differ. */
+	static List<ConfidenceGapDto> confidenceGaps(OnboardingAnswersDto a, FactsDto f, List<CheckDto> checks) {
 		Experience said = Experience.fromWire(a.experience());
-		if (f == null || said == null) {
+		if (said == null) {
 			return List.of();
 		}
 		List<ConfidenceGapDto> gaps = new ArrayList<>();
+		if (f != null) {
+			accountGaps(said, f, gaps);
+		}
+		for (ConfidenceArea area : ConfidenceArea.values()) {
+			checkGap(said, area, gaps, checks);
+		}
+		return gaps;
+	}
+
+	private static void accountGaps(Experience said, FactsDto f, List<ConfidenceGapDto> gaps) {
 		if (SAYS_LITTLE_SAVING.contains(said) && f.savesRegularly()) {
 			gaps.add(gap(ConfidenceArea.SAVING, GapDirection.UNDER, said, SAVES_LINE));
 		}
@@ -132,7 +142,38 @@ final class CategorizationRules {
 		else if (SAYS_INVESTING.contains(said) && !f.holdsInvestments()) {
 			gaps.add(gap(ConfidenceArea.INVESTING, GapDirection.OVER, said, NO_HOLDS_LINE));
 		}
-		return gaps;
+	}
+
+	/** An account gap in the area gets the check cited; otherwise the check alone can raise one, per the rule table. */
+	private static void checkGap(Experience said, ConfidenceArea area, List<ConfidenceGapDto> gaps,
+			List<CheckDto> checks) {
+		FocusArea focusArea = FocusArea.valueOf(area.name());
+		boolean understands = hasCheck(checks, focusArea, CheckResult.UNDERSTANDS);
+		boolean notYet = hasCheck(checks, focusArea, CheckResult.NOT_YET);
+		boolean saysLow = area == ConfidenceArea.SAVING ? SAYS_LITTLE_SAVING.contains(said) : !SAYS_INVESTING.contains(said);
+		String cite = ", and your answer about " + area.wire();
+		for (int i = 0; i < gaps.size(); i++) {
+			ConfidenceGapDto existing = gaps.get(i);
+			if (existing.area() == area) {
+				if (existing.direction() == GapDirection.UNDER && understands) {
+					String because = existing.because();
+					gaps.set(i, new ConfidenceGapDto(area, GapDirection.UNDER,
+							because.substring(0, because.length() - 1) + cite + " shows you understand it."));
+				}
+				return;
+			}
+		}
+		String prefix = "You said: " + said.getLabel();
+		if (saysLow && understands) {
+			gaps.add(new ConfidenceGapDto(area, GapDirection.UNDER, prefix + cite + " shows you understand it."));
+		}
+		else if (!saysLow && notYet) {
+			gaps.add(new ConfidenceGapDto(area, GapDirection.OVER, prefix + cite + " shows there is more to learn."));
+		}
+	}
+
+	private static boolean hasCheck(List<CheckDto> checks, FocusArea area, CheckResult result) {
+		return checks.stream().anyMatch(c -> c.area() == area && c.result() == result);
 	}
 
 	private static ConfidenceGapDto gap(ConfidenceArea area, GapDirection direction, Experience said, String shows) {

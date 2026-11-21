@@ -2,6 +2,7 @@ package com.collabothon.back.categorization.enums;
 
 import java.util.Arrays;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /** Main's onboarding answers to "How do you handle money today?", with their titles. */
@@ -11,6 +12,7 @@ public enum Experience {
 	NOT_SAVING("I don't save yet"), OCCASIONAL("I save now and then"), REGULAR("I save regularly"),
 	INVESTING("I save and invest"), PLANNING("I plan my finances ahead");
 
+	@Getter
 	private final String label;
 
 	public static Experience fromWire(String value) {

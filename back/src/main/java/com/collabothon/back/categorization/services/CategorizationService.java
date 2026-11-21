@@ -113,7 +113,7 @@ public class CategorizationService {
 						CategorizationRules.focusBecause(focus, answers, facts)));
 
 		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, j.role(), lifeStage, focus,
-				CategorizationRules.confidenceGaps(answers, facts),
+				CategorizationRules.confidenceGaps(answers, facts, checks),
 				CategorizationRules.lessonVariant(j.role(), lifeStage), explanation, checks,
 				CategorizationRules.startLesson(checks, focus, pool).orElse(null), shared,
 				fromJev.judgement().isPresent() ? CategorizationSource.JEV : CategorizationSource.FALLBACK, j.model(),

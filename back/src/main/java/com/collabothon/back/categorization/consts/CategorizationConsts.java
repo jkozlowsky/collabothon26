@@ -12,4 +12,7 @@ public final class CategorizationConsts {
 
 	public static final double FOCUS_THRESHOLD = 0.5;
 
+	/** The Quick check draws this many areas, and so this many questions, from each category. */
+	public static final int CHECKS_PER_CATEGORY = 2;
+
 }

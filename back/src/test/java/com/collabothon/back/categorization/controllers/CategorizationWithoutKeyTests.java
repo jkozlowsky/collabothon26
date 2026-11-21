@@ -1,7 +1,9 @@
 package com.collabothon.back.categorization.controllers;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -45,6 +47,11 @@ class CategorizationWithoutKeyTests {
 			.andExpect(jsonPath("$.source").value("fallback"))
 			.andExpect(jsonPath("$.sharedWithModel").isEmpty());
 		jev.verify();
+	}
+
+	@Test
+	void quickCheckIsSkippedWithoutAKey() throws Exception {
+		mvc.perform(get("/api/check-questions")).andExpect(status().isOk()).andExpect(content().json("[]"));
 	}
 
 }

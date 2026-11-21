@@ -400,3 +400,17 @@ v1 "To confirm" and both v1 triage rounds: `.planning/reviews/F1b-v1-triage.md` 
 | V11 | final POST with a null mastery value never sent | CategorizationRequestDto | fix | test 200 and read-back |
 | V12 | timing assertion with 300 ms margin | QuickCheckStepTests:3622 | fix | drop the elapsed assertion |
 | V13 | only one of the V16 CHECKs tested | CheckQuestionControllerTests | fix | parameterised violations |
+
+### Q-B diff review, round 2 (21.11, last round; Jan: fix only high/critical)
+| # | finding | where | severity | class | reason / action |
+|---|---|---|---|---|---|
+| R2-1 | a profile-less POST within 5 min reuses an earlier Quick-check row ("Based on N answers" for a skipped run) | CategorizationService:84-98 | high | fix | reuse only rows without profile and with answerCount 0 |
+| R2-2 | disclosure under-reports: steps send goals but `answers` null; F1 resend drops `stepCallsMade`; clamp to 6 and negative→0 misstate the count | CategorizationService:138-142, CategorizationRequestDto:33-34 | high (GDPR art. 13) | fix | `sharedWithModel` built when `stepCallsMade > 0` or the final call was sent, independent of ran, with the goals; `@PositiveOrZero`, no upper clamp; front keeps `stepCallsMade` on the F1 resend |
+| R2-3 | spec text stale after A1/A14/A18 (Reference "Next", Q-B done, "not validated") | spec :267, :326, Data | high (contract the front builds on) | fix | reword to the code's behaviour |
+| R2-4 | a restart carries `stepFellBack: true` into the new test | front, D3 | medium | defer | front resets it on restart (sent to Q-F as a note) |
+| R2-5 | `fall-before-you-need-it` also served to long horizons | QuickCheckRules.forHorizon | medium | defer | prompt is hypothetical ("Imagine…"); revisit with Danylo's bank |
+| R2-6 | short-horizon question routes to Emergency fund | V16 | — | reject | Jan's A14 decision |
+| R2-7 | garbled comments, import order, Javadoc on two constants, literal Jev URL in one test | CategorizationService:85,173, QuickCheckRulesTests:19, CategorizationConsts:54,57, CategorizationWithoutKeyTests:83 | low | defer | cosmetic |
+| R2-8 | tests that would not catch a revert: A16, A10 profile half, A12 close(), V13 correct-index row | tests | medium | defer | behaviour verified by review; strengthen when touched |
+| R2-9 | mastery sent for an unanswered area is stored; order from the filtered bank; RejectedExecution/close() wait at shutdown; whitespace-only options | various | low | defer | no demo-path impact |
+| R2-10 | seeded-bank test reads seed data | CheckQuestionControllerTests:188 | low | reject | V9 asks for exactly this check |

@@ -325,6 +325,15 @@ class QuickCheckRulesTests {
 	}
 
 	@Test
+	void anAreaLeftWithOnlyCompletedLessonsIsNotReadyForNext() {
+		LessonPlan plan = plan(Set.of(2L, 4L), right(S_EASY_1, Confidence.SURE), right(S_EASY_2, Confidence.SURE),
+				notSure(I_EASY));
+
+		assertEquals(3L, plan.start().id());
+		assertFalse(plan.readyForNext());
+	}
+
+	@Test
 	void onlyAreasWithAChipCanHaveAGap() {
 		assertEquals(List.of(INVESTING), QuickCheckRules.chipAreas(ORDER,
 				List.of(notSure(S_EASY_1), right(I_EASY, Confidence.SURE))));

@@ -248,7 +248,8 @@ final class QuickCheckRules {
 			Optional<BankLesson> next = lessons.stream()
 				.filter(l -> !completed.contains(l.id()))
 				.max(Comparator.comparing(BankLesson::position));
-			return new LessonPlan(next.orElse(null), true, next.map(l -> List.of(l.id())).orElse(List.of()));
+			return new LessonPlan(next.orElse(null), order.stream().allMatch(area -> solid(area, mastery, answers)),
+					next.map(l -> List.of(l.id())).orElse(List.of()));
 		}
 		List<BankLesson> pool = pool(candidates, answers);
 		BankLesson start = pool.size() < JevConsts.MIN_CHOICE_LABELS ? pool.getFirst()

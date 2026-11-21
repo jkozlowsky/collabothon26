@@ -43,6 +43,30 @@ export const STORY_CATEGORIES: Record<string, CategoryMeta> = {
     accent: storyColors.rose,
     tint: tints.rose,
   },
+  'buenos-aires': {
+    story: 'buenos-aires',
+    name: 'Fast inflation',
+    icon: 'tag',
+    color: 'orange',
+    accent: storyColors.orange,
+    tint: tints.orange,
+  },
+  nairobi: {
+    story: 'nairobi',
+    name: 'Small savings',
+    icon: 'smartphone',
+    color: 'violet',
+    accent: storyColors.violet,
+    tint: tints.violet,
+  },
+  mumbai: {
+    story: 'mumbai',
+    name: 'Gold',
+    icon: 'database',
+    color: 'orange',
+    accent: storyColors.orange,
+    tint: tints.orange,
+  },
 };
 
 export function getStoryCategoryMeta(story: string): CategoryMeta {

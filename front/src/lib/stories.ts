@@ -2,7 +2,7 @@ import type { LessonSummary } from '@/types/lessons';
 import type { Learner, Story } from '@/types/stories';
 
 // ponytail: local mock, replaced by `GET /api/stories` (f4-f5-lessons-spec.md §6) once the backend has it.
-// Cities are spread out so pins never overlap (globe-home-spec.md §9); Seoul, Berlin, São Paulo and Tokyo have content.
+// Cities are spread out so pins never overlap (globe-home-spec.md §9); every city has content; Buenos Aires, Nairobi and Mumbai have one lesson so far.
 export const STORIES: Story[] = [
   {
     id: 'seoul',
@@ -61,12 +61,12 @@ export const STORIES: Story[] = [
     city: 'Buenos Aires',
     title: 'Money basics',
     topic: 'When prices run away',
-    status: 'coming-soon',
+    status: 'available',
     pin: { lat: -34.6, lng: -58.38 },
     icon: 'tag',
     color: 'orange',
-    progress: { done: 0, total: 0 },
-    nextLesson: null,
+    progress: { done: 0, total: 1 },
+    nextLesson: { id: 'buenos-aires-1', title: 'How fast prices double', minutes: 4 },
     current: false,
   },
   {
@@ -74,12 +74,12 @@ export const STORIES: Story[] = [
     city: 'Nairobi',
     title: 'Saving',
     topic: 'Saving on the go',
-    status: 'coming-soon',
+    status: 'available',
     pin: { lat: -1.29, lng: 36.82 },
     icon: 'smartphone',
     color: 'violet',
-    progress: { done: 0, total: 0 },
-    nextLesson: null,
+    progress: { done: 0, total: 1 },
+    nextLesson: { id: 'nairobi-1', title: 'Small amounts add up', minutes: 4 },
     current: false,
   },
   {
@@ -87,12 +87,12 @@ export const STORIES: Story[] = [
     city: 'Mumbai',
     title: 'Investing',
     topic: 'Why gold glitters',
-    status: 'coming-soon',
+    status: 'available',
     pin: { lat: 19.08, lng: 72.88 },
     icon: 'database',
     color: 'orange',
-    progress: { done: 0, total: 0 },
-    nextLesson: null,
+    progress: { done: 0, total: 1 },
+    nextLesson: { id: 'mumbai-1', title: 'Why gold glitters', minutes: 4 },
     current: false,
   },
 ];

@@ -46,7 +46,7 @@ class LessonControllerTests {
 			.andExpect(jsonPath("$[0].id").value("seoul-1"))
 			.andExpect(jsonPath("$[0].status").value("available"))
 			.andExpect(jsonPath("$[1].status").value("locked"))
-			.andExpect(jsonPath("$.length()").value(20))
+			.andExpect(jsonPath("$.length()").value(23))
 			.andExpect(jsonPath("$[0].video.minutes").value(5))
 			.andExpect(jsonPath("$[2].video").isEmpty());
 		mvc.perform(get("/api/stories"))

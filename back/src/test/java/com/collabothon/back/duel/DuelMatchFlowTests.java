@@ -18,7 +18,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -54,7 +53,13 @@ class DuelMatchFlowTests {
 	JsonMapper json;
 
 	@Autowired
-	JdbcTemplate jdbc;
+	DuelMatchRepository matches;
+
+	@Autowired
+	DuelProgressRepository progress;
+
+	@Autowired
+	DuelAnswerRepository answers;
 
 	@Test
 	void aSoloMatchRunsFromStartToResult() throws Exception {
@@ -163,10 +168,9 @@ class DuelMatchFlowTests {
 		assertThat(start.get("rival").get("isBot").asBoolean()).isFalse();
 		assertThat(start.get("rival").get("name").asString()).isNotBlank();
 		assertThat(start.get("rival").get("elo").asInt()).isNotNull();
-		String rivalId = jdbc.queryForObject("select player_b from duel_match where id = ?", String.class, id);
+		String rivalId = matches.findById(id).orElseThrow().getPlayerB();
 		assertThat(rivalId).startsWith("demo-");
-		int rivalMatchesBefore = jdbc.queryForObject(
-				"select sum(human_matches) from duel_progress where user_id = ?", Integer.class, rivalId);
+		int rivalMatchesBefore = humanMatches(rivalId);
 
 		for (int i = 0; i < QUESTIONS; i++) {
 			answer(id, "human-player", i, i % 4).andExpect(status().isOk());
@@ -186,12 +190,13 @@ class DuelMatchFlowTests {
 			default -> assertThat(delta).isBetween(-40, 40);
 		}
 		assertThat(end.get("rival").get("isBot").asBoolean()).isFalse();
-		assertThat(jdbc.queryForObject("select sum(human_matches) from duel_progress where user_id = ?",
-				Integer.class, rivalId)).isEqualTo(rivalMatchesBefore + 1);
-		assertThat(jdbc.queryForObject("select elo_delta_b from duel_match where id = ?", Integer.class, id))
-			.isNotNull();
-		assertThat(jdbc.queryForObject("select count(*) from duel_answer where match_id = ? and user_id = ?",
-				Integer.class, id, rivalId)).isEqualTo(QUESTIONS);
+		assertThat(humanMatches(rivalId)).isEqualTo(rivalMatchesBefore + 1);
+		assertThat(matches.findById(id).orElseThrow().getEloDeltaB()).isNotNull();
+		assertThat(answers.findByMatchIdAndUserIdOrderByPositionAsc(id, rivalId)).hasSize(QUESTIONS);
+	}
+
+	private int humanMatches(String userId) {
+		return progress.findByUserId(userId).stream().mapToInt(DuelProgress::getHumanMatches).sum();
 	}
 
 	@Test

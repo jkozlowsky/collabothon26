@@ -13,6 +13,8 @@ import {
 } from '@/lib/quickCheck';
 import type { BankState } from '@/types/bank';
 import type { Facts } from '@/types/categorization';
+import { personaFor } from '@/lib/personas';
+import { useCurrentUser } from '@/lib/user';
 import type {
   CheckQuestion,
   Confidence,
@@ -34,6 +36,7 @@ export type QuestionView = {
   why: string;
   /** The question quotes the account, so the slip line says the numbers stay on the phone. */
   account: boolean;
+  preselectedOptionIndex?: number;
 };
 
 type Stage = 'idle' | 'profile' | 'knowledge' | 'waiting' | 'done';
@@ -74,6 +77,8 @@ type Props = {
  * "Front flow and errors"). The raw history lives only here until the final POST.
  */
 export function useQuickCheck({ pool, bank, consent, facts, lifeStageSkipped, onFinish, onSkip }: Props) {
+  const { userId } = useCurrentUser();
+  const hints = personaFor(userId).hints;
   const [run, setRun] = useState(INITIAL);
   // Async steps read the latest run here: a response is applied only while the history it was sent with is still current.
   const latest = useRef(INITIAL);
@@ -99,7 +104,7 @@ export function useQuickCheck({ pool, bank, consent, facts, lifeStageSkipped, on
     const timer = setTimeout(() => ctrl.abort(), STEP_TIMEOUT_MS);
     try {
       const body = { consent, ...(consent && { facts }), profile: latest.current.profile, history, useRules, stepFellBack };
-      return await postStep(body, ctrl.signal);
+      return await postStep(body, ctrl.signal, userId);
     } finally {
       clearTimeout(timer);
     }
@@ -190,8 +195,21 @@ export function useQuickCheck({ pool, bank, consent, facts, lifeStageSkipped, on
   const parts = question ? promptParts(question, bank, account) : [];
   const seenAreaBefore = !!question && history.slice(0, atQuestion ? undefined : -1).some((h) => pool.find((q) => q.id === h.questionId)?.area === question.area);
 
+  const hintedVal = asked && hints ? hints[asked.key] : undefined;
+  const preselectedOptionIndex =
+    asked && hintedVal !== undefined ? asked.options.findIndex((o) => o.value === hintedVal) : undefined;
+
   const view: QuestionView | null = asked
-    ? { key, kind: 'profile', prompt: asked.prompt, parts: [{ text: asked.prompt, filled: false }], options: asked.options.map((o) => o.label), why: asked.why, account: false }
+    ? {
+        key,
+        kind: 'profile',
+        prompt: asked.prompt,
+        parts: [{ text: asked.prompt, filled: false }],
+        options: asked.options.map((o) => o.label),
+        why: asked.why,
+        account: false,
+        preselectedOptionIndex: preselectedOptionIndex !== undefined && preselectedOptionIndex !== -1 ? preselectedOptionIndex : undefined,
+      }
     : question && {
         key,
         kind: 'knowledge',

@@ -27,12 +27,24 @@ function nowHHMM() {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+type SeedArg = number | BankState | (() => BankState);
+
+function resolveBankSeed(seed: SeedArg): BankState {
+  if (typeof seed === 'function') {
+    return seed();
+  }
+  if (typeof seed === 'number') {
+    return seedAccount(seed);
+  }
+  return seed;
+}
+
 /**
  * Mock bank for the host-app shell. In memory only: every reload starts again from the seed,
  * so each demo run looks the same.
  */
-export function BankProvider({ children, seed = DEFAULT_SEED }: { children: ReactNode; seed?: number }) {
-  const [state, dispatch] = useReducer(bankReducer, seed, seedAccount);
+export function BankProvider({ children, seed = DEFAULT_SEED }: { children: ReactNode; seed?: SeedArg }) {
+  const [state, dispatch] = useReducer(bankReducer, seed, resolveBankSeed);
   const [amountsHidden, setAmountsHidden] = useState(false);
 
   const toggleAmountsHidden = useCallback(() => setAmountsHidden((h) => !h), []);

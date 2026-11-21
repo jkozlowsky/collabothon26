@@ -2,7 +2,6 @@ import { AREAS, CONFIDENCE, JUST_STARTING_BELOW, PROFILE_QUESTIONS, SOLID_ABOVE,
 import { api } from '@/lib/api';
 import { groupThousands } from '@/lib/bank/money';
 import { slotValues } from '@/lib/bank/selectors';
-import { USER_ID } from '@/lib/user';
 import type { BankState } from '@/types/bank';
 import type { Facts, FocusArea } from '@/types/categorization';
 import {
@@ -49,8 +48,8 @@ type StepBody = {
   stepFellBack: boolean;
 };
 
-export const postStep = (body: StepBody, signal: AbortSignal) =>
-  api<StepResponse>(`/api/users/${encodeURIComponent(USER_ID)}/quick-check/step`, {
+export const postStep = (body: StepBody, signal: AbortSignal, userId: string = 'demo-user') =>
+  api<StepResponse>(`/api/users/${encodeURIComponent(userId)}/quick-check/step`, {
     method: 'POST',
     body: JSON.stringify(body),
     signal,

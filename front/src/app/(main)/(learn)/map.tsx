@@ -12,7 +12,7 @@ import { colors, spacing } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import { useStartHere } from '@/hooks/useStartHere';
 import { calloutState, isDone, LEARNER, sortStories, STORIES, withCurrent, withLessons } from '@/lib/stories';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type { LessonSummary } from '@/types/lessons';
 
 /** After a city's check pops in, the plane takes off for the next one. */
@@ -20,13 +20,14 @@ const TAKE_OFF_MS = 1300;
 
 /** Map tab (Figma 3:496): header, the globe with story pins, and the "Your journeys" sheet. */
 export default function MapScreen() {
+  const { userId } = useCurrentUser();
   const globe = useRef<GlobeHandle>(null);
   // Estimates until the first layout pass measures the real values.
   const window = useWindowDimensions();
   const [height, setHeight] = useState(window.height);
   const [sheetTop, setSheetTop] = useState(Math.round(window.height * 0.66));
   const [hint, setHint] = useState(true);
-  const { data: lessons, reload } = useApi<LessonSummary[]>(`/api/lessons?userId=${encodeURIComponent(USER_ID)}`);
+  const { data: lessons, reload } = useApi<LessonSummary[]>(`/api/lessons?userId=${encodeURIComponent(userId)}`);
   // Coming back from a lesson moves the story's progress on.
   useFocusEffect(reload);
   const startHere = useStartHere();

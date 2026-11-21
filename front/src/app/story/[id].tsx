@@ -15,7 +15,7 @@ import { useApi } from '@/hooks/useApi';
 import { useBank } from '@/hooks/useBank';
 import { depotTotal, monthlyInvesting } from '@/lib/bank/selectors';
 import { offersFor } from '@/lib/offers';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type { LessonSummary } from '@/types/lessons';
 import type { StoryPage } from '@/types/stories';
 
@@ -29,8 +29,9 @@ function skyline(city: string) {
 }
 
 export default function StoryScreen() {
+  const { userId } = useCurrentUser();
   const { id, lesson: targetLessonId } = useLocalSearchParams<{ id: string; lesson?: string }>();
-  const { data, loading, error, reload } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(USER_ID)}`);
+  const { data, loading, error, reload } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(userId)}`);
   useFocusEffect(reload);
   const story = data?.find((item) => item.id === id);
   const insets = useSafeAreaInsets();

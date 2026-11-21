@@ -82,7 +82,9 @@ export function QuickCheckPage({ view, position, total, status, ready, dock, onA
 type QuestionProps = Pick<Props, 'onAnswer'> & { view: QuestionView; position: number; total: number; off: boolean };
 
 function Question({ view, position, total, off, onAnswer }: QuestionProps) {
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<number | null>(
+    view.kind === 'profile' && view.preselectedOptionIndex !== undefined ? view.preselectedOptionIndex : null,
+  );
   const promptRef = useRef<ComponentRef<typeof Text>>(null);
   const profile = view.kind === 'profile';
 

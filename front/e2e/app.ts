@@ -48,6 +48,7 @@ export const skipQuickCheck = (page: Page) =>
 export async function openApp(page: Page) {
   await skipQuickCheck(page);
   await page.goto('/');
+  await page.getByTestId('account-demo-user').click();
   await page.getByTestId('nav-learn').click();
 }
 

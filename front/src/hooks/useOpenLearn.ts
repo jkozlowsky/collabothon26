@@ -6,6 +6,10 @@ import { useOnboarding } from '@/hooks/useOnboarding';
 /** Where to go once onboarding finishes. Module state is fine: one app, one onboarding at a time. */
 let pendingTarget: Href | null = null;
 
+export function resetPendingTarget() {
+  pendingTarget = null;
+}
+
 /**
  * Opens the Atlas module from the bank. The first time (onboarding not done yet) the
  * onboarding flow opens instead, and the user lands on `target` when it is finished.

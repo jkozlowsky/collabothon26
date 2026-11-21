@@ -23,6 +23,7 @@ import { isE2E } from '@/lib/e2e';
 import { categorize, checkBackend, factLabels, factsFrom, isRetryable, withTimeout } from '@/lib/categorization';
 import { setSummary } from '@/lib/learningPath';
 import { answerCounts, fetchCheckQuestions } from '@/lib/quickCheck';
+import { useCurrentUser } from '@/lib/user';
 import type { CheckQuestion, QuickResult } from '@/types/quickCheck';
 
 const STEP_MS = 800;
@@ -47,6 +48,7 @@ const GOAL_LABEL = Object.fromEntries(GOAL_GROUPS.flatMap((g) => g.goals.map((go
 
 /** After a fresh onboarding: ask whether account data may be used, show what we know, the Quick check, then build the learning path. */
 export default function CategorizingScreen() {
+  const { userId } = useCurrentUser();
   const { state: bank } = useBank();
   const { answers } = useOnboarding();
   // Computed once per visit, so the facts sent are exactly the ones the card previewed.
@@ -78,7 +80,7 @@ export default function CategorizingScreen() {
     setConsent(withConsent);
     setStep(0);
     setPhase('loading');
-    const judged = withTimeout(outer, (signal) => categorize(withConsent ? facts : null, signal, quickResult));
+    const judged = withTimeout(outer, (signal) => categorize(withConsent ? facts : null, signal, quickResult, userId));
     const [result] = await Promise.allSettled([judged, new Promise((r) => setTimeout(r, isE2E() ? 0 : MIN_MS))]);
     if (outer.aborted) return;
     if (result.status === 'fulfilled') {
@@ -109,7 +111,7 @@ export default function CategorizingScreen() {
   useEffect(() => {
     const ctrl = new AbortController();
     withTimeout(ctrl.signal, async (signal) => {
-      await checkBackend(signal);
+      await checkBackend(signal, userId);
       return fetchCheckQuestions(signal);
     }).then(
       (questions) => {
@@ -124,7 +126,7 @@ export default function CategorizingScreen() {
       },
     );
     return () => ctrl.abort();
-  }, [checkAttempt]);
+  }, [checkAttempt, userId]);
   const recheck = () => {
     setCheck('pending');
     setCheckAttempt((a) => a + 1);

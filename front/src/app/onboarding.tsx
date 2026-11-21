@@ -27,6 +27,8 @@ import {
 } from '@/constants/onboarding';
 import { colors, radii, spacing, type as text } from '@/constants/theme';
 import { useOnboarding } from '@/hooks/useOnboarding';
+import { personaFor } from '@/lib/personas';
+import { useCurrentUser } from '@/lib/user';
 import type { Goal, OnboardingAnswers } from '@/types/onboarding';
 
 const STEPS = [
@@ -43,12 +45,21 @@ type Step = (typeof STEPS)[number];
 const QUESTIONS = ['life-stage', 'goals', 'experience'] as const;
 
 export default function OnboardingScreen() {
+  const { userId } = useCurrentUser();
+  const hints = personaFor(userId).hints;
   const { complete, answers: saved } = useOnboarding();
   // Profile → "Edit answers": straight to the questions, prefilled, and back to the profile when done.
   const editing = useLocalSearchParams<{ edit?: string }>().edit === '1';
   const firstStep = editing ? STEPS.indexOf('life-stage') : 0;
   const [index, setIndex] = useState(firstStep);
-  const [answers, setAnswers] = useState<OnboardingAnswers>(editing ? saved : { goals: [] });
+  const initialAnswers: OnboardingAnswers = editing
+    ? saved
+    : {
+        goals: hints?.goals ? [...hints.goals] : [],
+        ...(hints?.lifeStage ? { lifeStage: hints.lifeStage } : {}),
+        ...(hints?.experience ? { experience: hints.experience } : {}),
+      };
+  const [answers, setAnswers] = useState<OnboardingAnswers>(initialAnswers);
 
   const step: Step = STEPS[index];
   const next = () => setIndex((i) => Math.min(i + 1, STEPS.length - 1));

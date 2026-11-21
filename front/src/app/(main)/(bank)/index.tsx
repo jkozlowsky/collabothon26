@@ -49,7 +49,7 @@ export default function OverviewScreen() {
   const cardWidth = Math.min(width, PHONE_MAX) - spacing.xl * 2 - CARD_PEEK;
 
   const { account, loan, savings, creditProducts, creditCard } = state;
-  const cardLimit = creditProducts.find((p) => p.id === 'credit-card')!;
+  const cardLimit = creditProducts.find((p) => p.id === 'credit-card');
 
   return (
     <BankScreen
@@ -109,22 +109,26 @@ export default function OverviewScreen() {
 
       <Section title="Credits & savings" action={{ label: 'See all', onPress: () => router.navigate('/credits') }}>
         <ListCard>
-          <ListRow
-            icon="percent"
-            title="Instalment loan"
-            meta={`${loan.paidInstalments} of ${loan.totalInstalments} instalments paid`}
-            value={money(loan.remaining)}
-            valueNote="remaining"
-            onPress={() => setDetail(loanDetail(loan, money))}
-          />
-          <ListRow
-            icon="card"
-            title={cardLimit.title}
-            meta={cardLimit.meta}
-            value={money(cardLimit.amount)}
-            valueNote={cardLimit.amountNote}
-            onPress={() => setDetail(creditProductDetail(cardLimit, money))}
-          />
+          {loan.remaining > 0 && (
+            <ListRow
+              icon="percent"
+              title="Instalment loan"
+              meta={`${loan.paidInstalments} of ${loan.totalInstalments} instalments paid`}
+              value={money(loan.remaining)}
+              valueNote="remaining"
+              onPress={() => setDetail(loanDetail(loan, money))}
+            />
+          )}
+          {cardLimit && (
+            <ListRow
+              icon="card"
+              title={cardLimit.title}
+              meta={cardLimit.meta}
+              value={money(cardLimit.amount)}
+              valueNote={cardLimit.amountNote}
+              onPress={() => setDetail(creditProductDetail(cardLimit, money))}
+            />
+          )}
           <ListRow
             icon="safe"
             title="Savings account"

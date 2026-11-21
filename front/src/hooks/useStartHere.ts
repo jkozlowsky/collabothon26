@@ -3,21 +3,23 @@ import { useCallback, useState } from 'react';
 
 import { AREA_LABEL } from '@/constants/quickCheck';
 import { api } from '@/lib/api';
-import { CATEGORIZATION_PATH } from '@/lib/categorization';
+import { categorizationPath } from '@/lib/categorization';
+import { useCurrentUser } from '@/lib/user';
 import type { Categorization } from '@/types/categorization';
 
 /** The stored categorisation, read again on every focus so "Start here" moves on after a lesson; null on a 404 or an error. */
 export function useStartHere() {
+  const { userId } = useCurrentUser();
   const [categorization, setCategorization] = useState<Categorization | null>(null);
   useFocusEffect(
     useCallback(() => {
       const ctrl = new AbortController();
-      api<Categorization>(CATEGORIZATION_PATH, { signal: ctrl.signal }).then(
+      api<Categorization>(categorizationPath(userId), { signal: ctrl.signal }).then(
         setCategorization,
         () => !ctrl.signal.aborted && setCategorization(null),
       );
       return () => ctrl.abort();
-    }, []),
+    }, [userId]),
   );
   return categorization?.startHere ? { storyId: categorization.startHere.storyId, why: whyHere(categorization) } : null;
 }

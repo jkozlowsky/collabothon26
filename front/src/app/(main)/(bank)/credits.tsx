@@ -34,33 +34,37 @@ export default function CreditsScreen() {
       overlay={<AtlasNudge placement="credits" teaser={teasers.credits} ready={ready} onOpen={openTeaser} testID="fq-teaser-credits" />}
       testID="screen-credits"
     >
-      <HeroCard
-        label="Instalment loan · remaining"
-        amount={money(loan.remaining)}
-        caption={`${loan.paidInstalments} of ${loan.totalInstalments} instalments paid`}
-        hidden={amountsHidden}
-        onToggleHidden={toggleAmountsHidden}
-        stats={[
-          { label: 'Next payment', value: `${money(loan.nextPayment)} · ${loan.nextDate}` },
-          { label: 'Interest rate', value: `${loan.apr}% APR` },
-        ]}
-      />
+      {loan.remaining > 0 && (
+        <HeroCard
+          label="Instalment loan · remaining"
+          amount={money(loan.remaining)}
+          caption={`${loan.paidInstalments} of ${loan.totalInstalments} instalments paid`}
+          hidden={amountsHidden}
+          onToggleHidden={toggleAmountsHidden}
+          stats={[
+            { label: 'Next payment', value: `${money(loan.nextPayment)} · ${loan.nextDate}` },
+            { label: 'Interest rate', value: `${loan.apr}% APR` },
+          ]}
+        />
+      )}
 
-      <Section title="Your credit products" action={{ label: 'See all', onPress: demoOnly }}>
-        <ListCard>
-          {state.creditProducts.map((p) => (
-            <ListRow
-              key={p.id}
-              icon={p.icon}
-              title={p.title}
-              meta={p.meta}
-              value={money(p.amount)}
-              valueNote={p.amountNote}
-              onPress={() => setDetail(creditProductDetail(p, money))}
-            />
-          ))}
-        </ListCard>
-      </Section>
+      {state.creditProducts.length > 0 && (
+        <Section title="Your credit products" action={{ label: 'See all', onPress: demoOnly }}>
+          <ListCard>
+            {state.creditProducts.map((p) => (
+              <ListRow
+                key={p.id}
+                icon={p.icon}
+                title={p.title}
+                meta={p.meta}
+                value={money(p.amount)}
+                valueNote={p.amountNote}
+                onPress={() => setDetail(creditProductDetail(p, money))}
+              />
+            ))}
+          </ListCard>
+        </Section>
+      )}
 
       <ProductSection title="Apply" tab="credits" />
 

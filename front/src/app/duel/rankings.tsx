@@ -10,14 +10,15 @@ import { ListCard } from '@/components/bank/ListCard';
 import { RankingListItem } from '@/components/duel/RankingListItem';
 import { colors, elevation, spacing, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type { Rankings } from '@/types/duel';
 
-const RANKINGS_PATH = `/api/duel/rankings?userId=${encodeURIComponent(USER_ID)}`;
+const rankingsPath = (userId: string) => `/api/duel/rankings?userId=${encodeURIComponent(userId)}`;
 
 /** Weekly overall rankings (Figma 157:4663). Overall weekly only, navy header. */
 export default function DuelRankingsScreen() {
-  const { data, loading, error, reload } = useApi<Rankings>(RANKINGS_PATH);
+  const { userId } = useCurrentUser();
+  const { data, loading, error, reload } = useApi<Rankings>(rankingsPath(userId));
 
   function goBack() {
     if (router.canGoBack()) router.back();
@@ -67,7 +68,7 @@ export default function DuelRankingsScreen() {
                       <RankingListItem
                         key={`${row.userId}-${row.rank}`}
                         row={row}
-                        isYou={row.userId === USER_ID}
+                        isYou={row.userId === userId}
                       />
                     ))}
                   </ListCard>

@@ -14,6 +14,7 @@ test.afterAll(async ({ request }) => {
 test('app opens on the bank; Learn runs onboarding and the consent card, then the globe and a story; Bank comes back; a transfer lowers the balance', async ({ page, request }) => {
   await skipQuickCheck(page);
   await page.goto('/');
+  await page.getByTestId('account-demo-user').click();
   await expect(page.getByTestId('owner-name')).toHaveText('Alex Krause');
   await expect(page.getByTestId('main-balance')).toHaveText('€ 4,280.52');
 

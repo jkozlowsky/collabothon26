@@ -423,3 +423,48 @@ v1 "To confirm" and both v1 triage rounds: `.planning/reviews/F1b-v1-triage.md` 
 | F-3 | dock level reads "Starting", spec says "Just starting" | dock | low | defer | copy polish |
 | F-4 | after a reload Solid needs `readyForNext`, and the aligned card counts "Not sure" (no per-area answer counts stored) | summary after reload | medium | defer | reload is off the demo path |
 | F-5 | `_layout.tsx` guard `done \|\| !loaded`, shared `Sheet.tsx` reduced motion | layout, Sheet | — | reject | reviewed: no risk to other screens |
+
+## v2.1 Adapt to main (21.11, Jan's decisions J1–J3)
+
+### Why
+PR #31 (`origin/main` d4b2a22) changed what F1b v2 was built on:
+- `V5__lesson_progress.sql` drops the `lesson` and `question` tables. Lessons are JSON in `back/src/main/resources/content/` (`stories.json`, `lessons/<id>.json`, ids such as `berlin-1`). Completions live in `lesson_completion(user_id, lesson_id VARCHAR(64), …)`.
+- Inside a story, lessons unlock one by one (`LessonController.summaries`: a lesson is `available` only when the previous one is done).
+- The Map tab is the globe (`(main)/(learn)/map.tsx` with `StorySheet`, `StoryCard`, `story/[id].tsx`). The old lesson list is gone.
+- `com.collabothon.back.lesson.LessonContent` and `LessonProgress` are package-private.
+
+### Jan's decisions
+- **J1** Adapt F1b to main: merge `origin/main` into `feat/quick-check` (merge, no rebase). Main's code wins on conflicts; F1b re-applies its changes on top.
+- **J2** "Start here" is a **story**. Its start lesson is that story's next lesson that is not done, so it is always `available`. Lesson locking stays untouched.
+- **J3** Role cap: when the Quick check ran and no area is at least Building (mastery ≥ 0.4 with ≥ 1 answer), the stored role is at most `INTERMEDIATE`, whatever Jev or the rule said. A role that is already lower stays.
+
+### Contract changes (supersede the v2 text above where they differ)
+1. **V16 bank:** `lesson_id VARCHAR(64) NOT NULL`, no foreign key (the `lesson` table is gone). Rewrite V16 in place (Q4 still holds: V16 is on no remote branch). Remap:
+   - `inflation-*` → `berlin-1`
+   - `compound-*` → `berlin-2`
+   - `emergency-*`, `fall-before-you-need-it` → `berlin-3` (Jan's A14 put it on the emergency-fund lesson; `berlin-3` covers emergency fund and time horizon)
+   - `short-term-fall`, `time-in-market` → `berlin-4` (volatility, drawdown, time horizon)
+   
+   The questions' wording stays. A backend test checks that every bank `lesson_id` exists in the lesson content.
+2. **Lesson lookup:** categorization reads lessons through `com.collabothon.back.lesson`. Make the smallest read-only surface public there: `LessonContent` (`stories()`, `lessonIdsOf(story)`, `lesson(id)`) and `LessonProgress.completed(userId)`. Do not copy the JSON loading, and do not query `lesson_completion` separately. This touches another topic's package, so tell its author (Announcements).
+3. **Candidates and path:** a candidate story is the story of a bank question's lesson in a non-Solid area. The story's start lesson is its first lesson in story order that is not completed; a story with all lessons done is not a candidate. `first_lesson` in the Jev final block becomes a choice among candidate **stories** (`story_<id>` labels, criterion = the story's `topic`). It is asked only with 2+ candidates; today the bank is all Berlin, so it is not asked. The rule picks the story of the weakest question in the weakest area. All Solid (`readyForNext`): the first story in `stories.json` order with a lesson not done.
+4. **Stored row:** `pathLessonIds` becomes a list of story ids in path order. Rename it to `pathStoryIds` in the entity, the DTO and the front types; the V15 column changes in place, same rule as V16.
+5. **Response `startLesson`:** `{ lessonId: string, title, area, storyId, storyCity }`, where `title` is the lesson's and `storyCity` is `stories.json` `city`. `startHere` on read is the same shape (plus the existing reason fields), recomputed from `pathStoryIds` and the current completions. It is null when every path story is done.
+6. **Role cap (J3)** goes in the service after the role is chosen (Jev or rule), with a test for each side of the Building threshold.
+
+### Front
+- Summary "Your first lesson" card: overline `YOUR FIRST STOP · {AREA}`, title = lesson title, line `{storyCity} · stop {n} of {total}`. `summary-start` opens `/lesson/[id]` with that lesson id. `summary-all` goes to the Map tab (globe).
+- "Start here": the `StoryCard` of the `startHere` story in `StorySheet` shows the "Start here" badge and the existing "Why here" line (`story-card-start-here`, `story-card-why-here`). No change to the 3D globe pin (skipped: the sheet already shows it; add it when the pin is reworked).
+- Drop F1b's changes to the old list `map.tsx`; main's globe `map.tsx` gets only the `startHere` fetch on focus and passes it to `StorySheet`.
+- `Sheet.tsx`: keep main's version plus F1b's reduced-motion change.
+- Lesson ids are strings everywhere in F1b types.
+- e2e: rewrite `start-here.spec.ts` for the story card; the quick-check specs use string lesson ids. Merge `e2e/smoke.spec.ts` so both sides' cases stay.
+
+### Done when
+- `feat/quick-check` contains `origin/main`, and `./mvnw -B clean test`, `npm run check`, `npx tsc --noEmit`, `npx expo lint` and the Playwright suite pass.
+- Smoke without a key and with the key: the quiz runs, the summary names a Berlin stop that is `available`, and the globe's story sheet shows "Start here" on Berlin.
+- Role cap test: no area at least Building plus Jev `advanced` → stored `INTERMEDIATE`.
+
+### Announcements (Jan)
+- Lessons author (PR #31): `LessonContent` and `LessonProgress.completed` are now public, read-only, for F1b. `StorySheet`/`StoryCard` get an optional `startHere` prop.
+- Danylo: bank questions point to JSON lesson ids. Debt (São Paulo) and risk (Seoul, Tokyo) now have lessons, so the bank can grow there.

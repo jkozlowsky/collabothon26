@@ -18,8 +18,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import jakarta.persistence.EntityManager;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +31,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.client.ExpectedCount;
@@ -47,6 +44,9 @@ import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.categorization.entities.Categorization;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
 import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
+import com.collabothon.back.lesson.LessonCompletion;
+import com.collabothon.back.lesson.LessonCompletionId;
+import com.collabothon.back.lesson.LessonCompletionRepository;
 import com.collabothon.back.lesson.LessonContent;
 
 import tools.jackson.databind.JsonNode;
@@ -100,7 +100,7 @@ class QuickCheckCategorizationTests {
 	MockRestServiceServer jev;
 
 	@Autowired
-	JdbcClient jdbc;
+	LessonCompletionRepository completions;
 
 	@Autowired
 	CheckQuestionRepository questions;
@@ -110,9 +110,6 @@ class QuickCheckCategorizationTests {
 
 	@Autowired
 	JsonMapper json;
-
-	@Autowired
-	EntityManager entityManager;
 
 	@Autowired
 	Clock clock;
@@ -146,8 +143,6 @@ class QuickCheckCategorizationTests {
 	private void onboard(String answers) throws Exception {
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
 			.content(answers)).andExpect(status().isOk());
-		// The profile is a JPA write in the test's transaction; the JDBC inserts below need it in the table.
-		entityManager.flush();
 	}
 
 	private ResultActions categorize(String body) throws Exception {
@@ -157,9 +152,9 @@ class QuickCheckCategorizationTests {
 
 	private void complete(String... lessonIds) {
 		for (String lessonId : lessonIds) {
-			jdbc.sql("INSERT INTO lesson_completion (user_id, lesson_id, xp) VALUES (?, ?, 10) ON CONFLICT DO NOTHING")
-				.params(userId, lessonId)
-				.update();
+			if (!completions.existsById(new LessonCompletionId(userId, lessonId))) {
+				completions.save(new LessonCompletion(userId, lessonId, 10));
+			}
 		}
 	}
 

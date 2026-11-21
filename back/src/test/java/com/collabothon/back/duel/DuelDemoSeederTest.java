@@ -11,12 +11,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.convention.TestBean;
 
 import com.collabothon.back.TestcontainersConfiguration;
-import com.collabothon.back.xp.XpService;
+import com.collabothon.back.duel.services.DuelDemoSeeder;
+import com.collabothon.back.duel.services.DuelRankingService;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -36,19 +36,13 @@ class DuelDemoSeederTest {
 	@Autowired
 	DuelRankingService rankingService;
 
-	@Autowired
-	XpService xpService;
-
-	@Autowired
-	JdbcClient jdbc;
-
 	@Test
 	void demoSeedingIsIdempotentAndPlacesDemoUserMidTable() {
 		// Run seeder
 		seeder.run(new DefaultApplicationArguments());
 
 		// Verify weekly rankings
-		var rankings = rankingService.getWeeklyRankings("demo-user");
+		var rankings = rankingService.weeklyRankings("demo-user");
 		assertThat(rankings.top()).isNotEmpty();
 
 		// Tomasz rank 1 with 310 weekly XP
@@ -64,7 +58,7 @@ class DuelDemoSeederTest {
 		// Run seeder second time -> must be idempotent (no duplicate rows)
 		seeder.run(new DefaultApplicationArguments());
 
-		var rankings2 = rankingService.getWeeklyRankings("demo-user");
+		var rankings2 = rankingService.weeklyRankings("demo-user");
 		assertThat(rankings2.me().weeklyXp()).isEqualTo(125);
 		assertThat(rankings2.top().get(0).weeklyXp()).isEqualTo(310);
 	}

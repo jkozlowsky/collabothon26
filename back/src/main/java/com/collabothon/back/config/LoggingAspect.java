@@ -1,0 +1,52 @@
+package com.collabothon.back.config;
+
+import java.util.concurrent.TimeUnit;
+
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.springframework.stereotype.Component;
+
+import com.collabothon.back.exceptions.BusinessException;
+
+import lombok.extern.slf4j.Slf4j;
+
+// Method, duration and exception type only: arguments, results and messages may carry personal data.
+@Aspect
+@Component
+@Slf4j
+class LoggingAspect {
+
+	private static final long SLOW_CALL_MS = 1000;
+
+	@Around("within(com.collabothon.back..*) && @within(org.springframework.stereotype.Service)"
+			+ " && execution(public * *(..))")
+	public Object logCall(ProceedingJoinPoint call) throws Throwable {
+		long start = System.nanoTime();
+		String method = call.getSignature().toShortString();
+		try {
+			Object result = call.proceed();
+			long ms = millisSince(start);
+			if (ms >= SLOW_CALL_MS) {
+				log.info("{} took {} ms", method, ms);
+			}
+			else {
+				log.debug("{} took {} ms", method, ms);
+			}
+			return result;
+		}
+		catch (BusinessException e) {
+			log.info("{} rejected after {} ms: {}", method, millisSince(start), e.getCode().name());
+			throw e;
+		}
+		catch (Throwable e) {
+			log.warn("{} failed after {} ms: {}", method, millisSince(start), e.getClass().getSimpleName());
+			throw e;
+		}
+	}
+
+	private static long millisSince(long start) {
+		return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+	}
+
+}

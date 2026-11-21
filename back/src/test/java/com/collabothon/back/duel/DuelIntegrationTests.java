@@ -10,7 +10,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +22,8 @@ import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.collabothon.back.TestcontainersConfiguration;
-import com.collabothon.back.xp.XpService;
+import com.collabothon.back.entities.xp.XpSource;
+import com.collabothon.back.xp.services.XpService;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -267,7 +267,7 @@ class DuelIntegrationTests {
 		int totalXp = xpService.totalXp("human-player");
 		assertThat(totalXp).isEqualTo(30);
 
-		int berlinXp = xpService.categoryXp("human-player", "berlin");
+		int berlinXp = xpService.xpPerCategory("human-player").get("berlin");
 		assertThat(berlinXp).isEqualTo(30);
 
 		// Advance clock by 10 seconds to allow rival's last answer to arrive
@@ -341,7 +341,7 @@ class DuelIntegrationTests {
 		CLOCK.set(Instant.parse("2026-11-23T18:00:00Z"));
 
 		// Seed user ranking test
-		xpService.record("rank-user", "berlin", com.collabothon.back.xp.XpSource.DUEL, "test-ref", 50, CLOCK.instant());
+		xpService.record("rank-user", "berlin", XpSource.DUEL, "test-ref", 50, CLOCK.instant());
 
 		// GET /api/duel/rankings
 		mvc.perform(get("/api/duel/rankings").param("userId", "rank-user"))

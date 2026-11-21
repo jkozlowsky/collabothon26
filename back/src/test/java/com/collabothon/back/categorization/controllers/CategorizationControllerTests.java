@@ -42,11 +42,12 @@ import org.springframework.test.web.client.ResponseCreator;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.categorization.consts.CategorizationConsts;
 
 import tools.jackson.databind.json.JsonMapper;
-import com.collabothon.back.categorization.consts.CategorizationConsts;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(properties = "jev.api-key=test-key")
@@ -125,12 +126,16 @@ class CategorizationControllerTests {
 			.content(body));
 	}
 
-	private long lessonAt(int position) {
-		return jdbc.sql("SELECT id FROM lesson WHERE position = ?").param(position).query(Long.class).single();
-	}
-
 	@Test
+	@Transactional
 	void alexIsCategorisedByJev() throws Exception {
+		TestBank bank = new TestBank(jdbc);
+		long emergency = bank.lesson("Emergency fund", "Rainy days.", 1);
+		long compound = bank.lesson("Compound interest", "Time works.", 2);
+		long inflation = bank.lesson("Inflation", "Prices rise.", 3);
+		bank.question("sv-a", emergency, "saving", "easy");
+		bank.question("sv-b", inflation, "saving", "easy");
+		bank.question("in-a", compound, "investing", "easy");
 		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(method(HttpMethod.POST))
@@ -164,7 +169,7 @@ class CategorizationControllerTests {
 				 "startHere": {"lessonId": %1$d, "title": "Compound interest", "area": "investing"},
 				 "sharedWithModel": {"facts": %4$s, "answers": %5$s, "profile": null, "answerCount": 0, "stepCallsMade": 0},
 				 "source": "jev", "model": "jev-2026-05", "categorizedAt": "2026-06-15T10:00:00Z"}"""
-			.formatted(lessonAt(2), lessonAt(1), lessonAt(3), FACTS, ANSWERS);
+			.formatted(compound, emergency, inflation, FACTS, ANSWERS);
 
 		categorize("alex", WITH_FACTS).andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json(expected, JsonCompareMode.STRICT));

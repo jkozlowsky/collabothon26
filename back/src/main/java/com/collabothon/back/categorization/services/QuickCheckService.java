@@ -18,7 +18,6 @@ import com.collabothon.back.categorization.repositories.projections.CheckQuestio
 
 import lombok.RequiredArgsConstructor;
 
-// Stateless: the front sends the whole history with every step.
 @Service
 @RequiredArgsConstructor
 public class QuickCheckService {

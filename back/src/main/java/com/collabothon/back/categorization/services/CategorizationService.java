@@ -30,6 +30,7 @@ import com.collabothon.back.categorization.enums.ExplanationOutput;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.LifeStage;
+import com.collabothon.back.categorization.mappers.BankLessonMapper;
 import com.collabothon.back.categorization.mappers.JevAnswerMapper;
 import com.collabothon.back.categorization.mappers.OnboardingAnswersMapper;
 import com.collabothon.back.categorization.mappers.StartLessonMapper;
@@ -65,6 +66,8 @@ public class CategorizationService {
 	private final CheckQuestionService checkQuestions;
 
 	private final StartLessonMapper startLessonMapper;
+
+	private final BankLessonMapper bankLessonMapper;
 
 	private final JevAnswerMapper jevAnswerMapper;
 
@@ -105,7 +108,7 @@ public class CategorizationService {
 			});
 		}
 		Set<Long> completed = completedLessons.findLessonIds(userId);
-		List<BankLesson> lessons = QuickCheckRules.lessons(bank);
+		List<BankLesson> lessons = QuickCheckRules.lessons(bank, bankLessonMapper::toLesson);
 		List<BankLesson> pool = QuickCheckRules.pool(
 				QuickCheckRules.candidates(lessons, order, mastery, history, completed), history);
 		List<FocusArea> gapAreas = QuickCheckRules.chipAreas(order, history);
@@ -203,7 +206,8 @@ public class CategorizationService {
 			.query(String.class)
 			.optional()
 			.flatMap(this::read)
-			.map(c -> c.withStartHere(startHere(c.pathLessonIds(), QuickCheckRules.lessons(checkQuestions.bank()),
+			.map(c -> c.withStartHere(startHere(c.pathLessonIds(),
+					QuickCheckRules.lessons(checkQuestions.bank(), bankLessonMapper::toLesson),
 					completedLessons.findLessonIds(userId))));
 	}
 

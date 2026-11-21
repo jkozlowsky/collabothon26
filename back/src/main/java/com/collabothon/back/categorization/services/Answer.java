@@ -32,7 +32,6 @@ public record Answer(
 		return result() == AnswerResult.CORRECT ? confidence.getCorrectScore() : CategorizationConsts.SCORE_WRONG;
 	}
 
-	/** "Not sure" counts as Guessing. */
 	public double chip() {
 		return (confidence == null ? Confidence.GUESSING : confidence).getChip();
 	}

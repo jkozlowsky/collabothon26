@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Stream;
 
@@ -36,7 +37,6 @@ import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.QuestionLevel;
 import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 
-/** The Quick check rule (spec F1b, Reference: Fallback rule): Jev's safety net and the keyless path. */
 final class QuickCheckRules {
 
 	private static final Comparator<CheckQuestionProjection> EASY_FIRST = Comparator
@@ -203,13 +203,12 @@ final class QuickCheckRules {
 		return "On %s you said “%s”. Your answers leave a few things %s".formatted(area.getLabel(), chip, end);
 	}
 
-	/** Every lesson with bank rows, in lesson id order. */
-	static List<BankLesson> lessons(List<CheckQuestionProjection> bank) {
+	static List<BankLesson> lessons(List<CheckQuestionProjection> bank,
+			Function<CheckQuestionProjection, BankLesson> toLesson) {
 		Map<Long, BankLesson> lessons = new LinkedHashMap<>();
 		bank.stream()
 			.sorted(Comparator.comparing(CheckQuestionProjection::id))
-			.forEach(q -> lessons.putIfAbsent(q.lessonId(), new BankLesson(q.lessonId(), q.lessonTitle(),
-					q.lessonSummary(), q.lessonPosition(), q.area())));
+			.forEach(q -> lessons.putIfAbsent(q.lessonId(), toLesson.apply(q)));
 		return lessons.values().stream().sorted(Comparator.comparing(BankLesson::id)).toList();
 	}
 
@@ -248,7 +247,6 @@ final class QuickCheckRules {
 			.orElse(inWeakest.getFirst());
 	}
 
-	/** {@code picked} is Jev's pick from the pool, or null for the rule's. */
 	static LessonPlan plan(List<BankLesson> lessons, List<BankLesson> candidates, BankLesson picked,
 			List<FocusArea> order, Map<FocusArea, Double> mastery, List<Answer> answers, Set<Long> completed) {
 		if (candidates.isEmpty()) {

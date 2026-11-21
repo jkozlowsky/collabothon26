@@ -17,7 +17,6 @@ public enum FocusArea {
 	RISK("Risk", "insurance", "scams"),
 	RETIREMENT("Retirement", "retirement");
 
-	/** The name users see. */
 	@Getter
 	private final String label;
 

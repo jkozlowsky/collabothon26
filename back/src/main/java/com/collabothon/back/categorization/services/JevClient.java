@@ -45,6 +45,8 @@ import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.Role;
 import com.collabothon.back.categorization.enums.WireNames;
 
+import jakarta.annotation.PreDestroy;
+
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -119,6 +121,11 @@ public class JevClient {
 	// to the one injected builder's factory, so a second factory would send test calls to the real API.
 	private final ExecutorService stepCalls = Executors.newVirtualThreadPerTaskExecutor();
 
+	@PreDestroy
+	void close() {
+		stepCalls.close();
+	}
+
 	JevClient(RestClient.Builder builder, JsonMapper json, JevProperties properties) {
 		if (!properties.apiKey().isEmpty()) {
 			builder.defaultHeader(AUTHORIZATION, "Bearer " + properties.apiKey());
@@ -130,10 +137,6 @@ public class JevClient {
 		this.finalQuestions = (ObjectNode) json.readTree(FINAL_QUESTIONS);
 	}
 
-	/**
-	 * Empty on any failure: a timeout after {@link JevConsts#STEP_READ_TIMEOUT}, an error, or an answer that breaks
-	 * the contract. {@code unasked} maps each unasked question id to its checks sentence.
-	 */
 	public Optional<StepJudgement> step(ProfileRangesDto profile, List<String> goals, FactsDto facts,
 			List<JevAnswerDto> answers, List<FocusArea> answeredAreas, Map<String, String> unasked) {
 		Map<String, Object> state = new LinkedHashMap<>();

@@ -13,8 +13,10 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 
 import com.collabothon.back.categorization.consts.CategorizationConsts;
+import com.collabothon.back.categorization.mappers.BankLessonMapper;
 import com.collabothon.back.categorization.dto.ConfidenceGapDto;
 import com.collabothon.back.categorization.enums.Confidence;
 import com.collabothon.back.categorization.enums.FocusArea;
@@ -49,7 +51,7 @@ class QuickCheckRulesTests {
 
 	private static final List<FocusArea> ORDER = List.of(SAVING, INVESTING);
 
-	private static final List<BankLesson> LESSONS = QuickCheckRules.lessons(BANK);
+	private static final List<BankLesson> LESSONS = QuickCheckRules.lessons(BANK, Mappers.getMapper(BankLessonMapper.class)::toLesson);
 
 	/** Option 0 is correct; options 1 and 2 carry misconceptions. Lesson position = lesson id. */
 	private static CheckQuestionProjection q(String id, long lessonId, FocusArea area, QuestionLevel level) {

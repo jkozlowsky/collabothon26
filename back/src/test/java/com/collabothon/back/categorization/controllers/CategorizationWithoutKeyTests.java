@@ -8,11 +8,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.random.RandomGenerator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.restclient.test.autoconfigure.AutoConfigureMockRestServiceServer;
@@ -20,18 +24,21 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.jayway.jsonpath.JsonPath;
+
 import com.collabothon.back.Race;
 import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
-import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
 
 // The default for teammates: no key, so nothing may reach the hosted API.
 @Import(TestcontainersConfiguration.class)
@@ -47,8 +54,19 @@ class CategorizationWithoutKeyTests {
 	@Autowired
 	MockRestServiceServer jev;
 
-	@Autowired
-	CheckQuestionRepository questions;
+	private static final FixedRandom RANDOM = new FixedRandom();
+
+	@TestBean
+	RandomGenerator random;
+
+	static RandomGenerator random() {
+		return RANDOM;
+	}
+
+	@BeforeEach
+	void drawTheFirstQuestion() {
+		RANDOM.index = 0;
+	}
 
 	@Autowired
 	CategorizationRepository categorizations;
@@ -74,20 +92,14 @@ class CategorizationWithoutKeyTests {
 	}
 
 	@Test
-	void theBankIsServedWithoutAKey() throws Exception {
-		TestBank bank = new TestBank(questions);
-		bank.question("only-one", "berlin-3", "saving", "easy");
-
+	void theQuestionsAreServedWithoutAKey() throws Exception {
 		mvc.perform(get("/api/check-questions")).andExpect(status().isOk())
-			.andExpect(jsonPath("$.length()").value(1))
-			.andExpect(jsonPath("$[0].id").value("only-one"));
+			.andExpect(jsonPath("$.length()").value(41))
+			.andExpect(jsonPath("$[0].id").value("seoul-1/q1"));
 	}
 
 	@Test
 	void aStepWithoutAKeyRunsOnTheRuleAndSaysSo() throws Exception {
-		TestBank bank = new TestBank(questions);
-		bank.question("sv-a", "berlin-3", "saving", "easy");
-		bank.question("sv-b", "berlin-3", "saving", "easy");
 		String userId = "keyless-" + UUID.randomUUID();
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
 			.content("{\"goals\": [\"start-saving\"], \"experience\": \"occasional\", \"skipped\": false}"))
@@ -97,13 +109,143 @@ class CategorizationWithoutKeyTests {
 		mvc.perform(post("/api/users/{id}/quick-check/step", userId).contentType(MediaType.APPLICATION_JSON)
 			.content("""
 					{"consent": false, "profile": {"ageBand": null, "savingsCover": "1-3", "horizon": "1-5y"},
-					 "history": [{"questionId": "sv-a", "optionIndex": 1, "confidence": "sure"}], "useRules": false}"""))
+					 "history": [%s], "useRules": false}""".formatted(TestPool.wrong("berlin-1/q1"))))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"mastery": {"saving": 0.25}, "nextQuestionId": "sv-b", "done": false, "useRules": true,
-					 "stepFellBack": false}""", JsonCompareMode.STRICT));
+					{"mastery": {"saving": 0.25, "debt": null, "investing": null}, "nextQuestionId": "berlin-1/q2",
+					 "done": false, "useRules": true, "stepFellBack": false}""", JsonCompareMode.STRICT));
 		jev.verify();
 	}
+
+	@Test
+	void aRunWithoutAMistakeAsksTwoQuestionsInEveryAreaAndReachesAdvanced() throws Exception {
+		List<String> asked = new ArrayList<>();
+
+		play(asked, true, true, true, true, true, true).andExpect(jsonPath("$.role").value("advanced"))
+			.andExpect(jsonPath("$.mastery.saving").value(0.85))
+			.andExpect(jsonPath("$.mastery.debt").value(0.85))
+			.andExpect(jsonPath("$.mastery.investing").value(0.85))
+			// Every area is Solid, so the path is the first story with a lesson left.
+			.andExpect(jsonPath("$.readyForNext").value(true))
+			.andExpect(jsonPath("$.startLesson.lessonId").value("seoul-1"))
+			.andExpect(jsonPath("$.gaps").isEmpty());
+
+		assertEquals(List.of("berlin-1/q1", "sao-paulo-1/q1", "seoul-1/q1", "berlin-2/q1", "sao-paulo-2/q1", "seoul-2/q1"),
+				asked);
+	}
+
+	@Test
+	void aMistakeInTheFourthAnswerEndsTheRunThereAsIntermediate() throws Exception {
+		List<String> asked = new ArrayList<>();
+
+		play(asked, true, true, true, false).andExpect(jsonPath("$.role").value("intermediate"))
+			.andExpect(jsonPath("$.mastery.saving").value(0.55));
+
+		assertEquals(List.of("berlin-1/q1", "sao-paulo-1/q1", "seoul-1/q1", "berlin-2/q1"), asked);
+	}
+
+	@Test
+	void alexWithAFirstWrongAnswerGetsASecondBerlinQuestionThenTheOtherAreasAndStartsInBerlin() throws Exception {
+		for (int draw = 0; draw < 2; draw++) {
+			RANDOM.index = draw;
+			List<String> asked = new ArrayList<>();
+
+			// Saving 0.55; debt and investing 0.85 with one answer each: not Solid, but high on the map.
+			play(asked, false, true, true, true).andExpect(jsonPath("$.role").value("intermediate"))
+				.andExpect(jsonPath("$.mastery.saving").value(0.55))
+				.andExpect(jsonPath("$.mastery.debt").value(0.85))
+				.andExpect(jsonPath("$.mastery.investing").value(0.85))
+				.andExpect(jsonPath("$.startLesson.lessonId").value("berlin-1"))
+				.andExpect(jsonPath("$.startLesson.area").value("saving"))
+				// He saves every month and got a saving answer wrong; he invests and answered investing right.
+				.andExpect(content().json("""
+						{"gaps": [{"area": "saving", "direction": "habit-ahead",
+						  "because": "Your account shows you move money to savings every month. Your Saving answers leave a few things open, which is where your first lesson starts."}]}""",
+						JsonCompareMode.LENIENT))
+				.andExpect(jsonPath("$.gaps.length()").value(1));
+
+			// Two of berlin-1's three questions come, as drawn.
+			assertEquals(draw == 0 ? List.of("berlin-1/q1", "berlin-1/q2", "sao-paulo-1/q1", "seoul-1/q1")
+					: List.of("berlin-1/q2", "berlin-1/q3", "sao-paulo-1/q2", "seoul-1/q2"), asked);
+		}
+	}
+
+	@Test
+	void everyAnswerRightWithoutTheHabitsIsKnowledgeAheadInBothAreas() throws Exception {
+		play(NO_HABITS, new ArrayList<>(), true, true, true, true, true, true)
+			.andExpect(jsonPath("$.gaps.length()").value(2))
+			.andExpect(content().json("""
+					{"gaps": [
+					  {"area": "saving", "direction": "knowledge-ahead",
+					   "because": "Your Saving answers show you understand how it works. Your account shows no monthly transfer to savings."},
+					  {"area": "investing", "direction": "knowledge-ahead",
+					   "because": "Your Investing answers show you understand how it works. Your account shows no investment products."}]}""",
+					JsonCompareMode.LENIENT));
+	}
+
+	@Test
+	void withoutFactsThereAreNoGaps() throws Exception {
+		play(NO_FACTS, new ArrayList<>(), false, true, true, true).andExpect(jsonPath("$.gaps").isEmpty());
+	}
+
+	@Test
+	void aRunWithEveryAnswerWrongStaysInBerlinAndIsANovice() throws Exception {
+		List<String> asked = new ArrayList<>();
+
+		play(asked, false, false, false, false).andExpect(jsonPath("$.role").value("novice"))
+			.andExpect(jsonPath("$.mastery.saving").value(0.25))
+			.andExpect(jsonPath("$.mastery.debt").isEmpty());
+
+		assertEquals(List.of("berlin-1/q1", "berlin-1/q2", "berlin-1/q3", "berlin-2/q1"), asked);
+	}
+
+	private ResultActions play(List<String> asked, boolean... right) throws Exception {
+		return play(ALEX, asked, right);
+	}
+
+	/**
+	 * Plays the Quick check on the rule (saving goals, money needed in 1-5 years) until it is done,
+	 * answering question i right or wrong as {@code right[i]} says, then categorizes.
+	 */
+	private ResultActions play(String account, List<String> asked, boolean... right) throws Exception {
+		String userId = "run-" + UUID.randomUUID();
+		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"goals\": [\"start-saving\", \"inflation\"], \"skipped\": false}"))
+			.andExpect(status().isOk());
+		String pool = mvc.perform(get("/api/check-questions")).andReturn().getResponse().getContentAsString();
+		List<String> history = new ArrayList<>();
+		while (true) {
+			String step = mvc.perform(post("/api/users/{id}/quick-check/step", userId)
+				.contentType(MediaType.APPLICATION_JSON).content(RUN.formatted(account, String.join(", ", history))))
+				.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+			String next = JsonPath.read(step, "$.nextQuestionId");
+			if (next == null) {
+				break;
+			}
+			List<Integer> correct = JsonPath.read(pool, "$[?(@.id == '%s')].correctIndex".formatted(next));
+			int option = right[asked.size()] ? correct.getFirst() : correct.getFirst() == 0 ? 1 : 0;
+			asked.add(next);
+			history.add("{\"questionId\": \"%s\", \"optionIndex\": %d}"
+				.formatted(next, option));
+		}
+		assertEquals(right.length, asked.size());
+		return mvc.perform(post("/api/users/{id}/categorization", userId).contentType(MediaType.APPLICATION_JSON)
+			.content(RUN.formatted(account, String.join(", ", history)))).andExpect(status().isOk());
+	}
+
+	private static final String RUN = """
+			{%s, "profile": {"ageBand": "26-40", "savingsCover": null, "horizon": "1-5y"}, "history": [%s],
+			 "useRules": true}""";
+
+	/** The seeded demo customer: saves every month and holds investments. */
+	private static final String ALEX = """
+			"consent": true, "facts": {"incomeBand": "2-3.5k", "cashBufferMonths": "6+", "savingsRate": "20%+",
+			 "savesRegularly": true, "inOverdraft": false, "holdsInvestments": true, "hasLoan": true}""";
+
+	private static final String NO_HABITS = ALEX.replace("\"savesRegularly\": true", "\"savesRegularly\": false")
+		.replace("\"holdsInvestments\": true", "\"holdsInvestments\": false");
+
+	private static final String NO_FACTS = "\"consent\": false";
 
 	@Test
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)

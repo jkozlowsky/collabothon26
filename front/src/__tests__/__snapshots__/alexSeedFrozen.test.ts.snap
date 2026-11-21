@@ -381,6 +381,7 @@ exports[`Alex seed frozen matches snapshot 1`] = `
     "totalInstalments": 48,
   },
   "owner": {
+    "age": 29,
     "initials": "AK",
     "name": "Alex Krause",
   },

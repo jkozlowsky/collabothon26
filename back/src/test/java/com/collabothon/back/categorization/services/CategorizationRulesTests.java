@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 import com.collabothon.back.categorization.consts.FactsConsts;
-import com.collabothon.back.categorization.dto.ConfidenceGapDto;
+import com.collabothon.back.categorization.dto.GapDto;
 import com.collabothon.back.categorization.dto.FactsDto;
 import com.collabothon.back.categorization.dto.LessonVariantDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
@@ -53,64 +53,64 @@ class CategorizationRulesTests {
 
 	private static final OnboardingAnswersDto SKIPPED = new OnboardingAnswersDto(null, List.of(), null, true);
 
-	private static List<ConfidenceGapDto> confidenceGaps(OnboardingAnswersDto a, FactsDto f) {
-		return CategorizationRules.confidenceGaps(a, f);
+	private static List<GapDto> saidGaps(OnboardingAnswersDto a, FactsDto f) {
+		return CategorizationRules.saidGaps(a, f);
 	}
 
-	private static void assertContains(List<ConfidenceGapDto> gaps, ConfidenceGapDto expected) {
+	private static void assertContains(List<GapDto> gaps, GapDto expected) {
 		assertTrue(gaps.contains(expected), () -> expected + " not in " + gaps);
 	}
 
-	private static ConfidenceGapDto gap(FocusArea area, GapDirection direction, String because) {
-		return new ConfidenceGapDto(area, direction, because);
+	private static GapDto gap(FocusArea area, GapDirection direction, String because) {
+		return new GapDto(area, direction, because);
 	}
 
 	@Test
 	void savingUnderWhenTheySayLittleButSaveEveryMonth() {
-		assertContains(confidenceGaps(said("not-saving"), ALEX), gap(FocusArea.SAVING, GapDirection.UNDER,
+		assertContains(saidGaps(said("not-saving"), ALEX), gap(FocusArea.SAVING, GapDirection.HABIT_AHEAD,
 				"You said: I don't save yet. Money goes to savings or investments every month."));
-		assertContains(confidenceGaps(said("occasional"), ALEX), gap(FocusArea.SAVING, GapDirection.UNDER,
+		assertContains(saidGaps(said("occasional"), ALEX), gap(FocusArea.SAVING, GapDirection.HABIT_AHEAD,
 				"You said: I save now and then. Money goes to savings or investments every month."));
-		assertEquals(List.of(), confidenceGaps(said("occasional"), TOM));
+		assertEquals(List.of(), saidGaps(said("occasional"), TOM));
 	}
 
 	@Test
 	void savingOverWhenTheySaySavingButHaveNoBuffer() {
-		assertEquals(List.of(gap(FocusArea.SAVING, GapDirection.OVER,
+		assertEquals(List.of(gap(FocusArea.SAVING, GapDirection.KNOWLEDGE_AHEAD,
 				"You said: I save regularly. Your accounts cover less than a month of spending.")),
-				confidenceGaps(said("regular"), LENA));
-		assertContains(confidenceGaps(said("investing"), LENA), gap(FocusArea.SAVING, GapDirection.OVER,
+				saidGaps(said("regular"), LENA));
+		assertContains(saidGaps(said("investing"), LENA), gap(FocusArea.SAVING, GapDirection.KNOWLEDGE_AHEAD,
 				"You said: I save and invest. Your accounts cover less than a month of spending."));
-		assertContains(confidenceGaps(said("planning"), LENA), gap(FocusArea.SAVING, GapDirection.OVER,
+		assertContains(saidGaps(said("planning"), LENA), gap(FocusArea.SAVING, GapDirection.KNOWLEDGE_AHEAD,
 				"You said: I plan my finances ahead. Your accounts cover less than a month of spending."));
-		assertEquals(List.of(), confidenceGaps(said("occasional"), LENA));
+		assertEquals(List.of(), saidGaps(said("occasional"), LENA));
 	}
 
 	@Test
 	void investingUnderWhenTheyDoNotSayInvestingButHoldInvestments() {
-		assertEquals(List.of(gap(FocusArea.INVESTING, GapDirection.UNDER,
+		assertEquals(List.of(gap(FocusArea.INVESTING, GapDirection.HABIT_AHEAD,
 				"You said: I save regularly. Your accounts with us include investment products.")),
-				confidenceGaps(said("regular"), ALEX));
-		assertContains(confidenceGaps(said("not-saving"), ALEX), gap(FocusArea.INVESTING, GapDirection.UNDER,
+				saidGaps(said("regular"), ALEX));
+		assertContains(saidGaps(said("not-saving"), ALEX), gap(FocusArea.INVESTING, GapDirection.HABIT_AHEAD,
 				"You said: I don't save yet. Your accounts with us include investment products."));
-		assertEquals(List.of(), confidenceGaps(said("investing"), ALEX));
+		assertEquals(List.of(), saidGaps(said("investing"), ALEX));
 	}
 
 	@Test
 	void investingOverWhenTheySayInvestingButHoldNone() {
-		assertEquals(List.of(gap(FocusArea.INVESTING, GapDirection.OVER,
+		assertEquals(List.of(gap(FocusArea.INVESTING, GapDirection.KNOWLEDGE_AHEAD,
 				"You said: I plan my finances ahead. No investment products in your accounts with us.")),
-				confidenceGaps(said("planning"), TOM));
-		assertEquals(List.of(gap(FocusArea.INVESTING, GapDirection.OVER,
+				saidGaps(said("planning"), TOM));
+		assertEquals(List.of(gap(FocusArea.INVESTING, GapDirection.KNOWLEDGE_AHEAD,
 				"You said: I save and invest. No investment products in your accounts with us.")),
-				confidenceGaps(said("investing"), TOM));
-		assertEquals(List.of(), confidenceGaps(said("regular"), TOM));
+				saidGaps(said("investing"), TOM));
+		assertEquals(List.of(), saidGaps(said("regular"), TOM));
 	}
 
 	@Test
 	void noGapsWithoutBankDataOrAnExperienceAnswer() {
-		assertEquals(List.of(), confidenceGaps(said("not-saving"), null));
-		assertEquals(List.of(), confidenceGaps(SKIPPED, ALEX));
+		assertEquals(List.of(), saidGaps(said("not-saving"), null));
+		assertEquals(List.of(), saidGaps(SKIPPED, ALEX));
 	}
 
 	@Test
@@ -242,7 +242,7 @@ class CategorizationRulesTests {
 						"retirement"), experience, false);
 				lines.addAll(roleBecause(a, facts));
 				lines.addAll(focusBecause(List.of(FocusArea.values()), a, facts));
-				confidenceGaps(a, facts).forEach(gap -> lines.add(gap.because()));
+				saidGaps(a, facts).forEach(gap -> lines.add(gap.because()));
 			}
 		}
 		assertFalse(lines.isEmpty());

@@ -3,7 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Slider } from '@/components/bank/Slider';
+import { BuyingBasket } from '@/components/lesson/BuyingBasket';
 import { LineChart } from '@/components/lesson/LineChart';
+import { PaidInSplit } from '@/components/lesson/PaidInSplit';
 import { StepLayout } from '@/components/lesson/StepLayout';
 import { haptic } from '@/components/onboarding/ui';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
@@ -45,6 +47,15 @@ export function SliderChartStep({ step, onDone }: Props) {
 
   const unit = step.output.unit;
   const outputText = formatValue(output, unit, { signed: true });
+  const lineChart = (
+    <LineChart
+      series={[{ points: sweep(step.model, step.params, values), tone: 'primary' }]}
+      marker={{ x: values[model.x], y: output }}
+      formatY={(y) => formatValue(y, unit, { signed: true })}
+      accessibilityLabel={`${step.output.label}: ${outputText}`}
+      testID="slider-chart"
+    />
+  );
 
   return (
     <StepLayout
@@ -58,15 +69,14 @@ export function SliderChartStep({ step, onDone }: Props) {
         </Text>
       </View>
 
-      <LineChart
-        series={[{ points: sweep(step.model, step.params, values), tone: 'primary' }]}
-        marker={{ x: values[model.x], y: output }}
-        formatY={(y) => formatValue(y, unit, { signed: true })}
-        accessibilityLabel={`${step.output.label}: ${outputText}`}
-        testID="slider-chart"
-      />
+      {step.visual === 'basket' && <BuyingBasket changePct={output} years={values.years ?? 0} />}
+      {step.visual === 'split' && model.paidIn && <PaidInSplit total={output} paidIn={model.paidIn(values)} />}
 
-      {Object.entries(step.params).map(([key, p]) => (
+      {/* Without a picture the chart is the picture; with one, the sliders come first, right under it. */}
+      {!step.visual && lineChart}
+
+      {/* A param with min === max is a fixed input of the model, not a slider. */}
+      {Object.entries(step.params).filter(([, p]) => p.min !== p.max).map(([key, p]) => (
         <View key={key} style={styles.param}>
           <View style={styles.paramRow}>
             <Text style={styles.paramLabel}>{p.label}</Text>
@@ -83,6 +93,9 @@ export function SliderChartStep({ step, onDone }: Props) {
           />
         </View>
       ))}
+
+      {/* The basket replaces the chart; the split keeps it, below the sliders. */}
+      {step.visual === 'split' && lineChart}
 
       {reached ? (
         <Text style={[styles.status, styles.done]} testID="goal-reached">

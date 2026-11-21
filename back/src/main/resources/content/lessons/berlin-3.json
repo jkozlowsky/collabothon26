@@ -1,209 +1,256 @@
 {
   "id": "berlin-3",
   "story": "berlin",
-  "title": "Money for emergencies",
-  "place": "Your savings · for surprises",
-  "topic": "An emergency fund",
-  "minutes": 4,
+  "title": "Pay yourself first",
+  "place": "Your current account · payday",
+  "topic": "Where your money goes",
+  "minutes": 3,
   "xp": 50,
   "concepts": [
-    "emergency-fund",
-    "time-horizon"
+    "savings-rate",
+    "fixed-costs",
+    "standing-order"
   ],
   "steps": [
     {
       "type": "text",
       "id": "t1",
       "phase": "learn",
-      "kicker": "Emergency fund",
-      "title": "Money that is ready at once",
-      "body": "An [[emergency-fund]] is money for surprises. It pays your costs if a job ends or something breaks. It does not need to grow. It needs to be there at once. Then you do not have to sell investments or borrow money in a hurry. People count it in months of costs."
-    },
-    {
-      "type": "predict",
-      "id": "p1",
-      "phase": "challenge",
-      "concepts": [
-        "emergency-fund"
-      ],
-      "prompt": "A household spends €2,800 a month. How big is an emergency fund for 3 months?",
-      "input": {
-        "kind": "slider",
-        "min": 0,
-        "max": 20000,
-        "step": 400,
-        "unit": "€"
-      },
-      "answer": 8400,
-      "reveal": "3 × €2,800 = €8,400. You count an emergency fund in months of costs, not as a round number. If an income stops, it gives you time to find a new one."
+      "kicker": "Saving",
+      "title": "Save first, spend the rest",
+      "body": "Most people save what is left at the end of the month. Often, that is almost nothing. The trick: save first, on payday. Then spend the rest. A small amount moved every day or every month adds up fast: €5 a day becomes €1,825 in one year. The share of your income you keep is your [[savings-rate]].",
+      "stat": {
+        "value": "€1,825",
+        "label": "€5 a day, for one year",
+        "tone": "good"
+      }
     },
     {
       "type": "sort",
       "id": "so1",
-      "phase": "challenge",
+      "phase": "learn",
       "concepts": [
-        "time-horizon"
+        "fixed-costs"
       ],
-      "prompt": "When is this money needed? Swipe each item to the left or to the right.",
+      "prompt": "Where can a saver find room? Swipe each cost: one you must pay, or one you can change.",
       "buckets": [
-        "Within a year",
-        "In 10 years or later"
+        "Must pay",
+        "Can change"
       ],
       "items": [
         {
-          "text": "Next month's rent",
+          "text": "Rent",
           "bucket": 0
         },
         {
-          "text": "A new washing machine",
-          "bucket": 0
-        },
-        {
-          "text": "Three months of costs if a job ends",
-          "bucket": 0
-        },
-        {
-          "text": "Money for a child at 18",
+          "text": "Three streaming services",
           "bucket": 1
         },
         {
-          "text": "Your pension",
+          "text": "Health insurance",
+          "bucket": 0
+        },
+        {
+          "text": "Take-away coffee every day",
           "bucket": 1
         },
         {
-          "text": "A car repair",
+          "text": "Electricity",
           "bucket": 0
+        },
+        {
+          "text": "Food delivery twice a week",
+          "bucket": 1
         }
       ],
-      "explanation": "Money you need soon has a short [[time-horizon]]. It must be there, whatever prices do. Money that can wait for decades has time to recover from falls."
+      "explanation": "Costs you must pay each month are [[fixed-costs]]. The others are where most people find room to save."
+    },
+    {
+      "type": "slider-chart",
+      "id": "e1",
+      "phase": "challenge",
+      "concepts": [
+        "savings-rate"
+      ],
+      "prompt": "Two streaming services at €13 each: €26 a month. Cancel them, move the money on payday, and watch what it becomes.",
+      "model": "monthlyPlan",
+      "visual": "split",
+      "params": {
+        "years": {
+          "label": "Years",
+          "min": 1,
+          "max": 20,
+          "step": 1,
+          "value": 1,
+          "unit": " years"
+        },
+        "monthly": {
+          "label": "Monthly costs you cut",
+          "min": 5,
+          "max": 200,
+          "step": 1,
+          "value": 26,
+          "unit": "€"
+        },
+        "rate": {
+          "label": "Interest on savings",
+          "min": 0,
+          "max": 4,
+          "step": 0.25,
+          "value": 2,
+          "unit": "%"
+        }
+      },
+      "output": {
+        "label": "Money set aside",
+        "unit": "€"
+      },
+      "goal": {
+        "condition": {
+          "of": "years",
+          "min": 5
+        },
+        "hint": "Move the years to 5 or more."
+      },
+      "note": "€26 a month is €312 a year. Over 5 years it is more than €1,600, without changing anything else."
     },
     {
       "type": "quiz",
       "id": "q1",
       "phase": "challenge",
       "concepts": [
-        "emergency-fund"
+        "standing-order"
       ],
-      "prompt": "True or false: an emergency fund should grow as fast as possible.",
+      "prompt": "It's payday. Which plan makes saving most likely to happen?",
       "options": [
-        "True",
-        "False"
+        "Move the saving amount on payday, then spend the rest",
+        "Spend first, then save what is left",
+        "Save only in months when money is left over"
       ],
-      "correctIndex": 1,
-      "explanation": "False. An emergency fund must be there when something goes wrong. Investments can be down at exactly that moment. So the fund sits where its value cannot fall, even if it earns little."
+      "correctIndex": 0,
+      "explanation": "When saving happens first, by a [[standing-order]] on payday, it does not depend on willpower at the end of the month."
     },
     {
       "type": "quiz",
       "id": "q2",
       "phase": "challenge",
       "concepts": [
-        "emergency-fund"
+        "savings-rate"
       ],
-      "prompt": "A job ends. At the same time, investments are down 20%. Where is the emergency fund most useful?",
+      "prompt": "Mia earns €2,000 a month after tax. She saves €300. What is her savings rate?",
       "options": [
-        "In a savings account, where its value did not fall",
-        "In a stock fund, where it lost 20%",
-        "Half in each, so half of it lost value"
+        "15%",
+        "30%",
+        "6%"
       ],
       "correctIndex": 0,
-      "explanation": "Job losses and market falls often happen at the same time. In a savings account, the full amount is there when you need it."
+      "explanation": "€300 of €2,000 is 15%. Your [[savings-rate]] is the share you keep, not the amount. It lets you compare months, even when income changes."
     },
     {
       "type": "text",
       "id": "t2",
       "phase": "you",
-      "kicker": "Your savings",
-      "title": "How long your savings last",
-      "body": "You spend about **{monthlySpending}** a month. Your savings account holds **{savingsBalance}**. That covers about **{bufferMonths}** months of costs."
+      "kicker": "Your month",
+      "title": "Your money last month",
+      "body": "**{monthlyIncome}** came in. **{monthlySpending}** went out. That leaves **{monthlyLeftover}**. Right now, **{monthlyInvesting}** of it moves on by itself every month.",
+      "stat": {
+        "value": "{leftoverShare}",
+        "label": "of your income was not spent last month",
+        "tone": "good"
+      }
     },
     {
       "type": "action",
       "id": "a1",
       "phase": "decide",
       "title": "Your decision",
-      "body": "Your savings cover about **{bufferMonths}** months of your costs today. How many months of costs do you want to keep as your emergency fund? You choose the number.",
-      "bodyNoData": "How many months of your costs do you want to keep as your emergency fund? You choose the number.",
+      "body": "Last month, **{leftoverShare}** of your income was not spent. How much of your income do you want to move on payday, before you spend? You choose the share. This app explains how money works. It does not recommend products.",
+      "bodyNoData": "How much of your income do you want to move on payday, before you spend? You choose the share. This app explains how money works. It does not recommend products.",
       "rule": {
-        "label": "My emergency fund",
-        "min": 1,
-        "max": 12,
+        "label": "Saved first, on payday",
+        "min": 0,
+        "max": 40,
         "step": 1,
-        "value": 3,
-        "unit": " months",
-        "appliesTo": "monthlySpending",
-        "kind": "multiple",
-        "result": "= {amount} ready any day"
+        "value": 10,
+        "unit": "%",
+        "appliesTo": "monthlyIncome",
+        "result": "= {amount} a month, moved before you spend"
       },
       "cta": "Save my rule"
     }
   ],
   "video": {
-    "minutes": 4,
+    "minutes": 3,
     "scenes": [
       {
         "type": "scene",
         "id": "v1",
-        "title": "Ready at once",
-        "desc": "An [[emergency-fund]] pays your costs when something goes wrong. It does not need to grow.",
-        "duration": 10.3,
+        "title": "Save first",
+        "desc": "Saving what is left often means saving nothing. Saving on payday first is the trick. The share you keep is your [[savings-rate]].",
+        "duration": 13,
         "camera": "push",
         "setting": {
           "place": "home",
-          "time": "night"
+          "time": "day"
         },
         "layers": [
           {
-            "kind": "tag",
+            "kind": "amount",
             "at": 1,
-            "text": "Job ends",
-            "tone": "bad",
-            "x": 0.28,
-            "y": 0.25
+            "len": 4,
+            "from": 0,
+            "to": 0,
+            "currency": "EUR",
+            "label": "Left at the end of the month"
+          },
+          {
+            "kind": "tag",
+            "at": 5.5,
+            "text": "Payday",
+            "tone": "good",
+            "x": 0.25,
+            "y": 0.3
           },
           {
             "kind": "amount",
-            "at": 3.5,
-            "len": 3,
+            "at": 8.5,
+            "len": 4,
             "from": 0,
-            "to": 6000,
+            "to": 1825,
             "currency": "EUR",
-            "label": "3 months of costs"
-          },
-          {
-            "kind": "tag",
-            "at": 6.8,
-            "text": "Ready",
-            "tone": "good",
-            "x": 0.75,
-            "y": 0.25
+            "label": "€5 a day, one year"
           }
         ],
         "captions": [
           {
-            "at": 0,
-            "text": "An emergency fund is money for surprises."
+            "at": 0.5,
+            "text": "Most people save what is left at the end of the month."
           },
           {
-            "at": 3.1,
-            "text": "It pays your costs if a job ends or something breaks."
+            "at": 3.5,
+            "text": "Often, that is almost nothing."
           },
           {
-            "at": 6.6,
-            "text": "It does not need to grow. It needs to be there at once."
+            "at": 6,
+            "text": "The trick: save first, on payday. Then spend the rest."
+          },
+          {
+            "at": 9.5,
+            "text": "€5 a day becomes €1,825 in one year."
           }
         ],
-        "transcript": "t1",
-        "audio": "berlin-3/v1.mp3"
+        "transcript": "t1"
       }
     ],
     "beats": [
       "v1",
-      "p1",
       "so1",
+      "e1",
       "q1",
       "q2",
       "t2",
       "a1"
     ]
-  }
+  },
+  "variants": {}
 }

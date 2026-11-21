@@ -9,7 +9,9 @@ import { LearnHeader } from '@/components/LearnHeader';
 import { haptic } from '@/components/onboarding/ui';
 import { StorySheet } from '@/components/StorySheet';
 import { colors, spacing } from '@/constants/theme';
+import { useAccount } from '@/hooks/useAccount';
 import { useApi } from '@/hooks/useApi';
+import { takeArrival } from '@/hooks/useOpenLearn';
 import { useStartHere } from '@/hooks/useStartHere';
 import { calloutState, isDone, LEARNER, sortStories, STORIES, withCurrent, withLessons } from '@/lib/stories';
 import { useCurrentUser } from '@/lib/user';
@@ -31,11 +33,17 @@ export default function MapScreen() {
   // Coming back from a lesson moves the story's progress on.
   useFocusEffect(reload);
   const startHere = useStartHere();
+  // Real streak and XP once the stats load; the mock until then.
+  const { stats } = useAccount();
+  const learner = stats ? { ...LEARNER, streak: stats.currentStreak, xp: stats.totalXp } : LEARNER;
   // One "start" cue: the Quick check's story replaces main's default current story.
   const startId = startHere?.storyId;
   // The globe picks its first view at mount, before the startHere story is known.
   useEffect(() => {
-    if (startId) globe.current?.flyTo(startId, true);
+    if (!startId) return;
+    // Straight after onboarding the plane flies in to the first destination; later it only turns.
+    if (takeArrival()) globe.current?.flyIn(startId);
+    else globe.current?.flyTo(startId, true);
   }, [startId]);
   // The highlight moves on once a story is done, also without a Quick check result.
   const stories = useMemo(() => withCurrent(withLessons(STORIES, lessons), startId), [lessons, startId]);
@@ -67,7 +75,7 @@ export default function MapScreen() {
   return (
     <View style={styles.screen} testID="screen-learn" onLayout={(e) => setHeight(e.nativeEvent.layout.height)}>
       <SafeAreaView edges={['top', 'left', 'right']} onLayout={(e) => setSheetTop(e.nativeEvent.layout.height + spacing.md)}>
-        <LearnHeader learner={LEARNER} />
+        <LearnHeader learner={learner} />
         <Globe
           ref={globe}
           stories={stories}

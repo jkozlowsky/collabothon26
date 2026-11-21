@@ -14,10 +14,9 @@ import {
   largestPosition,
   positionCount,
   savingsShare,
-  slotValues,
   totalCreditOutstanding,
 } from '@/lib/bank/selectors';
-import { factsFrom } from '@/lib/categorization';
+import { ageBandOf, factsFrom } from '@/lib/categorization';
 import { personalizeStep } from '@/lib/lessonMetrics';
 import { PERSONAS, PERSONA_IDS, personaFor } from '@/lib/personas';
 import type { BankState } from '@/types/bank';
@@ -41,22 +40,26 @@ describe('Personas registry and seeds', () => {
     expect(PERSONAS['demo-user'].hints).toBeNull();
 
     expect(PERSONAS['demo-daniel'].hints).toEqual({
+      purpose: 'growing',
+      horizon: '5y+',
       lifeStage: 'settled',
       goals: ['stocks-etfs', 'retirement'],
       experience: 'investing',
-      ageBand: '41-59',
-      horizon: '5y+',
-      savingsCover: '6+',
     });
 
     expect(PERSONAS['demo-elena'].hints).toEqual({
+      purpose: 'safety-net',
+      horizon: '1-5y',
       lifeStage: 'later-life',
       goals: ['inflation', 'scams'],
       experience: 'regular',
-      ageBand: '60+',
-      horizon: '1-5y',
-      savingsCover: '6+',
     });
+
+    // The age band is not asked: the onboarding derives it from the bank's owner.age.
+    expect(seedDaniel().owner.age).toBe(45);
+    expect(ageBandOf(seedDaniel().owner.age)).toBe('41-59');
+    expect(seedElena().owner.age).toBe(72);
+    expect(ageBandOf(seedElena().owner.age)).toBe('60+');
   });
 
   it('is deterministic: repeated seed calls produce deep-equal states', () => {
@@ -117,10 +120,7 @@ describe('Personas registry and seeds', () => {
         }
       }
 
-      const slots = slotValues(state);
-      for (const val of Object.values(slots)) {
-        expect(Number.isNaN(val)).toBe(false);
-      }
+      expect(Number.isNaN(state.owner.age)).toBe(false);
     }
 
     expect(largestPosition(elena)).toEqual({ name: '', share: 0 });

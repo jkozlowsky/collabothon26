@@ -86,7 +86,7 @@ export function seedDaniel(seed: number = DANIEL_SEED): BankState {
   const depotTotal = holdings.reduce((sum, h) => sum + h.value, 0);
 
   return {
-    owner: { name: 'Daniel Okafor', initials: 'DO' },
+    owner: { name: 'Daniel Okafor', initials: 'DO', age: 45 },
     account: {
       name: 'Main account',
       iban: 'DE42 3704 0044 0591 8234 10',

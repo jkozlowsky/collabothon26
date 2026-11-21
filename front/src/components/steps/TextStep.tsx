@@ -1,7 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
+import { FactsCard } from '@/components/lesson/FactsCard';
 import { RichText } from '@/components/lesson/RichText';
+import { StatHero } from '@/components/lesson/StatHero';
 import { StepLayout } from '@/components/lesson/StepLayout';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import type { StepOutcome, TextStep as TextStepData } from '@/types/lessons';
@@ -12,6 +14,7 @@ type Props = { step: TextStepData; onDone: (outcome: StepOutcome) => void };
 export function TextStep({ step, onDone }: Props) {
   return (
     <StepLayout footer={<Button label="Continue" onPress={() => onDone({})} testID="continue" />}>
+      {step.stat && <StatHero stat={step.stat} />}
       <View style={styles.card}>
         {step.kicker && <Text style={styles.kicker}>{step.kicker}</Text>}
         {step.title && (
@@ -21,6 +24,7 @@ export function TextStep({ step, onDone }: Props) {
         )}
         <RichText text={step.body} style={styles.body} />
       </View>
+      {step.facts && step.facts.length > 0 && <FactsCard facts={step.facts} />}
     </StepLayout>
   );
 }

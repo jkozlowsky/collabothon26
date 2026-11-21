@@ -95,7 +95,7 @@ test('plays a lesson: glossary sheet, a missed quiz comes back, sort, XP at the 
   await fireEvent.press(await screen.findByTestId('story-card-seoul'));
 
   // The user already has a saved profile, so the Learn tabs are open to them.
-  expect(await screen.findByText('0 of 2 stamps')).toBeOnTheScreen();
+  expect(await screen.findByText(/0 of 2 missions/)).toBeOnTheScreen();
   expect(screen.queryByTestId('lesson-seoul-2')).toBeNull();
   await fireEvent.press(await screen.findByTestId('lesson-seoul-1'));
 
@@ -128,7 +128,8 @@ test('plays a lesson: glossary sheet, a missed quiz comes back, sort, XP at the 
   await fireEvent.press(screen.getByTestId('continue'));
 
   expect(await screen.findByText('Lesson complete!')).toBeOnTheScreen();
-  expect(await screen.findByText('+50 XP')).toBeOnTheScreen();
+  // The XP counts up on the end screen.
+  expect(await screen.findByText('+50 XP', {}, { timeout: 4000 })).toBeOnTheScreen();
   expect(posted?.url).toContain('/api/lessons/seoul-1/result?userId=');
   expect(posted?.body).toEqual({
     steps: [
@@ -142,7 +143,7 @@ test('plays a lesson: glossary sheet, a missed quiz comes back, sort, XP at the 
   expect(screen.getByText('↻ Drawdown')).toBeOnTheScreen();
 
   await fireEvent.press(screen.getByTestId('back-to-list'));
-  expect(await screen.findByText('1 of 2 stamps')).toBeOnTheScreen();
+  expect(await screen.findByText(/1 of 2 missions/)).toBeOnTheScreen();
   expect(screen.getByTestId('lesson-seoul-2')).toBeOnTheScreen();
 });
 

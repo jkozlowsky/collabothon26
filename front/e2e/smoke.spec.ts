@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures';
 
-import { resetOnboarding, skipQuickCheck } from './app';
+import { answerFromConsent, emptyQuestionBank, goToConsent, gotoBank, resetOnboarding } from './app';
 
 // The test needs a user who has not been through onboarding yet, and leaves it that way for the next run.
 test.beforeEach(async ({ request }) => {
@@ -11,22 +11,20 @@ test.afterAll(async ({ request }) => {
   await resetOnboarding(request);
 });
 
-test('app opens on the bank; Learn runs onboarding and the consent card, then the globe and a story; Bank comes back; a transfer lowers the balance', async ({ page, request }) => {
-  await skipQuickCheck(page);
-  await page.goto('/');
-  await page.getByTestId('account-demo-user').click();
+test('app opens on the bank; Learn runs onboarding with the consent screen, then the globe and a story; Bank comes back; a transfer lowers the balance', async ({ page, request }) => {
+  await emptyQuestionBank(page);
+  await gotoBank(page);
   await expect(page.getByTestId('owner-name')).toHaveText('Alex Krause');
   await expect(page.getByTestId('main-balance')).toHaveText('€ 4,280.52');
 
   // First Learn tap: onboarding, then the Map (lessons come from the backend).
   await page.getByTestId('nav-learn').click();
-  await page.getByTestId('onboarding-start').click();
-  await page.getByTestId('onboarding-next').click();
-  await page.getByTestId('onboarding-challenge-next').click();
-  await page.getByTestId('onboarding-skip-all').click();
-  // The consent card previews the facts from the bank on screen; sharing them sends exactly those.
-  await expect(page.getByTestId('consent-slip')).toContainText('Over 6 months of spending covered');
-  await page.getByTestId('consent-accept').click();
+  await goToConsent(page);
+  // The consent screen previews the facts from the bank; sharing them sends exactly those.
+  await expect(page.getByTestId('consent-facts')).toContainText('Over 6 months of spending covered');
+  await expect(page.getByTestId('consent-facts')).toContainText('Age 26–40');
+  await answerFromConsent(page);
+  await page.getByTestId('check-start').click();
   await page.getByTestId('summary-start').click();
   await expect(page.getByTestId('screen-learn')).toBeVisible({ timeout: 15_000 });
   const categorization = await (await request.get('/api/users/demo-user/categorization')).json();

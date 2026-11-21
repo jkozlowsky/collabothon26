@@ -1,94 +1,69 @@
-import Feather from '@expo/vector-icons/Feather';
-import { useEffect, useRef, useState, type ComponentRef, type ReactNode } from 'react';
-import { AccessibilityInfo, findNodeHandle, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, type ComponentRef } from 'react';
+import { AccessibilityInfo, findNodeHandle, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AnswerTile } from '@/components/categorizing/AnswerTile';
-import { ConfidenceChips } from '@/components/categorizing/ConfidenceChips';
-import { FlowPage } from '@/components/categorizing/FlowPage';
-import { GLYPH, HAIRLINE, RULE } from '@/constants/path';
-import { STATUS_TEXT } from '@/constants/quickCheck';
-import { colors, radii, spacing, type } from '@/constants/theme';
+import { AnswerTile, type AnswerState } from '@/components/categorizing/AnswerTile';
+import { FeedbackBanner } from '@/components/categorizing/FeedbackBanner';
+import { Page } from '@/components/onboarding/Page';
+import { BigButton, FadeIn, haptic, StepHeader, type as text } from '@/components/onboarding/ui';
+import { AREA_LABEL, STATUS_TEXT } from '@/constants/quickCheck';
+import { colors, spacing, type } from '@/constants/theme';
 import type { QuestionView } from '@/hooks/useQuickCheck';
-import type { Confidence } from '@/types/quickCheck';
-
-const TOUCH_TARGET = 44;
-const ICON = 20;
-const NOT_SURE = -1;
 
 type Props = {
-  /** Null while the first step runs: only the header and the status line show. */
+  /** Null while a step decides or the test is done: the status line shows in its place. */
   view: QuestionView | null;
   /** The shown question's number, and how many there can be at most. */
   position: number;
   total: number;
-  /** A step is running or the test is done: tiles and chips are off. */
   status: 'waiting' | 'done' | null;
-  /** Tiles wait a moment after a question appears, so a double tap cannot skip one. */
-  ready: boolean;
-  /** The dock, for knowledge questions. */
-  dock?: ReactNode;
   /** `optionIndex` null = "Not sure". */
-  onAnswer: (optionIndex: number | null, confidence: Confidence | null) => void;
-  onBack: () => void;
+  onAnswer: (optionIndex: number | null) => void;
+  onContinue: () => void;
 };
 
 // react-native-web takes tabIndex on Text so focus() works; RN's TextProps do not declare it.
 const WEB_FOCUSABLE = { tabIndex: -1 };
 
-export function QuickCheckPage({ view, position, total, status, ready, dock, onAnswer, onBack }: Props) {
-  const filled = status ? position : position - 1;
-  const profile = view?.kind === 'profile';
-
+export function QuickCheckPage({ view, position, total, status, onAnswer, onContinue }: Props) {
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
+  // The feedback lands under the tiles, which a long question pushes below the fold.
+  const answer = (optionIndex: number | null) => {
+    onAnswer(optionIndex);
+    requestAnimationFrame(() => scroll.current?.scrollToEnd());
+  };
+  const next = () => {
+    scroll.current?.scrollTo({ y: 0, animated: false });
+    onContinue();
+  };
   return (
-    <FlowPage testID="quick-check" footer={dock}>
-      <View style={styles.top}>
-        <Pressable
-          onPress={onBack}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          hitSlop={8}
-          style={styles.back}
-          testID="quick-check-back"
-        >
-          <Feather name="chevron-left" size={ICON} color={colors.brandPrimary} />
-        </Pressable>
-      </View>
-      <View style={styles.row}>
-        <Text style={type.labelStrong} testID="quick-check-position">
-          Question {position} of up to {total}
-        </Text>
-        {view && <Text style={styles.muted}>{profile ? 'Not scored' : 'Not a test you can fail'}</Text>}
-      </View>
-      <View
-        style={styles.segments}
-        accessible
-        accessibilityLabel={`Question ${position} of up to ${total}. The check may end earlier.`}
-      >
-        {Array.from({ length: total }, (_, i) => (
-          <View key={i} style={[styles.segment, i < filled ? styles.done : i === filled && styles.current]} />
-        ))}
-      </View>
-      {/* Keyed per question, so the selection and the focus start fresh while the header and the dock stay. */}
-      {view && <Question key={view.key} view={view} position={position} total={total} off={!ready} onAnswer={onAnswer} />}
+    <Page
+      testID="quick-check"
+      scrollRef={scroll}
+      header={<StepHeader label={`Question ${position} of up to ${total}`} progress={position / total} />}
+      footer={<BigButton label="Continue" onPress={next} disabled={!view?.result} testID="quick-check-continue" />}
+    >
+      {/* Keyed per question, so the focus and the entrance start fresh while the header stays. */}
+      {view && (
+        <FadeIn key={view.key} style={styles.question}>
+          <Question view={view} position={position} total={total} onAnswer={answer} />
+        </FadeIn>
+      )}
       {status && (
         <Text style={styles.status} testID="quick-check-status">
           {STATUS_TEXT[status]}
         </Text>
       )}
-    </FlowPage>
+    </Page>
   );
 }
 
-type QuestionProps = Pick<Props, 'onAnswer'> & { view: QuestionView; position: number; total: number; off: boolean };
+type QuestionProps = Pick<Props, 'onAnswer' | 'position' | 'total'> & { view: QuestionView };
 
-function Question({ view, position, total, off, onAnswer }: QuestionProps) {
-  const [selected, setSelected] = useState<number | null>(
-    view.kind === 'profile' && view.preselectedOptionIndex !== undefined ? view.preselectedOptionIndex : null,
-  );
+function Question({ view, position, total, onAnswer }: QuestionProps) {
   const promptRef = useRef<ComponentRef<typeof Text>>(null);
-  const profile = view.kind === 'profile';
+  const { result, correctIndex } = view;
 
-  // A new question moves focus to its prompt (WCAG 2.2 SC 2.4.3); the screen's live region announces the status.
+  // A new question moves focus to its prompt (WCAG 2.2 SC 2.4.3); the screen's live region announces the rest.
   useEffect(() => {
     const prompt = promptRef.current;
     if (!prompt) return;
@@ -97,12 +72,18 @@ function Question({ view, position, total, off, onAnswer }: QuestionProps) {
   }, []);
 
   const pick = (index: number | null) => {
-    setSelected(index ?? NOT_SURE);
-    if (profile || index === null) onAnswer(index, null);
+    if (index === correctIndex) haptic('success');
+    onAnswer(index);
+  };
+  const stateOf = (index: number): AnswerState => {
+    if (!result) return 'default';
+    if (index === correctIndex) return 'correct';
+    return index === result.picked ? 'wrong' : 'dimmed';
   };
 
   return (
     <>
+      <Text style={text.overline}>QUICK CHECK · {AREA_LABEL[view.area].toUpperCase()}</Text>
       <Text
         ref={promptRef}
         accessibilityLabel={`Question ${position} of up to ${total}. ${view.prompt}`}
@@ -111,96 +92,41 @@ function Question({ view, position, total, off, onAnswer }: QuestionProps) {
         accessibilityRole="header"
         testID="quick-check-prompt"
       >
-        {view.parts.map((p, i) => (
-          <Text key={i} style={p.filled && styles.filled}>
-            {p.text}
-          </Text>
-        ))}
+        {view.prompt}
       </Text>
-      <View style={styles.why} testID="quick-check-why">
-        <Feather name={profile ? 'user' : 'search'} size={14} color={colors.brandPrimary} />
-        <Text style={styles.whyText}>Why this question: {view.why}</Text>
-      </View>
+      <Text style={text.label} testID="quick-check-why">
+        Why this question: {view.why}
+      </Text>
       <View style={styles.options} accessibilityRole="radiogroup" accessibilityLabel={view.prompt}>
         {view.options.map((label, i) => (
           <AnswerTile
             key={label}
-            label={label}
-            selected={selected === i}
-            disabled={off}
+            title={label}
+            state={stateOf(i)}
+            checked={result?.picked === i}
+            disabled={!!result}
             onPress={() => pick(i)}
             testID={`quick-check-option-${i}`}
-          >
-            {selected === i && !profile && <ConfidenceChips disabled={off} onPick={(c) => onAnswer(i, c)} />}
-          </AnswerTile>
-        ))}
-        {!profile && (
-          <AnswerTile
-            label="Not sure"
-            quiet
-            selected={selected === NOT_SURE}
-            disabled={off}
-            onPress={() => pick(null)}
-            testID="quick-check-unsure"
           />
-        )}
+        ))}
+        <AnswerTile
+          title="Not sure"
+          subtitle="That is fine. Your lessons cover it."
+          state={!result ? 'default' : result.picked === null ? 'selected' : 'dimmed'}
+          checked={result?.picked === null}
+          disabled={!!result}
+          onPress={() => pick(null)}
+          testID="quick-check-unsure"
+        />
       </View>
-      <Slip view={view} />
+      {result && <FeedbackBanner feedback={result.feedback} />}
     </>
   );
 }
 
-function Slip({ view }: { view: QuestionView }) {
-  if (view.account) {
-    return (
-      <View style={styles.slip}>
-        <Feather name="lock" size={GLYPH} color={colors.brandPrimary} />
-        <Text style={styles.slipText}>Only your answer is sent, never these numbers.</Text>
-      </View>
-    );
-  }
-  return <Text style={styles.muted}>{view.kind === 'profile' ? 'A fact about you, not a test.' : 'Example numbers'}</Text>;
-}
-
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', alignItems: 'center' },
-  back: {
-    width: TOUCH_TARGET,
-    height: TOUCH_TARGET,
-    marginLeft: -(TOUCH_TARGET - ICON) / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.sm },
-  muted: { ...type.labelDefault, color: colors.textMuted },
-  segments: { flexDirection: 'row', gap: spacing.xs },
-  segment: { flex: 1, height: 8, borderRadius: spacing.xs, borderWidth: RULE, borderStyle: 'dashed', borderColor: colors.borderStrong },
-  done: { borderStyle: 'solid', borderColor: colors.brandPrimary, backgroundColor: colors.brandPrimary },
-  current: { borderStyle: 'solid', borderColor: colors.brandPrimary, backgroundColor: colors.brandAccent },
-  prompt: { ...type.titleSection, marginTop: spacing.xs },
-  filled: { color: colors.brandPrimary, backgroundColor: colors.brandPrimarySoft },
-  why: {
-    flexDirection: 'row',
-    alignSelf: 'flex-start',
-    alignItems: 'center',
-    gap: spacing.sm - 2,
-    paddingVertical: spacing.xs + 1,
-    paddingHorizontal: spacing.smPlus,
-    borderRadius: radii.pill,
-    backgroundColor: colors.brandPrimarySoft,
-  },
-  whyText: { ...type.labelDefault, color: colors.brandPrimary, flexShrink: 1 },
-  options: { gap: spacing.sm },
-  slip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radii.card,
-    backgroundColor: colors.bgSurface,
-    borderWidth: HAIRLINE,
-    borderColor: colors.borderDefault,
-  },
-  slipText: { ...type.labelStrong, color: colors.brandPrimary, flexShrink: 1 },
+  question: { gap: spacing.smPlus },
+  prompt: { ...type.titleSection },
+  options: { gap: spacing.smPlus, marginTop: spacing.sm },
   status: { ...type.titleCard, color: colors.brandPrimary },
 });

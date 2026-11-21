@@ -23,17 +23,17 @@ beforeEach(() => jest.spyOn(console, 'error').mockImplementation(() => {}));
 afterEach(() => jest.restoreAllMocks());
 
 test('the startHere story is the highlighted one and the default current story is not', async () => {
-  backend(categorization({ startHere: { lessonId: 'berlin-3', title: 'Emergency fund', area: 'saving', storyId: 'berlin', storyCity: 'Berlin' } }));
+  backend(categorization({ startHere: { lessonId: 'tokyo-2', title: 'The scary first year', area: 'investing', storyId: 'tokyo', storyCity: 'Tokyo' } }));
   await renderRouter(appRoutes, { initialUrl: '/map' });
   await screen.findByTestId('story-card-start-here');
-  expect(card('story-card-berlin')).toHaveStyle({ backgroundColor: colors.brandAccentSoft });
-  expect(card('story-card-seoul')).not.toHaveStyle({ backgroundColor: colors.brandAccentSoft });
+  expect(card('story-card-tokyo')).toHaveStyle({ backgroundColor: colors.brandAccentSoft });
+  expect(card('story-card-berlin')).not.toHaveStyle({ backgroundColor: colors.brandAccentSoft });
 });
 
 test('without startHere main\'s current story stays highlighted', async () => {
   backend(null);
   await renderRouter(appRoutes, { initialUrl: '/map' });
-  await screen.findByTestId('story-card-seoul');
-  expect(card('story-card-seoul')).toHaveStyle({ backgroundColor: colors.brandAccentSoft });
+  await screen.findByTestId('story-card-berlin');
+  expect(card('story-card-berlin')).toHaveStyle({ backgroundColor: colors.brandAccentSoft });
   expect(screen.queryByTestId('story-card-start-here')).toBeNull();
 });

@@ -1,67 +1,96 @@
 import Feather from '@expo/vector-icons/Feather';
-import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
-import { HAIRLINE, RULE } from '@/constants/path';
+import { motion, Tappable } from '@/components/onboarding/ui';
+import { RULE } from '@/constants/path';
 import { colors, radii, spacing, type } from '@/constants/theme';
 
+export type AnswerState = 'default' | 'selected' | 'correct' | 'wrong' | 'dimmed';
+
 type Props = {
-  label: string;
-  selected: boolean;
-  /** The "Not sure" tile: quieter, no fill. */
-  quiet?: boolean;
-  disabled: boolean;
+  title: string;
+  subtitle?: string;
+  state: AnswerState;
+  /** The user's own pick, for screen readers; the colours come from `state`. */
+  checked: boolean;
+  disabled?: boolean;
   onPress: () => void;
   testID: string;
-  /** The confidence chips, which grow inside the tile once it is tapped. */
-  children?: ReactNode;
 };
 
-const TOUCH_TARGET = 48;
-const RADIO = 22;
+const RADIO = 24;
+const MARK = { selected: 'check', correct: 'check', wrong: 'x' } as const;
+const SPOKEN = { correct: 'Correct answer', wrong: 'Not the right answer' } as const;
 
-/** One single-choice tile; the border is an overlay, so selecting it does not move the layout. */
-export function AnswerTile({ label, selected, quiet, disabled, onPress, testID, children }: Props) {
+/** One single-choice tile, an `OptionCard` without the icon; after an answer it shows right, wrong or dimmed. */
+export function AnswerTile({ title, subtitle, state, checked, disabled, onPress, testID }: Props) {
+  const mark = state === 'default' || state === 'dimmed' ? null : MARK[state];
+  const spoken = state === 'correct' || state === 'wrong' ? SPOKEN[state] : null;
   return (
-    <View style={[styles.tile, selected && styles.selected, disabled && !selected && styles.disabled]}>
-      <Pressable
-        testID={testID}
-        accessibilityRole="radio"
-        accessibilityState={{ checked: selected, disabled }}
-        disabled={disabled}
-        onPress={onPress}
-        style={styles.row}
-      >
-        <View style={[styles.radio, selected && styles.radioOn]}>
-          {selected && <Feather name="check" size={14} color={colors.textOnBrand} />}
-        </View>
-        <Text style={[styles.label, quiet && styles.quiet]}>{label}</Text>
-      </Pressable>
-      {children}
-      <View pointerEvents="none" style={[styles.edge, selected ? styles.edgeSelected : quiet && styles.edgeQuiet]} />
-    </View>
+    <Tappable
+      testID={testID}
+      accessibilityRole="radio"
+      accessibilityLabel={spoken ? `${title}. ${spoken}.` : undefined}
+      aria-checked={checked}
+      aria-disabled={disabled}
+      disabled={disabled}
+      onPress={onPress}
+      haptic="selection"
+      pressedScale={0.98}
+      style={[styles.tile, tileStates[state], motion.colors]}
+    >
+      <View style={styles.text}>
+        <Text style={type.titleCard}>{title}</Text>
+        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+      </View>
+      <Animated.View style={[styles.radio, radioStates[state], motion.colors]}>
+        {mark && (
+          <Animated.View style={motion.pop} testID={`${testID}-${state}`}>
+            <Feather name={mark} size={14} color={colors.textOnBrand} />
+          </Animated.View>
+        )}
+      </Animated.View>
+    </Tappable>
   );
 }
 
+const tileStates = StyleSheet.create({
+  default: {},
+  selected: { backgroundColor: colors.brandAccentSoft, borderColor: colors.brandPrimary },
+  correct: { borderColor: colors.feedbackSuccess },
+  wrong: { borderColor: colors.feedbackDanger },
+  dimmed: { opacity: 0.5 },
+});
+
+const radioStates = StyleSheet.create({
+  default: {},
+  selected: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
+  correct: { backgroundColor: colors.feedbackSuccess, borderColor: colors.feedbackSuccess },
+  wrong: { backgroundColor: colors.feedbackDanger, borderColor: colors.feedbackDanger },
+  dimmed: {},
+});
+
 const styles = StyleSheet.create({
-  tile: { borderRadius: radii.card, backgroundColor: colors.bgSurface },
-  selected: { backgroundColor: colors.brandAccentSoft },
-  disabled: { opacity: 0.6 },
-  row: { minHeight: TOUCH_TARGET, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  tile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    padding: spacing.lg - 1,
+    borderRadius: radii.card,
+    borderWidth: RULE,
+    borderColor: colors.borderDefault,
+    backgroundColor: colors.bgSurface,
+  },
+  text: { flex: 1, gap: spacing.xxs },
+  subtitle: { ...type.bodyDefault, color: colors.textMuted },
   radio: {
     width: RADIO,
     height: RADIO,
     borderRadius: RADIO / 2,
     borderWidth: RULE,
-    borderColor: colors.textMuted,
+    borderColor: colors.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioOn: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
-  label: { ...type.bodyDefault, flex: 1 },
-  quiet: { ...type.labelDefault, color: colors.textMuted },
-  // borderStrong is 1.5:1 on white; a control's edge needs 3:1 (WCAG 2.2 SC 1.4.11), so textMuted.
-  edge: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: radii.card, borderWidth: HAIRLINE, borderColor: colors.textMuted },
-  edgeSelected: { borderWidth: RULE, borderColor: colors.brandPrimary },
-  edgeQuiet: { borderStyle: 'dashed' },
 });

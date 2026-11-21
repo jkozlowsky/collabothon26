@@ -126,7 +126,7 @@ export function seedAccount(seed: number = DEFAULT_SEED): BankState {
   const depotTotal = holdings.reduce((sum, h) => sum + h.value, 0);
 
   return {
-    owner: { name: 'Alex Krause', initials: 'AK' },
+    owner: { name: 'Alex Krause', initials: 'AK', age: 29 },
     account: {
       name: 'Main account',
       iban: 'DE89 3704 0044 0532 0148 21',

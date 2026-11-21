@@ -1,34 +1,21 @@
 import type { Facts, FocusArea } from '@/types/categorization';
 
-/** Bank numbers an account prompt can quote; filled in on the device only (docs/specs/F1b-quick-check.md). */
-export const SLOTS = [
-  'savingsBalance',
-  'savingsInterestRate',
-  'monthOut',
-  'loanRemaining',
-  'loanApr',
-  'cardUsed',
-  'cardLimit',
-  'etfMonthly',
-  'depotTotal',
-  'positionCount',
-] as const;
-export type Slot = (typeof SLOTS)[number];
-
-/** GET /api/check-questions item; the correct option never leaves the backend. */
+/**
+ * GET /api/check-questions item: one quiz step of a lesson, `id` = `<lessonId>/<stepId>`. `correctIndex` and
+ * `explanation` are shown after each answer; the explanation may hold [[concept|shown text]] glossary markup.
+ */
 export type CheckQuestion = {
   id: string;
+  lessonId: string;
   area: FocusArea;
-  accountPrompt: string | null;
-  slots: Slot[];
-  genericPrompt: string;
+  prompt: string;
   options: string[];
+  correctIndex: number;
+  explanation: string;
 };
 
-export type Confidence = 'guessing' | 'fairly-sure' | 'sure';
-
-/** `optionIndex` and `confidence` both null = "Not sure". */
-export type HistoryEntry = { questionId: string; optionIndex: number | null; confidence: Confidence | null };
+/** `optionIndex` null = "Not sure". */
+export type HistoryEntry = { questionId: string; optionIndex: number | null };
 
 export type AgeBand = '18-25' | '26-40' | '41-59' | '60+';
 export type Horizon = 'within-1y' | '1-5y' | '5y+' | 'not-sure';
@@ -38,10 +25,10 @@ export type ProfileRanges = {
   horizon: Horizon | null;
 };
 
-/** Per area with bank questions; null = no answer yet. */
+/** Per area with questions; null = no answer yet. */
 export type Mastery = Partial<Record<FocusArea, number | null>>;
 
-/** `useRules`: no model at all (the user opted out, or no key). `stepFellBack`: a step's model call failed, so only the later steps use the rule. */
+/** `useRules`: no model at all (no key). `stepFellBack`: a step's model call failed, so only the later steps use the rule. */
 export type StepResponse = {
   mastery: Mastery;
   nextQuestionId: string | null;
@@ -50,7 +37,7 @@ export type StepResponse = {
   stepFellBack: boolean;
 };
 
-/** What the final POST adds when the Quick check ran; the skip path after an opt-out sends only `useRules`. */
+/** What the final POST adds when the Quick check ran. */
 export type QuickResult = {
   profile: ProfileRanges;
   history: HistoryEntry[];

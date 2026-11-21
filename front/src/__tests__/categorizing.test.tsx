@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { AccessibilityInfo, BackHandler, Platform } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 
@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/api';
 import { seedAccount } from '@/lib/bank/seed';
 import { factLabels, factsFrom, isRetryable } from '@/lib/categorization';
 import { categorization } from '@/test-utils/categorization';
+import { walkSurvey } from '@/test-utils/onboarding';
 import { appRoutes as routes } from '@/test-utils/routes';
 import type { BankState } from '@/types/bank';
 import type { Facts } from '@/types/categorization';
@@ -36,12 +37,13 @@ const PROFILE = { userId: 'demo-user', goals: [], onboardingCompleted: true };
 type Handler = (init?: RequestInit) => Promise<unknown>;
 let fetchMock: jest.Mock;
 
-/** A user with a saved profile and no categorisation yet, unless a handler says otherwise. */
+/** A user with a saved profile and no categorisation yet, unless a handler says otherwise; `fresh` = onboarding still ahead. */
 function backend({
+  fresh = false,
   post = () => ok(categorization()),
   existing = () => fail(404),
-  profile = (init?: RequestInit) => (init?.method ? ok({}) : ok(PROFILE)),
-}: Record<string, Handler>) {
+  profile = (init?: RequestInit) => (init?.method ? ok({}) : ok({ ...PROFILE, onboardingCompleted: !fresh })),
+}: Partial<Record<'post' | 'existing' | 'profile', Handler>> & { fresh?: boolean }) {
   fetchMock = jest.fn((url: string, init?: RequestInit) => {
     if (url.endsWith('/categorization')) return init?.method === 'POST' ? post(init) : existing(init);
     if (/\/profile(\/onboarding)?$/.test(url)) return profile(init);
@@ -59,13 +61,24 @@ async function learnViaSummary() {
   await fireEvent.press(await screen.findByTestId('summary-start', {}, { timeout: 4000 }));
   return screen.findByTestId('screen-learn');
 }
-/** Opens /categorizing over the bank once the saved profile has loaded, as a finished onboarding does. */
-async function open() {
+/** A fresh onboarding up to /categorizing; the stub's empty question bank leaves the quick check out. */
+async function finishSurvey() {
+  await walkSurvey();
+  await fireEvent.press(screen.getByTestId('check-start'));
+}
+/**
+ * Opens /categorizing over the bank once the saved profile has loaded. `fresh`: a fresh onboarding leads there;
+ * otherwise the screen opens with no hand-over, as after a reload.
+ */
+async function open(fresh = false) {
   await renderRouter(routes, { initialUrl: '/' });
   await screen.findByTestId('screen-overview');
   await act(async () => {});
-  await act(async () => router.push('/categorizing'));
+  if (!fresh) return act(async () => router.push('/categorizing'));
+  await fireEvent.press(screen.getByTestId('nav-learn'));
+  await finishSurvey();
 }
+const loading = () => screen.findByTestId('categorizing-loading');
 
 test('the seed customer gives the facts in the spec, and they read as plain summaries', () => {
   expect(factsFrom(seedAccount())).toEqual(SEED_FACTS);
@@ -135,19 +148,11 @@ test('network errors, timeouts, 5xx and transient 4xx are retryable; other 4xx a
   expect(isRetryable(new ApiError(400, ''))).toBe(false);
 });
 
-test('consent with account data runs the three steps once, then lands on Learn', async () => {
-  backend({});
-  await open();
+test('after a fresh onboarding the three steps run, then the summary leads to Learn', async () => {
+  backend({ fresh: true });
+  await open(true);
 
-  expect(await screen.findByText('Over 6 months of spending covered')).toBeOnTheScreen();
-  // A double tap: both presses land before React re-renders the screen.
-  const { onClick } = screen.getByTestId('consent-accept').props;
-  await act(async () => {
-    onClick({ nativeEvent: {} });
-    onClick({ nativeEvent: {} });
-  });
-
-  expect(screen.getByTestId('categorizing-loading')).toBeOnTheScreen();
+  expect(await loading()).toBeOnTheScreen();
   await act(() => jest.advanceTimersByTimeAsync(800));
   expect(screen.getByText('7 summaries')).toBeOnTheScreen();
 
@@ -155,52 +160,54 @@ test('consent with account data runs the three steps once, then lands on Learn',
   expect(bodies()).toEqual([{ consent: true, facts: SEED_FACTS }]);
 });
 
-test('Continue without sends no consent and skips the accounts step', async () => {
+// The user never saw the AI notice, so the external model must not be asked.
+test('with no hand-over from the survey the path is built at once, without consent and by rules alone', async () => {
   backend({});
   await open();
 
-  await fireEvent.press(await screen.findByTestId('consent-decline'));
+  expect(await loading()).toBeOnTheScreen();
   expect(screen.queryByText('Looking at your accounts')).toBeNull();
   expect(await learnViaSummary()).toBeOnTheScreen();
-  expect(bodies()).toEqual([{ consent: false }]);
+  expect(bodies()).toEqual([{ consent: false, useRules: true }]);
 });
 
-test('the card previews exactly the facts a consent sends', async () => {
-  backend({});
+test('Retry with no hand-over keeps asking for rules alone', async () => {
+  let attempts = 0;
+  backend({ post: () => (++attempts === 1 ? fail(503) : ok(categorization())) });
   await open();
 
-  const pills = within(await screen.findByTestId('consent-slip')).getAllByText(/./).slice(1);
-  expect(pills.map((p) => p.props.children)).toEqual(factLabels(SEED_FACTS));
-  await fireEvent.press(screen.getByTestId('consent-accept'));
-
+  await fireEvent.press(await screen.findByTestId('categorizing-retry', {}, { timeout: 4000 }));
   expect(await learnViaSummary()).toBeOnTheScreen();
-  expect(bodies()).toEqual([{ consent: true, facts: SEED_FACTS }]);
+  expect(bodies()).toEqual([
+    { consent: false, useRules: true },
+    { consent: false, useRules: true },
+  ]);
 });
 
-test('a stored categorisation does not skip the card: every onboarding recategorises', async () => {
+test('a stored categorisation does not stop a new one: every onboarding recategorises', async () => {
   backend({ existing: () => ok(categorization()) });
   await open();
 
-  await fireEvent.press(await screen.findByTestId('consent-decline'));
   expect(await learnViaSummary()).toBeOnTheScreen();
-  expect(bodies()).toEqual([{ consent: false }]);
+  expect(bodies()).toEqual([{ consent: false, useRules: true }]);
 });
 
-test('a failed existence check offers Retry and Skip but never a POST that could overwrite a stored consent', async () => {
+test('a failed existence check offers Retry and "Continue to Learn", and nothing is posted until it passes', async () => {
   let attempts = 0;
   backend({ existing: () => (++attempts === 1 ? fail(503) : fail(404)) });
   await open();
 
   expect(await screen.findByTestId('categorizing-check-retry')).toBeOnTheScreen();
+  expect(screen.getByTestId('categorizing-check-skip')).toHaveTextContent('Continue to Learn');
   expect(screen.getByTestId('flow-alert')).toHaveTextContent("Your learning path didn't load");
-  expect(screen.queryByTestId('consent-decline')).toBeNull();
+  expect(posts()).toHaveLength(0);
   await fireEvent.press(screen.getByTestId('categorizing-check-retry'));
 
-  expect(await screen.findByTestId('consent-accept')).toBeOnTheScreen();
-  expect(posts()).toHaveLength(0);
+  expect(await learnViaSummary()).toBeOnTheScreen();
+  expect(posts()).toHaveLength(1);
 });
 
-test('Skip for now leaves a failing existence check for Learn without a POST', async () => {
+test('"Continue to Learn" leaves a failing existence check for Learn without a POST', async () => {
   backend({ existing: () => fail(503) });
   await open();
 
@@ -209,7 +216,7 @@ test('Skip for now leaves a failing existence check for Learn without a POST', a
   expect(posts()).toHaveLength(0);
 });
 
-test('an existence check that fails for good offers only Skip', async () => {
+test('an existence check that fails for good offers only "Continue to Learn"', async () => {
   backend({ existing: () => fail(403) });
   await open();
 
@@ -233,7 +240,6 @@ test('a transient 404 after the profile has settled is retried before it becomes
   backend({ post: () => (++attempts < 3 ? fail(404) : ok(categorization())) });
   await open();
 
-  await fireEvent.press(await screen.findByTestId('consent-accept'));
   expect(await learnViaSummary()).toBeOnTheScreen();
   expect(posts()).toHaveLength(3);
 });
@@ -242,19 +248,16 @@ test('a lasting 404 ends in an error that still offers Retry', async () => {
   backend({ post: () => fail(404) });
   await open();
 
-  await fireEvent.press(await screen.findByTestId('consent-accept'));
   expect(await screen.findByTestId('categorizing-retry', {}, { timeout: 4000 })).toBeOnTheScreen();
   expect(posts()).toHaveLength(4);
 });
 
 test('Retry after a network error keeps the consent the user gave', async () => {
   let attempts = 0;
-  backend({ post: () => (++attempts === 1 ? Promise.reject(new TypeError('Network request failed')) : ok(categorization())) });
-  await open();
+  backend({ fresh: true, post: () => (++attempts === 1 ? Promise.reject(new TypeError('Network request failed')) : ok(categorization())) });
+  await open(true);
 
-  await fireEvent.press(await screen.findByTestId('consent-accept'));
-  expect(await screen.findByTestId('categorizing-retry', {}, { timeout: 4000 })).toBeOnTheScreen();
-  await fireEvent.press(screen.getByTestId('categorizing-retry'));
+  await fireEvent.press(await screen.findByTestId('categorizing-retry', {}, { timeout: 4000 }));
 
   expect(await learnViaSummary()).toBeOnTheScreen();
   expect(bodies()).toEqual([
@@ -264,10 +267,9 @@ test('Retry after a network error keeps the consent the user gave', async () => 
 });
 
 test('a 5xx offers Retry and marks only the last step as not finished', async () => {
-  backend({ post: () => fail(503) });
-  await open();
+  backend({ fresh: true, post: () => fail(503) });
+  await open(true);
 
-  await fireEvent.press(await screen.findByTestId('consent-accept'));
   expect(await screen.findByTestId('categorizing-retry', {}, { timeout: 4000 })).toBeOnTheScreen();
   expect(screen.getByLabelText('Reading your answers, Done')).toBeOnTheScreen();
   expect(screen.getByLabelText('Looking at your accounts, Done')).toBeOnTheScreen();
@@ -279,12 +281,12 @@ test.each(['ios', 'android'] as const)('screen readers on %s hear each step and 
   const platform = jest.replaceProperty(Platform, 'OS', os);
   // React Native's jest setup already mocks this, with calls from earlier tests.
   const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
-  announce.mockClear();
   try {
-    backend({ post: () => fail(503) });
-    await open();
+    backend({ fresh: true, post: () => fail(503) });
+    await open(true);
+    await loading();
+    announce.mockClear();
 
-    await fireEvent.press(await screen.findByTestId('consent-accept'));
     await act(() => jest.advanceTimersByTimeAsync(800));
     expect(screen.getByTestId('flow-status')).toHaveTextContent('Looking at your accounts');
     expect(screen.getByTestId('flow-status').props['aria-live']).toBe('polite');
@@ -293,7 +295,6 @@ test.each(['ios', 'android'] as const)('screen readers on %s hear each step and 
     expect(screen.getByTestId('flow-alert')).toHaveTextContent('Your path stopped halfway');
     expect(screen.getByTestId('flow-alert').props['aria-live']).toBe('assertive');
     expect(announce.mock.calls.map(([m]) => m)).toEqual([
-      'Reading your answers',
       'Looking at your accounts',
       'Picking your first lessons',
       'Your path stopped halfway',
@@ -306,10 +307,10 @@ test.each(['ios', 'android'] as const)('screen readers on %s hear each step and 
 
 test('the hardware back button is swallowed during the flow', async () => {
   const add = jest.spyOn(BackHandler, 'addEventListener');
-  backend({});
+  backend({ post: hang });
   await open();
 
-  await screen.findByTestId('consent-accept');
+  await loading();
   // The screen's listener registers on focus, after React Navigation's, and Android calls the newest first.
   const ours = add.mock.calls.filter(([event]) => event === 'hardwareBackPress').at(-1)?.[1] as () => boolean;
   let handled = false;
@@ -317,20 +318,8 @@ test('the hardware back button is swallowed during the flow', async () => {
     handled = ours();
   });
   expect(handled).toBe(true);
-  expect(screen.getByTestId('categorizing-consent')).toBeOnTheScreen();
+  expect(screen.getByTestId('categorizing-loading')).toBeOnTheScreen();
   add.mockRestore();
-});
-
-test('Retry after Continue without keeps sending no consent', async () => {
-  let attempts = 0;
-  backend({ post: () => (++attempts === 1 ? fail(503) : ok(categorization())) });
-  await open();
-
-  await fireEvent.press(await screen.findByTestId('consent-decline'));
-  await fireEvent.press(await screen.findByTestId('categorizing-retry', {}, { timeout: 4000 }));
-
-  expect(await learnViaSummary()).toBeOnTheScreen();
-  expect(bodies()).toEqual([{ consent: false }, { consent: false }]);
 });
 
 test('on web the live regions speak instead of the native announcement', async () => {
@@ -354,20 +343,20 @@ test('a request that never answers times out after 10 s into Retry', async () =>
   backend({ post: hang });
   await open();
 
-  await fireEvent.press(await screen.findByTestId('consent-accept'));
+  await loading();
   await act(() => jest.advanceTimersByTimeAsync(9_000));
   expect(screen.getByTestId('categorizing-loading')).toBeOnTheScreen();
   await act(() => jest.advanceTimersByTimeAsync(1_000));
   expect(screen.getByTestId('categorizing-retry')).toBeOnTheScreen();
 });
 
-test('a 400 offers only Skip for now, which goes to Learn', async () => {
+test('a 400 offers only "Continue to Learn", which goes to Learn', async () => {
   backend({ post: () => fail(400) });
   await open();
 
-  await fireEvent.press(await screen.findByTestId('consent-accept'));
   expect(await screen.findByTestId('categorizing-error', {}, { timeout: 4000 })).toBeOnTheScreen();
   expect(screen.queryByTestId('categorizing-retry')).toBeNull();
+  expect(screen.getByTestId('categorizing-skip')).toHaveTextContent('Continue to Learn');
   await fireEvent.press(screen.getByTestId('categorizing-skip'));
 
   expect(await learn()).toBeOnTheScreen();
@@ -378,12 +367,12 @@ test('with reduced motion the active station ring holds still', async () => {
   backend({ post: hang });
   await open();
 
-  await fireEvent.press(await screen.findByTestId('consent-accept'));
+  await loading();
   expect(screen.getByTestId('step-ring')).toHaveStyle({ opacity: 0.5 });
   reduced.mockRestore();
 });
 
-test('restarting onboarding waits for the old profile and categorisation to be deleted, then asks again', async () => {
+test('restarting onboarding waits for the old profile and categorisation to be deleted, then builds the path', async () => {
   let deleted = false;
   let finishDelete = () => {};
   backend({
@@ -406,10 +395,7 @@ test('restarting onboarding waits for the old profile and categorisation to be d
 
   await fireEvent.press(await screen.findByTestId('restart-onboarding'));
   await fireEvent.press(await screen.findByTestId('nav-learn'));
-  await fireEvent.press(await screen.findByTestId('onboarding-start'));
-  await fireEvent.press(screen.getByTestId('onboarding-next'));
-  await fireEvent.press(screen.getByTestId('onboarding-challenge-next'));
-  await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
+  await finishSurvey();
 
   // While the slow DELETE runs, the PUT and the existence check both wait for it.
   expect(await screen.findByTestId('categorizing-checking')).toBeOnTheScreen();
@@ -417,8 +403,9 @@ test('restarting onboarding waits for the old profile and categorisation to be d
   expect(existenceChecks()).toHaveLength(0);
 
   await act(async () => finishDelete());
-  expect(await screen.findByTestId('categorizing-consent')).toBeOnTheScreen();
+  expect(await loading()).toBeOnTheScreen();
   expect(writes()).toEqual(['DELETE', 'PUT']);
+  expect(existenceChecks()).toHaveLength(1);
 });
 
 test('a profile write that never finishes still ends in Retry after 10 s', async () => {
@@ -435,10 +422,7 @@ test('a profile write that never finishes still ends in Retry after 10 s', async
     await renderRouter(routes, { initialUrl: '/profile' });
     await fireEvent.press(await screen.findByTestId('restart-onboarding'));
     await fireEvent.press(await screen.findByTestId('nav-learn'));
-    await fireEvent.press(await screen.findByTestId('onboarding-start'));
-    await fireEvent.press(screen.getByTestId('onboarding-next'));
-    await fireEvent.press(screen.getByTestId('onboarding-challenge-next'));
-    await fireEvent.press(screen.getByTestId('onboarding-skip-all'));
+    await finishSurvey();
 
     expect(await screen.findByTestId('categorizing-checking')).toBeOnTheScreen();
     await act(() => jest.advanceTimersByTimeAsync(10_000));
@@ -455,7 +439,7 @@ test('leaving mid-request aborts it and never navigates', async () => {
   await open();
   const navigate = jest.spyOn(router, 'navigate');
 
-  await fireEvent.press(await screen.findByTestId('consent-accept'));
+  await loading();
   screen.unmount();
   await act(() => jest.advanceTimersByTimeAsync(3_000));
 

@@ -1,9 +1,12 @@
 package com.collabothon.back.categorization.services;
 
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.random.RandomGenerator;
 
 import org.springframework.stereotype.Service;
 
@@ -13,11 +16,13 @@ import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
 import com.collabothon.back.categorization.dto.StepRequestDto;
 import com.collabothon.back.categorization.dto.StepResponseDto;
 import com.collabothon.back.categorization.enums.FocusArea;
+import com.collabothon.back.categorization.mappers.CheckLessonMapper;
 import com.collabothon.back.categorization.mappers.JevAnswerMapper;
-import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
+import com.collabothon.back.lesson.repositories.LessonCompletionRepository;
 
 import lombok.RequiredArgsConstructor;
 
+/** One step of the Quick check: Jev or the rule picks the lesson, the question is drawn from it at random. */
 @Service
 @RequiredArgsConstructor
 public class QuickCheckService {
@@ -32,58 +37,67 @@ public class QuickCheckService {
 
 	private final JevAnswerMapper jevAnswerMapper;
 
+	private final CheckLessonMapper lessonMapper;
+
+	private final LessonCompletionRepository completions;
+
+	private final RandomGenerator random;
+
 	public StepResponseDto step(String userId, StepRequestDto request) {
 		OnboardingAnswersDto onboarding = categorization.onboarding(userId);
-		List<CheckQuestionProjection> fullBank = checkQuestions.bank();
-		List<Answer> answers = checkQuestions.resolve(request.history(), fullBank);
+		List<CheckQuestion> pool = checkQuestions.pool();
+		List<Answer> answers = checkQuestions.resolve(request.history());
 		String horizon = request.profile() == null ? null : request.profile().horizon();
-		List<CheckQuestionProjection> bank = QuickCheckRules.forHorizon(fullBank, horizon);
-		List<FocusArea> order = QuickCheckRules.areaOrder(onboarding.goals(), horizon, bank);
+		List<FocusArea> order = QuickCheckRules.areaOrder(onboarding.goals(), horizon, pool);
+		Set<String> completed = new HashSet<>(completions.findLessonIdsByUserId(userId));
+		List<CheckQuestion> open = QuickCheckRules.open(pool, answers, completed);
 		Map<FocusArea, Double> ruleMastery = QuickCheckRules.mastery(order, answers);
 		boolean useRules = request.useRules() || !jevProperties.callsJev();
-		if (answers.isEmpty() || useRules || request.stepFellBack()) {
-			return byRule(order, bank, answers, horizon, ruleMastery, useRules, request.stepFellBack());
+		if (useRules || request.stepFellBack()) {
+			return byRule(order, pool, open, answers, ruleMastery, useRules, request.stepFellBack());
 		}
-		List<CheckQuestionProjection> unasked = QuickCheckRules.unasked(bank, answers);
-		Map<String, String> criteria = new LinkedHashMap<>();
-		unasked.forEach(q -> criteria.put(q.id(), q.checks()));
+		List<CheckLesson> choices = QuickCheckRules.nextLessonChoices(order,
+				QuickCheckRules.lessons(open, lessonMapper::toLesson));
+		// Before the first answer Jev only chooses the lesson, so without a choice there is nothing to ask it.
+		if (answers.isEmpty() && choices.size() < JevConsts.MIN_CHOICE_LABELS) {
+			return byRule(order, pool, open, answers, ruleMastery, false, false);
+		}
 		List<FocusArea> answered = order.stream().filter(area -> !QuickCheckRules.inArea(answers, area).isEmpty())
 			.toList();
 		Optional<StepJudgement> fromJev = jev.step(request.profile(), onboarding.goals(), request.facts(),
-				answers.stream().map(jevAnswerMapper::toJev).toList(), answered, criteria);
+				answers.stream().map(jevAnswerMapper::toJev).toList(), answered, choices);
 		if (fromJev.isEmpty()) {
-			return byRule(order, bank, answers, horizon, ruleMastery, false, true);
+			return byRule(order, pool, open, answers, ruleMastery, false, true);
 		}
 		StepJudgement j = fromJev.get();
 		Map<FocusArea, Double> mastery = new LinkedHashMap<>();
 		order.forEach(area -> mastery.put(area, j.mastery().getOrDefault(area, ruleMastery.get(area))));
-		Optional<CheckQuestionProjection> next;
-		if (QuickCheckRules.jevDone(unasked, answers, j.enough())) {
-			next = Optional.empty();
+		Optional<String> lesson;
+		if (QuickCheckRules.jevDone(open, answers, j.enough())) {
+			lesson = Optional.empty();
 		}
 		else if (j.elapsed().compareTo(JevConsts.STEP_BUDGET) > 0) {
-			next = QuickCheckRules.next(order, bank, answers, horizon);
+			lesson = QuickCheckRules.nextLesson(order, pool, open, answers);
 		}
 		else {
-			CheckQuestionProjection picked = j.next() == null ? unasked.getFirst()
-					: unasked.stream().filter(q -> q.id().equals(j.next())).findFirst().orElseThrow();
-			next = Optional.of(QuickCheckRules.shortHorizon(picked, unasked, horizon));
+			// Jev is not asked to choose among fewer than two lessons.
+			lesson = Optional.of(j.nextLesson() == null ? choices.getFirst().id() : j.nextLesson());
 		}
-		return response(mastery, next, false, false);
+		return response(mastery, open, lesson, false, false);
 	}
 
-	private static StepResponseDto byRule(List<FocusArea> order, List<CheckQuestionProjection> bank,
-			List<Answer> answers, String horizon, Map<FocusArea, Double> mastery, boolean useRules,
-			boolean stepFellBack) {
-		Optional<CheckQuestionProjection> next = QuickCheckRules.ruleDone(order, QuickCheckRules.unasked(bank, answers),
-				answers) ? Optional.empty() : QuickCheckRules.next(order, bank, answers, horizon);
-		return response(mastery, next, useRules, stepFellBack);
+	private StepResponseDto byRule(List<FocusArea> order, List<CheckQuestion> pool, List<CheckQuestion> open,
+			List<Answer> answers, Map<FocusArea, Double> mastery, boolean useRules, boolean stepFellBack) {
+		Optional<String> lesson = QuickCheckRules.ruleDone(order, open, answers) ? Optional.empty()
+				: QuickCheckRules.nextLesson(order, pool, open, answers);
+		return response(mastery, open, lesson, useRules, stepFellBack);
 	}
 
-	private static StepResponseDto response(Map<FocusArea, Double> mastery, Optional<CheckQuestionProjection> next,
+	private StepResponseDto response(Map<FocusArea, Double> mastery, List<CheckQuestion> open, Optional<String> lesson,
 			boolean useRules, boolean stepFellBack) {
-		return new StepResponseDto(QuickCheckRules.byWire(mastery), next.map(CheckQuestionProjection::id).orElse(null),
-				next.isEmpty(), useRules, stepFellBack);
+		Optional<String> next = lesson.map(id -> QuickCheckRules.draw(open, id, random).id());
+		return new StepResponseDto(QuickCheckRules.byWire(mastery), next.orElse(null), next.isEmpty(), useRules,
+				stepFellBack);
 	}
 
 }

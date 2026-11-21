@@ -57,7 +57,7 @@ export function ConsentCard({ facts, quickCheck }: Props) {
       </View>
       {quickCheck && (
         <Text style={styles.note} testID="consent-quickcheck-note">
-          Your answers to the next questions are sent once, exactly as you write them, to an AI service that picks your
+          Your answers to the next questions are sent exactly as you write them, to an AI service that picks your
           first lesson, so leave out exact amounts. Only the judgement is stored, never your words.
         </Text>
       )}

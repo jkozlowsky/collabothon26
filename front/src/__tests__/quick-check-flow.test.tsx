@@ -91,11 +91,11 @@ test('the summary of a user who has not been categorised redirects to the map', 
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
 });
 
-test('the consent card names the AI service and says the answers are sent once as written and only the judgement is kept', async () => {
+test('the consent card names the AI service and says the answers are sent as written and only the judgement is kept', async () => {
   backend();
   await open();
   expect(await screen.findByTestId('consent-quickcheck-note')).toHaveTextContent(
-    /sent once, exactly as you write them, to an AI service that picks your first lesson.*Only the judgement is stored, never your words\./,
+    /sent exactly as you write them, to an AI service that picks your first lesson.*Only the judgement is stored, never your words\./,
   );
 });
 

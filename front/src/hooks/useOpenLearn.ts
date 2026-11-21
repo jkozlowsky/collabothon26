@@ -24,12 +24,6 @@ export function useOpenLearn() {
   );
 }
 
-/** Opens the Map focused on a story/lesson id (Map may ignore it until stories exist). */
-export function useOpenLearnFocus() {
-  const open = useOpenLearn();
-  return useCallback((focus: string) => open({ pathname: '/map', params: { focus } }), [open]);
-}
-
 /** Closes the screen on top of the bank and goes to `target`. */
 function closeAndGo(target: Href) {
   if (router.canGoBack()) router.back();

@@ -1,6 +1,8 @@
-import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
+import { resetAtlasNudges } from '@/components/bank/AtlasNudge';
 import { pressKey } from '@/components/bank/Keypad';
+import { setAtlasDot } from '@/lib/atlasOrb';
 import { loanQuote } from '@/lib/bank/loan';
 import { formatEUR, isValidIban, maskIban, parseAmount } from '@/lib/bank/money';
 import { bankReducer, validateOrder, validateTransfer } from '@/lib/bank/reducer';
@@ -127,7 +129,65 @@ describe('bank shell', () => {
         json: () => Promise.resolve(url.endsWith('/profile') ? { userId: 'demo-user', goals: [], onboardingCompleted: true } : []),
       }),
     ) as jest.Mock;
+    resetAtlasNudges();
+    setAtlasDot(false);
   });
+
+  /** The popup waits about a second after the tab opens. */
+  const popup = (id: string) => screen.findByTestId(id, {}, { timeout: 3000 });
+  /** Popup tests wait out the popup's delays (about a second in, a moment to fly out). */
+  const POPUP_TEST_MS = 15_000;
+
+  test('Atlas pops up on Credits with the instalments story, once, and a tap opens it', async () => {
+    await renderRouter(appRoutes, { initialUrl: '/credits' });
+    await screen.findByTestId('screen-credits');
+    // Not straight away: the user sees the bank first.
+    expect(screen.queryByTestId('fq-teaser-credits')).toBeNull();
+    const card = await popup('fq-teaser-credits');
+    expect(card).toHaveTextContent('Start: Twelve easy payments', { exact: false });
+    expect(card).toHaveTextContent('São Paulo · Lesson 1 of 5', { exact: false });
+    expect(screen.getByTestId('fq-teaser-credits-timer')).toBeOnTheScreen();
+
+    await fireEvent.press(card);
+    expect(screen).toHavePathname('/story/sao-paulo');
+    expect(screen).toHaveSearchParams({ id: 'sao-paulo', lesson: 'sao-paulo-1' });
+  }, POPUP_TEST_MS);
+
+  test('closed, the popup goes into the Atlas button, which keeps a dot until tapped', async () => {
+    await renderRouter(appRoutes, { initialUrl: '/invest' });
+    await popup('fq-teaser-invest');
+    expect(screen.queryByTestId('nav-learn-dot')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('fq-teaser-invest-dismiss'));
+    await waitFor(() => expect(screen.queryByTestId('fq-teaser-invest')).toBeNull());
+    expect(screen.getByTestId('nav-learn-dot')).toBeOnTheScreen();
+
+    // It does not come back on the same tab.
+    await fireEvent.press(screen.getByTestId('nav-payments'));
+    await fireEvent.press(screen.getByTestId('nav-invest'));
+    await act(() => jest.advanceTimersByTimeAsync(1500));
+    expect(screen.queryByTestId('fq-teaser-invest')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('nav-learn'));
+    expect(screen.queryByTestId('nav-learn-dot')).toBeNull();
+  }, POPUP_TEST_MS);
+
+  test('before onboarding, the popup starts from the user\'s own numbers', async () => {
+    globalThis.fetch = jest.fn((url: string) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(url.endsWith('/profile') ? { userId: 'demo-user', goals: [], onboardingCompleted: false } : []),
+      }),
+    ) as jest.Mock;
+    await renderRouter(appRoutes, { initialUrl: '/' });
+    const card = await popup('fq-teaser-home');
+    expect(card).toHaveTextContent('You have € 12,500 in savings at 2.25% a year. Does it keep up with prices?', { exact: false });
+    expect(card).toHaveTextContent('Berlin · Saving', { exact: false });
+    // A tap leads into onboarding first.
+    await fireEvent.press(card);
+    expect(screen).toHavePathname('/onboarding');
+  }, POPUP_TEST_MS);
 
   test('opens on the bank, and a transfer to Anna lowers the balance', async () => {
     await renderRouter(appRoutes, { initialUrl: '/' });

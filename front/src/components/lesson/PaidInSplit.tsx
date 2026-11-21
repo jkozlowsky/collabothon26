@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { type CSSStyle } from 'react-native-reanimated';
 
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import { formatValue } from '@/lib/models';
@@ -23,8 +23,8 @@ export function PaidInSplit({ total, paidIn }: Props) {
       testID="paid-in-split"
     >
       <View style={styles.bar}>
-        <Animated.View style={[styles.paid, styles.grow, { flexGrow: paidShare }]} />
-        <Animated.View style={[styles.growth, styles.grow, { flexGrow: 1 - paidShare }]} />
+        <Animated.View style={[styles.paid, GROW, { flexGrow: paidShare }]} />
+        <Animated.View style={[styles.growth, GROW, { flexGrow: 1 - paidShare }]} />
       </View>
       <View style={styles.legend}>
         <Legend color={colors.brandPrimary} label="You paid in" value={formatValue(paidIn, '€')} />
@@ -51,13 +51,14 @@ function Legend({ color, label, value }: { color: string; label: string; value: 
   );
 }
 
+/** Reanimated CSS transition: the bar slides as the slider moves. */
+const GROW = { transitionProperty: 'flexGrow', transitionDuration: 250 } satisfies CSSStyle;
+
 const styles = StyleSheet.create({
   card: { gap: spacing.md, backgroundColor: colors.bgSurface, borderRadius: radii.card, padding: spacing.lg, ...elevation.low },
   bar: { flexDirection: 'row', height: 18, borderRadius: radii.pill, overflow: 'hidden', backgroundColor: colors.borderDefault, gap: 2 },
   paid: { backgroundColor: colors.brandPrimary, flexBasis: 0 },
   growth: { backgroundColor: colors.feedbackSuccess, flexBasis: 0 },
-  // Reanimated CSS transition: the bar slides as the slider moves.
-  grow: { transitionProperty: 'flexGrow', transitionDuration: 250 },
   legend: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
   legendItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   dot: { width: 10, height: 10, borderRadius: radii.pill, marginTop: 3 },

@@ -1,7 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import type { ComponentProps } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { type CSSStyle } from 'react-native-reanimated';
 
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 
@@ -44,7 +44,7 @@ export function BuyingBasket({ changePct, years }: Props) {
           // 1 = still bought, 0 = gone; the item at the edge is partly there.
           const share = Math.min(1, Math.max(0, full - i));
           return (
-            <Animated.View key={icon} style={[styles.item, share < 1 && styles.itemLost, { opacity: 0.25 + 0.75 * share }, styles.fade]}>
+            <Animated.View key={icon} style={[styles.item, share < 1 && styles.itemLost, { opacity: 0.25 + 0.75 * share }, FADE]}>
               <Feather name={icon} size={20} color={share > 0 ? colors.brandPrimary : colors.textMuted} />
             </Animated.View>
           );
@@ -54,6 +54,9 @@ export function BuyingBasket({ changePct, years }: Props) {
     </View>
   );
 }
+
+/** Reanimated CSS transition: the items fade as the slider moves. */
+const FADE = { transitionProperty: 'opacity', transitionDuration: 250 } satisfies CSSStyle;
 
 const styles = StyleSheet.create({
   card: { gap: spacing.md, backgroundColor: colors.bgSurface, borderRadius: radii.card, padding: spacing.lg, ...elevation.low },
@@ -75,7 +78,5 @@ const styles = StyleSheet.create({
     borderColor: colors.brandAccent,
   },
   itemLost: { backgroundColor: colors.bgCanvas, borderColor: colors.borderStrong, borderStyle: 'dashed' },
-  // Reanimated CSS transition: the items fade as the slider moves.
-  fade: { transitionProperty: 'opacity', transitionDuration: 250 },
   note: type.labelStrong,
 });

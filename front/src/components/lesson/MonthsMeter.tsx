@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { type CSSStyle } from 'react-native-reanimated';
 
 import { colors, radii, spacing, type } from '@/constants/theme';
 
@@ -28,7 +28,7 @@ export function MonthsMeter({ target, have, shortBy }: Props) {
           const fill = Math.min(1, Math.max(0, have - i));
           return (
             <View key={i} style={styles.block}>
-              <Animated.View style={[styles.fill, covered && styles.fillDone, styles.grow, { width: `${fill * 100}%` }]} />
+              <Animated.View style={[styles.fill, covered && styles.fillDone, GROW, { width: `${fill * 100}%` }]} />
             </View>
           );
         })}
@@ -40,14 +40,15 @@ export function MonthsMeter({ target, have, shortBy }: Props) {
   );
 }
 
+/** Reanimated CSS transition: blocks fill as the slider moves. */
+const GROW = { transitionProperty: 'width', transitionDuration: 250 } satisfies CSSStyle;
+
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm },
   blocks: { flexDirection: 'row', gap: spacing.xs },
   block: { flex: 1, height: 28, borderRadius: radii.bar * 2, backgroundColor: colors.borderDefault, overflow: 'hidden' },
   fill: { height: '100%', backgroundColor: colors.brandPrimary },
   fillDone: { backgroundColor: colors.feedbackSuccess },
-  // Reanimated CSS transition: blocks fill as the slider moves.
-  grow: { transitionProperty: 'width', transitionDuration: 250 },
   status: type.labelStrong,
   done: { color: colors.feedbackSuccess },
   short: { color: colors.textOnAccent },

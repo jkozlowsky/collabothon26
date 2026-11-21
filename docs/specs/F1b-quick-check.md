@@ -114,6 +114,19 @@ Simplest working solution, no code or tests for later.
 - Generated questions, a right/wrong verdict per question, or a score shown as a grade.
 - Exact account amounts sent by the app, or raw answer text stored or logged.
 
+## To confirm
+Forks settled with the simplest option; Jan decides. Restored 21.11 (the round-1 triage commit 6ebc961 dropped this section by mistake).
+- **Over-gap title.** The spec fixes only "You know more than you think" (under); an `over` gap shows "There is more to explore here". (a) keep (b) other wording (c) no card for `over`. Recommend (a).
+- **Draw does not force `retirement`.** A pre-retirement user may not get the retirement question. (a) keep random (b) force it for life stage `later-life`. Recommend (b) for "all generations", small change in the draw.
+- **Consent line vs the real draw.** The note shows when the pool is non-empty; after skipping malformed items the draw could still come out empty. (a) keep (b) compute the draw before the card. Recommend (a): only malformed rows trigger it.
+- **Generic "why" line.** An area that is neither a goal nor answered reads "It fits the answers you gave." even when onboarding was skipped and Jev fell back. (a) keep (b) "A good place to start." Recommend (b).
+- **Start learning without a lesson.** Only saving and investing questions link lessons (1–3); a path of Borrowing + Risk opens the map. (a) keep (spec) (b) Danylo links more lessons. Recommend (b) before the demo.
+- **`checkBackend` GET kept** for F1's check-error screens. Keep.
+- **Text typed with consent, then consent declined** is still sent; the input hint says not to type exact amounts. Keep (consent covers bank data; D4 notice covers answers).
+- **Web may read the question position twice** (focus label + live region). (a) keep (b) web: label without position. Recommend (b), low.
+- **`etfMonthly`** takes the first Depot order, monthly or not. Fine on the seed; revisit with Danylo's data.
+- Resolved: per-area why (goals by area, F-N11), `summarySeenAt` (removed, Q20), last-Next in-flight state (disabled `ready` state), `duel.spec` (F-e2e).
+
 ## Review triage
 Round 1 (21.11), reports in `.planning/reviews/F1b-diff-{back,front}-2026-11-21.md`. Sources: AR adversarial-review, CR code-review, K conformance (repo rules). `#` = source + number in that report.
 

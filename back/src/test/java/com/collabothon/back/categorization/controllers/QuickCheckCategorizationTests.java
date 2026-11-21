@@ -566,17 +566,17 @@ class QuickCheckCategorizationTests {
 		stored().andExpect(status().isOk()).andExpect(jsonPath("$.startHere").isEmpty());
 	}
 
-	@ParameterizedTest(name = "saving mastery {0} -> {1}")
-	@CsvSource({ "0.39, intermediate", "0.4, advanced" })
-	void withoutAnAreaAtLeastBuildingJevsAdvancedIsCappedAtIntermediate(String saving, String role) throws Exception {
+	@ParameterizedTest(name = "Jev {0}, saving mastery {1} -> {2}")
+	@CsvSource({ "advanced, 0.39, novice", "intermediate, 0.39, novice", "advanced, 0.4, advanced",
+			"intermediate, 0.4, intermediate" })
+	void withoutAnAreaAtLeastBuildingTheRoleIsNovice(String jevRole, String saving, String role) throws Exception {
 		jev.expect(requestTo(JEV_URL))
 			.andRespond(withSuccess(jevFinal(choice("gap_saving", "aligned", "under", "over", "aligned")
 					+ choice("first_lesson", "story_berlin", "story_berlin", "story_sao-paulo"))
 				.replace("""
-						"choice": "intermediate", "confidence": 0.8,
-						         "probabilities": {"novice": 0.1, "intermediate": 0.8, "advanced": 0.1}""", """
-						"choice": "advanced", "confidence": 0.8,
-						         "probabilities": {"novice": 0.1, "intermediate": 0.1, "advanced": 0.8}"""),
+						"role": {"type": "choice", "choice": "intermediate", "confidence": 0.8,
+						         "probabilities": {"novice": 0.1, "intermediate": 0.8, "advanced": 0.1}}""",
+						choice("role", jevRole, "novice", "intermediate", "advanced").substring(2)),
 					MediaType.APPLICATION_JSON));
 
 		categorize(QUICK_CHECK.replace(HISTORY, "[{\"questionId\": \"sv-a\", \"optionIndex\": 0, \"confidence\": \"guessing\"}]")

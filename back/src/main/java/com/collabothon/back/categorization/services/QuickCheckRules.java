@@ -150,12 +150,12 @@ final class QuickCheckRules {
 		return m != null && m > SOLID_ABOVE && inArea(answers, area).size() >= SOLID_MIN_ANSWERS;
 	}
 
-	/** J3: without an area at least Building (mastery ≥ JUST_STARTING_BELOW with an answer), at most intermediate. */
+	/** J3: without an area at least Building (mastery ≥ JUST_STARTING_BELOW with an answer), novice. */
 	static Role cappedRole(Role role, Map<FocusArea, Double> mastery, List<Answer> answers) {
 		boolean building = mastery.entrySet().stream()
 			.anyMatch(m -> m.getValue() != null && m.getValue() >= JUST_STARTING_BELOW
 					&& !inArea(answers, m.getKey()).isEmpty());
-		return role == Role.ADVANCED && !building ? Role.INTERMEDIATE : role;
+		return building ? role : Role.NOVICE;
 	}
 
 	/** Areas where at least one answer carries a chip: the only ones a gap can be about. */

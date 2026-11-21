@@ -436,7 +436,7 @@ PR #31 (`origin/main` d4b2a22) changed what F1b v2 was built on:
 ### Jan's decisions
 - **J1** Adapt F1b to main: merge `origin/main` into `feat/quick-check` (merge, no rebase). Main's code wins on conflicts; F1b re-applies its changes on top.
 - **J2** "Start here" is a **story**. Its start lesson is that story's next lesson that is not done, so it is always `available`. Lesson locking stays untouched.
-- **J3** Role cap: when the Quick check ran and no area is at least Building (mastery ≥ 0.4 with ≥ 1 answer), the stored role is at most `INTERMEDIATE`, whatever Jev or the rule said. A role that is already lower stays.
+- **J3** Role cap: when the Quick check ran and no area is at least Building (mastery ≥ 0.4 with ≥ 1 answer), the stored role is `NOVICE`, whatever Jev or the rule said; otherwise the role stays as Jev or the rule chose it. (changed 21.11: novice, Jan)
 - **J4** `area` names the area that picked the story; all Solid → first story in stories.json, area null.
 
 ### Contract changes (supersede the v2 text above where they differ)
@@ -464,7 +464,7 @@ PR #31 (`origin/main` d4b2a22) changed what F1b v2 was built on:
 ### Done when
 - `feat/quick-check` contains `origin/main`, and `./mvnw -B clean test`, `npm run check`, `npx tsc --noEmit`, `npx expo lint` and the Playwright suite pass.
 - Smoke without a key and with the key: the quiz runs, the summary names a Berlin stop that is `available`, and the globe's story sheet shows "Start here" on Berlin.
-- Role cap test: no area at least Building plus Jev `advanced` → stored `INTERMEDIATE`.
+- Role cap test: no area at least Building plus Jev `advanced` or `intermediate` → stored `NOVICE`; one area at Building keeps Jev's role.
 
 ### Announcements (Jan)
 - Lessons author (PR #31): `LessonContent` and `LessonProgress.completed` are now public, read-only, for F1b. `StorySheet`/`StoryCard` get an optional `startHere` prop.

@@ -18,7 +18,7 @@
 
 ```bash
 make setup     # one-time: creates .env from .env.example, runs npm install in front/
-               # edit .env and set your own POSTGRES_PASSWORD and DB_PASSWORD (must match)
+               # .env gets mock dev passwords from .env.example; change them if you want (keep both equal)
 make dev       # Postgres + backend + app with phone QR (Expo tunnel) and browser at localhost:8081
 make phone     # same as make dev
 make phone-usb # Postgres + backend + Android phone over a USB cable (no network at all)
@@ -46,7 +46,7 @@ If you want the Spring logs in their own terminal, run `make back` and `make web
 - **Phone via USB cable (Android, no network at all):** `make phone-usb` runs `adb reverse tcp:<port> tcp:<port>` and starts Metro on `--localhost`, so the phone's `127.0.0.1:<port>` goes through the cable to the laptop's loopback. Needs `adb` (Fedora: `sudo dnf install android-tools`; Ubuntu: `sudo apt install adb`; macOS: `brew install android-platform-tools`) and **USB debugging** enabled on the phone (Settings → About phone → tap *Build number* 7× → Developer options → USB debugging; accept the "Allow USB debugging?" prompt). In Expo Go tap **Enter URL manually** and type the `exp://127.0.0.1:<port>` URL the script prints (usually `exp://127.0.0.1:8081`). Use this when the Wi-Fi blocks `*.exp.direct` or the tunnel keeps dropping.
 - **Wait for the bundle before scanning:** both phone modes build the Android bundle once over loopback and print `✔ Android bundle built and cached` when done. Scan or open the app after that line. If `make dev` already holds 8081, the phone modes pick the next free port (8082, …) on their own.
 - **Never expose without the tunnel:** User IDs are not authenticated in this prototype, so never expose the backend, Postgres, or Metro directly on LAN / `0.0.0.0` (especially on shared hackathon Wi-Fi).
-- **Database password & git worktrees:** `docker-compose.yml` pins `name: collabothon26`, so every checkout/worktree shares the same `collabothon-postgres` container and `collabothon26_postgres-data` volume. An existing Postgres volume keeps the password it was originally created with: in a new worktree, copy your existing `.env` from the main checkout so the password matches (don't leave the `CHANGE_ME` placeholder), or edit `.env` and run `make db-reset` to recreate the volume with a new password.
+- **Database password & git worktrees:** `.env.example` ships a mock dev password (`collabothon-dev`). `make setup` and `make dev` run `scripts/sync-env.sh`, which creates `.env`, adds missing keys and replaces empty or `CHANGE_ME` values with the defaults, so a new worktree works without copying `.env`. `docker-compose.yml` pins `name: collabothon26`, so every checkout shares the `collabothon-postgres` container; `make dev` recreates its volume on every run, so the password always matches. If you set your own password, keep `POSTGRES_PASSWORD` and `DB_PASSWORD` identical.
 
 If Expo Go shows **"Failed to download remote update"**, it could not fetch the manifest or the JS bundle:
 - The `make phone` terminal printed `Tunnel connection has been closed`: wait for `Tunnel connected.`, then reopen the project in Expo Go. The usual trigger is a slow, memory-hungry cold bundle build. `front/metro.config.js` caps Metro at 4 workers to prevent it (override with `METRO_MAX_WORKERS=<n>`).

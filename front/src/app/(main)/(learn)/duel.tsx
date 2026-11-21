@@ -114,6 +114,7 @@ export default function DuelLobbyScreen() {
           accessibilityState={{ selected: activeTab === 'play' }}
           accessibilityLabel="Graj"
           testID="duel-tab-play"
+          containerStyle={styles.item}
           style={[styles.tab, activeTab === 'play' && styles.activeTab]}
         >
           <Text style={[styles.tabText, activeTab === 'play' && styles.activeTabText]}>Graj</Text>
@@ -125,6 +126,7 @@ export default function DuelLobbyScreen() {
           accessibilityState={{ selected: activeTab === 'history' }}
           accessibilityLabel="Historia"
           testID="duel-tab-history"
+          containerStyle={styles.item}
           style={[styles.tab, activeTab === 'history' && styles.activeTab]}
         >
           <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>Historia</Text>
@@ -219,8 +221,11 @@ const styles = StyleSheet.create({
     borderColor: colors.borderDefault,
     padding: spacing.xxs,
   },
-  tab: {
+  // Tappable puts `style` on its inner view, so the stretch goes on the Pressable.
+  item: {
     flex: 1,
+  },
+  tab: {
     paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',

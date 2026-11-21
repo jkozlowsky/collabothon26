@@ -26,10 +26,7 @@ if [ "$MODE" = usb ] && ! command -v adb >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ ! -f .env ]; then
-  cp .env.example .env
-  echo "▶ Created .env from .env.example."
-fi
+./scripts/sync-env.sh
 
 get_env_val() {
   grep -E "^$1=" .env | tail -n 1 | cut -d= -f2- | tr -d '\r'
@@ -37,14 +34,6 @@ get_env_val() {
 
 PG_PW="$(get_env_val POSTGRES_PASSWORD || true)"
 DB_PW="$(get_env_val DB_PASSWORD || true)"
-
-if [ -z "$PG_PW" ] || [ -z "$DB_PW" ] || [ "$PG_PW" = "CHANGE_ME" ] || [ "$DB_PW" = "CHANGE_ME" ]; then
-  echo "✖ .env still has the placeholder DB password (CHANGE_ME)."
-  echo "  Edit .env and set matching POSTGRES_PASSWORD and DB_PASSWORD, then re-run:"
-  echo "  - New worktree / existing Postgres volume: copy your existing .env from your main checkout so the password matches."
-  echo "  - Want a new password on an existing volume? Set it in .env, then run 'make db-reset' to recreate the volume."
-  exit 1
-fi
 
 if [ "$PG_PW" != "$DB_PW" ]; then
   echo "✖ POSTGRES_PASSWORD and DB_PASSWORD in .env do not match. Set both to the same password and re-run."

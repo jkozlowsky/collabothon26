@@ -22,6 +22,7 @@ export function ModeToggle({ mode, onChange }: Props) {
           accessibilityState={{ selected: isHuman }}
           accessibilityLabel="Z rywalem"
           testID="duel-mode-human"
+          containerStyle={styles.item}
           style={[styles.segment, isHuman && styles.selectedSegment]}
         >
           <Text style={[styles.label, isHuman && styles.selectedLabel]}>Z rywalem</Text>
@@ -33,6 +34,7 @@ export function ModeToggle({ mode, onChange }: Props) {
           accessibilityState={{ selected: !isHuman }}
           accessibilityLabel="Solo"
           testID="duel-mode-solo"
+          containerStyle={styles.item}
           style={[styles.segment, !isHuman && styles.selectedSegment]}
         >
           <Text style={[styles.label, !isHuman && styles.selectedLabel]}>Solo</Text>
@@ -59,8 +61,11 @@ const styles = StyleSheet.create({
     borderColor: colors.borderDefault,
     padding: spacing.xxs,
   },
-  segment: {
+  // Tappable puts `style` on its inner view, so the stretch goes on the Pressable.
+  item: {
     flex: 1,
+  },
+  segment: {
     paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',

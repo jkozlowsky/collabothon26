@@ -57,13 +57,13 @@ class JevClientTests {
 	@Test
 	void refusedConnectionIsNotSent() {
 		assertEquals(NOT_SENT,
-				new JevClient(RestClient.builder(), JSON, properties("http://localhost:1", "")).ask(ANSWERS, null, List.of()));
+				new JevClient(RestClient.builder(), JSON, properties("http://localhost:1", "")).ask(ANSWERS, null, List.of(), "boundary"));
 	}
 
 	@Test
 	void unknownHostIsNotSent() {
 		assertEquals(NOT_SENT,
-				new JevClient(RestClient.builder(), JSON, properties("http://jev.invalid", "")).ask(ANSWERS, null, List.of()));
+				new JevClient(RestClient.builder(), JSON, properties("http://jev.invalid", "")).ask(ANSWERS, null, List.of(), "boundary"));
 	}
 
 	@Test
@@ -74,7 +74,7 @@ class JevClientTests {
 			.andRespond(withStatus(HttpStatus.OK).header(HttpHeaders.CONTENT_TYPE, "not a type").body("{}"));
 
 		assertEquals(SENT_WITHOUT_ANSWER,
-				new JevClient(builder, JSON, properties("http://localhost:8000", "")).ask(ANSWERS, null, List.of()));
+				new JevClient(builder, JSON, properties("http://localhost:8000", "")).ask(ANSWERS, null, List.of(), "boundary"));
 	}
 
 	@Test
@@ -85,7 +85,7 @@ class JevClientTests {
 			.andRespond(withException(new SSLHandshakeException("certificate rejected")));
 
 		assertEquals(NOT_SENT,
-				new JevClient(builder, JSON, properties("https://jev.example", "")).ask(ANSWERS, null, List.of()));
+				new JevClient(builder, JSON, properties("https://jev.example", "")).ask(ANSWERS, null, List.of(), "boundary"));
 	}
 
 	@Test
@@ -94,7 +94,7 @@ class JevClientTests {
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
 		server.expect(headerDoesNotExist("Authorization")).andRespond(withServerError());
 
-		assertTrue(new JevClient(builder, JSON, properties("http://localhost:8000", " ")).ask(ANSWERS, null, List.of()).sent());
+		assertTrue(new JevClient(builder, JSON, properties("http://localhost:8000", " ")).ask(ANSWERS, null, List.of(), "boundary").sent());
 		server.verify();
 	}
 

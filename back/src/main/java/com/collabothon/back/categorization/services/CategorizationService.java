@@ -6,13 +6,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 
 import com.collabothon.back.categorization.config.JevProperties;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
-import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.CategorizationDto;
 import com.collabothon.back.categorization.dto.CheckAnswerDto;
 import com.collabothon.back.categorization.dto.CheckDto;
@@ -82,6 +82,7 @@ public class CategorizationService {
 				return recent.get();
 			}
 		}
+		String boundary = UUID.randomUUID().toString();
 		List<JevCheckDto> toJudge = new ArrayList<>();
 		List<SharedCheckDto> sharedChecks = new ArrayList<>();
 		for (int i = 0; i < picked.size(); i++) {
@@ -89,10 +90,10 @@ public class CategorizationService {
 			String text = submitted.get(i).text();
 			sharedChecks.add(new SharedCheckDto(q.id(), text != null));
 			if (text != null) {
-				toJudge.add(new JevCheckDto(q.id(), q.genericPrompt(), q.criterion(), delimited(text)));
+				toJudge.add(new JevCheckDto(q.id(), q.genericPrompt(), q.criterion(), boundary + " " + text.strip() + " " + boundary));
 			}
 		}
-		JevResult fromJev = jev.ask(answers, facts, toJudge);
+		JevResult fromJev = jev.ask(answers, facts, toJudge, boundary);
 		Judgement j = fromJev.judgement().orElseGet(() -> CategorizationRules.fallback(answers, facts));
 		SharedWithModelDto shared = fromJev.sent() ? new SharedWithModelDto(facts, answers, sharedChecks) : null;
 		List<CheckDto> checks = new ArrayList<>();
@@ -148,11 +149,6 @@ public class CategorizationService {
 					e.getClass().getSimpleName());
 			return Optional.empty();
 		}
-	}
-
-	// The tags mark the person's text as data; the angle brackets in it are swapped so it cannot close them.
-	private static String delimited(String text) {
-		return "<%1$s>%2$s</%1$s>".formatted(JevConsts.ANSWER_TAG, text.strip().replace('<', '‹').replace('>', '›'));
 	}
 
 	private static boolean isRecentJevResult(CategorizationDto c, OnboardingAnswersDto answers, boolean consent,

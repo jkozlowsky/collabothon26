@@ -44,6 +44,9 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.categorization.entities.Categorization;
+import com.collabothon.back.categorization.repositories.CategorizationRepository;
+import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
 import com.collabothon.back.lesson.LessonContent;
 
 import tools.jackson.databind.JsonNode;
@@ -100,6 +103,12 @@ class QuickCheckCategorizationTests {
 	JdbcClient jdbc;
 
 	@Autowired
+	CheckQuestionRepository questions;
+
+	@Autowired
+	CategorizationRepository categorizations;
+
+	@Autowired
 	JsonMapper json;
 
 	@Autowired
@@ -118,7 +127,7 @@ class QuickCheckCategorizationTests {
 	@BeforeEach
 	void ownBankAndUser() throws Exception {
 		// One story per lesson, so the path has three stories to order.
-		bank = new TestBank(jdbc);
+		bank = new TestBank(questions);
 		bank.question("sv-a", "berlin-1", "saving", "easy");
 		bank.question("sv-b", "sao-paulo-1", "saving", "easy");
 		bank.question("sv-hard", "berlin-1", "saving", "hard");
@@ -310,10 +319,7 @@ class QuickCheckCategorizationTests {
 
 		categorize(onRules(QUICK_CHECK.replace(HISTORY, history))).andExpect(status().isOk());
 
-		String data = jdbc.sql("SELECT data::text FROM categorization WHERE user_id = ?")
-			.param(userId)
-			.query(String.class)
-			.single();
+		String data = categorizations.findData(userId).orElseThrow();
 		JsonNode row = json.readTree(data);
 		assertEquals(json.readTree("{\"saving\": 0.25, \"investing\": 0.6}"), row.get("confidence"));
 		assertEquals(3, row.get("answerCount").intValue());
@@ -360,9 +366,11 @@ class QuickCheckCategorizationTests {
 		completeStory("sao-paulo");
 		stored().andExpect(jsonPath("$.startHere.lessonId").value("berlin-1"));
 
-		jdbc.sql("UPDATE categorization SET data = jsonb_set(data, '{pathStoryIds}', '[\"gone\", \"tokyo\"]') WHERE user_id = ?")
-			.param(userId)
-			.update();
+		Categorization row = categorizations.findById(userId).orElseThrow();
+		ObjectNode data = (ObjectNode) json.readTree(row.getData());
+		data.set("pathStoryIds", json.readTree("[\"gone\", \"tokyo\"]"));
+		row.setData(json.writeValueAsString(data));
+		categorizations.save(row);
 		stored().andExpect(jsonPath("$.startHere.storyId").value("tokyo"));
 	}
 
@@ -410,15 +418,13 @@ class QuickCheckCategorizationTests {
 
 	@Test
 	void aRowFromBeforeTheQuickCheckReadsWithDefaults() throws Exception {
-		jdbc.sql("INSERT INTO categorization (user_id, data) VALUES (?, ?::jsonb)")
-			.params(userId, """
+		categorizations.save(new Categorization(userId, """
 					{"userId": "%s", "consent": false, "bankData": false, "role": "novice", "lifeStage": null,
 					 "focusAreas": ["saving"], "confidenceGaps": [], "checks": [],
 					 "lessonVariant": {"persona": null, "level": "beginner", "lang": "plain"}, "explanation": [],
 					 "startLesson": {"lessonId": 1, "title": "Emergency fund"}, "pathLessonIds": [1],
 					 "sharedWithModel": null, "source": "fallback", "model": null,
-					 "categorizedAt": "%s"}""".formatted(userId, Instant.now(clock)))
-			.update();
+					 "categorizedAt": "%s"}""".formatted(userId, Instant.now(clock))));
 
 		stored().andExpect(status().isOk())
 			.andExpect(content().json("""

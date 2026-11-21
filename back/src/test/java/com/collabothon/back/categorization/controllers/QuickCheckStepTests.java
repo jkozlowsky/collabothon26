@@ -31,7 +31,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.client.ExpectedCount;
@@ -42,6 +41,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -84,7 +84,7 @@ class QuickCheckStepTests {
 	MockRestServiceServer jev;
 
 	@Autowired
-	JdbcClient jdbc;
+	CheckQuestionRepository questions;
 
 	@Autowired
 	JsonMapper json;
@@ -95,7 +95,7 @@ class QuickCheckStepTests {
 
 	@BeforeEach
 	void ownBankAndUser() throws Exception {
-		bank = new TestBank(jdbc);
+		bank = new TestBank(questions);
 		bank.question("sv-a", "berlin-3", "saving", "easy");
 		bank.question("sv-b", "berlin-1", "saving", "easy");
 		bank.question("sv-hard", "berlin-3", "saving", "hard");

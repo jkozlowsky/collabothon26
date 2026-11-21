@@ -46,6 +46,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
+import com.collabothon.back.categorization.entities.Categorization;
+import com.collabothon.back.categorization.repositories.CategorizationRepository;
+import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
 import com.collabothon.back.lesson.LessonContent;
 
 import tools.jackson.databind.json.JsonMapper;
@@ -106,6 +109,12 @@ class CategorizationControllerTests {
 	@Autowired
 	JdbcClient jdbc;
 
+	@Autowired
+	CheckQuestionRepository questions;
+
+	@Autowired
+	CategorizationRepository categorizations;
+
 	// Boot resets the Jev stub after each test; the clock needs its own reset, before the test, so a failed
 	// verify in an earlier test cannot leave it moved.
 	@BeforeEach
@@ -133,7 +142,7 @@ class CategorizationControllerTests {
 	@Test
 	@Transactional
 	void alexIsCategorisedByJev() throws Exception {
-		TestBank bank = new TestBank(jdbc);
+		TestBank bank = new TestBank(questions);
 		bank.question("sv-a", "berlin-1", "saving", "easy");
 		bank.question("sv-b", "sao-paulo-1", "saving", "easy");
 		bank.question("in-a", "tokyo-1", "investing", "easy");
@@ -418,7 +427,7 @@ class CategorizationControllerTests {
 	@Test
 	void unreadableStoredResultIs404() throws Exception {
 		onboard("alex", ANSWERS);
-		jdbc.sql("INSERT INTO categorization (user_id, data) VALUES ('alex', '{\"role\": \"wizard\"}'::jsonb)").update();
+		categorizations.save(new Categorization("alex", "{\"role\": \"wizard\"}"));
 
 		mvc.perform(get("/api/users/alex/categorization")).andExpect(status().isNotFound());
 	}

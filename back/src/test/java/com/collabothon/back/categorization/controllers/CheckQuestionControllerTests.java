@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,6 +20,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,6 +34,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
+import com.collabothon.back.categorization.entities.CheckQuestion;
+import com.collabothon.back.categorization.enums.FocusArea;
+import com.collabothon.back.categorization.enums.QuestionLevel;
+import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
 import com.collabothon.back.lesson.LessonContent;
 
 import tools.jackson.databind.JsonNode;
@@ -54,6 +60,9 @@ class CheckQuestionControllerTests {
 	JdbcClient jdbc;
 
 	@Autowired
+	CheckQuestionRepository questions;
+
+	@Autowired
 	JsonMapper json;
 
 	@Autowired
@@ -61,22 +70,35 @@ class CheckQuestionControllerTests {
 
 	private static final String LESSON = "berlin-1";
 
-	private void insert(String id, String lessonId, String misconceptions, int correctIndex) {
-		jdbc.sql("""
-				INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, generic_prompt, options,
-				                            correct_index, misconceptions, checks)
-				VALUES (?, ?, 'saving', 'easy', 'You hold €{savingsBalance}.', ARRAY['savingsBalance'], 'You hold €100.',
-				        ARRAY['a', 'b', 'c'], ?, %s, 'Whether it works.')""".formatted(misconceptions))
-			.params(id, lessonId, correctIndex)
-			.update();
+	/** The row each broken one starts from: valid, an account version with one slot. */
+	private static CheckQuestion valid() {
+		return CheckQuestion.builder()
+			.id("zz-valid")
+			.lessonId(LESSON)
+			.area(FocusArea.SAVING)
+			.level(QuestionLevel.EASY)
+			.accountPrompt("€{monthOut}")
+			.slots(List.of("monthOut"))
+			.genericPrompt("€100")
+			.options(List.of("a", "b", "c"))
+			.correctIndex(0)
+			.misconceptions(Arrays.asList(null, "m1", "m2"))
+			.checks("Whether it works.")
+			.build();
 	}
 
 	@Test
 	@Transactional
 	void theBankComesOrderedByIdWithoutTheAnswerKey() throws Exception {
-		jdbc.sql("DELETE FROM check_question").update();
-		insert("zz-second", LESSON, "ARRAY['m0', NULL, 'm2']", 1);
-		insert("zz-first", LESSON, "ARRAY[NULL, 'm1', 'm2']", 0);
+		questions.deleteAllInBatch();
+		CheckQuestion row = valid().toBuilder()
+			.accountPrompt("You hold €{savingsBalance}.")
+			.slots(List.of("savingsBalance"))
+			.genericPrompt("You hold €100.")
+			.build();
+		questions.save(row.toBuilder().id("zz-second").correctIndex(1).misconceptions(Arrays.asList("m0", null, "m2"))
+			.build());
+		questions.save(row.toBuilder().id("zz-first").build());
 
 		mvc.perform(get("/api/check-questions"))
 			.andExpect(status().isOk())
@@ -90,68 +112,52 @@ class CheckQuestionControllerTests {
 
 	static Stream<Arguments> rowsBreakingTheBankRules() {
 		return Stream.of(
-				Arguments.of("id not a slug", "'Zz Broken'", "'saving'", "'easy'", "'€{monthOut}'", "ARRAY['monthOut']",
-						"'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
-				Arguments.of("area outside its set", "'zz-broken'", "'wizardry'", "'easy'", "'€{monthOut}'",
-						"ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
-				Arguments.of("level outside its set", "'zz-broken'", "'saving'", "'medium'", "'€{monthOut}'",
-						"ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
-				Arguments.of("unknown slot", "'zz-broken'", "'saving'", "'easy'", "'€{salary}'", "ARRAY['salary']",
-						"'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
-				Arguments.of("two options", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'", "ARRAY['monthOut']",
-						"'€100'", "ARRAY['a', 'b']", 0, "ARRAY[NULL, 'm1']"),
-				Arguments.of("five options", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'", "ARRAY['monthOut']",
-						"'€100'", "ARRAY['a', 'b', 'c', 'd', 'e']", 0, "ARRAY[NULL, 'm1', 'm2', 'm3', 'm4']"),
-				Arguments.of("a NULL option", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'", "ARRAY['monthOut']",
-						"'€100'", "ARRAY['a', NULL, 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
-				Arguments.of("an empty option", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'", "ARRAY['monthOut']",
-						"'€100'", "ARRAY['a', '', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
-				Arguments.of("misconceptions shorter than options", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'",
-						"ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1']"),
-				Arguments.of("correct index past the options", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'",
-						"ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 3, "ARRAY['m0', 'm1', 'm2']"),
-				Arguments.of("a misconception on the correct option", "'zz-broken'", "'saving'", "'easy'",
-						"'€{monthOut}'", "ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 0,
-						"ARRAY['m0', 'm1', NULL]"),
-				Arguments.of("two NULL misconceptions", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'",
-						"ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, NULL, 'm2']"),
-				Arguments.of("an account prompt without slots", "'zz-broken'", "'saving'", "'easy'", "'You hold money.'",
-						"ARRAY[]::TEXT[]", "'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
-				Arguments.of("slots without an account prompt", "'zz-broken'", "'saving'", "'easy'", "NULL",
-						"ARRAY['monthOut']", "'€100'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"),
-				Arguments.of("a slot in the generic prompt", "'zz-broken'", "'saving'", "'easy'", "'€{monthOut}'",
-						"ARRAY['monthOut']", "'€{monthOut}'", "ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']"));
+				Arguments.of("id not a slug", valid().toBuilder().id("Zz Broken").build()),
+				Arguments.of("unknown slot", valid().toBuilder().accountPrompt("€{salary}").slots(List.of("salary")).build()),
+				Arguments.of("two options",
+						valid().toBuilder().options(List.of("a", "b")).misconceptions(Arrays.asList(null, "m1")).build()),
+				Arguments.of("five options", valid().toBuilder().options(List.of("a", "b", "c", "d", "e"))
+					.misconceptions(Arrays.asList(null, "m1", "m2", "m3", "m4")).build()),
+				Arguments.of("a NULL option", valid().toBuilder().options(Arrays.asList("a", null, "c")).build()),
+				Arguments.of("an empty option", valid().toBuilder().options(List.of("a", "", "c")).build()),
+				Arguments.of("misconceptions shorter than options",
+						valid().toBuilder().misconceptions(Arrays.asList(null, "m1")).build()),
+				Arguments.of("correct index past the options",
+						valid().toBuilder().correctIndex(3).misconceptions(List.of("m0", "m1", "m2")).build()),
+				Arguments.of("a misconception on the correct option",
+						valid().toBuilder().misconceptions(Arrays.asList("m0", "m1", null)).build()),
+				Arguments.of("two NULL misconceptions",
+						valid().toBuilder().misconceptions(Arrays.asList(null, null, "m2")).build()),
+				Arguments.of("an account prompt without slots",
+						valid().toBuilder().accountPrompt("You hold money.").slots(List.of()).build()),
+				Arguments.of("slots without an account prompt", valid().toBuilder().accountPrompt(null).build()),
+				Arguments.of("a slot in the generic prompt", valid().toBuilder().genericPrompt("€{monthOut}").build()));
 	}
 
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("rowsBreakingTheBankRules")
 	@Transactional
-	void aRowBreakingTheBankRulesIsRejectedByTheSchema(String name, String id, String area, String level,
-			String accountPrompt, String slots, String genericPrompt, String options, int correctIndex,
-			String misconceptions) {
-		assertThrows(DataIntegrityViolationException.class, () -> insertRow(id, LESSON, area, level, accountPrompt,
-				slots, genericPrompt, options, correctIndex, misconceptions));
+	void aRowBreakingTheBankRulesIsRejectedByTheSchema(String name, CheckQuestion row) {
+		assertThrows(DataIntegrityViolationException.class, () -> questions.saveAndFlush(row));
+	}
+
+	// The entity's enums cannot hold a value outside the set, so only SQL can send one.
+	@ParameterizedTest(name = "{0} outside its set")
+	@CsvSource({ "area, 'wizardry', 'easy'", "level, 'saving', 'medium'" })
+	@Transactional
+	void anAreaOrLevelOutsideItsSetIsRejectedByTheSchema(String name, String area, String level) {
+		assertThrows(DataIntegrityViolationException.class, () -> jdbc.sql("""
+				INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, generic_prompt, options,
+				                            correct_index, misconceptions, checks)
+				VALUES ('zz-broken', 'berlin-1', ?, ?, NULL, ARRAY[]::TEXT[], '€100', ARRAY['a', 'b', 'c'], 0,
+				        ARRAY[NULL, 'm1', 'm2'], 'Whether it works.')""").params(area, level).update());
 	}
 
 	@Test
 	@Transactional
 	void theRowTheBrokenOnesStartFromIsAccepted() {
-		insertRow("'zz-valid'", LESSON, "'saving'", "'easy'", "'€{monthOut}'", "ARRAY['monthOut']", "'€100'",
-				"ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']");
-		insertRow("'zz-generic'", LESSON, "'saving'", "'easy'", "NULL", "ARRAY[]::TEXT[]", "'€100'",
-				"ARRAY['a', 'b', 'c']", 0, "ARRAY[NULL, 'm1', 'm2']");
-	}
-
-	private void insertRow(String id, String lesson, String area, String level, String accountPrompt, String slots,
-			String genericPrompt, String options, int correctIndex, String misconceptions) {
-		jdbc.sql("""
-				INSERT INTO check_question (id, lesson_id, area, level, account_prompt, slots, generic_prompt, options,
-				                            correct_index, misconceptions, checks)
-				VALUES (%s, :lesson, %s, %s, %s, %s, %s, %s, :correct, %s, 'Whether it works.')"""
-			.formatted(id, area, level, accountPrompt, slots, genericPrompt, options, misconceptions))
-			.param("lesson", lesson)
-			.param("correct", correctIndex)
-			.update();
+		questions.saveAndFlush(valid());
+		questions.saveAndFlush(valid().toBuilder().id("zz-generic").accountPrompt(null).slots(List.of()).build());
 	}
 
 	@Test
@@ -185,7 +191,7 @@ class CheckQuestionControllerTests {
 
 	@Test
 	void everySeededBankLessonIsInTheLessonContent() {
-		List<String> lessonIds = jdbc.sql("SELECT DISTINCT lesson_id FROM check_question").query(String.class).list();
+		List<String> lessonIds = questions.findAll().stream().map(CheckQuestion::getLessonId).distinct().toList();
 
 		assertFalse(lessonIds.isEmpty());
 		lessonIds.forEach(id -> assertTrue(lessonContent.lesson(id).isPresent(), id));

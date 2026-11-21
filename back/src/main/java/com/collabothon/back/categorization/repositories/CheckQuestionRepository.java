@@ -2,13 +2,13 @@ package com.collabothon.back.categorization.repositories;
 
 import java.util.List;
 
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.Repository;
 
 import com.collabothon.back.categorization.entities.CheckQuestion;
 import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 
-public interface CheckQuestionRepository extends Repository<CheckQuestion, String> {
+public interface CheckQuestionRepository extends JpaRepository<CheckQuestion, String> {
 
 	@Query("""
 			select new com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection(

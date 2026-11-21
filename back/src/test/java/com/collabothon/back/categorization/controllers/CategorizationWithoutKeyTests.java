@@ -17,7 +17,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -25,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
 
 // The default for teammates: no key, so nothing may reach the hosted API.
 @Import(TestcontainersConfiguration.class)
@@ -41,7 +41,7 @@ class CategorizationWithoutKeyTests {
 	MockRestServiceServer jev;
 
 	@Autowired
-	JdbcClient jdbc;
+	CheckQuestionRepository questions;
 
 	@Test
 	void fallsBackWithoutCallingJev() throws Exception {
@@ -62,7 +62,7 @@ class CategorizationWithoutKeyTests {
 
 	@Test
 	void theBankIsServedWithoutAKey() throws Exception {
-		TestBank bank = new TestBank(jdbc);
+		TestBank bank = new TestBank(questions);
 		bank.question("only-one", "berlin-3", "saving", "easy");
 
 		mvc.perform(get("/api/check-questions")).andExpect(status().isOk())
@@ -72,7 +72,7 @@ class CategorizationWithoutKeyTests {
 
 	@Test
 	void aStepWithoutAKeyRunsOnTheRuleAndSaysSo() throws Exception {
-		TestBank bank = new TestBank(jdbc);
+		TestBank bank = new TestBank(questions);
 		bank.question("sv-a", "berlin-3", "saving", "easy");
 		bank.question("sv-b", "berlin-3", "saving", "easy");
 		String userId = "keyless-" + UUID.randomUUID();

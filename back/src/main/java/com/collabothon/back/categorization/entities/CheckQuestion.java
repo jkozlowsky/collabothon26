@@ -10,13 +10,17 @@ import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.QuestionLevel;
 
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** Read-only: the bank is written by migrations. {@code correctIndex} is 0-based. */
+/** The bank is written by migrations; the builder makes tests' own rows. {@code correctIndex} is 0-based. */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder(toBuilder = true)
 public class CheckQuestion {
 
 	@Id

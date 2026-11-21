@@ -11,7 +11,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 
 import com.collabothon.back.categorization.consts.CategorizationConsts;
@@ -25,6 +24,7 @@ import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
 import com.collabothon.back.categorization.dto.ProfileRangesDto;
 import com.collabothon.back.categorization.dto.SharedWithModelDto;
 import com.collabothon.back.categorization.dto.StartLessonDto;
+import com.collabothon.back.categorization.entities.Categorization;
 import com.collabothon.back.categorization.enums.CategorizationSource;
 import com.collabothon.back.categorization.enums.ExplanationOutput;
 import com.collabothon.back.categorization.enums.FocusArea;
@@ -35,6 +35,7 @@ import com.collabothon.back.categorization.mappers.BankLessonMapper;
 import com.collabothon.back.categorization.mappers.JevAnswerMapper;
 import com.collabothon.back.categorization.mappers.OnboardingAnswersMapper;
 import com.collabothon.back.categorization.mappers.StartLessonMapper;
+import com.collabothon.back.categorization.repositories.CategorizationRepository;
 import com.collabothon.back.categorization.repositories.ProfileAnswersRepository;
 import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
 import com.collabothon.back.common.exceptions.BadRequestException;
@@ -61,7 +62,7 @@ public class CategorizationService {
 
 	private final OnboardingAnswersMapper mapper;
 
-	private final JdbcClient jdbc;
+	private final CategorizationRepository categorizations;
 
 	private final JevClient jev;
 
@@ -164,16 +165,13 @@ public class CategorizationService {
 				now);
 		ObjectNode row = json.valueToTree(c);
 		row.remove("startHere");
-		// Inserting only while onboarding is completed turns a reset during the Jev call into a 404.
-		int saved = jdbc.sql("""
-				INSERT INTO categorization (user_id, data)
-				SELECT user_id, ?::jsonb FROM user_profile WHERE user_id = ? AND onboarding_completed
-				ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data""")
-			.params(json.writeValueAsString(row), userId)
-			.update();
-		if (saved == 0) {
-			throw new NotFoundException(NO_PROFILE);
-		}
+		// Checked again after the Jev call, so a reset meanwhile is a 404.
+		// ponytail: check then save is not atomic; a reset in that gap leaves a row the next onboarding deletes.
+		onboarding(userId);
+		String data = json.writeValueAsString(row);
+		Categorization stored = categorizations.findById(userId).orElseGet(() -> new Categorization(userId, data));
+		stored.setData(data);
+		categorizations.save(stored);
 		return c.withStartHere(startHere(c, stories, lessons, completed));
 	}
 
@@ -225,10 +223,7 @@ public class CategorizationService {
 	}
 
 	public Optional<CategorizationDto> find(String userId) {
-		return jdbc.sql("SELECT data FROM categorization WHERE user_id = ?")
-			.param(userId)
-			.query(String.class)
-			.optional()
+		return categorizations.findData(userId)
 			.flatMap(this::read)
 			.map(c -> c.withStartHere(startHere(c, stories(),
 					QuickCheckRules.lessons(checkQuestions.bank(), bankLessonMapper::toLesson),

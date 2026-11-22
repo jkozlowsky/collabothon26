@@ -164,6 +164,11 @@ test('lobby Historia tab renders unfinished and finished matches', async () => {
   expect(screen.getByTestId('match-history-row-10')).toBeOnTheScreen();
 });
 
+jest.mock('@/lib/duel/useDuelSocket', () => {
+  const socket = { status: 'idle', send: () => false, waitForOpen: () => Promise.resolve(false) };
+  return { useDuelSocket: () => socket };
+});
+
 test('match flow: answers question, sees feedback banner, waiting view, and result with review', async () => {
   jest.useFakeTimers();
   const matchResult: MatchEnd = {
@@ -250,9 +255,12 @@ test('match flow: answers question, sees feedback banner, waiting view, and resu
     initialUrl: '/duel/match?categories=berlin&mode=HUMAN',
   });
 
-  await act(async () => {
-    jest.advanceTimersByTime(1500);
-  });
+  // The live socket is unavailable here, so the match falls back to the simulated rival after the finding delay.
+  for (let i = 0; i < 4; i += 1) {
+    await act(async () => {
+      jest.advanceTimersByTime(500);
+    });
+  }
 
   // Question view renders
   expect(await screen.findByTestId('duel-question')).toBeOnTheScreen();

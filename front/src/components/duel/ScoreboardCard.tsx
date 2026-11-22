@@ -9,7 +9,9 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { DotTrack } from '@/components/duel/DotTrack';
+import { LiveBadge } from '@/components/duel/LiveBadge';
 import { PlayerAvatar } from '@/components/duel/PlayerAvatar';
+import { StatusChip } from '@/components/duel/StatusChip';
 import { colors, radii, spacing, type } from '@/constants/theme';
 import { formatPlayerName } from '@/lib/duel/meta';
 import type { LocalDot } from '@/lib/duel/reducer';
@@ -28,6 +30,10 @@ type Props = {
   rivalScore: number;
   activeIndex: number | null;
   questionCount: number;
+  /** A live duel against another human: shows the LIVE badge on the rival. */
+  live?: boolean;
+  /** The live rival disconnected; their remaining answers time out. */
+  rivalLeft?: boolean;
 };
 
 /**
@@ -49,6 +55,8 @@ export function ScoreboardCard({
   rivalScore,
   activeIndex,
   questionCount: _questionCount,
+  live = false,
+  rivalLeft = false,
 }: Props) {
   const reducedMotion = useReducedMotion();
   const youLevel = youLevels?.[currentCategory] ?? 1;
@@ -171,6 +179,20 @@ export function ScoreboardCard({
                 testID="rival-dots"
               />
             </View>
+            {live && (
+              <View style={styles.liveRow}>
+                {rivalLeft ? (
+                  <StatusChip
+                    label="Rival disconnected · their remaining answers time out"
+                    tone="offline"
+                    icon="wifi-off"
+                    testID="rival-left-chip"
+                  />
+                ) : (
+                  <LiveBadge testID="rival-live-badge" />
+                )}
+              </View>
+            )}
           </View>
         ) : (
           <View style={[styles.playerCol, styles.playerRight]}>
@@ -191,6 +213,10 @@ export function ScoreboardCard({
 }
 
 const styles = StyleSheet.create({
+  liveRow: {
+    marginTop: spacing.xs,
+    alignItems: 'flex-end',
+  },
   card: {
     backgroundColor: colors.brandPrimary,
     borderRadius: radii.card,

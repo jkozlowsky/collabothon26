@@ -28,6 +28,7 @@ public interface DuelMatchMapper {
 
 	@Mapping(target = "matchId", source = "match.id")
 	@Mapping(target = "finished", source = "match.finished")
+	@Mapping(target = "live", source = "match.live")
 	MatchStateDto toStateDto(DuelMatch match, PlayerCardDto you, PlayerCardDto rival, int questionCount,
 			List<Boolean> yourResults, DuelQuestionDto question, RivalSnapshotDto rivalProgress,
 			YourFinalDto yourFinal);

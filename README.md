@@ -14,10 +14,11 @@ Atlas turns the bank app into a learning journey: short and engaging lessons on 
 - **Graphics and motion:** three.js + `@react-three/fiber` on `expo-gl` (3D globe), `react-native-svg`, `react-native-reanimated`, `react-native-gesture-handler`, `expo-audio`, `expo-haptics`
 - **Backend:** Java 25, Spring Boot 4.2 (Web MVC, Data JPA, Validation, WebSocket, Actuator, AspectJ), MapStruct, Lombok, Maven
 - **Database:** PostgreSQL 17, schema managed only by Flyway migrations
-- **Content and media:** lessons as structured JSON, narration recorded with ElevenLabs, Natural Earth map data for the globe texture
+- **Content and media:** lessons as structured JSON, Natural Earth map data for the globe texture
 - **Testing:** Jest + React Native Testing Library, Playwright (web E2E), JUnit + Testcontainers (Postgres)
 - **Infrastructure:** Docker Compose, GitHub Actions (test → build → deploy), Oracle Cloud (OCI ARM, Oracle Linux 9), Caddy reverse proxy, Expo Go + ngrok tunnel for phones
 - **Profiling AI:** Jev decision model by TypeSafe (`jev-latest`) via Spring `RestClient`
+- **Narration AI:** ElevenLabs v4 text-to-speech, one narrator voice; MP3 clips served by the backend and played with `expo-audio` as the video's master clock
 
 ### Project Overview
 

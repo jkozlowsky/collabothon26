@@ -9,8 +9,15 @@ import type { AreaMark } from '@/lib/quickCheck';
 
 const TRACK = 10;
 
+type Props = {
+  mark: AreaMark;
+  /** One line under the bar, e.g. where the account and the answers disagree. */
+  note?: string;
+  noteTestID?: string;
+};
+
 /** One area: its level in words and the bar for what the answers show. */
-export function AreaRow({ mark }: { mark: AreaMark }) {
+export function AreaRow({ mark, note, noteTestID }: Props) {
   const reduced = useReducedMotion();
   const { area, mastery, level } = mark;
   return (
@@ -29,6 +36,11 @@ export function AreaRow({ mark }: { mark: AreaMark }) {
             style={[styles.fill, { width: `${(mastery ?? 0) * 100}%` }, !reduced && barMotion]}
           />
         </View>
+        {note && (
+          <Text style={styles.note} testID={noteTestID}>
+            {note}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -39,6 +51,7 @@ const styles = StyleSheet.create({
   body: { flex: 1, minWidth: 0, gap: spacing.sm - 2 },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.sm },
   level: { ...type.labelStrong, color: colors.brandPrimary },
+  note: { ...type.labelDefault, color: colors.textMuted },
   track: { height: TRACK, borderRadius: TRACK / 2, backgroundColor: colors.bgTint, justifyContent: 'center' },
   fill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: radii.bar + 2, backgroundColor: colors.brandPrimary },
 });

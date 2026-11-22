@@ -12,8 +12,6 @@ type Props = {
   facts: string[];
 };
 
-const STILL_ASKED = ['What your savings are for', 'When you need the money', 'What you already know'];
-
 function Lines({ title, lines, icon, color, testID }: { title: string; lines: string[]; icon: IconName; color: string; testID: string }) {
   return (
     <View style={styles.card} testID={testID}>
@@ -28,7 +26,7 @@ function Lines({ title, lines, icon, color, testID }: { title: string; lines: st
   );
 }
 
-/** The one consent screen: what the account already shows, what the app still asks, and what a consent shares. */
+/** The one consent screen: what the account already shows and what a consent shares. */
 export function ConsentCard({ facts }: Props) {
   return (
     <>
@@ -40,7 +38,6 @@ export function ConsentCard({ facts }: Props) {
         Atlas reads a few summaries from your account to build your learning path. Learn needs them to work.
       </Text>
       <Lines title="Your account already shows" lines={facts} icon="check" color={colors.feedbackSuccess} testID="consent-facts" />
-      <Lines title="We will still ask" lines={STILL_ASKED} icon="help-circle" color={colors.textMuted} testID="consent-asks" />
       <View style={styles.line}>
         <Feather name="lock" size={GLYPH} color={colors.brandPrimary} />
         <Text style={styles.promise}>Only these summaries are shared, never your transactions.</Text>

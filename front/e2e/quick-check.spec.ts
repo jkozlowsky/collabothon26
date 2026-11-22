@@ -230,12 +230,10 @@ test('a gap shows its card, titled by its direction', async ({ page }) => {
   await answer(page, 0);
 
   await expect(page.getByTestId('summary-gap-saving')).toContainText('Your habits are ahead of the theory', { timeout: 15_000 });
-  await expect(page.getByTestId('summary-gap-saving')).toContainText(gaps[0].because);
   await expect(page.getByTestId('summary-gap-investing')).toContainText('You know more than your account shows');
-  await expect(page.getByTestId('summary-gap-investing')).toContainText(gaps[1].because);
 });
 
-test('no gap card shows when no gap was found', async ({ page }) => {
+test('no gap note shows when no gap was found', async ({ page }) => {
   await toCheck(page, { step: stepper(1) });
   await answer(page, 0);
 

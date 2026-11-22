@@ -14,14 +14,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -222,15 +223,11 @@ public class JevClient {
 			}
 		}
 		Double enough = asked.has("enough") ? probability(answers.path("enough").path("noul")) : Double.valueOf(0);
-		String next = null;
-		if (asked.has("next")) {
-			JevChoice<String> choice = choice(answers.path("next"), lessonsByLabel(lessons));
-			if (choice == null) {
-				return Optional.empty();
-			}
-			next = choice.value();
+		String next = asked.has("next") ? lessonId(answers.path("next"), lessons) : null;
+		if (enough == null || (asked.has("next") && next == null)) {
+			return Optional.empty();
 		}
-		return enough == null ? Optional.empty() : Optional.of(new StepJudgement(mastery, next, enough, elapsed));
+		return Optional.of(new StepJudgement(mastery, next, enough, elapsed));
 	}
 
 	private JsonNode post(JevRequestDto body) {
@@ -264,7 +261,7 @@ public class JevClient {
 			state.put("checkAnswers", quickCheck.answers());
 			asked = questions.deepCopy();
 			for (FocusArea area : quickCheck.gapAreas()) {
-				asked.set(gapKey(area), finalQuestions.get(gapKey(area)).deepCopy());
+				asked.set("gap_" + area.wire(), finalQuestions.get("gap_" + area.wire()).deepCopy());
 			}
 			if (!quickCheck.lessons().isEmpty()) {
 				asked.set("first_lesson", lessonChoice(finalQuestions.get("first_lesson"), quickCheck.lessons()));
@@ -296,19 +293,6 @@ public class JevClient {
 			.anyMatch(cause -> NOT_SENT.stream().anyMatch(type -> type.isInstance(cause)));
 	}
 
-	private static String gapKey(FocusArea area) {
-		return "gap_" + area.wire();
-	}
-
-	/** Jev's option names for a gap: the enum names in lower case, with their underscores. */
-	private static Map<String, GapDirection> gapLabels() {
-		Map<String, GapDirection> labels = new LinkedHashMap<>();
-		for (GapDirection direction : GapDirection.values()) {
-			labels.put(direction.name().toLowerCase(Locale.ROOT), direction);
-		}
-		return labels;
-	}
-
 	/** A choice among lessons: each option is named by the lesson's topic and described by what the lesson covers. */
 	private static ObjectNode lessonChoice(JsonNode question, List<CheckLesson> lessons) {
 		ObjectNode choice = (ObjectNode) question.deepCopy();
@@ -318,64 +302,56 @@ public class JevClient {
 		return choice;
 	}
 
-	private static Map<String, String> lessonsByLabel(List<CheckLesson> lessons) {
-		Map<String, String> byLabel = new LinkedHashMap<>();
-		lessons.forEach(lesson -> byLabel.put(lesson.label(), lesson.id()));
-		return byLabel;
-	}
-
 	private static Optional<Judgement> parse(JsonNode response, JevQuickCheck quickCheck) {
 		if (response == null) {
 			return Optional.empty();
 		}
 		JsonNode answers = response.path("answers");
-		JevChoice<Role> role = choice(answers.path("role"), Role.values());
+		JevChoice<Role> role = choice(answers.path("role"), List.of(Role.values()), WireNames::of);
+		if (role == null) {
+			return Optional.empty();
+		}
 		Map<FocusArea, Double> noul = new EnumMap<>(FocusArea.class);
-		Map<String, Double> focus = new LinkedHashMap<>();
 		for (FocusArea area : FocusArea.values()) {
-			Double p = probability(answers.path(area.jevQuestion()).path("noul"));
+			Double p = probability(answers.path("focus_" + area.wire()).path("noul"));
 			if (p == null) {
 				return Optional.empty();
 			}
 			noul.put(area, p);
-			focus.put(area.wire(), p);
-		}
-		if (role == null) {
-			return Optional.empty();
 		}
 		Map<FocusArea, GapDirection> gaps = new EnumMap<>(FocusArea.class);
 		String firstLesson = null;
 		if (quickCheck != null) {
 			for (FocusArea area : quickCheck.gapAreas()) {
-				JevChoice<GapDirection> gap = choice(answers.path(gapKey(area)), gapLabels());
+				// Gap options are the enum names in lower case with underscores, not the hyphenated wire names.
+				JevChoice<GapDirection> gap = choice(answers.path("gap_" + area.wire()), List.of(GapDirection.values()),
+						direction -> direction.name().toLowerCase(Locale.ROOT));
 				if (gap == null) {
 					return Optional.empty();
 				}
 				gaps.put(area, gap.value());
 			}
 			if (!quickCheck.lessons().isEmpty()) {
-				JevChoice<String> lesson = choice(answers.path("first_lesson"), lessonsByLabel(quickCheck.lessons()));
-				if (lesson == null) {
+				firstLesson = lessonId(answers.path("first_lesson"), quickCheck.lessons());
+				if (firstLesson == null) {
 					return Optional.empty();
 				}
-				firstLesson = lesson.value();
 			}
 		}
 		JsonNode model = response.path("model");
 		boolean validModel = model.isString() && MODEL_ID.matcher(model.stringValue()).matches();
 		return Optional.of(new Judgement(role.value(), role.probabilities(), CategorizationRules.focusFromNoul(noul),
-				focus, validModel ? model.stringValue() : null, gaps, firstLesson));
+				QuickCheckRules.byWire(noul), validModel ? model.stringValue() : null, gaps, firstLesson));
 	}
 
-	private static <E extends Enum<E>> JevChoice<E> choice(JsonNode answer, E[] values) {
-		Map<String, E> byLabel = new LinkedHashMap<>();
-		for (E value : values) {
-			byLabel.put(WireNames.of(value), value);
-		}
-		return choice(answer, byLabel);
+	/** Null when the answer broke the contract. */
+	private static String lessonId(JsonNode answer, List<CheckLesson> lessons) {
+		JevChoice<CheckLesson> choice = choice(answer, lessons, CheckLesson::label);
+		return choice == null ? null : choice.value().id();
 	}
 
-	private static <T> JevChoice<T> choice(JsonNode answer, Map<String, T> byLabel) {
+	private static <T> JevChoice<T> choice(JsonNode answer, List<T> options, Function<T, String> labelOf) {
+		Map<String, T> byLabel = options.stream().collect(Collectors.toMap(labelOf, Function.identity()));
 		JsonNode label = answer.path("choice");
 		JsonNode probabilities = answer.path("probabilities");
 		if (!label.isString() || !byLabel.containsKey(label.stringValue()) || !probabilities.isObject()) {

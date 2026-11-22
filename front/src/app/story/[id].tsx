@@ -1,19 +1,20 @@
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions, type ScrollViewInstance } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AsyncContent } from '@/components/AsyncContent';
-import { Button } from '@/components/Button';
 import { IconButton } from '@/components/bank/IconButton';
-import { Sheet } from '@/components/bank/Sheet';
 import { OffersEntryCard } from '@/components/offers/OffersEntryCard';
+import { LockedLessonSheet } from '@/components/path/LockedLessonSheet';
 import { PathProgress } from '@/components/path/PathProgress';
 import { PathStop } from '@/components/path/PathStop';
 import { YourMoneyCard } from '@/components/path/YourMoneyCard';
 import { StoryLandmark } from '@/components/StoryLandmark';
 import { colors, radii, spacing, storyColors, tints, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
+import { animateScroll } from '@/lib/animateScroll';
 import { offersFor } from '@/lib/offers';
 import { USER_ID } from '@/lib/user';
 import type { StoryPage } from '@/types/stories';
@@ -41,9 +42,24 @@ export default function StoryScreen() {
   const tint = tints[story?.color ?? 'slate'] ?? tints.slate;
 
   const offers = offersFor(id);
-  const [dismissedLocked, setDismissedLocked] = useState(false);
   const targetLesson = story?.lessons.find((l) => l.id === targetLessonId);
-  const lockedPopupVisible = !dismissedLocked && Boolean(targetLesson && targetLesson.status === 'locked');
+  const nextIndex = story?.lessons.findIndex((l) => l.status === 'available') ?? -1;
+  const nextLesson = nextIndex >= 0 ? story?.lessons[nextIndex] : undefined;
+  const targetIndex = story?.lessons.findIndex((l) => l.id === targetLessonId) ?? -1;
+  const missingBefore = story?.lessons.slice(0, Math.max(0, targetIndex)).filter((l) => l.status !== 'done').length ?? 0;
+  const lockedTarget = targetLesson?.status === 'locked';
+  const reduced = useReducedMotion();
+  const { height: viewportHeight } = useWindowDimensions();
+  // The duel flow (Figma frames 13–17): push (350 ms), scroll to the stop (600 ms), then outline + shake/pulse,
+  // and for a locked stop the "Oops, lesson locked" sheet at about 1.3 s. An open stop gets no sheet.
+  const [targetY, setTargetY] = useState<number>();
+  const [fxOn, setFxOn] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [outlineOn, setOutlineOn] = useState(true);
+  const closeSheet = () => {
+    setSheetOpen(false);
+    setOutlineOn(false);
+  };
 
   // Opening a path lands on where the user is: the linked lesson, else the next one. Coming back from a finished
   // lesson (the screen stays mounted) moves on to the new next mission. Offsets add up from the route's position in
@@ -59,7 +75,7 @@ export default function StoryScreen() {
     const y = focusId ? stopY.current[focusId] : undefined;
     if (!focusId || y === undefined || scrolledTo.current === focusId) return;
     scrolledTo.current = focusId;
-    if (focusIndex <= 0) return;
+    if (focusIndex <= 0 || targetLessonId) return;
     const top = offsets.current.content + offsets.current.route + y;
     scrollRef.current?.scrollTo({ y: Math.max(0, top - 140), animated: true });
   };
@@ -67,15 +83,39 @@ export default function StoryScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(scrollToFocus, [focusId]);
 
+  const scrollY = useRef(0);
+  const targetId = targetLesson?.id;
+  useEffect(() => {
+    if (!targetId || targetY === undefined) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let cancel = () => {};
+    const jump = (y: number) => scrollRef.current?.scrollTo({ y, animated: false });
+    // After the push lands, bring the stop to about a third from the top.
+    const toY = Math.max(0, offsets.current.content + offsets.current.route + targetY - viewportHeight / 3);
+    timers.push(
+      setTimeout(() => {
+        cancel = animateScroll(jump, scrollY.current, toY, reduced ? 0 : 600);
+      }, reduced ? 0 : 350)
+    );
+    timers.push(setTimeout(() => setFxOn(true), reduced ? 0 : 950));
+    if (lockedTarget) timers.push(setTimeout(() => setSheetOpen(true), reduced ? 400 : 1300));
+    return () => {
+      timers.forEach(clearTimeout);
+      cancel();
+    };
+  }, [targetId, targetY, lockedTarget, reduced, viewportHeight]);
+
   return (
     <>
       <ScrollView
         ref={scrollRef}
+        onScroll={(e) => (scrollY.current = e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={16}
         testID="screen-story"
         style={styles.screen}
         contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}
       >
-        <Stack.Screen options={{ headerShown: false }} />
+        <Stack.Screen options={{ headerShown: false, animation: 'slide_from_right', animationDuration: 350 }} />
         <View style={[styles.hero, { backgroundColor: tint, paddingTop: insets.top + spacing.lg }]}>
           {story && (
             <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.skyline]}>
@@ -123,10 +163,11 @@ export default function StoryScreen() {
                           }
                           previousDone={story.lessons[index - 1]?.status === 'done'}
                           last={index === story.lessons.length - 1}
-                          highlighted={lesson.id === targetLessonId}
+                          target={lesson.id === targetLessonId ? { kind: lesson.status === 'locked' ? 'locked' : 'duel', active: fxOn, outline: outlineOn } : undefined}
                           accent={accent}
                           onLayout={(e) => {
                             stopY.current[lesson.id] = e.nativeEvent.layout.y;
+                            if (lesson.id === targetLessonId) setTargetY(e.nativeEvent.layout.y);
                             if (lesson.id === focusId) scrollToFocus();
                           }}
                         />
@@ -149,27 +190,22 @@ export default function StoryScreen() {
             }
           </AsyncContent>
         </View>
+        {/* A linked lesson needs room below it to sit a third from the top, even when it is near the end. */}
+        {targetLessonId ? <View style={{ height: viewportHeight * 0.4 }} testID="story-target-spacer" /> : null}
       </ScrollView>
 
-      <Sheet visible={lockedPopupVisible} onClose={() => setDismissedLocked(true)} title="Mission locked" testID="story-locked-sheet">
-        <View style={styles.lockedSheetContent}>
-          <Text style={styles.lockedSheetText} testID="story-locked-message">
-            This mission is locked. Finish the earlier missions in {story?.area ?? story?.city} first.
-          </Text>
-          <View style={styles.lockedSheetButtons}>
-            <Button label="Open path" variant="primary" onPress={() => setDismissedLocked(true)} testID="story-locked-open" />
-            <Button
-              label="Close"
-              variant="ghost"
-              onPress={() => {
-                setDismissedLocked(true);
-                back();
-              }}
-              testID="story-locked-close"
-            />
-          </View>
-        </View>
-      </Sheet>
+      <LockedLessonSheet
+        visible={sheetOpen}
+        onClose={closeSheet}
+        city={story?.city ?? ''}
+        targetTitle={targetLesson?.title ?? ''}
+        next={nextLesson ? { title: nextLesson.title, meta: `${nextLesson.minutes} min · +${nextLesson.xp} XP`, stop: nextIndex + 1 } : null}
+        missing={missingBefore}
+        onStart={() => {
+          closeSheet();
+          if (nextLesson) router.push({ pathname: '/lesson/[id]', params: { id: nextLesson.id } });
+        }}
+      />
     </>
   );
 }
@@ -188,7 +224,4 @@ const styles = StyleSheet.create({
   route: { gap: spacing.xs },
   routeTitle: { ...type.titleSection, marginBottom: spacing.sm },
   muted: { ...type.labelDefault, color: colors.textMuted },
-  lockedSheetContent: { padding: spacing.xl, gap: spacing.lg },
-  lockedSheetText: type.bodyReading,
-  lockedSheetButtons: { gap: spacing.sm },
 });

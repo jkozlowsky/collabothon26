@@ -1,13 +1,15 @@
 """Builds the offline Atlas pitch: one HTML file with libraries, map and font embedded, plus a clips/ folder.
 
 Usage (from presentation/src):
-  python3 make_offline.py            # writes ../atlas-pitch.html and makes sure ../clips/ exists
+  python3 make_offline.py                     # writes ../atlas-pitch.html and makes sure ../clips/ exists
+  python3 make_offline.py atlas-pitch-b.html  # writes ../atlas-pitch-b.html
 """
-import base64, json, pathlib, shutil
+import base64, json, pathlib, re, shutil, sys
 
 here = pathlib.Path(__file__).resolve().parent
 out_dir = here.parent
-s = (here / 'atlas-pitch.html').read_text()
+src_name = sys.argv[1] if len(sys.argv) > 1 else 'atlas-pitch.html'
+s = (here / src_name).read_text()
 
 def once(old, new):
     global s
@@ -23,6 +25,11 @@ for tag, name in [('<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5
     code = (here / name).read_text()
     assert '</script' not in code.lower()
     once(tag, f'<script>{code}</script>')
+emblem = base64.b64encode((here / 'commerzbank-emblem.png').read_bytes()).decode()
+once('src="commerzbank-emblem.png"', f'src="data:image/png;base64,{emblem}"')
+# Local fonts referenced as url('x.woff2') (variant B's serif)
+s = re.sub(r"url\('([\w.-]+\.woff2)'\)",
+           lambda m: "url(data:font/woff2;base64," + base64.b64encode((here / m.group(1)).read_bytes()).decode() + ")", s)
 land = json.dumps(json.loads((here / 'land-110m.json').read_text()), separators=(',', ':'))
 assert '</' not in land
 once("  fetch('land-110m.json')\n    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))",
@@ -37,6 +44,6 @@ head = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
         'd3 (ISC), topojson-client (ISC), world-atlas / Natural Earth (public domain), Inter (SIL OFL 1.1). -->\n')
 body_start = s.index('<div class="stage"')
 s = head + s[:body_start] + '</head>\n<body>\n' + s[body_start:] + '\n</body>\n</html>\n'
-(out_dir / 'atlas-pitch.html').write_text(s)
+(out_dir / src_name).write_text(s)
 (out_dir / 'clips').mkdir(exist_ok=True)
-print(out_dir / 'atlas-pitch.html', round(len(s.encode()) / 1024), 'KB')
+print(out_dir / src_name, round(len(s.encode()) / 1024), 'KB')

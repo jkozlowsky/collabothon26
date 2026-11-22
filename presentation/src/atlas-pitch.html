@@ -21,6 +21,7 @@
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
   --gutter-l: max(clamp(16px, 6vw, 112px), env(safe-area-inset-left, 0px));
   --gutter-r: max(clamp(16px, 4vw, 72px), env(safe-area-inset-right, 0px));
+  --pad-y: clamp(10px, 2.2vh, 24px);
   /* Type scale, bounded by width and height so a 1366×768 projector still fits */
   --t-display: clamp(36px, min(5.6vw, 9.4vh), 108px);
   --t-headline: clamp(24px, min(3vw, 5.2vh), 58px);
@@ -44,14 +45,25 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
   margin: 0; font-size: clamp(30px, min(3vw, 5.4vh), 56px); font-weight: 800; letter-spacing: -0.035em; line-height: 1;
 }
 .wordmark span { color: var(--yellow); }
+.wordmark { transition: opacity 300ms; }
+/* The title slide carries its own, much larger Atlas. */
+.stage:has(.stop[data-kind="overview"]:not([hidden]):not(.leaving)) .wordmark { opacity: 0; }
+
+/* Stop 1: title */
+.hero { margin: 0; font-size: clamp(72px, min(12vw, 22vh), 240px); font-weight: 800; letter-spacing: -0.05em; line-height: 0.9; }
+.hero span { color: var(--yellow); }
+.hero-bank { display: flex; align-items: center; gap: 0.8em; margin-top: clamp(4px, 1.2vh, 14px); max-width: none; text-wrap: balance; }
+.hero-bank img { flex: none; height: 2.4em; width: auto; }
 
 /* ---------- Stops ---------- */
 .content {
   position: absolute; top: 0; bottom: 0; left: 0;
-  width: min(55vw, 1060px); box-sizing: border-box;
-  padding: clamp(84px, 13vh, 140px) 16px clamp(32px, 6vh, 80px) var(--gutter-l);
+  width: min(60vw, 1180px); box-sizing: border-box;
+  padding: var(--pad-y) 16px var(--pad-y) var(--gutter-l);
   display: grid; align-content: center; z-index: 2;
 }
+/* The text clears the wordmark; the phone next to it runs the full height. */
+.content .text { padding-top: clamp(56px, 9vh, 110px); }
 .stop { grid-area: 1 / 1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: clamp(20px, 3vw, 56px); align-items: center; min-width: 0; }
 .stop.no-media { grid-template-columns: minmax(0, 1fr); }
 .text { display: flex; flex-direction: column; gap: clamp(10px, 1.9vh, 22px); min-width: 0; }
@@ -105,25 +117,6 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
 .beats.one { grid-template-columns: minmax(0, 1fr); }
 .beats.one span { font-size: var(--t-body); }
 
-/* Stop 2: the Atlas notification inside the bank app (same look as AtlasNudge in the app) */
-.nudge {
-  position: relative; display: flex; align-items: flex-start; gap: clamp(12px, 1.1vw, 18px); overflow: hidden;
-  background: var(--card); color: var(--card-text); border: 3px solid var(--yellow); border-radius: 22px;
-  padding: clamp(14px, 2vh, 22px) clamp(44px, 3.4vw, 60px) clamp(16px, 2.3vh, 26px) clamp(14px, 1.2vw, 22px);
-  box-shadow: 0 12px 32px rgba(0, 10, 14, 0.45); max-width: 40em;
-}
-.nudge-globe { flex: none; width: clamp(40px, 3.4vw, 60px); aspect-ratio: 1; }
-.nudge-globe svg { width: 100%; height: 100%; display: block; }
-.nudge-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.nudge-over { margin: 0; font-size: var(--t-label); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #1B4250; }
-.nudge-text { margin: 0; font-size: var(--t-lead); font-weight: 700; line-height: 1.3; color: var(--card-text); }
-.nudge-meta { margin: 0; font-size: var(--t-body); color: var(--card-muted); }
-.nudge-x { position: absolute; top: clamp(10px, 1.6vh, 18px); right: clamp(14px, 1.3vw, 22px); font-size: clamp(20px, 1.8vw, 30px); line-height: 1; color: var(--card-muted); }
-.nudge-timer { position: absolute; left: 0; bottom: 0; height: 4px; width: 100%; background: var(--yellow); transform-origin: left; transform: scaleX(0.8); }
-.nudge:not(.pending) .nudge-timer { animation: run-down 5s linear both; }
-.nudge.pending { transform: translateY(-28px); }
-@keyframes run-down { from { transform: scaleX(1); } to { transform: scaleX(0.12); } }
-
 .path { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; font-size: var(--t-body); }
 .path li { display: flex; align-items: center; gap: 10px; }
 .check { flex: none; width: 1.3em; height: 1.3em; border-radius: 50%; background: var(--success); display: grid; place-items: center; }
@@ -148,13 +141,15 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
 .footnote { margin: 0; font-size: var(--t-label); color: var(--ink-muted); }
 
 /* ---------- Phone with the app recording ---------- */
-.media { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+/* The phone takes the full stage height, so the app recording is as readable as possible. */
+.media { position: relative; display: flex; flex-direction: column; align-items: center; }
 .phone {
-  margin: 0; width: clamp(150px, min(14.5vw, 30vh), 280px); aspect-ratio: 9 / 19.5; box-sizing: border-box;
-  border-radius: clamp(22px, 2.2vw, 38px); padding: clamp(5px, 0.5vw, 8px); background: #0A1418;
+  --ph: calc(100vh - 2 * var(--pad-y)); --bezel: calc(var(--ph) * 0.012);
+  margin: 0; height: var(--ph); width: auto; aspect-ratio: 9 / 19.5; box-sizing: border-box;
+  border-radius: calc(var(--ph) * 0.06); padding: var(--bezel); background: #0A1418;
   box-shadow: 0 0 0 1.5px rgba(245, 247, 247, 0.22), 0 24px 60px rgba(0, 10, 14, 0.55); cursor: pointer; position: relative;
 }
-.phone-screen { position: relative; width: 100%; height: 100%; border-radius: clamp(17px, 1.75vw, 31px); overflow: hidden; background: #E9EEF0; }
+.phone-screen { position: relative; width: 100%; height: 100%; border-radius: calc(var(--ph) * 0.06 - var(--bezel)); overflow: hidden; background: #E9EEF0; }
 .phone video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: #E9EEF0; }
 .phone-empty {
   position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
@@ -165,7 +160,11 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
 .phone.empty video { visibility: hidden; }
 .phone-file { font: 600 clamp(11px, 0.85vw, 15px)/1.3 ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; color: var(--yellow); }
 .phone-what { font-size: clamp(11px, 0.85vw, 15px); line-height: 1.4; }
-.media-hint { margin: 0; font-size: 12px; color: var(--ink-muted); opacity: 0; transition: opacity 300ms; }
+.media-hint {
+  position: absolute; left: 50%; bottom: calc(var(--pad-y) * 0.5 + 24px); transform: translateX(-50%); pointer-events: none;
+  margin: 0; padding: 4px 12px; border-radius: 999px; background: rgba(0, 20, 28, 0.75); font-size: 12px; color: var(--ink);
+  opacity: 0; transition: opacity 300ms;
+}
 .phone:hover + .media-hint { opacity: 1; }
 
 .phone:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
@@ -207,6 +206,7 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
 @media (max-aspect-ratio: 19/20) {
   .content { width: auto; right: 0; bottom: auto; padding: max(64px, calc(env(safe-area-inset-top, 0px) + 56px)) var(--gutter-r) 0 var(--gutter-l); align-content: start; }
   .stop { grid-template-columns: minmax(0, 1fr); }
+  .content .text { padding-top: 0; }
   .media { display: none; }
   .callout { gap: 10px; padding: 10px 14px 10px 10px; }
   .callout-tile { width: 32px; }
@@ -239,10 +239,10 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
     <!-- 1 · Motto (whole globe) -->
     <section class="stop no-media" data-kind="overview" data-title="Atlas">
       <div class="text">
-        <p class="eyebrow">Commerzbank challenge · Collabothon 2026</p>
-        <h1 class="display">Atlas lets your financial decisions <em>land safely.</em></h1>
-        <p class="lead">People don’t lack information. <b>They lack the confidence to act.</b> Atlas is a learning module inside the Commerzbank app that builds that confidence from the customer’s own numbers.</p>
-        <p class="lead">Let’s follow one customer.</p>
+        <p class="eyebrow">Finance Quest · Collabothon 2026</p>
+        <h1 class="hero">Atlas<span>.</span></h1>
+        <p class="headline">Lets your financial decisions <em>land safely.</em></p>
+        <p class="lead hero-bank"><img src="commerzbank-emblem.png" alt="Commerzbank"><span>A learning application integrated into the <b>Commerzbank</b> banking app.</span></p>
       </div>
     </section>
 
@@ -265,19 +265,7 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
             <dt>ETF savings plan</dt><dd>€100 <small>/ month</small></dd>
           </dl>
         </div>
-        <div class="nudge" data-step="1" role="img" aria-label="Notification from Atlas: You have €12,500 in savings at 2.25% a year. Learn how to keep it from losing value. Berlin, Saving, 5 minutes.">
-          <span class="nudge-globe" aria-hidden="true">
-            <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="23" fill="#1B4250"/><path d="M9 17c3-4 8-5 11-3 2 2 0 5-3 6-4 1-6 4-9 2-1-1 0-3 1-5z" fill="#D7EAE3"/><path d="M27 10c4 0 8 2 9 5-2 2-5 1-7 3-2 1-4-1-4-3 0-2 0-5 2-5z" fill="#D7EAE3"/><path d="M26 25c4-1 9 0 10 4 1 4-2 9-6 10-3 1-4-3-5-6-1-3-2-7 1-8z" fill="#D7EAE3"/><path d="M12 30c2 0 4 2 4 4s-2 3-3 2-2-4-1-6z" fill="#D7EAE3"/></svg>
-          </span>
-          <div class="nudge-body">
-            <p class="nudge-over">Atlas · From your numbers</p>
-            <p class="nudge-text">You have € 12,500 in savings at 2.25% a year. Learn how to keep it from losing value.</p>
-            <p class="nudge-meta">Berlin · Saving · 5 min</p>
-          </div>
-          <span class="nudge-x" aria-hidden="true">×</span>
-          <span class="nudge-timer" aria-hidden="true"></span>
-        </div>
-        <div class="pills" data-step="2">
+        <div class="pills" data-step="1">
           <p class="pill">Commerzbank app</p><span class="arrow">→</span><p class="pill">Atlas notification</p><span class="arrow">→</span><p class="pill yellow">Atlas</p>
         </div>
       </div>

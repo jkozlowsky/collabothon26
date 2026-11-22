@@ -17,7 +17,7 @@ Atlas turns the bank app into a learning journey: short and engaging lessons on 
 - **Content and media:** lessons as structured JSON, narration recorded with ElevenLabs, Natural Earth map data for the globe texture
 - **Testing:** Jest + React Native Testing Library, Playwright (web E2E), JUnit + Testcontainers (Postgres)
 - **Infrastructure:** Docker Compose, GitHub Actions (test → build → deploy), Oracle Cloud (OCI ARM, Oracle Linux 9), Caddy reverse proxy, Expo Go + ngrok tunnel for phones
-- **Profiling AI:** Jev decision model by TypeSafe (`jev-latest`) via Spring `RestClient`, with a rule-based fallback
+- **Profiling AI:** Jev decision model by TypeSafe (`jev-latest`) via Spring `RestClient`
 
 ### Project Overview
 
@@ -29,20 +29,19 @@ This hits every generation differently. A student, a young family and someone te
 
 #### Your solution
 
-**Atlas** is a learning module that lives inside the bank app, behind a **Learn** button. It works like a language-learning app for finance: short lessons (3–5 minutes), streaks, XP and levels. What makes it different:
+**Atlas** is a learning module that lives inside the bank app, behind a **Learn** button. It works like a language-learning app for finance: short lessons, streaks, XP and levels. What makes it different:
 
 1. **Personal from the first minute.** With the customer's consent, **Jev**, the profiling engine, reads what the bank already knows (regular saving, safety net, small investments). Atlas then asks one question the data can't answer: which topics are new to the user. A two-minute quick check finds the knowledge gaps, and Jev builds a learning path from the gaps and the picked topics.
-2. **A journey, not a syllabus.** Each learning area is a city on a 3D globe: Saving in Berlin, Investing in Tokyo, Borrowing in São Paulo, Risk in Seoul, Retirement in Cape Town. A plane flies between the pins as the user progresses.
-3. **Lessons about *your* money.** Every mission follows the same arc: a real hook number, a plain explanation, an interactive slider to explore the effect, myths vs facts, a decision scenario, a three-question checkpoint, and finally the lesson's lens on the user's own accounts ("your €12,500 at 2.25% against inflation").
-4. **Watch or read.** The Berlin and Tokyo lessons can be played as a narrated, animated "video" rendered live from the lesson data (so it can show the user's own numbers and follow their choices), or read as a transcript. The user can switch at any moment without losing progress.
-5. **Actionable, never advice.** At the end of a path Atlas recaps what the user learned and shows the trade-offs with their numbers. It names product types as facts but never recommends one; the user decides and is taken straight to the right screen of their bank.
+2. **A journey, not a syllabus.** Each learning area is a city on a globe: Saving in Berlin, Investing in Tokyo, Borrowing in São Paulo, Risk in Seoul, Retirement in Cape Town. A plane flies between the pins as the user progresses.
+3. **Lessons about *your* money.** Every mission follows the same arc: a real hook number, a plain explanation, an interactive slider to explore the effect, myths vs facts, a decision scenario, a three-question checkpoint, and finally the lesson's lens on the user's own accounts.
+4. **Customizable for everyone** Some lessons can be played as a narrated, animated "video" rendered live from the lesson data (so it can show the user's own numbers and follow their choices), or read as a transcript. The user can switch at any moment without losing progress.
+5. **Actionable** At the end of a path Atlas recaps what the user learned and shows the trade-offs with their numbers. It names product types as facts but never recommends one; the user decides and is taken straight to the right screen of their bank.
 6. **Duels in the Arena.** 1v1 knowledge duels (live against another player or solo) keep what was learned fresh. Players are ranked in a weekly league by the XP they earn from lessons and duels, never by money, and a review after each match explains every mistake.
 
 #### The working prototype
-
 Everything below is implemented and runs end to end on Android (Expo Go), iOS and the web. A live deployment runs on our own server.
 
-- **Mock bank app:** Overview, Payments, Credits and Invest tabs with accounts, cards, transactions, standing orders, an instalment loan with a loan calculator, and an ETF portfolio. Each tab shows a short teaser for the lesson that fits it (for example, the Credits tab points to the São Paulo lesson about the real cost of instalments). Three demo customers (Alex, Daniel, Elena) have different life situations and different bank data.
+- **Mock bank app:** Overview, Payments, Credits and Invest tabs with accounts, cards, transactions, standing orders, an instalment loan with a loan calculator, and an ETF portfolio. Each tab shows a short teaser for the lesson that fits it. Three demo customers (Alex, Daniel, Elena) have different life situations and different bank data.
 - **Onboarding:** a welcome screen, two short intro screens (the map and the duels), and a consent card. The user can accept that Atlas uses their account data or leave with "Not now". Then one question: "What would you like to learn?" The user picks every area that is new to them (Saving, Investing, Borrowing, Risk, Money basics) or "Not sure yet". The areas come from the backend, so the names match the map. For Daniel and Elena, the picks are preselected but can be changed.
 - **Quick check:** 3 to 6 knowledge questions, about 2 minutes. The areas the user picked come first, but every area is tested. Jev picks each next question from the answers so far. The user picks an answer or "Not sure" and then sees a short explanation. If the check fails to load, the user starts with the general lessons.
 - **Learning-path summary:** animated steps ("Reading your answers", "Looking at your accounts", "Picking your first lessons"), then the result: the learner level and the first lesson. Jev picks the first lesson from two sources: lessons that close the gaps the check found, and the start lessons of the areas the user picked. If the check shows the user already knows a picked area well, Jev skips its basics and offers a later lesson. Profile and mastery are stored in the backend.

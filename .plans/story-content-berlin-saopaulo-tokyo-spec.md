@@ -1,7 +1,7 @@
 # Story content: Berlin, São Paulo, Tokyo
 
 > Status: **content generated** (2026-11-21). Open work: the bank metrics in §6.2 item 3.
-> Related: [`doc/historie.md`](../doc/historie.md) (story concept, city test), [`f4-f5-lessons-spec.md`](f4-f5-lessons-spec.md) (step types, variants), `back/src/main/resources/content/lessons/seoul-*.json` (the reference story).
+> Related: [`docs/historie.md`](../docs/historie.md) (story concept, city test), [`f4-f5-lessons-spec.md`](f4-f5-lessons-spec.md) (step types, variants), `back/src/main/resources/content/lessons/seoul-*.json` (the reference story).
 
 ## 1. Goal
 

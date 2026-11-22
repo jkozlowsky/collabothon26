@@ -199,18 +199,49 @@ class CategorizationWithoutKeyTests {
 		assertEquals(List.of("berlin-1/q1", "berlin-1/q2", "berlin-1/q3", "berlin-2/q1"), asked);
 	}
 
+	@Test
+	void thePickedPathIsFirstOrSecondOnARulesRunAndEveryAreaIsStillAskedAbout() throws Exception {
+		String mumbai = "\"mumbai\"";
+		List<String> asked = new ArrayList<>();
+
+		// Investing is weakest, so the rule starts in Seoul and the picked Gold path follows, ahead of Tokyo.
+		play(ALEX, mumbai, asked, false, true, true, true)
+			.andExpect(jsonPath("$.startLesson.storyId").value("seoul"))
+			.andExpect(jsonPath("$.pathStoryIds[1]").value("mumbai"));
+		assertEquals(List.of("seoul-1/q1", "seoul-1/q2", "berlin-1/q1", "sao-paulo-1/q1"), asked);
+
+		// Saving is weakest.
+		play(NO_FACTS, mumbai, new ArrayList<>(), true, false, true, true)
+			.andExpect(jsonPath("$.startLesson.storyId").value("berlin"))
+			.andExpect(jsonPath("$.pathStoryIds[1]").value("mumbai"));
+
+		// Every area is Solid.
+		play(ALEX, mumbai, new ArrayList<>(), true, true, true, true, true, true)
+			.andExpect(jsonPath("$.readyForNext").value(true))
+			.andExpect(jsonPath("$.pathStoryIds[0]").value("seoul"))
+			.andExpect(jsonPath("$.pathStoryIds[1]").value("mumbai"));
+
+		// The picked path is the weakest one, so it comes first.
+		play(ALEX, "\"berlin\"", new ArrayList<>(), false, true, true, true)
+			.andExpect(jsonPath("$.pathStoryIds[0]").value("berlin"));
+	}
+
 	private ResultActions play(List<String> asked, boolean... right) throws Exception {
 		return play(ALEX, asked, right);
 	}
 
 	/**
-	 * Plays the Quick check on the rule (two saving paths picked, money needed in 1-5 years) until it is done,
+	 * Plays the Quick check on the rule (by default two saving paths picked; money needed in 1-5 years) until it is done,
 	 * answering question i right or wrong as {@code right[i]} says, then categorizes.
 	 */
 	private ResultActions play(String account, List<String> asked, boolean... right) throws Exception {
+		return play(account, "\"berlin\", \"buenos-aires\"", asked, right);
+	}
+
+	private ResultActions play(String account, String interests, List<String> asked, boolean... right) throws Exception {
 		String userId = "run-" + UUID.randomUUID();
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
-			.content("{\"interests\": [\"berlin\", \"buenos-aires\"], \"skipped\": false}"))
+			.content("{\"interests\": [%s], \"skipped\": false}".formatted(interests)))
 			.andExpect(status().isOk());
 		String pool = mvc.perform(get("/api/check-questions")).andReturn().getResponse().getContentAsString();
 		List<String> history = new ArrayList<>();

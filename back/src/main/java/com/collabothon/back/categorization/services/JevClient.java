@@ -90,7 +90,7 @@ public class JevClient {
 			  "mastery_debt":      {"type": "noul", "instructions": "Do this person's borrowing answers, the entries of `answers` whose `area` is debt, show that they understand ideas such as instalments, card debt and the full cost of a loan?"},
 			  "mastery_investing": {"type": "noul", "instructions": "Do this person's investing answers, the entries of `answers` whose `area` is investing, show that they understand ideas such as market falls, borrowing to invest and spreading risk?"},
 			  "next": {"type": "choice",
-			    "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers` and when they might need their money in `profile.horizon`?",
+			    "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers`, when they might need their money in `profile.horizon` and, when given, the topics they said are new to them in `interests`?",
 			    "criteria": {}},
 			  "first": {"type": "choice",
 			    "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given when they might need their money in `profile.horizon` and, when given, the topics they said are new to them in `interests` and the facts about their accounts in `facts`?",
@@ -173,7 +173,7 @@ public class JevClient {
 			.filter(stepQuestions::has)
 			.forEach(key -> asked.set(key, stepQuestions.get(key).deepCopy()));
 		if (lessons.size() >= JevConsts.MIN_CHOICE_LABELS) {
-			asked.set("next", lessonChoice(stepQuestions.get(first ? "first" : "next"), lessons));
+			asked.set("next", lessonChoice(stepQuestions.get(first ? "first" : "next"), lessons, Map.of()));
 		}
 		if (!first) {
 			asked.set("enough", stepQuestions.get("enough").deepCopy());
@@ -273,7 +273,8 @@ public class JevClient {
 				asked.set(gapKey(area), finalQuestions.get(gapKey(area)).deepCopy());
 			}
 			if (!quickCheck.lessons().isEmpty()) {
-				asked.set("first_lesson", lessonChoice(finalQuestions.get("first_lesson"), quickCheck.lessons()));
+				asked.set("first_lesson", lessonChoice(finalQuestions.get("first_lesson"), quickCheck.lessons(),
+						quickCheck.interestNotes()));
 			}
 		}
 		try {
@@ -316,11 +317,15 @@ public class JevClient {
 	}
 
 	/** A choice among lessons: each option is named by the lesson's topic and described by what the lesson covers. */
-	private static ObjectNode lessonChoice(JsonNode question, List<CheckLesson> lessons) {
+	private static ObjectNode lessonChoice(JsonNode question, List<CheckLesson> lessons, Map<String, String> notes) {
 		ObjectNode choice = (ObjectNode) question.deepCopy();
 		ObjectNode criteria = choice.putObject("criteria");
-		lessons.forEach(lesson -> criteria.put(lesson.label(), "%s. Covers: %s.".formatted(lesson.topic(),
-				String.join(", ", lesson.concepts()).replace('-', ' '))));
+		lessons.forEach(lesson -> {
+			String covers = "%s. Covers: %s.".formatted(lesson.topic(),
+					String.join(", ", lesson.concepts()).replace('-', ' '));
+			String note = notes.get(lesson.id());
+			criteria.put(lesson.label(), note == null ? covers : covers + " " + note);
+		});
 		return choice;
 	}
 

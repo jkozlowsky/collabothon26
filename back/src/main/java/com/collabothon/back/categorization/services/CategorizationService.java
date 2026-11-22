@@ -106,6 +106,7 @@ public class CategorizationService {
 		boolean ran = !history.isEmpty();
 		ProfileRangesDto profile = ran ? request.profile() : null;
 		List<Story> stories = stories();
+		List<Story> interests = Story.picked(answers.interests(), stories);
 		List<FocusArea> order = QuickCheckRules.areaOrder(FocusArea.fromInterests(answers.interests(), stories),
 				ran ? profile.horizon() : null, pool);
 		Map<FocusArea, Double> ruleMastery = QuickCheckRules.mastery(order, history);
@@ -118,14 +119,17 @@ public class CategorizationService {
 		}
 		Set<String> completed = new HashSet<>(completions.findLessonIdsByUserId(userId));
 		List<CheckLesson> lessons = QuickCheckRules.lessons(pool, lessonMapper::toLesson);
-		List<CheckLesson> choices = QuickCheckRules.firstLessonChoices(QuickCheckRules.pool(
-				QuickCheckRules.candidates(lessons, stories, order, mastery, history, completed), history), history,
+		List<CheckLesson> interestLessons = QuickCheckRules.interestLessons(interests, lessons, mastery, history,
 				completed);
+		List<CheckLesson> choices = QuickCheckRules.firstLessonChoices(QuickCheckRules.pool(
+				QuickCheckRules.candidates(lessons, stories, order, mastery, history, completed), history),
+				interestLessons, history, completed);
 		List<FocusArea> gapAreas = QuickCheckRules.gapAreas(order, history, facts);
 		JevQuickCheck quickCheck = ran ? new JevQuickCheck(profile,
-				history.stream().map(jevAnswerMapper::toJev).toList(), gapAreas, choices) : null;
+				history.stream().map(jevAnswerMapper::toJev).toList(), gapAreas, choices,
+				QuickCheckRules.interestNotes(interestLessons, mastery, history)) : null;
 		JevResult fromJev = request.useRules() ? JevResult.SKIPPED : jev.ask(jevOnboardingAnswersMapper.toJev(answers),
-				jevInterestMapper.toJev(Story.picked(answers.interests(), stories)), facts, quickCheck);
+				jevInterestMapper.toJev(interests), facts, quickCheck);
 
 		LifeStage lifeStage = answers.lifeStage() == null && ran ? LifeStage.fromAgeBand(profile.ageBand())
 				: LifeStage.fromAnswer(answers.lifeStage());
@@ -141,8 +145,8 @@ public class CategorizationService {
 		// Jev's lesson counts only when it is one of the lessons it was given to choose from.
 		CheckLesson picked = choices.stream().filter(l -> l.id().equals(j.firstLesson())).findFirst().orElse(null);
 		StoryPlan plan = QuickCheckRules.plan(stories,
-				QuickCheckRules.candidates(lessons, stories, pathOrder, mastery, history, completed), picked, pathOrder,
-				mastery, history, completed);
+				QuickCheckRules.candidates(lessons, stories, pathOrder, mastery, history, completed), picked, interests,
+				pathOrder, mastery, history, completed);
 		StartLessonDto startLesson = plan.start() == null ? null : startLesson(plan.start(), plan.area(), completed);
 		FocusArea startArea = startLesson == null ? null : startLesson.area();
 		List<GapDto> gaps = ran

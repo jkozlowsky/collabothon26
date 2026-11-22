@@ -172,7 +172,7 @@ class CategorizationControllerTests {
 				 "startLesson": {"lessonId": "seoul-1", "title": "%1$s", "area": "investing", "storyId": "seoul",
 				                 "storyCity": "Seoul"},
 				 "readyForNext": false,
-				 "pathStoryIds": ["seoul", "tokyo", "mumbai", "sao-paulo", "berlin", "buenos-aires", "nairobi"],
+				 "pathStoryIds": ["seoul", "berlin", "tokyo", "mumbai", "sao-paulo", "buenos-aires", "nairobi"],
 				 "startHere": {"lessonId": "seoul-1", "title": "%1$s", "area": "investing", "storyId": "seoul",
 				               "storyCity": "Seoul"},
 				 "sharedWithModel": {"facts": %2$s, "answers": %3$s, "interests": ["berlin", "tokyo"], "profile": null, "answerCount": 0, "stepCallsMade": 0},

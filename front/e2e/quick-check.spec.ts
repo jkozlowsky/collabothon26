@@ -129,7 +129,7 @@ test('three questions with the right answer shown after each, the summary, then 
   await expect(page.getByTestId('summary-role')).toHaveText("You're an intermediate learner");
   await expect(page.getByTestId('summary-based-on')).toHaveText('Based on 3 answers and what your account shows.');
   await expect(page.getByTestId('summary-first-lesson')).toContainText('Emergency fund');
-  await expect(page.getByTestId('summary-first-lesson')).toContainText('Berlin · stop 3 of 5');
+  await expect(page.getByTestId('summary-first-lesson')).toHaveAttribute('aria-label', /^Stop 3, Emergency fund, /);
   await expect(page.getByText(/confiden/i)).toHaveCount(0);
   await expect(page.getByTestId('summary-disclaimer')).toHaveText('This picks lessons for you. It is not investment advice.');
 

@@ -11,22 +11,13 @@ import { LockedLessonSheet } from '@/components/path/LockedLessonSheet';
 import { PathProgress } from '@/components/path/PathProgress';
 import { PathStop } from '@/components/path/PathStop';
 import { YourMoneyCard } from '@/components/path/YourMoneyCard';
-import { StoryLandmark } from '@/components/StoryLandmark';
+import { skyline, StoryLandmark } from '@/components/StoryLandmark';
 import { colors, radii, spacing, storyColors, tints, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import { animateScroll } from '@/lib/animateScroll';
 import { offersFor } from '@/lib/offers';
 import { useCurrentUser } from '@/lib/user';
 import type { StoryPage } from '@/types/stories';
-
-/** Building heights for the hero skyline, derived from the city name so every city gets its own, stable outline. */
-function skyline(city: string) {
-  let seed = [...city].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
-  return Array.from({ length: 16 }, () => {
-    seed = (seed * 1103515245 + 12345) >>> 0;
-    return 40 + (seed % 70);
-  });
-}
 
 export default function StoryScreen() {
   const { id, lesson: targetLessonId } = useLocalSearchParams<{ id: string; lesson?: string }>();

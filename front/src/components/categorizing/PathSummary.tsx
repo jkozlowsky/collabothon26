@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { RoutePreview } from '@/components/categorizing/RoutePreview';
 import { IconTile, type as text } from '@/components/onboarding/ui';
 import { RULE } from '@/constants/path';
 import { colors, radii, spacing, type } from '@/constants/theme';
@@ -15,13 +16,12 @@ const BULLET_TOP = 6;
 
 const ROLE: Record<Role, string> = { novice: 'a beginner', intermediate: 'an intermediate', advanced: 'an advanced' };
 
-/** Result first, then the one lesson to start. */
+/** Result first, then the route that starts at the first lesson. */
 export function PathSummary({ categorization: c }: Summary) {
   const { userId } = useCurrentUser();
   const start = c.startLesson;
   const { data: stories } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(userId)}`);
-  const lessons = start && stories?.find((s) => s.id === start.storyId)?.lessons;
-  const stop = lessons ? lessons.findIndex((l) => l.id === start!.lessonId) + 1 : 0;
+  const story = stories?.find((s) => s.id === start?.storyId && s.lessons.some((l) => l.id === start.lessonId));
   const roleLines = c.explanation.find((e) => e.output === 'role')?.because ?? [];
   const usedModel = c.sharedWithModel !== null;
 
@@ -33,7 +33,7 @@ export function PathSummary({ categorization: c }: Summary) {
         </Text>
         {c.answerCount > 0 ? (
           <Text style={styles.muted} testID="summary-based-on">
-            Based on {c.answerCount} answers and what your account shows.
+            Based on {c.answerCount} {c.answerCount === 1 ? 'answer' : 'answers'} and what your account shows.
           </Text>
         ) : (
           roleLines.map((line) => (
@@ -49,16 +49,14 @@ export function PathSummary({ categorization: c }: Summary) {
           </Text>
         )}
       </View>
-      {start && (
+      {start && story && <RoutePreview story={story} start={start} ready={c.readyForNext} />}
+      {start && !story && (
         <View style={styles.lesson} testID="summary-first-lesson">
           <IconTile icon="play" active />
           <View style={styles.lessonText}>
             <Text style={styles.lessonOverline}>Your first stop</Text>
             <Text style={type.titleCard}>{start.title}</Text>
-            <Text style={type.labelDefault}>
-              {start.storyCity}
-              {stop > 0 && ` · stop ${stop} of ${lessons!.length}`}
-            </Text>
+            <Text style={type.labelDefault}>{start.storyCity}</Text>
             {c.readyForNext && <Text style={type.labelDefault}>You&apos;re ready for the next lesson</Text>}
           </View>
         </View>

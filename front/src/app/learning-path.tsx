@@ -42,11 +42,7 @@ export default function LearningPathScreen() {
     );
   }
   return (
-    <Page
-      testID="learning-path"
-      center
-      footer={<BigButton label="Show my path" onPress={leave} testID="summary-start" />}
-    >
+    <Page testID="learning-path" footer={<BigButton label="Show my path" onPress={leave} testID="summary-start" />}>
       <PathSummary {...summary} />
     </Page>
   );

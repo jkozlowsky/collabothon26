@@ -154,6 +154,10 @@ The build follows the option marked "chosen".
 - **C9 A hint that is not a tile.** (a) **chosen:** only ids of rendered tiles are selected and saved. An unknown id
   would be a 400 that the background save only logs.
 - **C10 Multi-select semantics.** (a) **chosen:** the path tiles and "Not sure yet" announce as checkboxes (WCAG 4.1.2).
+- **C11 Parallel work on the same files.** Local branch `jkozlowsky/simplify-jev` (unmerged, with uncommitted work
+  while this was built) rewrites `JevClient`, `QuickCheckRules`, `CategorizationService` and their tests. (a)
+  **chosen:** build on `origin/main` with narrow hunks; whichever lands second merges and resolves. (b) build on that
+  branch: depends on unfinished, unreviewed work.
 
 ## Tasks
 

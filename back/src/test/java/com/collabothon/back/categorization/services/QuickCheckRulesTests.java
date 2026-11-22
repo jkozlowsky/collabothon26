@@ -135,8 +135,13 @@ class QuickCheckRulesTests {
 	}
 
 	private static StoryPlan plan(Set<String> completed, CheckLesson picked, Answer... answers) {
+		return planWithInterests(List.of(), completed, picked, answers);
+	}
+
+	private static StoryPlan planWithInterests(List<Story> interests, Set<String> completed, CheckLesson picked,
+			Answer... answers) {
 		List<Answer> list = List.of(answers);
-		return QuickCheckRules.plan(STORIES, candidates(completed, answers), picked, ORDER,
+		return QuickCheckRules.plan(STORIES, candidates(completed, answers), picked, interests, ORDER,
 				QuickCheckRules.mastery(ORDER, list), list, completed);
 	}
 
@@ -447,6 +452,41 @@ class QuickCheckRulesTests {
 
 		StoryPlan quizLessonDone = plan(Set.of("s3-1"), answers);
 		assertEquals("s3", quizLessonDone.start().id());
+	}
+
+	@Test
+	void afterAStartOutsideTheInterestsTheFirstPickedPathComesSecond() {
+		Answer[] answers = { right(S11_A), notSure(S31), right(I21_A) };
+		List<Story> picked = List.of(story("s4"), story("s2"));
+
+		assertEquals(List.of("s3", "s4", "s1", "s2"), planWithInterests(picked, Set.of(), null, answers).pathStoryIds());
+		// The same holds when Jev chose the start.
+		assertEquals(List.of("s1", "s4", "s3", "s2"),
+				planWithInterests(picked, Set.of(), lesson("s1-1"), answers).pathStoryIds());
+		// A Solid area has no candidates, and its picked path still comes second.
+		assertEquals(List.of("s2", "s3", "s4"),
+				planWithInterests(List.of(story("s3")), Set.of(), null, right(S11_A), right(S31), wrong(I21_A))
+					.pathStoryIds());
+	}
+
+	@Test
+	void aStartOnAnyPickedPathLeavesTheOrderAsItIs() {
+		Answer[] answers = { right(S11_A), notSure(S31), right(I21_A) };
+
+		assertEquals(List.of("s3", "s1", "s2", "s4"),
+				planWithInterests(List.of(story("s4"), story("s3")), Set.of(), null, answers).pathStoryIds());
+	}
+
+	@Test
+	void theSecondPlaceGoesToTheFirstPickedPathWithALessonLeftInEveryBranch() {
+		Answer[] answers = { right(S11_A), notSure(S31), right(I21_A) };
+		List<Story> picked = List.of(story("s4"), story("s2"));
+		Answer[] allSure = { right(S11_A), right(S31), right(I21_A), right(I41) };
+
+		assertEquals(List.of("s3", "s2", "s1"), planWithInterests(picked, done("s4"), null, answers).pathStoryIds());
+		assertEquals(List.of("s1", "s4"), planWithInterests(picked, Set.of(), null, allSure).pathStoryIds());
+		assertEquals(List.of("s1", "s2"), planWithInterests(picked, done("s4"), null, allSure).pathStoryIds());
+		assertEquals(List.of("s1"), planWithInterests(picked, done("s2", "s4"), null, allSure).pathStoryIds());
 	}
 
 	@Test

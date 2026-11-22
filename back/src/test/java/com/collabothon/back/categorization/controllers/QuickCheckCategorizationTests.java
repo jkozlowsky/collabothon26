@@ -102,6 +102,11 @@ class QuickCheckCategorizationTests {
 		.replace("\"consent\": false", "\"consent\": true, \"facts\": " + FACTS)
 		.replace(PROFILE, PROFILE_WITH_CONSENT);
 
+	private static final String ALL_SOLID = QUICK_CHECK
+		.replace(HISTORY, "[" + history(right("berlin-1/q1"), right("berlin-2/q1"), right("sao-paulo-1/q1"),
+				right("sao-paulo-3/q2"), right("seoul-1/q2"), right("tokyo-1/q1")) + "]")
+		.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": 0.9, \"debt\": 0.9, \"investing\": 0.9}");
+
 	private static final String F1_ANSWERS = """
 			"role": {"type": "choice", "choice": "intermediate", "confidence": 0.8,
 			         "probabilities": {"novice": 0.1, "intermediate": 0.8, "advanced": 0.1}},
@@ -146,6 +151,11 @@ class QuickCheckCategorizationTests {
 	private void onboard(String answers) throws Exception {
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
 			.content(answers)).andExpect(status().isOk());
+	}
+
+	private void onboardWithInterests(String... storyIds) throws Exception {
+		onboard("{\"interests\": %s, \"experience\": \"occasional\", \"skipped\": false}"
+			.formatted(json.writeValueAsString(storyIds)));
 	}
 
 	private ResultActions categorize(String body) throws Exception {
@@ -579,11 +589,9 @@ class QuickCheckCategorizationTests {
 
 	@Test
 	void everyAreaSolidStartsTheFirstStoryWithALessonLeftAndStartHereEndsWhenItIsDone() throws Exception {
-		String history = "[" + history(right("berlin-1/q1"), right("berlin-2/q1"), right("sao-paulo-1/q1"),
-				right("sao-paulo-3/q2"), right("seoul-1/q2"), right("tokyo-1/q1")) + "]";
+		onboardWithInterests();
 
-		categorize(onRules(QUICK_CHECK.replace(HISTORY, history)
-			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": 0.9, \"debt\": 0.9, \"investing\": 0.9}")))
+		categorize(onRules(ALL_SOLID))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"readyForNext": true, "startLesson": {"lessonId": "seoul-1", "storyId": "seoul"},
@@ -591,6 +599,14 @@ class QuickCheckCategorizationTests {
 
 		completeStory("seoul");
 		stored().andExpect(status().isOk()).andExpect(jsonPath("$.startHere").isEmpty());
+	}
+
+	@Test
+	void everyAreaSolidStillPutsThePickedPathSecondAndStartHereMovesOnToIt() throws Exception {
+		assertEquals(json.readTree("[\"seoul\", \"berlin\"]"), categorized(onRules(ALL_SOLID)).get("pathStoryIds"));
+
+		completeStory("seoul");
+		stored().andExpect(jsonPath("$.startHere.lessonId").value("berlin-1"));
 	}
 
 	@ParameterizedTest(name = "Jev {0}, saving mastery {1} -> {2}")

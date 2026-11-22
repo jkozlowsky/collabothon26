@@ -4,13 +4,13 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
-import com.collabothon.back.categorization.repositories.projections.CheckQuestionProjection;
-import com.collabothon.back.categorization.services.BankLesson;
+import com.collabothon.back.categorization.services.CheckLesson;
+import com.collabothon.back.categorization.services.CheckQuestion;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
-public interface BankLessonMapper {
+public interface CheckLessonMapper {
 
 	@Mapping(target = "id", source = "lessonId")
-	BankLesson toLesson(CheckQuestionProjection question);
+	CheckLesson toLesson(CheckQuestion question);
 
 }

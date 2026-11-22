@@ -36,10 +36,10 @@ test('the badge and its why line show on the startHere story card only', async (
   await expect(page.getByTestId('story-card-start-here')).toHaveCount(1);
   await expect(page.getByTestId('story-card-berlin').getByTestId('story-card-start-here')).toBeVisible();
   await expect(page.getByTestId('story-card-seoul').getByTestId('story-card-start-here')).toHaveCount(0);
-  await expect(page.getByTestId('story-card-why-here')).toHaveText('Why here: Your answers about Saving');
+  await expect(page.getByTestId('story-card-why-here')).toHaveText('Based on your onboarding answers');
   // The globe turns to the story and its callout carries the same cue.
   await expect(page.getByTestId('callout-start-here')).toBeVisible();
-  await expect(page.getByTestId('callout-why-here')).toHaveText('Why here: Your answers about Saving');
+  await expect(page.getByTestId('callout-why-here')).toHaveText('Based on your onboarding answers');
 });
 
 test('no stored categorisation leaves the sheet as it is', async ({ page }) => {

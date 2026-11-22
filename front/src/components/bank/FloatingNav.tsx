@@ -48,7 +48,8 @@ export function FloatingNav({ state, navigateToTab }: BottomTabBarProps) {
 
   const mode: Mode = state.routes[state.index].name === '(learn)' ? 'learn' : 'bank';
   // Group routes have no path segment, so "/" is Overview and "/payments" is Payments.
-  const activeRoute = pathname.replace(/^\//, '') || 'index';
+  // Only the first segment picks the tab, so a nested screen ("/glossary/<slug>") keeps its tab lit.
+  const activeRoute = pathname.split('/')[1] || 'index';
   const groupKey = (name: string) => state.routes.find((r) => r.name === name)!.key;
 
   // The Atlas popup flies into this button when it closes (AtlasNudge); the dot stays until it is tapped.

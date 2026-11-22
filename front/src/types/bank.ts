@@ -197,7 +197,7 @@ export type FqTeaser = {
 };
 
 export type BankState = {
-  owner: { name: string; initials: string };
+  owner: { name: string; initials: string; age: number };
   account: Account;
   cards: PaymentCard[];
   transactions: Transaction[];

@@ -38,16 +38,16 @@ test('takes story progress from the backend lessons and opens the story with its
   await renderRouter(appRoutes, { initialUrl: '/map' });
 
   expect(await screen.findByText('Where to next?')).toBeOnTheScreen();
-  expect(screen.getByText('7 paths · 0 done')).toBeOnTheScreen();
+  expect(screen.getByText('8 paths · 0 done')).toBeOnTheScreen();
   await waitFor(() =>
-    expect(screen.getByTestId('globe-pin-seoul')).toHaveProp('accessibilityLabel', 'Seoul, Hype and borrowed money, in progress'),
+    expect(screen.getByTestId('globe-pin-seoul')).toHaveProp('accessibilityLabel', 'Seoul, Hype, scams and borrowed money, in progress'),
   );
 
   // Seoul is off the fallback picture, so its card opens the story screen directly.
   await fireEvent.press(screen.getByTestId('story-card-seoul'));
   expect(await screen.findByTestId('screen-story')).toBeOnTheScreen();
   expect(await screen.findByText('Hype and borrowed money')).toBeOnTheScreen();
-  expect(screen.getByText('1 of 3 stamps')).toBeOnTheScreen();
+  expect(screen.getByText(/1 of 3 missions/)).toBeOnTheScreen();
   expect(screen.getByTestId('lesson-seoul-2')).toBeOnTheScreen();
   expect(screen.getByText(/3 min · Locked/)).toBeOnTheScreen();
   expect(screen.queryByTestId('lesson-seoul-3')).toBeNull();
@@ -60,6 +60,15 @@ test('a city with one lesson has a callout with an open button', async () => {
   const callout = await screen.findByTestId('pin-callout');
   expect(within(callout).queryByText('Coming soon')).toBeNull();
   expect(within(callout).getByTestId('pin-callout-open')).toBeOnTheScreen();
+});
+
+test('a coming-soon path has a callout without a button', async () => {
+  await renderRouter(appRoutes, { initialUrl: '/map' });
+
+  await fireEvent.press(await screen.findByTestId('globe-pin-cape-town'));
+  const callout = await screen.findByTestId('pin-callout');
+  expect(within(callout).getByText('Coming soon')).toBeOnTheScreen();
+  expect(within(callout).queryByTestId('pin-callout-open')).toBeNull();
 });
 
 test('the Rome Arena pin opens the Arena callout and navigates to duel tab', async () => {

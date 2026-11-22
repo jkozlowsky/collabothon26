@@ -2,24 +2,29 @@
   "id": "seoul-5",
   "story": "seoul",
   "title": "Your own rule",
-  "place": "Your stop · today",
+  "place": "Mission 5 · Your rule",
   "topic": "Set a limit with your bank data",
   "minutes": 3,
   "xp": 70,
-  "concepts": ["concentration-risk", "risk-capacity"],
+  "concepts": [
+    "concentration-risk",
+    "risk-capacity"
+  ],
   "steps": [
     {
       "type": "text",
       "id": "t1",
-      "kicker": "Ji-woo's sticky note",
+      "kicker": "A calm-day rule",
       "title": "“No single bet gets more than 10%”",
-      "body": "After the XYZ crash, Ji-woo wrote herself a rule. She sized it by her [[risk-capacity]]: money she needs in the next few years stays out of bets. A rule made on a calm day protects you on a loud one."
+      "body": "A rule made on a calm day protects you on a loud one. Size it by your [[risk-capacity]]: money you need in the next few years stays out of bets."
     },
     {
       "type": "quiz",
       "id": "q1",
-      "concepts": ["risk-capacity"],
-      "prompt": "Why decide the rule before the chat gets loud?",
+      "concepts": [
+        "risk-capacity"
+      ],
+      "prompt": "Why decide the rule before a hype starts?",
       "options": [
         "Decisions made under hype and time pressure are often rushed",
         "Banks require a written rule",
@@ -31,11 +36,17 @@
     {
       "type": "quiz",
       "id": "q2",
-      "concepts": ["concentration-risk"],
-      "prompt": "Ji-woo's rule is “max 10% in one bet”. Her single bet loses everything. What happens to her savings?",
-      "options": ["They fall by at most 10%", "They fall by half", "Nothing, the rule prevents losses"],
+      "concepts": [
+        "concentration-risk"
+      ],
+      "prompt": "Your rule is “max 10% in one bet”. That bet loses everything. What happens to your savings?",
+      "options": [
+        "They fall by at most 10%",
+        "They fall by half",
+        "Nothing, the rule prevents losses"
+      ],
       "correctIndex": 0,
-      "explanation": "The rule doesn't stop the loss. It limits how much one bad bet can take: at most 10% of her savings."
+      "explanation": "The rule doesn't stop the loss. It limits how much one bad bet can take."
     },
     {
       "type": "action",

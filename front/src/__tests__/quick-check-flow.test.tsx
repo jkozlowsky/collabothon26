@@ -1,15 +1,17 @@
 import { router } from 'expo-router';
-import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 import { BackHandler, StyleSheet } from 'react-native';
 
-import { ANSWER_DELAY_MS, DONE_MS, MAX_QUESTIONS } from '@/constants/quickCheck';
+import { DONE_MS, FEEDBACK, MAX_QUESTIONS } from '@/constants/quickCheck';
 import { groupThousands } from '@/lib/bank/money';
 import { seedAccount } from '@/lib/bank/seed';
-import { slotValues } from '@/lib/bank/selectors';
+import { depotTotal } from '@/lib/bank/selectors';
+import { factsFrom } from '@/lib/categorization';
 import { setSummary } from '@/lib/learningPath';
-import { promptParts } from '@/lib/quickCheck';
+import { plainText } from '@/lib/quickCheck';
 import { categorization } from '@/test-utils/categorization';
 import { POOL } from '@/test-utils/checkPool';
+import { walkSurvey } from '@/test-utils/onboarding';
 import { appRoutes as routes } from '@/test-utils/routes';
 import type { Categorization } from '@/types/categorization';
 import type { StepResponse } from '@/types/quickCheck';
@@ -28,12 +30,12 @@ type Backend = {
   step?: Handler;
   post?: Handler;
   stored?: unknown;
-  lifeStage?: string | null;
-  goals?: string[];
+  /** Onboarding is behind the user: for the screens a reload opens directly. */
+  onboarded?: boolean;
 };
 
-/** The question ids in the order the stub backend asks them. */
-const ORDER = ['inflation-real-value', 'time-in-market', 'emergency-cushion-purpose', 'short-term-fall'];
+/** The question ids in the order the stub backend asks them: Saving, Investing, Saving, Investing. */
+const ORDER = ['berlin-1/q1', 'seoul-1/q1', 'berlin-1/q2', 'seoul-1/q2'];
 const MASTERY = { saving: 0.6, investing: 0.25 };
 /** A step stub: asks ORDER one by one and says done after `doneAfter` answers. */
 const stepper =
@@ -46,6 +48,13 @@ const stepper =
       useRules,
       stepFellBack: false,
     } satisfies StepResponse);
+/** A step stub whose answer to the first reply waits for `release()`. */
+function slowStep() {
+  const gate = { release: () => {} };
+  const step: Handler = (request) =>
+    request.history.length === 1 ? new Promise((resolve) => (gate.release = () => resolve(stepper()(request)))) : stepper()(request);
+  return { step, release: () => act(async () => gate.release()) };
+}
 
 const stop = (n: number) => ({ id: `berlin-${n}`, story: 'berlin', title: `Stop ${n}`, place: 'Mitte', topic: null, minutes: 4, xp: 50, status: 'available' });
 const BERLIN = { id: 'berlin', city: 'Berlin', lessons: [1, 2, 3, 4].map(stop) };
@@ -53,14 +62,7 @@ const BERLIN = { id: 'berlin', city: 'Berlin', lessons: [1, 2, 3, 4].map(stop) }
 let fetchMock: jest.Mock;
 const body = (init?: RequestInit) => JSON.parse(String(init?.body ?? '{}'));
 
-function backend({
-  pool = () => ok(POOL),
-  step = stepper(),
-  post = () => ok(categorization()),
-  stored,
-  lifeStage = 'building',
-  goals = [],
-}: Backend = {}) {
+function backend({ pool = () => ok(POOL), step = stepper(), post = () => ok(categorization()), stored, onboarded = false }: Backend = {}) {
   fetchMock = jest.fn((url: string, init?: RequestInit) => {
     if (url.endsWith('/api/check-questions')) return pool({}, init);
     if (url.endsWith('/quick-check/step')) return step(body(init), init);
@@ -69,8 +71,7 @@ function backend({
       return stored ? ok(stored) : fail(404);
     }
     if (/\/profile(\/onboarding)?$/.test(url)) {
-      const profile = { userId: 'demo-user', lifeStage, goals, onboardingCompleted: true };
-      return init?.method ? ok({}) : ok(profile);
+      return init?.method ? ok({}) : ok({ userId: 'demo-user', goals: [], onboardingCompleted: onboarded });
     }
     if (url.includes('/api/stories?')) return ok([BERLIN]);
     if (/\/api\/lessons\/[\w-]+/.test(url)) return ok({ id: 'berlin-2', title: 'Compound interest', steps: [], concepts: [], glossary: {}, next: null });
@@ -84,215 +85,145 @@ const steps = () => callsTo('/quick-check/step').map(([, init]) => body(init));
 const finals = () => callsTo('/categorization').map(([, init]) => body(init));
 const get = (id: string) => screen.getByTestId(id);
 const press = (id: string) => fireEvent.press(get(id));
-const ready = () => act(() => jest.advanceTimersByTimeAsync(ANSWER_DELAY_MS));
 const prompt = () => get('quick-check-prompt');
+const settle = () => act(async () => {});
 
-async function open() {
+/** Opens a screen directly over the bank, as a reload of it does. */
+async function openAt(path: '/learning-path') {
   await renderRouter(routes, { initialUrl: '/' });
   await screen.findByTestId('screen-overview');
-  await act(async () => {});
-  await act(async () => router.push('/categorizing'));
+  await settle();
+  await act(async () => router.push(path));
 }
-/** Consent card, "What we know", then the first profile question on screen. */
-async function toProfile({ consent = true, simple = false } = {}) {
-  await open();
-  await fireEvent.press(await screen.findByTestId(consent ? 'consent-accept' : 'consent-decline'));
-  await fireEvent.press(await screen.findByTestId(simple ? 'know-simple' : 'know-start'));
-  await screen.findByTestId('quick-check-why');
+type Survey = Parameters<typeof walkSurvey>[0];
+/** A fresh onboarding up to "Start the quick check". */
+async function startCheck(survey?: Survey) {
+  await renderRouter(routes, { initialUrl: '/' });
+  await fireEvent.press(await screen.findByTestId('nav-learn'));
+  await walkSurvey(survey);
+  await press('check-start');
 }
-/** Answers the profile tiles with their second option until the first knowledge question shows. */
-async function toFirstQuestion(options: { consent?: boolean; simple?: boolean } = {}) {
-  await toProfile(options);
-  while (screen.queryByText('Not scored')) {
-    await ready();
-    await press('quick-check-option-1');
-    await act(async () => {});
-  }
+async function toFirstQuestion(survey?: Survey) {
+  await startCheck(survey);
   await screen.findByTestId('quick-check-unsure');
 }
-/** Taps an option, then its chip (the "Not sure" tile has none). */
-async function answer(option: number | 'unsure', chip?: 'guessing' | 'fairly-sure' | 'sure') {
-  await ready();
-  await press(option === 'unsure' ? 'quick-check-unsure' : `quick-check-option-${option}`);
-  if (chip) await press(`confidence-${chip}`);
+const tile = (option: number | 'unsure') => (option === 'unsure' ? 'quick-check-unsure' : `quick-check-option-${option}`);
+/** Taps an option ("unsure" = the "Not sure" tile), lets its step answer, then taps "Continue". */
+async function answer(option: number | 'unsure') {
+  await press(tile(option));
+  await settle();
+  await press('quick-check-continue');
 }
-const finish = () => act(() => jest.advanceTimersByTimeAsync(DONE_MS));
 const hardwareBack = async (add: jest.SpyInstance) => {
   const ours = add.mock.calls.filter(([event]) => event === 'hardwareBackPress').at(-1)?.[1] as () => boolean;
   await act(async () => {
     expect(ours()).toBe(true);
   });
 };
-const question = (n: number, of = 7) => screen.findByText(`Question ${n} of up to ${of}`);
-const promptOf = (id: string, consent = true) =>
-  promptParts(POOL.find((q) => q.id === id)!, seedAccount(), consent && id !== 'compound-rate-vs-time')
-    .map((p) => p.text)
-    .join('');
+const finish = () => act(() => jest.advanceTimersByTimeAsync(DONE_MS));
+const summary = () => screen.findByTestId('learning-path', {}, { timeout: 4000 });
+const question = (n: number) => screen.findByText(`Question ${n} of up to ${MAX_QUESTIONS}`);
+const byId = (id: string) => POOL.find((q) => q.id === id)!;
+const promptOf = (id: string) => byId(id).prompt;
+/** What the banner shows under its title. */
+const EXPLAINED = plainText(byId(ORDER[0]).explanation);
+const FIRST = byId(ORDER[0]);
+const WRONG = (FIRST.correctIndex + 1) % FIRST.options.length;
+const marks = () =>
+  [...FIRST.options.map((_, i) => tile(i)), tile('unsure')].flatMap((id) =>
+    ['selected', 'correct', 'wrong'].filter((state) => screen.queryByTestId(`${id}-${state}`)).map((state) => `${id}-${state}`),
+  );
 
 beforeEach(() => setSummary(null));
 
 test('the summary of a user who has not been categorised redirects to the map', async () => {
-  backend();
-  await renderRouter(routes, { initialUrl: '/' });
-  await screen.findByTestId('screen-overview');
-  await act(async () => {});
-  await act(async () => router.push('/learning-path'));
+  backend({ onboarded: true });
+  await openAt('/learning-path');
   expect(await screen.findByTestId('screen-learn')).toBeOnTheScreen();
 });
 
-test('the consent card carries the GDPR notice and no longer talks about typed words', async () => {
+test('the test starts on a knowledge question; the first step carries the facts, the age band and the time frame', async () => {
   backend();
-  await open();
-  expect(await screen.findByTestId('consent-quickcheck-note')).toHaveTextContent(
-    'Your answers, how sure you felt and the ranges you pick (and, if you allow it, ranges from your accounts) are checked by an external AI provider to pick your first lesson. Exact account numbers never leave this phone. We keep the result and the ranges.',
-  );
-  expect(screen.queryByText(/exactly as you write/)).toBeNull();
-});
+  await toFirstQuestion();
 
-test('consent leads to "What we know about you", with the account facts tagged and the AI line', async () => {
-  backend({ goals: ['start-saving', 'stocks-etfs'] });
-  await open();
-  await fireEvent.press(await screen.findByTestId('consent-accept'));
-
-  expect(await screen.findByText('What we know about you')).toBeOnTheScreen();
-  expect(get('know-life-stage')).toHaveTextContent('Building my life', { exact: false });
-  expect(get('know-life-stage')).toHaveTextContent('You told us', { exact: false });
-  expect(get('know-goals')).toHaveTextContent('Goals: Start saving, Stocks & ETFs', { exact: false });
-  expect(get('know-facts')).toHaveTextContent('Over 6 months of spending covered', { exact: false });
-  expect(get('know-facts')).toHaveTextContent('From your accounts', { exact: false });
-  expect(screen.getByText('Ranges only, never exact amounts. Your questions use the exact numbers on this phone.')).toBeOnTheScreen();
-  expect(get('know-ai-line')).toHaveTextContent('Your choices are checked by an AI service.', { exact: false });
-});
-
-test('without consent, and with life stage and goals skipped, the card says so', async () => {
-  backend({ lifeStage: null });
-  await open();
-  await fireEvent.press(await screen.findByTestId('consent-decline'));
-
-  await screen.findByText('What we know about you');
-  expect(get('know-life-stage')).toHaveTextContent('Life stage not shared', { exact: false });
-  expect(get('know-life-stage')).toHaveTextContent('You skipped this', { exact: false });
-  expect(get('know-life-stage')).toHaveTextContent('We will ask one question.', { exact: false });
-  expect(get('know-goals')).toHaveTextContent('Goals not shared', { exact: false });
-  expect(get('know-facts')).toHaveTextContent('Account access is off', { exact: false });
-  expect(get('know-facts')).toHaveTextContent('You chose this', { exact: false });
-  expect(get('know-facts')).toHaveTextContent('We will ask about your savings.', { exact: false });
-});
-
-test('"Change account access" goes back to the consent card', async () => {
-  backend();
-  await open();
-  await fireEvent.press(await screen.findByTestId('consent-decline'));
-  await fireEvent.press(await screen.findByTestId('know-change'));
-  expect(await screen.findByTestId('categorizing-consent')).toBeOnTheScreen();
-});
-
-test('with consent only the time frame is asked first: a profile tile, no chips, not scored, no step yet', async () => {
-  backend();
-  await toProfile();
-
-  expect(screen.getByText('Question 1 of up to 7')).toBeOnTheScreen();
-  expect(screen.getByText('Not scored')).toBeOnTheScreen();
-  expect(prompt()).toHaveTextContent('When might you need the money you save or invest?', { exact: false });
-  expect(get('quick-check-why')).toHaveTextContent('Why this question: So examples match your time frame', { exact: false });
-  expect(screen.getByText('A fact about you, not a test.')).toBeOnTheScreen();
-  expect(screen.queryByTestId('quick-check-unsure')).toBeNull();
-  expect(steps()).toHaveLength(0);
-
-  await ready();
-  await press('quick-check-option-1');
-  await question(2);
+  expect(await question(1)).toBeOnTheScreen();
+  expect(screen.getByText('QUICK CHECK · SAVING')).toBeOnTheScreen();
   expect(steps()).toEqual([
     {
       consent: true,
-      facts: expect.objectContaining({ cashBufferMonths: '6+' }),
-      profile: { ageBand: null, savingsCover: null, horizon: '1-5y' },
+      facts: factsFrom(seedAccount()),
+      profile: { ageBand: '26-40', savingsCover: null, horizon: '1-5y' },
       history: [],
       useRules: false,
       stepFellBack: false,
     },
   ]);
+  expect(finals()).toHaveLength(0);
 });
 
-test('without consent the savings cover is asked, then the time frame; the questions use example numbers', async () => {
-  backend();
-  await toProfile({ consent: false });
-  expect(prompt()).toHaveTextContent('How many months of spending could your savings cover?', { exact: false });
-  expect(get('quick-check-why')).toHaveTextContent('So examples fit your savings', { exact: false });
-  expect(screen.getByText('Question 1 of up to 8')).toBeOnTheScreen();
-  await ready();
-  await press('quick-check-option-2');
-  await question(2, 8);
-  expect(prompt()).toHaveTextContent('When might you need the money', { exact: false });
-  await ready();
-  await press('quick-check-option-0');
-
-  await question(3, 8);
-  expect(prompt()).toHaveTextContent(POOL.find((q) => q.id === ORDER[0])!.genericPrompt);
-  expect(screen.getByText('Example numbers')).toBeOnTheScreen();
-  expect(screen.queryByText('Only your answer is sent, never these numbers.')).toBeNull();
-  const [first] = steps();
-  expect(first.consent).toBe(false);
-  expect('facts' in first).toBe(false);
-  expect(first.profile).toEqual({ ageBand: null, savingsCover: '3-6', horizon: 'within-1y' });
-});
-
-test('with the life stage skipped the age band comes first', async () => {
-  backend({ lifeStage: null });
-  await toProfile();
-  expect(prompt()).toHaveTextContent('Which age band are you in?', { exact: false });
-  expect(get('quick-check-why')).toHaveTextContent('So examples fit your stage of life', { exact: false });
-  expect(screen.getByText('Question 1 of up to 8')).toBeOnTheScreen();
-  await ready();
-  await press('quick-check-option-1');
-  await question(2, 8);
-  expect(prompt()).toHaveTextContent('When might you need the money', { exact: false });
-  await ready();
-  await press('quick-check-option-2');
-  await question(3, 8);
-  expect(steps()[0].profile).toEqual({ ageBand: '26-40', savingsCover: null, horizon: '5y+' });
-});
-
-test('a knowledge question quotes the account with consent, shows its why line and the slip', async () => {
+test('a question shows the lesson\'s quiz prompt and its why line, with no account numbers; "Continue" waits for an answer', async () => {
   backend();
   await toFirstQuestion();
 
-  expect(prompt()).toHaveTextContent(promptOf(ORDER[0]), { exact: false });
-  expect(promptOf(ORDER[0])).not.toBe(POOL[1].genericPrompt);
-  expect(screen.getByText('Not a test you can fail')).toBeOnTheScreen();
+  expect(prompt()).toHaveTextContent(FIRST.prompt);
   expect(get('quick-check-why')).toHaveTextContent('Why this question: Picked to learn more about Saving', { exact: false });
-  expect(screen.getByText('Only your answer is sent, never these numbers.')).toBeOnTheScreen();
-  expect(screen.getAllByRole('radio')).toHaveLength(POOL[1].options.length + 1);
+  expect(screen.queryByText('Only your answer is sent, never these numbers.')).toBeNull();
+  expect(screen.queryByText('Example numbers')).toBeNull();
+  expect(screen.getAllByRole('radio')).toHaveLength(FIRST.options.length + 1);
+  expect(get('quick-check-unsure')).toHaveTextContent('Not sureThat is fine. Your lessons cover it.');
+  expect(get('quick-check-continue')).toBeDisabled();
+  expect(screen.queryByTestId('quick-check-feedback')).toBeNull();
+  expect(marks()).toEqual([]);
+  expect(screen.queryByTestId('map-dock')).toBeNull();
 });
 
-test('tapping a tile shows the chips inside it; a chip commits the answer; nothing says right or wrong', async () => {
+test('a right answer is committed at the tap and marked; the next question waits for "Continue"', async () => {
   backend();
   await toFirstQuestion();
-  expect(screen.queryByTestId('confidence-sure')).toBeNull();
+  await press(tile(FIRST.correctIndex));
 
-  await ready();
-  await press('quick-check-option-1');
-  expect(screen.getByText('How sure are you?')).toBeOnTheScreen();
-  expect(steps()).toHaveLength(1);
+  expect(marks()).toEqual([`${tile(FIRST.correctIndex)}-correct`]);
+  expect(get(tile(FIRST.correctIndex)).props.accessibilityLabel).toBe(`${FIRST.options[FIRST.correctIndex]}. Correct answer.`);
+  expect(get('quick-check-feedback')).toHaveTextContent(`${FEEDBACK.right.title}${EXPLAINED}`, { exact: false });
+  expect(get('flow-status')).toHaveTextContent(`${FEEDBACK.right.title}. ${EXPLAINED}`);
+  // The step left at the tap.
+  expect(steps()[1].history).toEqual([{ questionId: ORDER[0], optionIndex: FIRST.correctIndex }]);
 
-  await press('quick-check-option-2');
-  expect(screen.getAllByText('How sure are you?')).toHaveLength(1);
-  await press('confidence-fairly-sure');
+  // The step has answered, yet the reveal stays; a second tap changes nothing.
+  await settle();
+  await act(() => jest.advanceTimersByTimeAsync(DONE_MS));
+  await press(tile(WRONG));
+  expect(prompt()).toHaveTextContent(promptOf(ORDER[0]), { exact: false });
+  expect(marks()).toEqual([`${tile(FIRST.correctIndex)}-correct`]);
+  expect(steps()).toHaveLength(2);
 
-  await question(3);
-  expect(steps()[1].history).toEqual([{ questionId: ORDER[0], optionIndex: 2, confidence: 'fairly-sure' }]);
-  expect(prompt()).toHaveTextContent(promptOf(ORDER[1]));
-  expect(screen.queryByText(/correct|try again|well done/i)).toBeNull();
-});
-
-test('"Not sure" commits at once with no option and no chip', async () => {
-  backend();
-  await toFirstQuestion();
-  await answer('unsure');
-
-  await question(3);
-  expect(steps()[1].history).toEqual([{ questionId: ORDER[0], optionIndex: null, confidence: null }]);
+  await press('quick-check-continue');
+  expect(await question(2)).toBeOnTheScreen();
+  expect(prompt()).toHaveTextContent(promptOf(ORDER[1]), { exact: false });
   expect(get('quick-check-why')).toHaveTextContent('Picked to learn more about Investing', { exact: false });
+  expect(marks()).toEqual([]);
+  expect(get('quick-check-continue')).toBeDisabled();
+});
+
+test('a wrong answer is marked next to the right one, with its feedback', async () => {
+  backend();
+  await toFirstQuestion();
+  await press(tile(WRONG));
+
+  expect(marks()).toEqual([tile(FIRST.correctIndex), tile(WRONG)].sort().map((id) => `${id}-${id === tile(WRONG) ? 'wrong' : 'correct'}`));
+  expect(get(tile(WRONG)).props.accessibilityLabel).toBe(`${FIRST.options[WRONG]}. Not the right answer.`);
+  expect(get('quick-check-feedback')).toHaveTextContent(`${FEEDBACK.wrong.title}${EXPLAINED}`, { exact: false });
+  expect(steps()[1].history).toEqual([{ questionId: ORDER[0], optionIndex: WRONG }]);
+});
+
+test('"Not sure" commits with no option, and still shows the right answer', async () => {
+  backend();
+  await toFirstQuestion();
+  await press(tile('unsure'));
+
+  expect(marks()).toEqual([`${tile(FIRST.correctIndex)}-correct`, 'quick-check-unsure-selected']);
+  expect(get('quick-check-feedback')).toHaveTextContent(`${FEEDBACK.unsure.title}${EXPLAINED}`, { exact: false });
+  expect(steps()[1].history).toEqual([{ questionId: ORDER[0], optionIndex: null }]);
 });
 
 test('an area asked about before reads "from another angle"', async () => {
@@ -300,64 +231,63 @@ test('an area asked about before reads "from another angle"', async () => {
     ok({ mastery: MASTERY, nextQuestionId: ORDER[history.length === 1 ? 2 : history.length], done: false, useRules: false, stepFellBack: false });
   backend({ step });
   await toFirstQuestion();
-  await answer(0, 'sure');
-  await question(3);
+  await answer(0);
+  await question(2);
   expect(get('quick-check-why')).toHaveTextContent('Picked to look at Saving from another angle', { exact: false });
 });
 
-test('tiles stay off for a moment on each new question, so a double tap cannot skip one', async () => {
-  backend();
-  await toProfile();
-  expect(get('quick-check-option-1')).toBeDisabled();
-  await ready();
-  expect(get('quick-check-option-1')).toBeEnabled();
-  await press('quick-check-option-1');
-  await question(2);
-  expect(get('quick-check-option-1')).toBeDisabled();
-});
-
-test('while a step runs the status line shows and tiles and chips are off', async () => {
-  let release: () => void = () => {};
-  const slow: Handler = (request) =>
-    request.history.length === 1 ? new Promise((resolve) => (release = () => resolve(stepper()(request)))) : stepper()(request);
-  backend({ step: slow });
+test('"Continue" before the step answers shows the status line in place of the question until it does', async () => {
+  const slow = slowStep();
+  backend({ step: slow.step });
   await toFirstQuestion();
-  await answer(0, 'sure');
+  await press(tile(0));
+  await press('quick-check-continue');
 
   expect(get('quick-check-status')).toHaveTextContent('Choosing your next question', { exact: false });
-  expect(get('quick-check-option-1')).toBeDisabled();
-  expect(get('confidence-sure')).toBeDisabled();
   expect(get('flow-status')).toHaveTextContent('Choosing your next question', { exact: false });
-  await act(async () => release());
-  await question(3);
+  expect(screen.queryByTestId('quick-check-prompt')).toBeNull();
+  expect(get('quick-check-continue')).toBeDisabled();
+  expect(screen.getByText(`Question 1 of up to ${MAX_QUESTIONS}`)).toBeOnTheScreen();
+
+  await slow.release();
+  expect(await question(2)).toBeOnTheScreen();
   expect(screen.queryByTestId('quick-check-status')).toBeNull();
+  expect(prompt()).toHaveTextContent(promptOf(ORDER[1]), { exact: false });
 });
 
-test('the step that says done ends the test before the maximum: "All set", then one final POST with everything', async () => {
+test('the step that says done ends the test only after "Continue": "All set", then one final POST with everything', async () => {
   backend({ step: stepper(2) });
   await toFirstQuestion();
-  await answer(1, 'guessing');
-  await question(3);
-  await answer('unsure');
+  await answer(1);
+  await question(2);
+  await press(tile('unsure'));
+  await settle();
 
-  expect(await screen.findByTestId('quick-check-status')).toHaveTextContent('All set · That is enough to place you', { exact: false });
+  // Done is decided, but the reveal stays until "Continue".
+  await act(() => jest.advanceTimersByTimeAsync(DONE_MS * 2));
+  expect(screen.queryByTestId('quick-check-status')).toBeNull();
+  expect(get('quick-check-feedback')).toBeOnTheScreen();
+  await press('quick-check-continue');
+
+  expect(get('quick-check-status')).toHaveTextContent('All set · That is enough to place you', { exact: false });
   expect(get('flow-status')).toHaveTextContent('All set · That is enough to place you', { exact: false });
   expect(finals()).toHaveLength(0);
   await finish();
-  expect(await screen.findByTestId('learning-path', {}, { timeout: 4000 })).toBeOnTheScreen();
+  expect(await summary()).toBeOnTheScreen();
 
   expect(finals()).toEqual([
     {
       consent: true,
-      facts: expect.any(Object),
-      profile: { ageBand: null, savingsCover: null, horizon: '1-5y' },
+      facts: factsFrom(seedAccount()),
+      profile: { ageBand: '26-40', savingsCover: null, horizon: '1-5y' },
       history: [
-        { questionId: ORDER[0], optionIndex: 1, confidence: 'guessing' },
-        { questionId: ORDER[1], optionIndex: null, confidence: null },
+        { questionId: ORDER[0], optionIndex: 1 },
+        { questionId: ORDER[1], optionIndex: null },
       ],
       mastery: MASTERY,
       useRules: false,
-      stepCallsMade: 2,
+      // The first step and one per answer.
+      stepCallsMade: 3,
     },
   ]);
   expect(steps()).toHaveLength(3);
@@ -366,29 +296,29 @@ test('the step that says done ends the test before the maximum: "All set", then 
 test('no exact account amount leaves the phone in any call', async () => {
   backend({ step: stepper(1) });
   await toFirstQuestion();
-  await answer(0, 'sure');
-  await screen.findByTestId('quick-check-status');
+  await answer(0);
   await finish();
-  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
+  await summary();
 
   const sent = JSON.stringify([...steps(), ...finals()]);
-  const { positionCount, ...amounts } = slotValues(seedAccount());
-  for (const value of Object.values(amounts)) {
+  const seed = seedAccount();
+  const cents = [seed.savings.balance, seed.account.monthOut, seed.loan.remaining, seed.creditCard.used, depotTotal(seed)];
+  for (const value of cents.map((amount) => Math.round(amount / 100))) {
     expect(sent).not.toContain(String(value));
     expect(sent).not.toContain(groupThousands(value));
   }
 });
 
-test('"Use simple check instead" runs every step on rules and counts no model call', async () => {
+test('a backend that answers useRules gets it back on every later call, and no model call is counted', async () => {
   backend({ step: stepper(1, true) });
-  await toFirstQuestion({ simple: true });
-  await answer(0, 'sure');
-  await screen.findByTestId('quick-check-status');
+  await toFirstQuestion();
+  await answer(0);
   await finish();
-  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
+  await summary();
 
-  expect(steps().map((s) => s.useRules)).toEqual([true, true]);
+  expect(steps().map((s) => s.useRules)).toEqual([false, true]);
   expect(finals()[0]).toMatchObject({ useRules: true, stepCallsMade: 0 });
+  expect(screen.queryByText('Use simple check instead')).toBeNull();
 });
 
 test('a step that answers stepFellBack makes the later steps run on the rule; only model calls are counted', async () => {
@@ -396,15 +326,13 @@ test('a step that answers stepFellBack makes the later steps run on the rule; on
     ok({ mastery: MASTERY, nextQuestionId: ORDER[history.length], done: history.length >= 4, useRules: false, stepFellBack: history.length >= 2 });
   backend({ step });
   await toFirstQuestion();
-  await answer(0, 'sure');
-  await question(3);
-  await answer(0, 'sure');
-  await question(4);
-  await answer(0, 'sure');
-  await question(5);
-  await answer(0, 'sure');
+  for (const next of [2, 3, 4]) {
+    await answer(0);
+    await question(next);
+  }
+  await answer(0);
   await finish();
-  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
+  await summary();
 
   expect(steps().map((s) => [s.useRules, s.stepFellBack])).toEqual([
     [false, false],
@@ -413,10 +341,11 @@ test('a step that answers stepFellBack makes the later steps run on the rule; on
     [false, true],
     [false, true],
   ]);
-  expect(finals()[0]).toMatchObject({ useRules: false, stepCallsMade: 2 });
+  // The first step and the two answers before the fallback.
+  expect(finals()[0]).toMatchObject({ useRules: false, stepCallsMade: 3 });
 });
 
-test('the maximum number of questions ends the test; every history step was a model call', async () => {
+test('the maximum number of questions ends the test; the first step and every answer were model calls', async () => {
   const step: Handler = ({ history }) =>
     ok({
       mastery: MASTERY,
@@ -425,106 +354,85 @@ test('the maximum number of questions ends the test; every history step was a mo
       useRules: false,
       stepFellBack: false,
     });
+  // ORDER repeats here, which only a stub may do.
   backend({ step });
   await toFirstQuestion();
   for (let i = 0; i < MAX_QUESTIONS; i++) {
     await answer('unsure');
-    if (i < MAX_QUESTIONS - 1) await question(i + 3);
+    if (i < MAX_QUESTIONS - 1) await question(i + 2);
   }
   await screen.findByTestId('quick-check-status');
   await finish();
-  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
+  await summary();
   expect(finals()[0].history).toHaveLength(MAX_QUESTIONS);
-  expect(finals()[0].stepCallsMade).toBe(MAX_QUESTIONS);
+  expect(finals()[0].stepCallsMade).toBe(MAX_QUESTIONS + 1);
 });
 
 test.each([
-  { name: 'an empty bank (no Jev key and no questions)', pool: () => ok([]) },
+  { name: 'no questions', pool: () => ok([]) },
   { name: 'a failed GET', pool: () => fail(500) },
-])('$name skips the Quick check: consent leads straight to the summary with the F1 body', async ({ pool }) => {
-  backend({ pool, post: () => ok(categorization({ source: 'fallback', startLesson: null, confidenceGaps: [] })) });
-  await open();
-  expect(screen.queryByTestId('consent-quickcheck-note')).toBeNull();
-  await fireEvent.press(await screen.findByTestId('consent-decline'));
+  { name: 'questions without the correct options', pool: () => ok(POOL.map(({ correctIndex, ...q }) => q)) },
+])('$name leaves the test out: "Start the quick check" leads straight to the summary with the F1 body', async ({ pool }) => {
+  backend({ pool, post: () => ok(categorization({ source: 'fallback', startLesson: null, gaps: [] })) });
+  await startCheck();
 
-  expect(await screen.findByTestId('learning-path', {}, { timeout: 4000 })).toBeOnTheScreen();
-  expect(screen.queryByTestId('categorizing-know')).toBeNull();
-  expect(finals()).toEqual([{ consent: false }]);
+  expect(await summary()).toBeOnTheScreen();
+  expect(steps()).toHaveLength(0);
+  expect(finals()).toEqual([{ consent: true, facts: factsFrom(seedAccount()) }]);
   expect(screen.queryByTestId('summary-simple')).toBeNull();
 });
 
-test('a first step that fails skips the Quick check: the final POST carries no profile, history or mastery', async () => {
+test('a first step that fails skips the test: the final POST carries no profile, history or mastery', async () => {
   backend({ step: () => fail(500) });
-  await toProfile();
-  await ready();
-  await press('quick-check-option-1');
+  await startCheck();
 
-  expect(await screen.findByTestId('learning-path', {}, { timeout: 4000 })).toBeOnTheScreen();
+  expect(await summary()).toBeOnTheScreen();
   expect(steps()).toHaveLength(1);
-  expect(finals()).toEqual([{ consent: true, facts: expect.any(Object) }]);
-});
-
-test('after the opt-out a failed first step still sends useRules on the skip path', async () => {
-  backend({ step: () => fail(500) });
-  await toProfile({ simple: true });
-  await ready();
-  await press('quick-check-option-1');
-
-  expect(await screen.findByTestId('learning-path', {}, { timeout: 4000 })).toBeOnTheScreen();
-  expect(finals()).toEqual([{ consent: true, facts: expect.any(Object), useRules: true }]);
-});
-
-test('a restart whose first step fails still reports the model calls made before Back', async () => {
-  let starts = 0;
-  const step: Handler = (request) => (request.history.length === 0 && ++starts === 2 ? fail(500) : stepper()(request));
-  backend({ step });
-  await toFirstQuestion();
-  await answer(0, 'sure');
-  await question(3);
-  await press('quick-check-back');
-  await fireEvent.press(await screen.findByTestId('know-start'));
-
-  expect(await screen.findByTestId('learning-path', {}, { timeout: 4000 })).toBeOnTheScreen();
-  expect(finals()).toEqual([{ consent: true, facts: expect.any(Object), stepCallsMade: 1 }]);
+  expect(finals()).toEqual([{ consent: true, facts: factsFrom(seedAccount()) }]);
 });
 
 test('a later step that fails is retried once with stepFellBack, and the test goes on', async () => {
   const step: Handler = (request) => (request.history.length === 1 && !request.stepFellBack ? fail(503) : stepper()(request));
   backend({ step });
   await toFirstQuestion();
-  await answer(0, 'sure');
+  await answer(0);
 
-  await question(3);
+  await question(2);
   expect(steps().slice(1).map((s) => [s.history.length, s.useRules, s.stepFellBack])).toEqual([
     [1, false, false],
     [1, false, true],
   ]);
-  await answer(0, 'sure');
-  await question(4);
+  await answer(0);
+  await question(3);
   expect(steps().at(-1)).toMatchObject({ useRules: false, stepFellBack: true });
 });
 
-test('a step that fails twice ends the test; the final POST carries the history so far, and the model is still asked', async () => {
+test('a step that fails twice ends the test at "Continue"; the final POST carries the history so far, and the model is still asked', async () => {
   const step: Handler = (request) => (request.history.length === 2 ? fail(503) : stepper()(request));
   backend({ step });
   await toFirstQuestion();
-  await answer(0, 'sure');
-  await question(3);
-  await answer(1, 'fairly-sure');
+  await answer(0);
+  await question(2);
+  await press(tile(1));
+  await settle();
+  expect(get('quick-check-feedback')).toBeOnTheScreen();
+  expect(finals()).toHaveLength(0);
+  await press('quick-check-continue');
 
-  expect(await screen.findByTestId('learning-path', {}, { timeout: 4000 })).toBeOnTheScreen();
+  expect(await summary()).toBeOnTheScreen();
   expect(finals()).toEqual([
     {
       consent: true,
       facts: expect.any(Object),
       profile: expect.any(Object),
       history: [
-        { questionId: ORDER[0], optionIndex: 0, confidence: 'sure' },
-        { questionId: ORDER[1], optionIndex: 1, confidence: 'fairly-sure' },
+        { questionId: ORDER[0], optionIndex: 0 },
+        { questionId: ORDER[1], optionIndex: 1 },
       ],
       mastery: MASTERY,
       useRules: false,
-      stepCallsMade: 2,
+      // The first step and one per answer.
+      stepCallsMade: 3,
     },
   ]);
 });
@@ -533,105 +441,74 @@ test('a step that never answers fails after the client timeout and is retried wi
   const step: Handler = (request, init) => (request.history.length === 1 && !request.stepFellBack ? hang(init) : stepper()(request));
   backend({ step });
   await toFirstQuestion();
-  await answer(0, 'sure');
+  await press(tile(0));
+  await press('quick-check-continue');
   await act(() => jest.advanceTimersByTimeAsync(5_000));
-  await question(3);
+  await question(2);
   expect(steps().at(-1)).toMatchObject({ stepFellBack: true });
 });
 
-test('Back returns to the "What we know" card; "Start the quick check" restarts with no history and the profile kept', async () => {
+test('a fresh onboarding cannot be skipped: no Skip on any step, and no Close in the test', async () => {
   backend();
-  await toFirstQuestion();
-  await answer(0, 'sure');
-  await question(3);
+  await renderRouter(routes, { initialUrl: '/' });
+  await fireEvent.press(await screen.findByTestId('nav-learn'));
+  const STEPS: [step: string, ...taps: string[]][] = [
+    ['welcome', 'onboarding-start'],
+    ['intro', 'onboarding-next'],
+    ['challenge', 'onboarding-challenge-next'],
+    ['consent', 'consent-accept'],
+    ['purpose', 'option-home', 'onboarding-continue'],
+    ['horizon', 'option-1-5y', 'onboarding-continue'],
+    ['check-intro', 'check-start'],
+  ];
+  for (const [step, ...taps] of STEPS) {
+    expect(await screen.findByTestId(`onboarding-${step}`)).toBeOnTheScreen();
+    expect(screen.queryByText(/skip/i)).toBeNull();
+    for (const id of ['onboarding-skip', 'onboarding-skip-intro', 'check-skip']) expect(screen.queryByTestId(id)).toBeNull();
+    for (const id of taps) await press(id);
+  }
 
-  await press('quick-check-back');
-  expect(await screen.findByTestId('categorizing-know')).toBeOnTheScreen();
-  await fireEvent.press(get('know-start'));
-
-  // The time frame was answered before, so the first step goes out at once, with an empty history.
   await screen.findByTestId('quick-check-unsure');
-  expect(steps().at(-1)).toMatchObject({ history: [], profile: { horizon: '1-5y' } });
-  expect(screen.getByText('Question 2 of up to 7')).toBeOnTheScreen();
-  expect(prompt()).toHaveTextContent(promptOf(ORDER[0]), { exact: false });
+  expect(screen.queryByTestId('onboarding-close')).toBeNull();
+  expect(screen.queryByLabelText('Close')).toBeNull();
+  expect(within(get('quick-check')).getAllByRole('button').map((b) => b.props.testID)).toEqual(['quick-check-continue']);
 });
 
-test('hardware back during the questions is the same as Back', async () => {
+test('hardware back does nothing inside the test', async () => {
   const add = jest.spyOn(BackHandler, 'addEventListener');
   try {
     backend();
     await toFirstQuestion();
+    await answer(0);
+    await question(2);
     await hardwareBack(add);
-    expect(screen.getByTestId('categorizing-know')).toBeOnTheScreen();
+
+    expect(screen.getByText(`Question 2 of up to ${MAX_QUESTIONS}`)).toBeOnTheScreen();
+    expect(prompt()).toHaveTextContent(promptOf(ORDER[1]), { exact: false });
+    expect(steps()).toHaveLength(2);
   } finally {
     add.mockRestore();
   }
-});
-
-test('an answer that arrives after Back is ignored', async () => {
-  let release: () => void = () => {};
-  const slow: Handler = (request) =>
-    request.history.length === 1 ? new Promise((resolve) => (release = () => resolve(stepper()(request)))) : stepper()(request);
-  backend({ step: slow });
-  await toFirstQuestion();
-  await answer(0, 'sure');
-  await press('quick-check-back');
-  await act(async () => release());
-
-  expect(await screen.findByTestId('categorizing-know')).toBeOnTheScreen();
-  expect(screen.queryByTestId('quick-check')).toBeNull();
-});
-
-test('the count of model calls survives Back and a restart', async () => {
-  backend({ step: stepper(2) });
-  await toFirstQuestion();
-  await answer(0, 'sure');
-  await question(3);
-  await press('quick-check-back');
-  await fireEvent.press(await screen.findByTestId('know-start'));
-  await screen.findByTestId('quick-check-unsure');
-  await answer(0, 'sure');
-  await question(3);
-  await answer(0, 'sure');
-  await finish();
-  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
-  expect(finals()[0].stepCallsMade).toBe(3);
 });
 
 test('a 400 on the final POST takes the F1 path instead of a Retry that cannot succeed', async () => {
   const post: Handler = (request) => ('history' in request ? fail(400) : ok(categorization()));
   backend({ step: stepper(1), post });
   await toFirstQuestion();
-  await answer(0, 'sure');
+  await answer(0);
   await finish();
 
-  expect(await screen.findByTestId('learning-path', {}, { timeout: 4000 })).toBeOnTheScreen();
+  expect(await summary()).toBeOnTheScreen();
   expect(finals().map((f) => Object.keys(f).sort())).toEqual([
     ['consent', 'facts', 'history', 'mastery', 'profile', 'stepCallsMade', 'useRules'],
     ['consent', 'facts', 'stepCallsMade'],
   ]);
 });
 
-test('Back to the consent card and the other choice drops or asks the savings cover', async () => {
-  backend();
-  await toProfile({ consent: false });
-  await ready();
-  await press('quick-check-option-2');
-  await question(2, 8);
-  await press('quick-check-back');
-  await fireEvent.press(await screen.findByTestId('know-change'));
-  await fireEvent.press(await screen.findByTestId('consent-accept'));
-  await fireEvent.press(await screen.findByTestId('know-start'));
-
-  // With account access on, the cover answer is dropped and not asked again: only the time frame.
-  expect(await screen.findByText('Question 1 of up to 7')).toBeOnTheScreen();
-  expect(prompt()).toHaveTextContent('When might you need the money', { exact: false });
-});
-
 test('a slow final POST keeps the loading screen until it answers', async () => {
   backend({ step: stepper(1), post: () => new Promise((resolve) => setTimeout(() => resolve(ok(categorization())), 9_000)) });
   await toFirstQuestion();
-  await answer(0, 'sure');
+  await answer(0);
   await finish();
 
   await act(() => jest.advanceTimersByTimeAsync(8_000));
@@ -644,11 +521,11 @@ test('a failed final POST shows the error screen; Retry sends the same body agai
   let attempts = 0;
   backend({ step: stepper(1), post: () => (++attempts === 1 ? fail(503) : ok(categorization())) });
   await toFirstQuestion();
-  await answer(0, 'sure');
+  await answer(0);
   await finish();
 
   await fireEvent.press(await screen.findByTestId('categorizing-retry', {}, { timeout: 4000 }));
-  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
+  await summary();
   const [first, second] = finals();
   expect(second).toEqual(first);
   expect(first.history).toHaveLength(1);
@@ -658,55 +535,65 @@ const ran = (patch: object = {}) =>
   categorization({
     profile: { ageBand: null, savingsCover: null, horizon: '1-5y' },
     mastery: { saving: 0.6, investing: 0.25 },
-    confidence: { saving: 0.9, investing: 0.25 },
     answerCount: 3,
-    confidenceGaps: [],
+    gaps: [],
     ...patch,
   });
 
-async function toSummary(post: Categorization) {
+async function toSummary(post: Categorization, survey?: Survey) {
   backend({ step: stepper(1), post: () => ok(post) });
-  await toFirstQuestion();
-  await answer(0, 'sure');
+  await toFirstQuestion(survey);
+  await answer(0);
   await finish();
-  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
+  await summary();
 }
 
 test('the summary: a gap card, the level and its basis, the first lesson, the disclaimer', async () => {
-  const gap = { area: 'saving' as const, direction: 'over' as const, because: 'On Saving you said “Sure”. Your answers leave a few things open to explore.' };
-  await toSummary(ran({ confidenceGaps: [gap], startLesson: { lessonId: 'berlin-3', title: 'Emergency fund', area: 'saving', storyId: 'berlin', storyCity: 'Berlin' } }));
+  const gap = {
+    area: 'saving' as const,
+    direction: 'habit-ahead' as const,
+    because: 'Your account shows you move money to savings every month. Your Saving answers leave a few things open, which is where your first lesson starts.',
+  };
+  await toSummary(ran({ gaps: [gap], startLesson: { lessonId: 'berlin-3', title: 'Emergency fund', area: 'saving', storyId: 'berlin', storyCity: 'Berlin' } }));
 
-  expect(get('summary-gap-saving')).toHaveTextContent('There is more to explore here', { exact: false });
+  expect(get('summary-gap-saving')).toHaveTextContent('Your habits are ahead of the theory', { exact: false });
   expect(get('summary-gap-saving')).toHaveTextContent(gap.because, { exact: false });
-  expect(screen.queryByTestId('summary-aligned')).toBeNull();
   expect(get('summary-role')).toHaveTextContent("You're an intermediate learner", { exact: false });
-  expect(get('summary-based-on')).toHaveTextContent('Based on 3 answers and how sure you felt about each.', { exact: false });
+  expect(get('summary-based-on')).toHaveTextContent('Based on 3 answers and what your account shows.', { exact: false });
   expect(get('summary-first-lesson')).toHaveTextContent(/your first stop · saving/i);
   expect(get('summary-first-lesson')).toHaveTextContent('Emergency fund', { exact: false });
   expect(get('summary-first-lesson')).toHaveTextContent('Berlin · stop 3 of 4', { exact: false });
   expect(get('summary-disclaimer')).toHaveTextContent('This picks lessons for you. It is not investment advice.', { exact: false });
+  expect(get('summary-saving-for')).toHaveTextContent('Saving for: A home of my own · needed in 1–5 years');
   expect(screen.queryByTestId('summary-simple')).toBeNull();
 });
 
-test('an under-confidence gap says "You know more than you think"', async () => {
-  const gap = { area: 'investing' as const, direction: 'under' as const, because: 'On Investing you said “Guessing”, yet your answers show you already understand how it works.' };
-  await toSummary(ran({ confidenceGaps: [gap] }));
-  expect(get('summary-gap-investing')).toHaveTextContent('You know more than you think', { exact: false });
+test('a knowledge-ahead gap says "You know more than your account shows"', async () => {
+  const gap = {
+    area: 'investing' as const,
+    direction: 'knowledge-ahead' as const,
+    because: 'Your Investing answers show you understand how it works. Your account shows no investment products.',
+  };
+  await toSummary(ran({ gaps: [gap] }));
+  expect(get('summary-gap-investing')).toHaveTextContent('You know more than your account shows', { exact: false });
+  expect(get('summary-gap-investing')).toHaveTextContent(gap.because, { exact: false });
 });
 
-test('with no gap and a chip on an answer, the aligned card shows', async () => {
+test('with no gap the summary has no gap card, and the map has no confidence marker or legend', async () => {
   await toSummary(ran());
-  expect(get('summary-aligned')).toHaveTextContent('How sure you felt matches your answers', { exact: false });
-  expect(get('summary-aligned')).toHaveTextContent('On the areas we checked, your confidence and your answers line up.', { exact: false });
+  expect(screen.queryByTestId(/^summary-gap-/)).toBeNull();
+  expect(get('summary-map')).toBeOnTheScreen();
+  expect(screen.queryByTestId(/^area-diamond-/, { includeHiddenElements: true })).toBeNull();
+  expect(screen.queryByText(/confiden/i)).toBeNull();
 });
 
-test('with only "Not sure" answers there is no chip, so no aligned card', async () => {
-  backend({ step: stepper(1), post: () => ok(ran()) });
-  await toFirstQuestion();
-  await answer('unsure');
-  await finish();
-  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
-  expect(screen.queryByTestId('summary-aligned')).toBeNull();
+test.each([
+  { name: 'a purpose with no time frame', survey: { purpose: 'growing', horizon: 'not-sure' }, line: 'Saving for: Growing it long term' },
+  { name: '"No plan yet"', survey: { purpose: 'none', horizon: 'within-1y' }, line: null },
+] as const)('the summary after $name', async ({ survey, line }) => {
+  await toSummary(ran(), survey);
+  if (line) expect(get('summary-saving-for')).toHaveTextContent(line);
+  else expect(screen.queryByTestId('summary-saving-for')).toBeNull();
 });
 
 test('a start lesson with no area is just "your first stop"', async () => {
@@ -748,15 +635,12 @@ test('a fallback with nothing sent to the model has no simpler-check line', asyn
 });
 
 test('a reload of /learning-path rebuilds the summary from the stored row', async () => {
-  backend({ stored: ran({ startLesson: { lessonId: 'berlin-3', title: 'Emergency fund', area: 'saving', storyId: 'berlin', storyCity: 'Berlin' } }) });
-  await renderRouter(routes, { initialUrl: '/' });
-  await screen.findByTestId('screen-overview');
-  await act(async () => {});
-  await act(async () => router.push('/learning-path'));
+  backend({ onboarded: true, stored: ran({ startLesson: { lessonId: 'berlin-3', title: 'Emergency fund', area: 'saving', storyId: 'berlin', storyCity: 'Berlin' } }) });
+  await openAt('/learning-path');
 
   expect(await screen.findByTestId('summary-first-lesson')).toHaveTextContent('Emergency fund', { exact: false });
-  expect(get('summary-aligned')).toBeOnTheScreen();
   expect(get('summary-based-on')).toHaveTextContent('3 answers', { exact: false });
+  expect(screen.queryByTestId('summary-saving-for')).toBeNull();
 });
 
 test('hardware back on the summary leaves for the map like Show my path', async () => {
@@ -770,106 +654,22 @@ test('hardware back on the summary leaves for the map like Show my path', async 
   }
 });
 
-/** The markers are hidden from screen readers (the column's text says it), so they are looked up as hidden. */
+/** The markers are hidden from screen readers (the row's text says it), so they are looked up as hidden. */
 const style = (id: string) => StyleSheet.flatten(screen.getByTestId(id, { includeHiddenElements: true }).props.style);
-const BAR_HEIGHT = 44;
-const DIAMOND_HALF = 5;
-
-test('the dock appears with the knowledge questions only, one column per bank area, each with its screen-reader text', async () => {
-  backend();
-  await toProfile();
-  expect(screen.queryByTestId('map-dock')).toBeNull();
-  await ready();
-  await press('quick-check-option-1');
-  await screen.findByTestId('quick-check-unsure');
-
-  expect(get('map-dock')).toBeOnTheScreen();
-  expect(get('dock-sr-saving')).toHaveTextContent('Saving: Not checked yet', { exact: false });
-  expect(get('dock-sr-investing')).toHaveTextContent('Investing: Not checked yet', { exact: false });
-  expect(screen.queryByTestId('dock-area-debt')).toBeNull();
-  expect(style('dock-bar-saving').height).toBe(0);
-  expect(style('dock-diamond-saving').opacity).toBe(0);
-});
-
-test('the diamond follows the chip at once, the bar and the level follow the step', async () => {
-  let release: () => void = () => {};
-  const slow: Handler = (request) =>
-    request.history.length === 1 ? new Promise((resolve) => (release = () => resolve(stepper()(request)))) : stepper()(request);
-  backend({ step: slow });
-  await toFirstQuestion();
-  await answer(0, 'sure');
-
-  expect(style('dock-diamond-saving').opacity).toBe(1);
-  expect(style('dock-diamond-saving').bottom).toBeCloseTo(0.9 * BAR_HEIGHT - DIAMOND_HALF);
-  expect(style('dock-bar-saving').height).toBe(0);
-  await act(async () => release());
-  await question(3);
-  expect(style('dock-bar-saving').height).toBeCloseTo(0.6 * BAR_HEIGHT);
-  expect(style('dock-bar-investing').height).toBeCloseTo(0.25 * BAR_HEIGHT);
-  expect(get('dock-sr-saving')).toHaveTextContent('Saving: Building', { exact: false });
-  expect(get('dock-sr-investing')).toHaveTextContent('Investing: Just starting', { exact: false });
-});
-
-test('"Not sure" counts as Guessing on the diamond', async () => {
-  backend();
-  await toFirstQuestion();
-  await answer('unsure');
-  await question(3);
-  expect(style('dock-diamond-saving').bottom).toBeCloseTo(0.25 * BAR_HEIGHT - DIAMOND_HALF);
-});
-
-test('a tap on the dock opens "Your map in detail" with both markers and the legend; Close closes it', async () => {
-  backend();
-  await toFirstQuestion();
-  await answer(0, 'fairly-sure');
-  await question(3);
-
-  await press('map-dock');
-  expect(await screen.findByText('Your map in detail')).toBeOnTheScreen();
-  expect(get('area-level-saving')).toHaveTextContent('Building');
-  expect(get('area-level-investing')).toHaveTextContent('Just starting');
-  expect(screen.getByText('How sure you felt')).toBeOnTheScreen();
-  expect(screen.getByText('What your answers show')).toBeOnTheScreen();
-  await press('sheet-close');
-  await act(() => jest.advanceTimersByTimeAsync(400));
-  expect(screen.queryByText('Your map in detail')).toBeNull();
-});
-
-test('Solid needs two answers in the area: one high answer reads Building, two read Solid', async () => {
-  const step: Handler = ({ history }) =>
-    ok({ mastery: { saving: 0.9, investing: null }, nextQuestionId: ORDER[history.length], done: false, useRules: false, stepFellBack: false });
-  backend({ step });
-  await toFirstQuestion();
-  await answer(1, 'sure');
-  await question(3);
-  expect(get('dock-sr-saving')).toHaveTextContent('Saving: Building', { exact: false });
-  await answer(1, 'sure');
-  await question(4);
-  expect(get('dock-sr-saving')).toHaveTextContent('Saving: Building', { exact: false });
-  await answer(1, 'sure');
-  await question(5);
-  expect(get('dock-sr-saving')).toHaveTextContent('Saving: Solid', { exact: false });
-});
 
 test('after a reload the summary map comes from the stored row; a ready path reads Solid', async () => {
-  backend({ stored: ran({ readyForNext: true, mastery: { saving: 0.9, investing: 0.8 }, confidence: { saving: 0.9, investing: 0.6 } }) });
-  await renderRouter(routes, { initialUrl: '/' });
-  await screen.findByTestId('screen-overview');
-  await act(async () => {});
-  await act(async () => router.push('/learning-path'));
+  backend({ onboarded: true, stored: ran({ readyForNext: true, mastery: { saving: 0.9, investing: 0.8 } }) });
+  await openAt('/learning-path');
 
   expect(await screen.findByTestId('summary-map')).toBeOnTheScreen();
   expect(get('area-level-saving')).toHaveTextContent('Solid');
   expect(style('area-bar-saving').width).toBe('90%');
-  expect(style('area-diamond-investing').left).toBe('60%');
+  expect(style('area-bar-investing').width).toBe('80%');
 });
 
 test('after a reload a high mastery on a path that is not ready reads Building: the answer counts are gone', async () => {
-  backend({ stored: ran({ mastery: { saving: 0.9, investing: 0.2 } }) });
-  await renderRouter(routes, { initialUrl: '/' });
-  await screen.findByTestId('screen-overview');
-  await act(async () => {});
-  await act(async () => router.push('/learning-path'));
+  backend({ onboarded: true, stored: ran({ mastery: { saving: 0.9, investing: 0.2 } }) });
+  await openAt('/learning-path');
 
   expect(await screen.findByTestId('summary-map')).toBeOnTheScreen();
   expect(get('area-level-saving')).toHaveTextContent('Building');
@@ -879,13 +679,13 @@ test('after a reload a high mastery on a path that is not ready reads Building: 
 test('right after the test the summary map counts the answers per area: two in Saving read Solid, one in Investing does not', async () => {
   backend({ step: stepper(3), post: () => ok(ran({ mastery: { saving: 0.9, investing: 0.9 } })) });
   await toFirstQuestion();
-  await answer(1, 'sure');
+  await answer(1);
+  await question(2);
+  await answer(0);
   await question(3);
-  await answer(0, 'sure');
-  await question(4);
-  await answer(1, 'sure');
+  await answer(1);
   await finish();
-  await screen.findByTestId('learning-path', {}, { timeout: 4000 });
+  await summary();
   // ORDER is Saving, Investing, Saving.
   expect(get('area-level-saving')).toHaveTextContent('Solid');
   expect(get('area-level-investing')).toHaveTextContent('Building');

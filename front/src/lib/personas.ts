@@ -12,23 +12,23 @@ import { seedDaniel } from '@/lib/bank/seed-daniel';
 import { seedElena } from '@/lib/bank/seed-elena';
 import { DEFAULT_SEED, seedAccount } from '@/lib/bank/seed';
 import type { BankState } from '@/types/bank';
-import type { Facts } from '@/types/categorization';
-import type { Experience, Goal, LifeStage } from '@/types/onboarding';
-import type { AgeBand, Horizon } from '@/types/quickCheck';
+import type { Experience, Goal, LifeStage, Purpose } from '@/types/onboarding';
+import type { Horizon } from '@/types/quickCheck';
 
 export type PersonaId = 'demo-user' | 'demo-daniel' | 'demo-elena';
 
 /**
- * Preselected answers for the profiling questions only (never the Quick check's knowledge questions).
- * Every field optional; an absent field means "no hint", and the user can always change a hinted answer.
+ * Preselected answers for the onboarding's profiling questions only (never the Quick check's knowledge questions).
+ * `purpose` and `horizon` are asked in a fresh onboarding; `lifeStage`, `goals` and `experience` only in Profile →
+ * "Edit answers", where they fill in what the profile does not hold yet. The age band is not a question: it comes
+ * from the bank's `owner.age`. Every field optional; an absent field means "no hint", and any hint can be changed.
  */
 export type OnboardingHints = {
+  purpose?: Purpose;
+  horizon?: Horizon;
   lifeStage?: LifeStage;
   goals?: Goal[];
   experience?: Experience;
-  ageBand?: AgeBand;
-  horizon?: Horizon;
-  savingsCover?: Facts['cashBufferMonths'];
 };
 
 export type Persona = {
@@ -47,24 +47,22 @@ export const PERSONAS: Record<PersonaId, Persona> = {
     userId: 'demo-daniel',
     bankSeed: () => seedDaniel(),
     hints: {
+      purpose: 'growing',
+      horizon: '5y+',
       lifeStage: 'settled',
       goals: ['stocks-etfs', 'retirement'],
       experience: 'investing',
-      ageBand: '41-59',
-      horizon: '5y+',
-      savingsCover: '6+',
     },
   },
   'demo-elena': {
     userId: 'demo-elena',
     bankSeed: () => seedElena(),
     hints: {
+      purpose: 'safety-net',
+      horizon: '1-5y',
       lifeStage: 'later-life',
       goals: ['inflation', 'scams'],
       experience: 'regular',
-      ageBand: '60+',
-      horizon: '1-5y',
-      savingsCover: '6+',
     },
   },
 };

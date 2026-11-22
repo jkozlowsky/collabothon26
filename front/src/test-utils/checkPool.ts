@@ -1,90 +1,94 @@
 import type { CheckQuestion } from '@/types/quickCheck';
 
-/** The starter bank of docs/specs/F1b-quick-check.md as GET /api/check-questions returns it (no answer key). */
+/** Six quiz steps of the lessons, as GET /api/check-questions returns them (docs/specs/F1b-quick-check.md, v5). */
 export const POOL: CheckQuestion[] = [
   {
-    id: 'emergency-cushion-purpose',
-    area: 'saving',
-    accountPrompt:
-      'Your accounts show about €{monthOut} going out each month. If your income stopped for two months, what would an emergency fund be there to do?',
-    slots: ['monthOut'],
-    genericPrompt:
-      'You spend about €1,500 a month. If your income stopped for two months, what would an emergency fund be there to do?',
-    options: [
-      'Cover your spending until income comes back, without borrowing',
-      'Replace your income for good, so you no longer need to work',
-      'Pay for planned purchases such as a holiday or a new phone',
-      'Earn as high a return as possible while it waits for you',
-    ],
-  },
-  {
-    id: 'inflation-real-value',
-    area: 'saving',
-    accountPrompt:
-      'Your savings account holds €{savingsBalance} at {savingsInterestRate}% a year. Imagine prices rise by one percentage point more than that each year. Over a year, what happens to what that money can buy?',
-    slots: ['savingsBalance', 'savingsInterestRate'],
-    genericPrompt:
-      'Your savings account holds €10,000 at 2% a year. Inflation runs at about 3%. Over a year, what happens to what that money can buy?',
-    options: [
-      'It buys a little more, because the balance grows by the interest',
-      'It buys a little less, because prices rise faster than the interest',
-      'It stays the same, because the money is safe in the bank',
-      'It depends on the bank, not on prices',
-    ],
-  },
-  {
-    id: 'inflation-grocery-bill',
-    area: 'saving',
-    accountPrompt:
-      'Your accounts show about €{monthOut} going out each month. Over the next year prices rise by about 4% and you buy exactly the same things. What happens to your monthly spending?',
-    slots: ['monthOut'],
-    genericPrompt:
-      'You spend about €1,500 a month. Over the next year prices rise by about 4% and you buy exactly the same things. What happens to your monthly spending?',
-    options: [
-      'It stays the same, because you buy the same things',
-      'It rises, because the same things cost more',
-      'It falls, because money is worth more when prices rise',
-    ],
-  },
-  {
-    id: 'time-in-market',
+    id: 'seoul-1/q1',
+    lessonId: 'seoul-1',
     area: 'investing',
-    accountPrompt:
-      'You put about €{etfMonthly} a month into investments. Two people do the same at the same yearly return, but one starts 20 years earlier. Why does the early starter end up with far more?',
-    slots: ['etfMonthly'],
-    genericPrompt:
-      'You put about €100 a month into investments. Two people do the same at the same yearly return, but one starts 20 years earlier. Why does the early starter end up with far more?',
+    prompt:
+      'Why doesn\'t +40% followed by −40% bring you back to the start?',
     options: [
-      'The early starter must have picked better investments along the way',
-      'Compounding only works in the first ten years of any investment',
-      'The early money has more years in which gains earn further gains',
+      'The −40% is taken from a bigger amount than the +40% was',
+      'The bank charges a fee in between',
+      'Prices always fall faster than they rise',
     ],
+    correctIndex: 0,
+    explanation:
+      'The second percent applies to the new, larger amount, so the same-sized fall removes more money.',
   },
   {
-    id: 'short-term-fall',
+    id: 'seoul-1/q2',
+    lessonId: 'seoul-1',
     area: 'investing',
-    accountPrompt:
-      'Your investments are worth about €{depotTotal}. Imagine their value drops by 15% next month and you would not need the money for 20 years. What does that drop mean for the long run?',
-    slots: ['depotTotal'],
-    genericPrompt:
-      'Your investments are worth about €10,000. Imagine their value drops by 15% next month and you would not need the money for 20 years. What does that drop mean for the long run?',
+    prompt:
+      'A share fell 50%. What rise does it need to get back to its old price?',
     options: [
-      'Compounding is over, because one fall wipes out the growth of the years ahead',
-      'The investment has failed, because a fall means it will not come back',
-      'It is one month out of 20 years, and what is left keeps compounding',
+      '+50%',
+      '+100%',
+      '+25%',
     ],
+    correctIndex: 1,
+    explanation:
+      'Half the money has to double to be whole again.',
   },
   {
-    id: 'compound-rate-vs-time',
-    area: 'investing',
-    accountPrompt: null,
-    slots: [],
-    genericPrompt:
-      'Saver A earns 5% a year for 30 years. Saver B earns 6% a year for 20 years. Both start with the same amount and leave all gains in. Who ends up with more?',
+    id: 'berlin-1/q1',
+    lessonId: 'berlin-1',
+    area: 'saving',
+    prompt:
+      'What does an inflation rate of 3% mean?',
     options: [
-      'Saver B, because a higher yearly rate always beats more years',
-      'Saver A, because ten more years of compounding outweigh one point',
-      'It cannot be told without knowing the exact starting amount',
+      'On average, the basket of goods costs 3% more than a year ago',
+      'Every price rose by exactly 3%',
+      'The bank takes 3% of your balance',
     ],
+    correctIndex: 0,
+    explanation:
+      '[[inflation]] is an average over a basket. Some prices rise much more, some less, some even fall.',
+  },
+  {
+    id: 'berlin-1/q2',
+    lessonId: 'berlin-1',
+    area: 'saving',
+    prompt:
+      'Savings earn 2%. Prices rise 3%. What happens to what the money can buy?',
+    options: [
+      'It shrinks by about 1% a year',
+      'It grows by 2% a year',
+      'It stays the same, the balance never falls',
+    ],
+    correctIndex: 0,
+    explanation:
+      'The [[real-return]] is the interest minus inflation: 2% − 3% ≈ −1%. The balance grows, the buying power shrinks.',
+  },
+  {
+    id: 'berlin-2/q1',
+    lessonId: 'berlin-2',
+    area: 'saving',
+    prompt:
+      'True or false: an emergency fund should grow as fast as possible.',
+    options: [
+      'True',
+      'False',
+    ],
+    correctIndex: 1,
+    explanation:
+      'False. Its job is to be there at once and keep its value. Fast growth comes with swings, and a surprise does not wait for a good day.',
+  },
+  {
+    id: 'sao-paulo-1/q1',
+    lessonId: 'sao-paulo-1',
+    area: 'debt',
+    prompt:
+      'When is “0% interest” really without interest?',
+    options: [
+      'When paying at once gets no discount at all',
+      'Whenever the shop says so',
+      'When the payments are small',
+    ],
+    correctIndex: 0,
+    explanation:
+      'If the cash price is the same as the total of the payments, the split is free. Any cash discount is the price of waiting.',
   },
 ];

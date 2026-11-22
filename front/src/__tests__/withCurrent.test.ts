@@ -6,11 +6,11 @@ const progress = (done: Record<string, number>): Story[] =>
 const currentIds = (stories: Story[]) => stories.filter((s) => s.current).map((s) => s.id);
 
 test('the default story stays current while it is not done', () => {
-  expect(currentIds(withCurrent(progress({ seoul: 2 })))).toEqual(['seoul']);
+  expect(currentIds(withCurrent(progress({ berlin: 2 })))).toEqual(['berlin']);
 });
 
 test('a done default story hands the highlight to the story in progress', () => {
-  expect(currentIds(withCurrent(progress({ seoul: 5, tokyo: 1 })))).toEqual(['tokyo']);
+  expect(currentIds(withCurrent(progress({ berlin: 5, tokyo: 1 })))).toEqual(['tokyo']);
 });
 
 test('with nothing in progress, the first story not started is current', () => {
@@ -20,5 +20,5 @@ test('with nothing in progress, the first story not started is current', () => {
 });
 
 test('the Start here story wins', () => {
-  expect(currentIds(withCurrent(progress({}), 'berlin'))).toEqual(['berlin']);
+  expect(currentIds(withCurrent(progress({}), 'tokyo'))).toEqual(['tokyo']);
 });

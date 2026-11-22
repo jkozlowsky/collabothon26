@@ -1,65 +1,76 @@
 {
   "id": "sao-paulo-4",
   "story": "sao-paulo",
-  "title": "Word from São Paulo: CET",
-  "place": "Centro · bank branch",
+  "title": "The real price of a loan",
+  "place": "Mission 4 · APR",
   "topic": "The full price of a loan",
   "minutes": 4,
   "xp": 60,
-  "concepts": ["total-cost-of-credit", "hidden-interest"],
+  "concepts": [
+    "total-cost-of-credit",
+    "hidden-interest"
+  ],
   "steps": [
-    {
-      "type": "chat",
-      "id": "c1",
-      "title": "Two offers",
-      "messages": [
-        { "from": "Lender A", "text": "Motorbike loan, R$8,000 over 24 months: only 1.9% a month!" },
-        { "from": "Lender A", "text": "Plus a R$300 opening fee and R$600 loan insurance" },
-        { "from": "Lender B", "text": "R$8,000 over 24 months at 2.3% a month. Nothing else" },
-        { "from": "Rafa", "me": true, "text": "1.9 is lower than 2.3. Easy choice?" }
-      ]
-    },
     {
       "type": "text",
       "id": "t1",
-      "kicker": "Word from São Paulo",
-      "title": "CET · Custo Efetivo Total",
-      "body": "The \"total effective cost\". Brazilian lenders have to show it: one rate with interest, fees and insurance all included. It's the [[total-cost-of-credit]], and it's the number to compare, not the headline rate."
-    },
-    {
-      "type": "predict",
-      "id": "p1",
-      "concepts": ["total-cost-of-credit"],
-      "prompt": "Offer A adds R$900 of fee and insurance to the loan, but Rafa still only gets R$8,000. What does offer A really cost per month?",
-      "input": { "kind": "slider", "min": 1.5, "max": 4, "step": 0.1, "unit": "%" },
-      "answer": 2.9,
-      "reveal": "About 2.9% a month. Rafa pays back R$8,900 plus interest for R$8,000 in his hand. The \"cheap\" 1.9% is more expensive than offer B's 2.3%. Simplified: fees are added to the loan."
+      "kicker": "Two offers",
+      "title": "5.9% or 7.5%?",
+      "body": "€8,000 over 24 months. Offer A: 5.9% a year, plus a €300 fee and €600 loan insurance added to the loan. Offer B: 7.5% a year, nothing else. A looks cheaper. With the fee and insurance, A costs about €9,460 in total, B about €8,640. In the EU, lenders must also show the APR: the interest and the fees as one yearly rate. It is the [[total-cost-of-credit]] in one number.",
+      "stat": {
+        "value": "€820",
+        "label": "more paid back with the “cheaper” 5.9% offer",
+        "tone": "bad"
+      }
     },
     {
       "type": "match",
       "id": "m1",
-      "concepts": ["total-cost-of-credit", "hidden-interest"],
+      "concepts": [
+        "total-cost-of-credit",
+        "hidden-interest"
+      ],
       "prompt": "Match each part of a loan offer with what it is.",
       "pairs": [
-        ["Interest rate", "The price of the borrowed money, per month or year"],
-        ["Opening fee", "A one-off charge to set up the loan"],
-        ["Loan insurance", "An extra paid in case you can't repay"],
-        ["CET", "All of it together, as one rate"]
+        [
+          "Interest rate",
+          "The price of the borrowed money, per year"
+        ],
+        [
+          "Opening fee",
+          "A one-off charge to set up the loan"
+        ],
+        [
+          "Loan insurance",
+          "An extra paid in case you can't repay"
+        ],
+        [
+          "APR",
+          "Interest and fees together, as one yearly rate"
+        ]
       ]
     },
     {
       "type": "quiz",
       "id": "q1",
-      "concepts": ["total-cost-of-credit"],
-      "prompt": "Offer A: 1.9% a month, CET 2.9%. Offer B: 2.3% a month, CET 2.3%. Which costs Rafa less?",
-      "options": ["Offer B", "Offer A", "They cost the same"],
+      "concepts": [
+        "total-cost-of-credit"
+      ],
+      "prompt": "Offer A: 5.9% interest, APR about 18% with its fees. Offer B: 7.5% interest, APR 7.5%. Which costs you less?",
+      "options": [
+        "Offer B",
+        "Offer A",
+        "They cost the same"
+      ],
       "correctIndex": 0,
-      "explanation": "Compare the CET, not the headline. B's 2.3% is all there is. A's fees and insurance push it to 2.9%."
+      "explanation": "Compare the total cost, not the headline rate. B's 7.5% is all there is. A's fee and insurance push its real cost far higher."
     },
     {
       "type": "quiz",
       "id": "q2",
-      "concepts": ["hidden-interest"],
+      "concepts": [
+        "hidden-interest"
+      ],
       "prompt": "Why might a lender advertise a low rate and add fees on top?",
       "options": [
         "The low rate catches the eye, while the fees raise the real cost",
@@ -69,6 +80,5 @@
       "correctIndex": 0,
       "explanation": "People compare the number they see first. Fees and add-ons are where [[hidden-interest]] lives."
     }
-  ],
-  "variants": {}
+  ]
 }

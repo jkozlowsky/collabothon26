@@ -46,6 +46,12 @@ const NUMBERS: Record<string, (s: BankState) => number | null> = {
   savingsRate: (s) => s.savings.rate,
 };
 
+/** Inflation assumed in "your situation" facts: the ECB's target, so the numbers stay neutral, not a forecast. */
+const ASSUMED_INFLATION = 2;
+
+/** Income minus spending last month, in cents; null without income. */
+const leftover = (s: BankState) => (s.account.monthIn ? s.account.monthIn - s.account.monthOut : null);
+
 /** Months of spending the savings account covers, rounded down. */
 const bufferMonths = (s: BankState) => (s.account.monthOut ? Math.floor(s.savings.balance / s.account.monthOut) : null);
 
@@ -57,6 +63,17 @@ const METRICS: Record<string, (s: BankState, money: Money) => string | null> = {
   largestPositionShare: (s) => (invested(s) ? percent(largestPosition(s).share) : null),
   depotTotal: (s, money) => (depotTotal(s) ? money(depotTotal(s), { whole: true }) : null),
   monthlySpending: (s, money) => (s.account.monthOut ? money(s.account.monthOut, { whole: true }) : null),
+  monthlyIncome: (s, money) => (s.account.monthIn ? money(s.account.monthIn, { whole: true }) : null),
+  monthlyLeftover: (s, money) => { const l = leftover(s); return l === null ? null : money(l, { whole: true }); },
+  leftoverShare: (s) => { const l = leftover(s); return l === null ? null : percent(l / s.account.monthIn); },
+  accountBalance: (s, money) => money(s.account.balance, { whole: true }),
+  accountInflationCost: (s, money) => (s.account.balance > 0 ? money(Math.round((s.account.balance * ASSUMED_INFLATION) / 100), { whole: true }) : null),
+  realRate: (s) => {
+    const r = Math.round((s.savings.rate - ASSUMED_INFLATION) * 100) / 100;
+    return `${r > 0 ? '+' : r < 0 ? '−' : ''}${Math.abs(r)}%`;
+  },
+  savingsReal3y: (s, money) =>
+    money(Math.round(s.savings.balance * ((1 + s.savings.rate / 100) / (1 + ASSUMED_INFLATION / 100)) ** 3), { whole: true }),
   bufferMonths: (s) => { const m = bufferMonths(s); return m === null ? null : String(m); },
   savingsRate: (s) => `${s.savings.rate}%`,
   savingsShareOfAssets: (s) => (totalAssets(s) ? percent(savingsShare(s)) : null),
@@ -81,6 +98,13 @@ const FALLBACK: Record<string, string> = {
   largestPositionShare: 'a big part',
   depotTotal: 'your investments',
   monthlySpending: 'your monthly costs',
+  monthlyIncome: 'your income',
+  monthlyLeftover: 'what is left',
+  leftoverShare: 'part',
+  accountBalance: 'your current account',
+  accountInflationCost: 'some',
+  realRate: 'about zero',
+  savingsReal3y: 'a little less',
   bufferMonths: 'a few',
   savingsRate: 'its rate',
   savingsShareOfAssets: 'part',

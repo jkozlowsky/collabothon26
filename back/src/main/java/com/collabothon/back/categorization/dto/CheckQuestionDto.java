@@ -4,12 +4,13 @@ import java.util.List;
 
 import com.collabothon.back.categorization.enums.FocusArea;
 
-// No correct option, misconceptions, checks sentence or level: the answer key stays in the backend.
+// The correct option and the explanation go out so the app can show them after each answer.
 public record CheckQuestionDto(
 		String id,
+		String lessonId,
 		FocusArea area,
-		String accountPrompt,
-		List<String> slots,
-		String genericPrompt,
-		List<String> options
+		String prompt,
+		List<String> options,
+		int correctIndex,
+		String explanation
 ) {}

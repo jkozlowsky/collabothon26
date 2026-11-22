@@ -19,6 +19,45 @@ What the jury should see:
 Design source: direction C "Two markers on a dock", `docs/design/mockups/quick-check-v2-c.html` (dock with two markers, confidence chips inside the tapped tile, profile questions, "What we know about you" card, Learn map with "Start here").
 
 ## Jan's decisions
+v3 (21.11, Jan; overrides everything below where they differ):
+- Consent comes first, on one onboarding screen merged with "What we know": what the account already shows, what is still asked, the GDPR notice and "Your choices are checked by an AI service."
+- The profile questions leave the test and move into the survey. With consent the age band comes from the account; without it the survey asks life stage, experience and savings cover. The time frame is always a survey step.
+- A purpose question ("What are you saving for?") replaces the goals grid in a fresh onboarding and is saved as `goals`.
+- One 1–5 confidence rating in the survey replaces the chips: 1–2 → `guessing`, 3 → `fairly-sure`, 4–5 → `sure`, sent with every answered option.
+- `GET /api/check-questions` returns `correctIndex`; the right answer and a feedback line show after each question, and "Continue" moves on.
+- No dock during the test; the two-marker map stays on the summary.
+- No "Use simple check instead" (replaces D5); the app still sends back the `useRules` and `stepFellBack` the backend returns.
+- No back inside the test (replaces D3): Close leaves for Learn, hardware back does nothing.
+- Fallback role: when the test ran and no experience was declared, the role comes from the result and follows the map: no answered area with mastery above 0.75 → novice; at least one, even with a single answer → intermediate; every answered area Solid (two answers each) → advanced. A declared experience and the Jev path are unchanged.
+- Gaps: "under" needs every answer in the area right and the self-rating low (`guessing`); "over" still needs a wrong answer at `sure`. The cards say "You rated your confidence low/high" and name the area's answers, since there is one overall rating.
+- Scores: a right answer scores 0.85 whatever the confidence, so a low self-rating can still reach Solid; the confidence feeds only the confidence marker and the gaps.
+- Rule length: a run with every answer right goes on while an area with questions left has a single answer, and the next question comes from that area, still at most 4; so the rule can reach Solid in two areas and the advanced role. A run with a wrong or "Not sure" answer ends as before.
+- Onboarding is mandatory: a fresh onboarding has no "Skip" on any step, no "Skip for now" before the test and no Close in the test (replaces the Close in "No back inside the test" above); only Close on the welcome screen leaves, and it saves nothing. The two error screens keep their way out, labelled "Continue to Learn". Profile → "Edit answers" keeps its "Skip".
+- Consent is required: the consent screen offers "Use my account data" and "Not now" (nothing saved, back to the bank, onboarding shows again on the next Learn tap); there is no run without account access, so the survey no longer asks life stage, experience or savings cover. The backend still accepts `consent: false`, which a reload of /categorizing sends.
+
+v4 (21.11, Jan; overrides v3 and everything below where they differ):
+- No self-rating: the survey's 1–5 confidence step is gone (a fresh survey is purpose and time frame), history entries carry only `questionId` and `optionIndex`, and the feedback banner has three texts (right, wrong, not sure). `Categorization.confidence` and the confidence markers and legend on the summary map are removed.
+- The gap compares what the knowledge answers show with what the account shows. Habit per area, from the facts sent with consent: saving = `savesRegularly`, investing = `holdsInvestments`; other areas have no habit and no gap.
+- Gap rule, in code, per area with at least one answer and with facts present: habit and at least one answer not correct → `habit-ahead`; no habit and every answer correct → `knowledge-ahead`; otherwise no gap. Without facts (the reload path sends `consent: false`) there are no gaps. Still at most `MAX_GAP_CARDS`, the card about the start lesson's area first.
+- Renamed: `confidenceGaps` → `gaps`, entries `{area, direction: "habit-ahead" | "knowledge-ahead", because}` (`GapDto`). F1's said-versus-account table (only without a Quick check) uses the same directions: the account ahead of what the user said → `habit-ahead`, the reverse → `knowledge-ahead`.
+- `because`, descriptive only: `habit-ahead` "Your account shows you move money to savings every month. Your Saving answers leave a few things open, which is where your first lesson starts." (investing: "Your account shows you already invest. Your Investing answers leave a few things open, …"; the ending is "…open to explore." when the first lesson is in another area); `knowledge-ahead` "Your Saving answers show you understand how it works. Your account shows no monthly transfer to savings." (investing: "…Your account shows no investment products.").
+- Summary copy: "Based on N answers and what your account shows."; card titles "Your habits are ahead of the theory" (`habit-ahead`) and "You know more than your account shows" (`knowledge-ahead`), body = `because`.
+- Jev: each answer in `answers` / `checkAnswers` carries its `lessonId` and no `confidence`; the step's `next` no longer mentions how sure the user felt; the final call asks one `gap_<area>` choice per answered area with a habit, only when facts were sent, with options `habit_ahead`, `knowledge_ahead`, `aligned`. A Jev label counts only when the gap rule above gives the same direction for that area; otherwise the area is aligned.
+- Stored rows: the categorisation JSONB has no `confidence` key any more and `gaps` replaces `confidenceGaps`; there is no column to migrate, and a row written before v4 reads with `gaps: []`.
+
+v5 (21.11, Jan; overrides v4, v3 and everything below where they differ):
+- The questions are the `quiz` steps of the lessons in `back/src/main/resources/content/lessons`: 46 steps in 22 of the 23 lessons (seoul-4 has none and is never tested). Left out, in one place (`CheckQuestionService`): the five steps with a `chart` (tokyo-3/q1, tokyo-4/q1, tokyo-5/q1, buenos-aires-1/q3, mumbai-1/q1), since the test shows no chart. The pool has 41 questions in 22 lessons. A prompt's lesson counter ("Checkpoint 1 of 3 · " in berlin-1) is cut off. After the merge of main's universal paths (21.11) the stories have no character, so the filter on the character's name is gone; three explanations still lean on their lesson's example (sao-paulo-1/q2 "the fridge", sao-paulo-2/q1 "€420 a month", sao-paulo-5/q1 "from mission 2"). The hand-written bank is gone: the `check_question` table (dropped in `V23__drop_check_question.sql`, after main's `V22__check_questions_new_paths.sql`), levels, slots, account and generic prompts, misconceptions, `checks`, the easy-first and slot ordering, and the D8 horizon question swap with its two constants.
+- Pool: one question per quiz step that is not left out, id `<lessonId>/<stepId>` (`berlin-1/q1`), in story order (stories.json, then each story's `lessonIds`, then the lesson's steps), read through `LessonContentRepository`. A question carries its lesson's `topic` and `concepts` and its story's area: "Saving" and "Money basics" → `saving`, "Borrowing" → `debt`, "Investing" and "Risk" → `investing` (`FocusArea.ofStoryArea`, the one place). Seoul's "Risk" path is about investing risk (hype, leverage, spreading), so the test rates it with investing and three areas stay in play: saving (Berlin, Buenos Aires, Nairobi), debt (São Paulo), investing (Seoul, Tokyo, Mumbai).
+- The lesson the next question comes from is chosen from the answers: by Jev when it answers, by the rule otherwise (no key, timeout, `useRules`, `stepFellBack`). The question is drawn at random from that lesson's quiz steps not asked yet (the `RandomGenerator` bean; tests replace it). The step endpoint stays stateless: the history's question ids say what was asked. A lesson the user completed is never asked about.
+- Rule for the next lesson, in this order: (1) empty history → the first area of the area order, at its first lesson in story order that has a question left; (2) after an answer that is not correct → the same lesson while it has a question left, else the next lesson of that story that has one; (3) the first area in order without an answer; (4) in a run without a mistake, the first area one answer short of Solid; (5) the areas by mastery ascending (ties: area order). In (3)–(5) the area gives its first lesson in story order that has not been asked about yet, else its first lesson with a question left; an area with nothing left to ask passes to the next rule. Stop rules: `MIN_QUESTIONS` 3, `MAX_QUESTIONS` 6, Jev `enough`, and for the rule `RULE_MAX_QUESTIONS` 4 once any answer is wrong or "Not sure". While every answer so far is correct the rule's limit is `MAX_QUESTIONS`, so the "one answer short of Solid" extension can give two answers in each of the three areas. An area with no question left counts as covered.
+- Jev step call: `next` is a choice among lessons, at most `LESSON_CHOICES_PER_AREA` (2) per area in the area order, so at most 6 options: lessons with a question left, each story's first such lesson before any story's second, so the two investing options are one of Seoul and one of Tokyo, and the two saving options one of Berlin and one of Buenos Aires. Each option is named by the lesson's topic in snake case (`inflation_and_what_your_money_can_buy`) and described by "<topic>. Covers: <concepts>."; code maps the name back to the `lessonId` and draws the question. A name outside the options, any invalid answer or no answer in 3 s → the rule, `stepFellBack: true`, as before. One `mastery_<area>` noul per answered area: saving, debt, investing. Each answer in the state is `{area, lessonId, topic, concepts, result}`; `misconception` is gone.
+- First question (21.11, Jan): with an empty history and a key the step asks Jev too, among the same lesson options, with the `first` wording sent as the call's one question `next`. The state is `{profile, goals, facts?}` with no `answers` key (an empty list would read as a signal), and `mastery_<area>` and `enough` are not asked: mastery starts all `null` and no stop rule applies before `MIN_QUESTIONS`. A failed call or a name outside the options → the rule's lesson (rule 1) with `stepFellBack: true`; fewer than two lessons to choose from → the rule without a call. The front counts this step into `stepCallsMade` once the response says `useRules: false`.
+- Jev final call: `first_lesson` is a choice among lessons, named and described the same way: per area of the candidate pool (answered, non-Solid areas when any, as before) at most 2 lessons not completed, those with an answer that was not correct first, then one per story. Jev's lesson counts only when it is one of the options sent; an option name outside them fails validation and the whole categorisation runs on rules. The rule's lesson is the one of the lowest-scored answer in the weakest area, as before.
+- Start lesson: the picked lesson gives the story and the area. The app opens a story's lessons only in order (`LessonProgression.requireUnlocked`, 403 `PREVIOUS_LESSON_LOCKED`; later lessons show locked), and the lock rules stay, so `startLesson` is that story's first lesson not completed, not the picked lesson itself. `startHere` for a later path story takes the story's area.
+- Mastery, Solid, the role (`measuredRole`) and the gaps keep their rules, now over three areas; gaps stay with saving and investing, the areas with a habit in the facts. A run without a mistake on the rule asks 6 questions, two per area, makes every area Solid and gives `advanced` (`readyForNext: true`, the path is the first story with a lesson left); a run with a mistake ends at 4 as before.
+- `GET /api/check-questions` returns `{id, lessonId, area, prompt, options, correctIndex, explanation}`.
+- Front: the question shows the quiz step's `prompt` and options. No slots, no "Example numbers" and no "Only your answer is sent, never these numbers." line. The feedback banner shows the question's `explanation` under "Right" / "Not quite" / "Good to know". The lesson renderer's glossary link needs the lesson's own `glossary` map, which the test does not have, so a `[[concept|shown text]]` marker shows as its plain label (`[[real-return]]` → "real return"). The summary map shows every area with a key in `mastery` (saving, debt, investing; "Not checked yet" without an answer); `debt` keeps its existing label "Borrowing".
+
 v2 adversarial review (21.11, `.planning/reviews/F1b-v2-spec-adversarial-review.md`; binding over everything below):
 - D1 Age bands `18-25 | 26-40 | 41-59 | 60+`. With life stage skipped: `18-25` → student, `60+` → pre-retirement, `26-40` and `41-59` → null (GDPR art. 5(1)(d) accuracy: no inferred family status).
 - D2 Final-call fallback line: "We used a simpler check this time".
@@ -29,7 +68,7 @@ v2 adversarial review (21.11, `.planning/reviews/F1b-v2-spec-adversarial-review.
 - D7 An area is Solid only with ≥ 2 answers; copy "You're ready for the next lesson".
 - D8 (Jan, after review round 1, A14) Two horizon questions. `fall-before-you-need-it` (saving, easy, lesson 1) asks what a 15% fall next month means for money needed within a year; with `within-1y` our code serves it first for saving on both paths, and `short-term-fall` is never served to these users. `short-term-fall` (investing, easy, lesson 2) asks about a fall next month against 20 years of compounding and stays for longer horizons.
 - D9 Latency budget: Jev step p50 < 1.5 s with the key; the smoke records each step's time; a step over budget takes `next`/`done` from the rule and keeps Jev's mastery. The 3 s timeout stays the hard limit.
-- D10 No rate limit and no cap on Jev calls: the step endpoint is stateless, so every request with a non-empty history and Jev on is one Jev call, whatever `MAX_QUESTIONS` says about one test. No auth in the hackathon; acceptable only without a public deployment. A deliberate omission.
+- D10 No rate limit and no cap on Jev calls: the step endpoint is stateless, so every request with Jev on is one Jev call, whatever `MAX_QUESTIONS` says about one test. No auth in the hackathon; acceptable only without a public deployment. A deliberate omission.
 - Review fixes 1–13 accepted; fix 2 changes Q22's order: bank content first.
 
 v2 (21.11, grilling rounds 1–3):
@@ -98,29 +137,25 @@ None: the three v2 forks are settled by D1–D3.
 Consumers: Danylo (bank format), the summary screen, the map's author (`startHere`), F5 (`lessonVariant`, unchanged). Changes go to `.planning/decisions.md` and the team channel. Everything F1 defines (`docs/specs/F1-profiling.md`: facts, consent rule, Jev call, validation, fallback, because lines) stays unless changed here.
 
 ```
-GET  /api/check-questions                          → CheckQuestion[]    // the whole bank ordered by id, with or without a key
+GET  /api/check-questions                          → CheckQuestion[]    // the lessons' quiz steps in story order, with or without a key
 POST /api/users/{userId}/quick-check/step          StepRequest → StepResponse
 POST /api/users/{userId}/categorization            {consent, facts?, profile?, history?, mastery?, useRules?, stepCallsMade?} → Categorization
 GET  /api/users/{userId}/categorization            → Categorization | 404     // startHere computed on read
 ```
 
-`GET /api/check-questions` (no correct option, no misconceptions, no "checks" sentence, no level):
+`GET /api/check-questions` (v5: one entry per lesson quiz step in the pool):
 ```json
 [{
-  "id": "inflation-real-value",
+  "id": "berlin-1/q1",
+  "lessonId": "berlin-1",
   "area": "saving",
-  "accountPrompt": "Your savings account holds €{savingsBalance} at {savingsInterestRate}% a year. Inflation runs at about 3%. Over a year, what happens to what that money can buy?",
-  "slots": ["savingsBalance", "savingsInterestRate"],
-  "genericPrompt": "Your savings account holds €10,000 at 2% a year. Inflation runs at about 3%. Over a year, what happens to what that money can buy?",
-  "options": [
-    "It buys a little more, because the balance grows by the interest",
-    "It buys a little less, because prices rise faster than the interest",
-    "It stays the same, because the money is safe in the bank",
-    "It depends on the bank, not on prices"
-  ]
+  "prompt": "What does an inflation rate of 3% mean?",
+  "options": ["On average, the basket of goods costs 3% more than a year ago", "Every price rose by exactly 3%", "The bank takes 3% of your balance"],
+  "correctIndex": 0,
+  "explanation": "[[inflation]] is an average over a basket. Some prices rise much more, some less, some even fall."
 }]
 ```
-`accountPrompt` is null for generic-only questions. Options carry no slots. Slots, their availability rules and their formatting are unchanged from v1: `savingsBalance`, `savingsInterestRate`, `monthOut`, `loanRemaining`, `loanApr`, `cardUsed`, `cardLimit`, `etfMonthly`, `depotTotal`, `positionCount`, filled by `slotValues` in `front/src/lib/bank/selectors.ts`. An account version is shown only with consent and when every slot is available; otherwise the generic version is shown.
+`id` is `<lessonId>/<stepId>`; `area` is the story's area (`saving` | `debt` | `investing`); `prompt`, `options`, `correctIndex` and `explanation` are the quiz step's own, the explanation with its `[[concept]]` / `[[concept|shown text]]` glossary markup. The correct option and the explanation go out because the app shows them after each answer.
 
 `POST /api/users/{userId}/quick-check/step`:
 ```json
@@ -129,19 +164,19 @@ GET  /api/users/{userId}/categorization            → Categorization | 404     
   "facts": {"incomeBand": "2-3.5k", "cashBufferMonths": "6+", "savingsRate": "20%+", "savesRegularly": true, "inOverdraft": false, "holdsInvestments": true, "hasLoan": true},
   "profile": {"ageBand": null, "savingsCover": null, "horizon": "1-5y"},
   "history": [
-    {"questionId": "inflation-real-value", "optionIndex": 1, "confidence": "guessing"},
-    {"questionId": "compound-two-years", "optionIndex": null, "confidence": null}
+    {"questionId": "berlin-1/q1", "optionIndex": 1},
+    {"questionId": "sao-paulo-3/q2", "optionIndex": null}
   ],
   "useRules": false,
   "stepFellBack": false
 }
 ```
 ```json
-{"mastery": {"saving": 0.6, "investing": 0.25}, "nextQuestionId": "time-in-market", "done": false, "useRules": false, "stepFellBack": false}
+{"mastery": {"saving": 0.85, "debt": 0.25, "investing": null}, "nextQuestionId": "sao-paulo-1/q1", "done": false, "useRules": false, "stepFellBack": false}
 ```
-- `optionIndex: null` with `confidence: null` = "Not sure". `history: []` returns the first question, picked by the rule (no Jev call: there is nothing to judge yet).
-- `mastery` has a key for every area that has bank questions; `null` = no answer yet. `done: true` comes with `nextQuestionId: null`.
-- `useRules` means no Jev at all: the user's opt-out (D5) or no configured key (`JevProperties.callsJev()` false); the response returns `true` in either case. `stepFellBack` (default `false`) turns `true` in the response once a step's Jev call failed; it switches only the later steps to the rule, and the final Jev call still runs (Q12). The front sends the last response's `useRules` and `stepFellBack` with the next step, and `useRules` with the final POST. With either one `true` the step makes no Jev call. So every step sent with both `false` and a non-empty history is one Jev call; the front counts them on send into `stepCallsMade`.
+- `optionIndex: null` = "Not sure". `history: []` returns the first question: its lesson is picked by Jev from the goals, the profile and, with consent, the facts, or by the rule when the step runs without Jev (v5, "First question").
+- `mastery` has a key for every area that has questions (saving, debt, investing); `null` = no answer yet. `done: true` comes with `nextQuestionId: null`.
+- `useRules` means no Jev at all: the user's opt-out (D5) or no configured key (`JevProperties.callsJev()` false); the response returns `true` in either case. `stepFellBack` (default `false`) turns `true` in the response once a step's Jev call failed; it switches only the later steps to the rule, and the final Jev call still runs (Q12). The front sends the last response's `useRules` and `stepFellBack` with the next step, and `useRules` with the final POST. With either one `true` the step makes no Jev call. So every step sent with both `false` is one Jev call; the front counts them into `stepCallsMade`: on send for a step with a history, and for the first step once its response says `useRules: false` (only that response tells the front whether the backend has a key).
 
 Final `POST /api/users/{userId}/categorization`:
 ```json
@@ -149,11 +184,11 @@ Final `POST /api/users/{userId}/categorization`:
   "consent": false,
   "profile": {"ageBand": "26-40", "savingsCover": "1-3", "horizon": "within-1y"},
   "history": [
-    {"questionId": "emergency-months", "optionIndex": 0, "confidence": "sure"},
-    {"questionId": "inflation-real-value", "optionIndex": 2, "confidence": "sure"},
-    {"questionId": "fall-before-you-need-it", "optionIndex": 1, "confidence": "fairly-sure"}
+    {"questionId": "berlin-1/q2", "optionIndex": 0},
+    {"questionId": "sao-paulo-1/q1", "optionIndex": 2},
+    {"questionId": "seoul-1/q2", "optionIndex": 1}
   ],
-  "mastery": {"saving": 0.55, "investing": 0.75},
+  "mastery": {"saving": 0.85, "debt": 0.25, "investing": 0.85},
   "useRules": true,
   "stepCallsMade": 2
 }
@@ -163,15 +198,14 @@ Final `POST /api/users/{userId}/categorization`:
 - `stepCallsMade` is counted by the front on send, kept across D3 restarts and on the F1 resend after a failed step; negative → 400, no upper bound, stored as sent.
 - With life stage skipped in onboarding, the categorisation reads `lifeStage` from `ageBand` (D1: `18-25` → student, `60+` → pre-retirement, else null); the onboarding row is not changed.
 
-Value sets: `ageBand` `18-25` | `26-40` | `41-59` | `60+`; `savingsCover` = F1 `cashBufferMonths` values `<1` | `1-3` | `3-6` | `6+`; `horizon` `within-1y` | `1-5y` | `5y+` | `not-sure`; `confidence` `guessing` | `fairly-sure` | `sure`. Every profile field is nullable.
+Value sets: `ageBand` `18-25` | `26-40` | `41-59` | `60+`; `savingsCover` = F1 `cashBufferMonths` values `<1` | `1-3` | `3-6` | `6+`; `horizon` `within-1y` | `1-5y` | `5y+` | `not-sure`. Every profile field is nullable.
 
 `Categorization` (F1) changes; stored in the categorisation JSONB:
 ```
 profile: {ageBand, savingsCover, horizon} | null         // the ranges the user picked (Q7); non-null = the Quick check ran
 mastery: {<area>: number | null}                         // {} without a Quick check
-confidence: {<area>: number | null}                      // per-area chip aggregate (Reference), so the dock rebuilds after reload
 answerCount: number                                      // knowledge answers; 0 without a Quick check
-confidenceGaps: [{area, direction: "under" | "over", because}]   // ≤ 2, from Q14 when the Quick check ran; F1's facts table only without one
+gaps: [{area, direction: "habit-ahead" | "knowledge-ahead", because}]   // ≤ 2, from the v4 gap rule when the Quick check ran; F1's facts table only without one
 startLesson: {lessonId, title, area, storyId, storyCity} | null   // lessonId a JSON lesson id (string), title the lesson's, storyCity stories.json city, area the area that picked the story (J4; null when no candidate picked it, e.g. all Solid); null → the summary hides the first-lesson card
 readyForNext: boolean                                    // every area Solid (Q15, D7)
 pathStoryIds: string[]                                   // story ids in path order: startLesson's story first, then the other candidate stories (v2.1)
@@ -191,55 +225,65 @@ v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / f
   "goals": ["...F1 onboarding goals"],
   "facts": {"...": "F1 facts, only with consent"},
   "answers": [
-    {"area": "saving", "result": "wrong", "misconception": "Thinks money in the bank keeps its value whatever prices do.", "confidence": "sure"},
-    {"area": "investing", "result": "not-sure", "misconception": null, "confidence": null}
+    {"area": "saving", "lessonId": "berlin-1", "topic": "Inflation and what your money can buy", "concepts": ["inflation", "real-return"], "result": "wrong"},
+    {"area": "debt", "lessonId": "sao-paulo-1", "topic": "The interest in \"no interest\"", "concepts": ["installments", "hidden-interest"], "result": "not-sure"}
   ]
 }
 ```
-`result` is `correct` | `wrong` | `not-sure`; `misconception` is the chosen wrong option's text from the bank, else null. Questions, verbatim (`mastery_<area>` only for areas with at least one answer; `next` only with 2+ unasked ids, its labels the unasked ids, each criterion its `checks` sentence). The backend test compares each sent question with its entry below, placeholders filled from the bank, and finds no extra keys. Areas without lessons (debt, risk, retirement) get a `mastery_` entry when their first lesson exists.
+`result` is `correct` | `wrong` | `not-sure`; `lessonId`, `topic` and `concepts` are those of the lesson the question came from. Questions, verbatim (`mastery_<area>` only for areas with at least one answer; `next` only with 2+ lessons to choose from). `next.criteria` is built per request (v5): one option per candidate lesson, named by the lesson's topic in snake case and described by "<topic>. Covers: <concepts, hyphens as spaces>."; the candidates are at most `LESSON_CHOICES_PER_AREA` (2) lessons per area in the area order, lessons with a question left, each story's first such lesson before any story's second. The backend test compares each sent question with its entry below, the criteria filled from the lessons, and finds no extra keys.
 
 <!-- jev-step-questions: the backend test compares the Jev request with this block -->
 ```json
 {
-  "mastery_saving":     {"type": "noul", "instructions": "Do this person's answers about saving, emergency funds and inflation show that they understand these ideas well?"},
-  "mastery_investing":  {"type": "noul", "instructions": "Do this person's answers about investing, compound interest and market ups and downs show that they understand these ideas well?"},
+  "mastery_saving":    {"type": "noul", "instructions": "Do this person's saving answers, the entries of `answers` whose `area` is saving, show that they understand ideas such as inflation, an emergency fund and how savings grow?"},
+  "mastery_debt":      {"type": "noul", "instructions": "Do this person's borrowing answers, the entries of `answers` whose `area` is debt, show that they understand ideas such as instalments, card debt and the full cost of a loan?"},
+  "mastery_investing": {"type": "noul", "instructions": "Do this person's investing answers, the entries of `answers` whose `area` is investing, show that they understand ideas such as market falls, borrowing to invest and spreading risk?"},
   "next": {"type": "choice",
-    "instructions": "Which of these questions would show best what this person still needs to learn, given their answers so far, how sure they felt and when they might need their money?",
-    "criteria": {"<question id>": "<the question's checks sentence>"}},
+    "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers` and when they might need their money in `profile.horizon`?",
+    "criteria": {"<lesson topic in snake case>": "<lesson topic>. Covers: <lesson concepts>."}},
+  "first": {"type": "choice",
+    "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given their goals in `goals`, when they might need their money in `profile.horizon` and, when given, the facts about their accounts in `facts`?",
+    "criteria": {"<lesson topic in snake case>": "<lesson topic>. Covers: <lesson concepts>."}},
   "enough": {"type": "noul", "instructions": "Do the answers so far show clearly enough what this person already understands and what they should learn first?"}
 }
 ```
 Step outcome, in this order:
-1. A response that fails F1's validation (missing question, label outside its set, `next` not among the unasked ids, probability outside [0, 1]), a timeout or any error → this step runs on the rule and returns `stepFellBack: true`. After a fallback the rule recomputes mastery from all answers, so the dock's values can jump from Jev's to the rule's.
+1. A response that fails F1's validation (missing question, label outside its set, `next` not among the lessons sent, probability outside [0, 1]), a timeout or any error → this step runs on the rule and returns `stepFellBack: true`. After a fallback the rule recomputes mastery from all answers, so the dock's values can jump from Jev's to the rule's.
 2. `mastery` = the `mastery_<area>` probabilities; an answered area without a `mastery_<area>` question takes the rule mean.
 3. A response later than `JevConsts.STEP_BUDGET` (1.5 s, D9) → `next` from the rule, `done` as in outcome 4 with Jev's `enough`; `stepFellBack` stays `false`.
-4. `done` when answered ≥ `MAX_QUESTIONS`, when no unasked question is left, or when answered ≥ `MIN_QUESTIONS` and `enough` ≥ `ENOUGH_THRESHOLD`. Otherwise `nextQuestionId` = `next`, or the single unasked id when `next` was not asked.
-5. With `horizon` `within-1y`, `short-term-fall` is left out of the unasked ids (and so of `next`), and a next question in `saving` is replaced by `fall-before-you-need-it` while it is unasked (D8, enforced like min/max).
+4. `done` when answered ≥ `MAX_QUESTIONS`, when no unasked question is left, or when answered ≥ `MIN_QUESTIONS` and `enough` ≥ `ENOUGH_THRESHOLD`. Otherwise the next question is drawn at random from the unasked quiz steps of the lesson `next` names, or of the single candidate lesson when `next` was not asked.
+5. Removed in v5 (the D8 question swap went with the bank); `within-1y` still moves saving before investing in the area order.
 
 ### Jev final call
-F1's request (role and `focus_*` verbatim from F1's `jev-questions` block) plus `state.profile`, `state.goals` and `state.checkAnswers` (the step call's `answers`; F1's `state.answers` already holds the onboarding answers), plus these questions (`gap_<area>` only for areas with at least one answer that carries a chip; `first_lesson` only with 2+ candidates, Q15). No `mastery_*` (D4). Same per-key comparison as the step block.
+F1's request (role and `focus_*` verbatim from F1's `jev-questions` block) plus `state.profile`, `state.goals` and `state.checkAnswers` (the step call's `answers`; F1's `state.answers` already holds the onboarding answers), plus these questions (`gap_<area>` only when facts were sent, and only for areas with at least one answer and a habit in the facts: saving and investing; `first_lesson` only with 2+ lessons to choose from, its criteria built per request as in the step call: per area of the candidate pool at most 2 lessons not completed, those with an answer that was not correct first, then one per story, v5). No `mastery_*` (D4). Same per-key comparison as the step block.
 
 <!-- jev-final-questions: the backend test compares the Jev request with this block -->
 ```json
 {
-  "gap_<area>": {"type": "choice",
-    "instructions": "In this area, how does how sure this person felt compare with how well they answered?",
+  "gap_saving": {"type": "choice",
+    "instructions": "How does this person's saving habit in `facts.savesRegularly` (true when they move money to savings every month) compare with their knowledge answers about saving, the entries of `checkAnswers` whose `area` is saving?",
     "criteria": {
-      "under": "Their answers in this area are mostly right, yet they said they were guessing or only fairly sure.",
-      "over": "They said they were sure, yet their answers in this area show gaps.",
-      "aligned": "How sure they felt roughly matches how well they answered."}},
+      "habit_ahead": "They move money to savings every month, and at least one of their saving answers is wrong or not sure.",
+      "knowledge_ahead": "Every one of their saving answers is correct, and they do not move money to savings every month.",
+      "aligned": "The habit and the answers match: they move money to savings every month and every saving answer is correct, or they do not and at least one saving answer is wrong or not sure."}},
+  "gap_investing": {"type": "choice",
+    "instructions": "How does this person's investing habit in `facts.holdsInvestments` (true when they hold investment products) compare with their knowledge answers about investing, the entries of `checkAnswers` whose `area` is investing?",
+    "criteria": {
+      "habit_ahead": "They hold investment products, and at least one of their investing answers is wrong or not sure.",
+      "knowledge_ahead": "Every one of their investing answers is correct, and they hold no investment products.",
+      "aligned": "The habit and the answers match: they hold investment products and every investing answer is correct, or they hold none and at least one investing answer is wrong or not sure."}},
   "first_lesson": {"type": "choice",
-    "instructions": "Which lesson should this person start with, given which ideas their answers show they have not mastered yet?",
-    "criteria": {"story_<id>": "<the story's topic>"}}
+    "instructions": "Which of these lessons should this person start with, given which ideas their knowledge answers in `checkAnswers` show they have not mastered yet?",
+    "criteria": {"<lesson topic in snake case>": "<lesson topic>. Covers: <lesson concepts>."}}
 }
 ```
-F1 validation applies to the whole response; any failure → the whole categorisation on rules (D6), 7 s read timeout. A valid `gap_<area>` label whose precondition fails in the history becomes `aligned` (Reference, Gaps).
+F1 validation applies to the whole response; any failure → the whole categorisation on rules (D6), 7 s read timeout. The decision stays in code: a valid `gap_<area>` label counts only when the v4 gap rule gives the same direction for that area from the facts and the history; otherwise the area is `aligned`. Jev's option names keep their underscores; the response's `direction` is `habit-ahead` / `knowledge-ahead`.
 
 ### Validation and errors
 `ProblemDetail` from the global handler; `detail` never echoes a rejected value. Both POSTs share these rules:
 - F1 rules: malformed JSON, missing `consent`, `userId` blank or over 64 chars, a fact outside its set, `facts` with `consent: false` → 400; no onboarding row → 404 "Finish onboarding first". Skipped onboarding is allowed as in F1.
 - `profile` value outside its set, or `savingsCover` with `consent: true` (the card asks it only without consent) → 400.
-- `history`: more than `MAX_QUESTIONS` entries, an unknown or repeated `questionId`, `optionIndex` outside the question's options, `confidence` null with a non-null `optionIndex` (or the reverse), `confidence` outside its set → 400.
+- `history`: more than `MAX_QUESTIONS` entries, an unknown or repeated `questionId`, `optionIndex` outside the question's options → 400.
 - Final POST with `profile`: a `mastery` key that is not a bank area or a value outside [0, 1] → 400; a negative `stepCallsMade` → 400 (with or without `profile`). F1's 5-minute reuse of a recent categorisation is skipped when `profile` is sent or `useRules` is true, and reuses only a stored row without `profile` and with `answerCount` 0.
 - No rate limit (D10).
 
@@ -264,7 +308,7 @@ F1 validation applies to the whole response; any failure → the whole categoris
 - **Mastery**: the mean of the area's answer scores; no answers → null.
 - **Confidence**: per area, the mean of the chip values, "Not sure" counted as Guessing; no answers → null. The backend stores it; the front uses the same values live on the dock.
 - **Area order**: areas from the user's goals first (F1 goals → areas map), then the rest in `saving, debt, investing, risk, retirement` order, keeping only areas with bank questions; `horizon` `within-1y` moves `saving` before `investing`.
-- **Next**: (1) after a wrong or "Not sure" answer, an unasked `easy` question from the same area; (2) otherwise the first area in order with no answer; (3) otherwise the areas by mastery ascending (ties: area order), the first with an unasked question; none → done. Within an area: `easy` before `hard`, then `id`; with `within-1y`, `fall-before-you-need-it` first for saving and `short-term-fall` excluded, as in step outcome 5. No unasked question in the chosen area → the next rule down.
+- **Next** (v5 replaces this with the lesson-level rule in the v5 block): (1) after a wrong or "Not sure" answer, an unasked `easy` question from the same area; (2) otherwise the first area in order with no answer; (3) otherwise the areas by mastery ascending (ties: area order), the first with an unasked question; none → done. Within an area: `easy` before `hard`, then `id`; with `within-1y`, `fall-before-you-need-it` first for saving and `short-term-fall` excluded, as in step outcome 5. No unasked question in the chosen area → the next rule down.
 - **Done**: answered ≥ `RULE_MAX_QUESTIONS`, or answered ≥ `MIN_QUESTIONS` and every area has an answer, or no unasked question left.
 - **Gaps (Q14)**, per area, from the chips ("Not sure" carries no chip and is ignored). Preconditions: `over` needs ≥ 1 wrong answer with `sure`; `under` needs ≥ 1 correct answer with a chip other than `sure` and no wrong `sure`. Rule: `over` when its precondition holds; else `under` when its precondition holds and mastery ≥ `JUST_STARTING_BELOW`; else none. Jev labels pass only when their precondition holds, else `aligned`; Jev's `under` also needs mastery ≥ `JUST_STARTING_BELOW` (0.4), like the rule's; `aligned` = none. At most `MAX_GAP_CARDS`: `under` before `over`, then area order. The quoted chip: `under` the lowest chip in the area, `over` the highest. `because` is built after `startLesson`, since the `over` template depends on it.
 - **First lesson (Q15)**: candidates = lessons with bank rows in non-Solid areas (no answer counts as non-Solid), minus lessons the user completed before the test. A lesson's area is the area of its lowest-id bank question; lessons without bank rows are skipped. Jev and the rule pick from candidates in answered areas when any exist, else from unanswered ones. One candidate → it, without a Jev question. Rule: the weakest area (lowest mastery, ties: area order); in it, the answered question with the lowest score (ties: earlier in the history) gives the lesson; an unanswered area gives its lowest `lessonId`. No candidates → the uncompleted lesson with bank rows and the highest `position`; `readyForNext: true` only when every area is Solid; none left → `startLesson: null`. Without the Quick check the area order is F1's `focusAreas` first, then the other bank areas in area order, so the map's why line reads "{Area} is not checked yet".
@@ -282,6 +326,7 @@ F1 validation applies to the whole response; any failure → the whole categoris
 Never a percentage or number on screen.
 
 ### Horizon (Q17, D8)
+v5: only the area order is left; the question swap below went with the bank.
 `within-1y` changes the area order, the saving pick and drops `short-term-fall` (step outcome 5, both paths), and Jev sees it in `state.profile`. Other values change nothing in the rule.
 
 ### "Start here" (Q18)
@@ -307,13 +352,14 @@ Never a percentage or number on screen.
 
 ### Copy, verbatim (Q19, Q20 and the cards)
 - Why this question (Q19): knowledge, first question in the area: "Picked to learn more about {Area}"; area already asked: "Picked to look at {Area} from another angle". Profile: age band "So examples fit your stage of life"; savings cover "So examples fit your savings"; time frame "So examples match your time frame".
-- Why here (map): `startHere` area answered and not Solid "Why here: Your answers about {Area}"; area unanswered "Why here: {Area} is not checked yet"; `readyForNext` "Why here: Next on your path".
+- Why here (map): one line, "Based on your onboarding answers" (Jan, 21.11).
 - Consent notice (Q20, GDPR art. 13(1)(e)): "Your answers, how sure you felt and the ranges you pick (and, if you allow it, ranges from your accounts) are checked by an external AI provider to pick your first lesson. Exact account numbers never leave this phone. We keep the result and the ranges."
 - Profile questions (Q10 order): "Which age band are you in?" 18–25 / 26–40 / 41–59 / 60+; "How many months of spending could your savings cover?" Less than 1 month / 1–3 months / 3–6 months / 6 months or more; "When might you need the money you save or invest?" Within a year / 1–5 years / 5+ years / Not sure.
 - Gap cards: under, title "You know more than you think", because "On {Area} you said “{chip}”, yet your answers show you already understand how it works."; over, title "There is more to explore here", because with `startLesson` in this area "On {Area} you said “{chip}”. Your answers leave a few things open, which is where your first lesson starts.", otherwise "On {Area} you said “{chip}”. Your answers leave a few things open to explore."; aligned, title "How sure you felt matches your answers", text "On the areas we checked, your confidence and your answers line up." The backend builds `because`; the front adds the titles.
 - D2 line: "We used a simpler check this time".
 
 ### Bank rules (for the content task and Danylo)
+Removed in v5: there is no bank and no `check_question` table; the questions are the lessons' quiz steps.
 - Columns of `check_question`: `id` (slug `^[a-z0-9-]+$`), `lesson_id` (NOT NULL, FK `lesson(id)` `ON DELETE CASCADE`), `area`, `level` (`easy` | `hard`), `account_prompt` (nullable), `slots`, `generic_prompt`, `options` (3–4), `correct_index` (0-based), `misconceptions` (same length as `options`, NULL at `correct_index`, text elsewhere), `checks` (one sentence).
 - DB `CHECK`s hold the lengths, ranges and sets. Postgres arrays are 1-based: `cardinality(options) BETWEEN 3 AND 4`, `cardinality(misconceptions) = cardinality(options)`, `correct_index BETWEEN 0 AND cardinality(options) - 1`, `misconceptions[correct_index + 1] IS NULL`, and exactly one NULL in `misconceptions` (`cardinality(array_positions(misconceptions, NULL)) = 1`), no NULL or empty option, `account_prompt` NULL exactly when `slots` is empty, and no `{` in `generic_prompt`.
 - Starter bank, 9 rows from V2's lessons (1 Emergency fund and 3 Inflation → `saving`; 2 Compound interest → `investing`): each area at least 2 `easy` and 1 `hard`, so a 6-question test never runs out. `short-term-fall` (investing, easy, lesson 2, D8) asks what a fall next month means for money left to compound for 20 years; `fall-before-you-need-it` (saving, easy, lesson 1, D8) asks what it means for money needed within a year. Same concept and level as the lesson, other numbers or scenario, no lesson question copied.

@@ -58,7 +58,7 @@ export function seedElena(seed: number = ELENA_SEED): BankState {
   const rng = createRng(seed);
 
   return {
-    owner: { name: 'Elena Petrova', initials: 'EP' },
+    owner: { name: 'Elena Petrova', initials: 'EP', age: 72 },
     account: {
       name: 'Main account',
       iban: 'DE56 3704 0044 0872 1945 63',

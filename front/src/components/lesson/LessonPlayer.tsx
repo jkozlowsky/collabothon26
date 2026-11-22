@@ -46,6 +46,7 @@ export function LessonPlayer({ lesson, session, onClose, onNext, onOpenGlossary,
         ) : (
           <LessonEnd
             title={lesson.title}
+            stop={{ position: lesson.position, total: lesson.total, city: lesson.city }}
             xp={xp}
             concepts={lesson.concepts.map((key) => ({ key, term: lesson.glossary[key]?.term ?? key, weak: weak.has(key) }))}
             onConcept={setConcept}

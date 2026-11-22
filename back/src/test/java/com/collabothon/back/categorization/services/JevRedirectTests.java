@@ -22,7 +22,7 @@ import org.springframework.test.context.DynamicPropertySource;
 
 import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.categorization.consts.JevConsts;
-import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
+import com.collabothon.back.categorization.dto.JevOnboardingAnswersDto;
 import com.sun.net.httpserver.HttpServer;
 
 // A followed redirect would re-send the body to a second host, which the sent flag cannot account for.
@@ -60,8 +60,8 @@ class JevRedirectTests {
 
 	@Test
 	void redirectIsNotFollowed() {
-		OnboardingAnswersDto answers = new OnboardingAnswersDto(null, List.of(), "occasional", false);
-		JevResult result = jev.ask(answers, null, null);
+		JevOnboardingAnswersDto answers = new JevOnboardingAnswersDto(null, "occasional", false);
+		JevResult result = jev.ask(answers, List.of(), null, null);
 
 		assertEquals(1, ASKED.get());
 		assertEquals(0, REDIRECTED.get());

@@ -33,6 +33,8 @@ import com.collabothon.back.categorization.enums.LifeStage;
 import com.collabothon.back.categorization.enums.Role;
 import com.collabothon.back.categorization.mappers.CheckLessonMapper;
 import com.collabothon.back.categorization.mappers.JevAnswerMapper;
+import com.collabothon.back.categorization.mappers.JevInterestMapper;
+import com.collabothon.back.categorization.mappers.JevOnboardingAnswersMapper;
 import com.collabothon.back.categorization.mappers.OnboardingAnswersMapper;
 import com.collabothon.back.categorization.mappers.StartLessonMapper;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
@@ -70,6 +72,10 @@ public class CategorizationService {
 
 	private final JevAnswerMapper jevAnswerMapper;
 
+	private final JevInterestMapper jevInterestMapper;
+
+	private final JevOnboardingAnswersMapper jevOnboardingAnswersMapper;
+
 	private final LessonContentRepository content;
 
 	private final LessonCompletionRepository completions;
@@ -99,7 +105,9 @@ public class CategorizationService {
 		}
 		boolean ran = !history.isEmpty();
 		ProfileRangesDto profile = ran ? request.profile() : null;
-		List<FocusArea> order = QuickCheckRules.areaOrder(answers.goals(), ran ? profile.horizon() : null, pool);
+		List<Story> stories = stories();
+		List<FocusArea> order = QuickCheckRules.areaOrder(FocusArea.fromInterests(answers.interests(), stories),
+				ran ? profile.horizon() : null, pool);
 		Map<FocusArea, Double> ruleMastery = QuickCheckRules.mastery(order, history);
 		Map<FocusArea, Double> mastery = new LinkedHashMap<>();
 		if (ran) {
@@ -109,15 +117,15 @@ public class CategorizationService {
 			});
 		}
 		Set<String> completed = new HashSet<>(completions.findLessonIdsByUserId(userId));
-		List<Story> stories = stories();
 		List<CheckLesson> lessons = QuickCheckRules.lessons(pool, lessonMapper::toLesson);
 		List<CheckLesson> choices = QuickCheckRules.firstLessonChoices(QuickCheckRules.pool(
 				QuickCheckRules.candidates(lessons, stories, order, mastery, history, completed), history), history,
 				completed);
 		List<FocusArea> gapAreas = QuickCheckRules.gapAreas(order, history, facts);
-		JevQuickCheck quickCheck = ran ? new JevQuickCheck(profile, answers.goals(),
+		JevQuickCheck quickCheck = ran ? new JevQuickCheck(profile,
 				history.stream().map(jevAnswerMapper::toJev).toList(), gapAreas, choices) : null;
-		JevResult fromJev = request.useRules() ? JevResult.SKIPPED : jev.ask(answers, facts, quickCheck);
+		JevResult fromJev = request.useRules() ? JevResult.SKIPPED : jev.ask(jevOnboardingAnswersMapper.toJev(answers),
+				jevInterestMapper.toJev(Story.picked(answers.interests(), stories)), facts, quickCheck);
 
 		LifeStage lifeStage = answers.lifeStage() == null && ran ? LifeStage.fromAgeBand(profile.ageBand())
 				: LifeStage.fromAnswer(answers.lifeStage());
@@ -125,7 +133,7 @@ public class CategorizationService {
 		Role measured = ran && Experience.fromWire(answers.experience()) == null
 				? QuickCheckRules.measuredRole(mastery, history) : null;
 		Judgement j = fromJev.judgement()
-			.orElseGet(() -> CategorizationRules.fallback(answers, facts, lifeStage, savingsCover, measured));
+			.orElseGet(() -> CategorizationRules.fallback(answers, facts, lifeStage, savingsCover, measured, stories));
 		Role role = ran ? QuickCheckRules.cappedRole(j.role(), mastery, history) : j.role();
 		// Without the Quick check nothing was measured, so the judged focus leads the path.
 		List<FocusArea> pathOrder = ran ? order
@@ -141,7 +149,7 @@ public class CategorizationService {
 				? QuickCheckRules.gapCards(gaps(order, history, facts, fromJev.judgement()), startArea)
 				: CategorizationRules.saidGaps(answers, facts);
 		SharedWithModelDto shared = fromJev.sent() || request.stepCallsMade() > 0
-				? new SharedWithModelDto(facts, fromJev.sent() ? answers : null, answers.goals(),
+				? new SharedWithModelDto(facts, fromJev.sent() ? answers : null, answers.interests(),
 						ran || request.stepCallsMade() > 0 ? request.profile() : null, history.size(),
 						request.stepCallsMade())
 				: null;
@@ -151,7 +159,7 @@ public class CategorizationService {
 				new ExplanationDto(ExplanationOutput.ROLE, j.roleProbabilities(),
 						CategorizationRules.roleBecause(answers, facts)),
 				new ExplanationDto(ExplanationOutput.FOCUS_AREAS, j.focusProbabilities(),
-						CategorizationRules.focusBecause(focus, answers, facts)));
+						CategorizationRules.focusBecause(focus, answers, facts, stories)));
 		CategorizationDto c = new CategorizationDto(userId, consent, facts != null, role, lifeStage, focus, gaps,
 				CategorizationRules.lessonVariant(role, lifeStage), explanation, profile,
 				QuickCheckRules.byWire(mastery), history.size(), startLesson, plan.readyForNext(), plan.pathStoryIds(), null, shared,
@@ -201,10 +209,10 @@ public class CategorizationService {
 				content.lesson(lessonId).orElseThrow().path("title").asString(), area);
 	}
 
-	private List<Story> stories() {
+	List<Story> stories() {
 		return content.stories().stream()
-			.map(s -> new Story(s.path("id").asString(), s.path("city").asString(), s.path("topic").asString(),
-					content.lessonIdsOf(s)))
+			.map(s -> new Story(s.path("id").asString(), s.path("category").asString(), s.path("city").asString(),
+					s.path("topic").asString(), s.path("area").asString(), content.lessonIdsOf(s)))
 			.toList();
 	}
 

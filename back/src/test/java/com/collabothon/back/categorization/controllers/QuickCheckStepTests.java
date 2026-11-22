@@ -69,7 +69,7 @@ class QuickCheckStepTests {
 
 	private static final String JEV_URL = "https://api.typesafe.ai/v1/systemone";
 
-	// The goal below puts saving first, so the test starts in Berlin; debt (São Paulo) and investing (Seoul) follow.
+	// The interest below puts saving first, so the test starts in Berlin; debt (São Paulo) and investing (Seoul) follow.
 	private static final String BERLIN_1_Q1 = "berlin-1/q1";
 
 	private static final String BERLIN_1_Q2 = "berlin-1/q2";
@@ -126,9 +126,14 @@ class QuickCheckStepTests {
 	void ownUser() throws Exception {
 		RANDOM.index = 0;
 		userId = "step-" + UUID.randomUUID();
+		onboard("\"berlin\"");
+	}
+
+	private void onboard(String interests) throws Exception {
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
-			.content("{\"lifeStage\": \"building\", \"goals\": [\"start-saving\"], \"experience\": \"occasional\","
-					+ " \"skipped\": false}"))
+			.content("""
+					{"lifeStage": "building", "interests": [%s], "experience": "occasional", "skipped": false}"""
+				.formatted(interests)))
 			.andExpect(status().isOk());
 	}
 
@@ -184,6 +189,13 @@ class QuickCheckStepTests {
 		next(history(wrong(BERLIN_1_Q2), wrong(BERLIN_1_Q1))).andExpect(nextIs("berlin-1/q3"));
 		RANDOM.index = 0;
 		next(wrong(BERLIN_1_Q1)).andExpect(nextIs(BERLIN_1_Q2));
+	}
+
+	@Test
+	void thePickedPathsAreaIsAskedAboutFirst() throws Exception {
+		onboard("\"tokyo\"");
+
+		next("").andExpect(nextIs("seoul-1/q1"));
 	}
 
 	@Test
@@ -357,12 +369,12 @@ class QuickCheckStepTests {
 
 		assertEquals("jev-latest", sent.get().get("model").stringValue());
 		assertEquals(json.readTree("""
-				{"profile": {"ageBand": null, "savingsCover": "1-3", "horizon": "1-5y"}, "goals": ["start-saving"],
+				{"profile": {"ageBand": null, "savingsCover": "1-3", "horizon": "1-5y"}, "interests": [%s],
 				 "answers": [
 				   {"area": "saving", "lessonId": "berlin-1", "topic": "Why safe money can lose value",
 				    "concepts": ["inflation", "real-return", "fixed-term-deposit", "time-horizon"], "result": "correct"},
 				   {"area": "debt", "lessonId": "sao-paulo-1", "topic": "The interest in \\"no interest\\"",
-				    "concepts": ["installments", "hidden-interest"], "result": "wrong"}]}"""),
+				    "concepts": ["installments", "hidden-interest"], "result": "wrong"}]}""".formatted(TestPool.interest("berlin"))),
 				sent.get().get("state"));
 		JsonNode spec = SpecBlocks.read(json, "jev-step-questions");
 		ObjectNode expected = json.createObjectNode();
@@ -396,8 +408,8 @@ class QuickCheckStepTests {
 
 		// No `answers` key: an empty list would read as a signal.
 		assertEquals(json.readTree("""
-				{"profile": {"ageBand": null, "savingsCover": null, "horizon": "1-5y"}, "goals": ["start-saving"],
-				 "facts": %s}""".formatted(FACTS)), sent.get().get("state"));
+				{"profile": {"ageBand": null, "savingsCover": null, "horizon": "1-5y"}, "interests": [%s],
+				 "facts": %s}""".formatted(TestPool.interest("berlin"), FACTS)), sent.get().get("state"));
 		ObjectNode first = (ObjectNode) SpecBlocks.read(json, "jev-step-questions").get("first").deepCopy();
 		ObjectNode criteria = first.putObject("criteria");
 		CHOICES.forEach(lesson -> criteria.put(label(lesson), TestPool.criterion(lesson)));
@@ -410,11 +422,22 @@ class QuickCheckStepTests {
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(jsonPath("$.state.facts").doesNotExist())
 			.andExpect(jsonPath("$.state.answers").doesNotExist())
-			.andExpect(jsonPath("$.state.goals[0]").value("start-saving"))
+			.andExpect(jsonPath("$.state.interests[0].category").value("Inflation & savings"))
 			.andExpect(jsonPath("$.state.profile.horizon").value("1-5y"))
 			.andRespond(jevReplies(jevFirst("sao-paulo-2", CHOICES)));
 
 		step(body("1-5y", "", false)).andExpect(status().isOk()).andExpect(nextIs("sao-paulo-2/q1"));
+	}
+
+	@Test
+	void withoutInterestsTheStepLeavesThemOutOfTheState() throws Exception {
+		onboard("");
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(jsonPath("$.state.profile").exists())
+			.andExpect(jsonPath("$.state.interests").doesNotExist())
+			.andRespond(jevReplies(jevFirst("berlin-1", CHOICES)));
+
+		step(body("1-5y", "", false)).andExpect(status().isOk()).andExpect(nextIs(BERLIN_1_Q1));
 	}
 
 	static Stream<Arguments> brokenFirstSteps() {

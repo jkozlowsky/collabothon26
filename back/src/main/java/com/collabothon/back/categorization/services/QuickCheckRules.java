@@ -37,9 +37,9 @@ import com.collabothon.back.categorization.enums.Role;
 
 final class QuickCheckRules {
 
-	/** Goal areas first, then the fixed order, only areas with questions; a short horizon puts saving first. */
-	static List<FocusArea> areaOrder(List<String> goals, String horizon, List<CheckQuestion> pool) {
-		Set<FocusArea> order = new LinkedHashSet<>(FocusArea.fromGoals(goals));
+	/** Interest areas first, then the fixed order, only areas with questions; a short horizon puts saving first. */
+	static List<FocusArea> areaOrder(List<FocusArea> interests, String horizon, List<CheckQuestion> pool) {
+		Set<FocusArea> order = new LinkedHashSet<>(interests);
 		order.addAll(Arrays.asList(FocusArea.values()));
 		List<FocusArea> areas = new ArrayList<>(order.stream()
 			.filter(area -> pool.stream().anyMatch(q -> q.area() == area))

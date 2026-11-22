@@ -68,12 +68,15 @@ class QuickCheckCategorizationTests {
 	private static final String JEV_URL = "https://api.typesafe.ai/v1/systemone";
 
 	private static final String ONBOARDING = """
-			{"lifeStage": "building", "goals": ["start-saving"], "experience": "occasional", "skipped": false}""";
+			{"lifeStage": "building", "interests": ["berlin"], "experience": "occasional", "skipped": false}""";
+
+	private static final String ANSWERS_FOR_JEV = """
+			{"lifeStage": "building", "experience": "occasional", "skipped": false}""";
 
 	private static final String PROFILE = "{\"ageBand\": null, \"savingsCover\": \"1-3\", \"horizon\": \"1-5y\"}";
 
 	// Saving: right in berlin-1, then wrong in berlin-2. Investing: right in seoul-1, then Not sure in tokyo-1.
-	// The saving goal puts saving first; debt has no answer.
+	// The picked Berlin path puts saving first; debt has no answer.
 	private static final String HISTORY = "[" + history(right("berlin-1/q1"), wrong("berlin-2/q1"), right("seoul-1/q2"),
 			notSure("tokyo-1/q1")) + "]";
 
@@ -229,8 +232,8 @@ class QuickCheckCategorizationTests {
 			.andExpect(jsonPath("$.gaps.length()").value(1));
 
 		assertEquals(json.readTree("""
-				{"answers": %s, "facts": %s, "profile": %s, "goals": ["start-saving"], "checkAnswers": [%s]}"""
-			.formatted(ONBOARDING, FACTS, PROFILE_WITH_CONSENT, String.join(", ",
+				{"answers": %s, "interests": [%s], "facts": %s, "profile": %s, "checkAnswers": [%s]}"""
+			.formatted(ANSWERS_FOR_JEV, TestPool.interest("berlin"), FACTS, PROFILE_WITH_CONSENT, String.join(", ",
 					jevAnswer("saving", "berlin-1", "correct"), jevAnswer("saving", "berlin-2", "wrong"),
 					jevAnswer("investing", "seoul-1", "correct"), jevAnswer("investing", "tokyo-1", "not-sure")))),
 				sent.get().get("state"));
@@ -332,7 +335,7 @@ class QuickCheckCategorizationTests {
 			.andExpect(jsonPath("$.source").value("fallback"))
 			.andExpect(jsonPath("$.sharedWithModel.stepCallsMade").value(3))
 			.andExpect(jsonPath("$.sharedWithModel.answers").isEmpty())
-			.andExpect(jsonPath("$.sharedWithModel.goals[0]").value("start-saving"));
+			.andExpect(jsonPath("$.sharedWithModel.interests[0]").value("berlin"));
 
 		categorize(onRules(QUICK_CHECK).replace("\"stepCallsMade\": 3", "\"stepCallsMade\": 0"))
 			.andExpect(status().isOk())
@@ -356,7 +359,7 @@ class QuickCheckCategorizationTests {
 
 	@Test
 	void withLifeStageSkippedTheAgeBandGivesItOnlyAtTheEnds() throws Exception {
-		onboard("{\"goals\": [\"start-saving\"], \"experience\": \"occasional\", \"skipped\": false}");
+		onboard("{\"interests\": [\"berlin\"], \"experience\": \"occasional\", \"skipped\": false}");
 
 		categorize(onRules(QUICK_CHECK.replace("\"ageBand\": null", "\"ageBand\": \"60+\"")))
 			.andExpect(jsonPath("$.lifeStage").value("pre-retirement"))
@@ -467,7 +470,7 @@ class QuickCheckCategorizationTests {
 	void anF1ResendAfterStepCallsStillDisclosesThem() throws Exception {
 		categorize("{\"consent\": false, \"useRules\": true, \"stepCallsMade\": 2}").andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"sharedWithModel": {"facts": null, "answers": null, "goals": ["start-saving"], "profile": null,
+					{"sharedWithModel": {"facts": null, "answers": null, "interests": ["berlin"], "profile": null,
 					 "answerCount": 0, "stepCallsMade": 2}}""", JsonCompareMode.LENIENT));
 	}
 
@@ -520,7 +523,7 @@ class QuickCheckCategorizationTests {
 
 	@Test
 	void withoutTheQuickCheckTheFirstLessonFollowsTheJudgedFocus() throws Exception {
-		// Goals put saving first; Jev's focus puts investing ahead of it.
+		// Interests put saving first; Jev's focus puts investing ahead of it.
 		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(jevFinal(""), MediaType.APPLICATION_JSON));
 
 		categorize(NO_QUICK_CHECK).andExpect(status().isOk())
@@ -563,7 +566,7 @@ class QuickCheckCategorizationTests {
 
 	@Test
 	void theSavingsCoverAndTheAgeBandFeedTheRuleFocus() throws Exception {
-		onboard("{\"goals\": [\"stocks-etfs\"], \"experience\": \"planning\", \"skipped\": false}");
+		onboard("{\"interests\": [\"tokyo\"], \"experience\": \"planning\", \"skipped\": false}");
 
 		assertEquals(json.readTree("[\"saving\", \"investing\"]"),
 				categorized(onRules(QUICK_CHECK.replace("\"1-3\"", "\"<1\""))).get("focusAreas"));
@@ -615,7 +618,7 @@ class QuickCheckCategorizationTests {
 			"'\"regular\"', 0, intermediate" })
 	void onRulesTheRoleComesFromTheAnswersOnlyWithoutADeclaredExperience(String experience, int solidAreas,
 			String role) throws Exception {
-		onboard("{\"goals\": [\"start-saving\"], \"experience\": %s, \"skipped\": false}".formatted(experience));
+		onboard("{\"interests\": [\"berlin\"], \"experience\": %s, \"skipped\": false}".formatted(experience));
 		// Two right answers make an area Solid, one wrong answer leaves it at Building; debt was not asked about.
 		String history = "[" + history(right("berlin-1/q1"),
 				solidAreas < 1 ? wrong("berlin-2/q1") : right("berlin-2/q1"), right("seoul-1/q2"),

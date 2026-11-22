@@ -44,8 +44,16 @@ class CategorizationRulesTests {
 
 	private static final FactsDto TOM = new FactsDto("3.5-5k", "6+", "20%+", false, false, false, false);
 
+	private static final List<Story> STORIES = List.of(story("seoul", "Hype & leverage", "Risk"),
+			story("berlin", "Inflation & savings", "Saving"), story("sao-paulo", "Instalments & debt", "Borrowing"),
+			story("tokyo", "Diversification", "Investing"), story("buenos-aires", "Fast inflation", "Money basics"));
+
 	private static final Pattern ADVICE = Pattern
 		.compile("\\b(should|must|consider|recommend|buy|sell|switch|invest in|open)\\b", Pattern.CASE_INSENSITIVE);
+
+	private static Story story(String id, String category, String area) {
+		return new Story(id, category, "City " + id, "Topic " + id, area, List.of(id + "-1"));
+	}
 
 	private static OnboardingAnswersDto said(String experience) {
 		return new OnboardingAnswersDto(null, List.of(), experience, false);
@@ -127,27 +135,26 @@ class CategorizationRulesTests {
 
 	@Test
 	void fallbackFocusKeepsTheFixedOrder() {
-		OnboardingAnswersDto goals = new OnboardingAnswersDto(null, List.of("insurance", "budget"), "not-saving",
-				false);
+		OnboardingAnswersDto picked = new OnboardingAnswersDto(null, List.of("berlin"), "not-saving", false);
 		assertEquals(List.of(FocusArea.DEBT, FocusArea.SAVING, FocusArea.RISK),
-				fallbackFocus(goals, LENA, Role.NOVICE, null, null));
-		OnboardingAnswersDto laterLife = new OnboardingAnswersDto("later-life", List.of("stocks-etfs"), "planning",
+				fallbackFocus(picked, LENA, Role.NOVICE, null, null, STORIES));
+		OnboardingAnswersDto laterLife = new OnboardingAnswersDto("later-life", List.of("tokyo"), "planning",
 				false);
 		assertEquals(List.of(FocusArea.DEBT, FocusArea.RETIREMENT, FocusArea.INVESTING),
-				fallbackFocus(laterLife, ALEX, Role.ADVANCED, LifeStage.PRE_RETIREMENT, null));
+				fallbackFocus(laterLife, ALEX, Role.ADVANCED, LifeStage.PRE_RETIREMENT, null, STORIES));
 		assertEquals(List.of(FocusArea.RETIREMENT, FocusArea.INVESTING),
-				fallbackFocus(laterLife, null, Role.ADVANCED, LifeStage.PRE_RETIREMENT, null));
-		assertEquals(List.of(FocusArea.INVESTING), fallbackFocus(SKIPPED, TOM, Role.ADVANCED, null, null));
-		assertEquals(List.of(FocusArea.SAVING), fallbackFocus(SKIPPED, null, Role.ADVANCED, null, null));
+				fallbackFocus(laterLife, null, Role.ADVANCED, LifeStage.PRE_RETIREMENT, null, STORIES));
+		assertEquals(List.of(FocusArea.INVESTING), fallbackFocus(SKIPPED, TOM, Role.ADVANCED, null, null, STORIES));
+		assertEquals(List.of(FocusArea.SAVING), fallbackFocus(SKIPPED, null, Role.ADVANCED, null, null, STORIES));
 	}
 
 	@Test
 	void theQuickChecksSavingsCoverStandsInForTheBufferOnlyWithoutBankData() {
-		OnboardingAnswersDto etfs = new OnboardingAnswersDto(null, List.of("stocks-etfs"), "planning", false);
-		assertEquals(List.of(FocusArea.INVESTING), fallbackFocus(etfs, null, Role.ADVANCED, null, "6+"));
+		OnboardingAnswersDto investing = new OnboardingAnswersDto(null, List.of("tokyo"), "planning", false);
+		assertEquals(List.of(FocusArea.INVESTING), fallbackFocus(investing, null, Role.ADVANCED, null, "6+", STORIES));
 		assertEquals(List.of(FocusArea.SAVING, FocusArea.INVESTING),
-				fallbackFocus(etfs, null, Role.ADVANCED, null, "<1"));
-		assertEquals(List.of(FocusArea.INVESTING), fallbackFocus(etfs, TOM, Role.ADVANCED, null, "<1"));
+				fallbackFocus(investing, null, Role.ADVANCED, null, "<1", STORIES));
+		assertEquals(List.of(FocusArea.INVESTING), fallbackFocus(investing, TOM, Role.ADVANCED, null, "<1", STORIES));
 	}
 
 	@Test
@@ -158,17 +165,26 @@ class CategorizationRulesTests {
 		assertEquals(LifeStage.PRE_RETIREMENT, LifeStage.fromAgeBand("60+"));
 		assertNull(LifeStage.fromAgeBand(null));
 		assertEquals(List.of(FocusArea.SAVING, FocusArea.RETIREMENT),
-				fallbackFocus(SKIPPED, null, Role.ADVANCED, LifeStage.PRE_RETIREMENT, "1-3"));
+				fallbackFocus(SKIPPED, null, Role.ADVANCED, LifeStage.PRE_RETIREMENT, "1-3", STORIES));
 	}
 
 	@Test
-	void everyGoalOfMainsOnboardingPointsToAnArea() {
-		List<String> goals = List.of("budget", "money-habits", "banking-basics", "start-saving", "emergency-fund",
-				"inflation", "pay-off-debt", "credit-cards", "loans-mortgages", "start-investing", "stocks-etfs",
-				"crypto", "retirement", "insurance", "scams");
-		goals.forEach(goal -> assertEquals(1, FocusArea.fromGoals(List.of(goal)).size(), goal));
-		assertEquals(List.of(FocusArea.INVESTING, FocusArea.RISK, FocusArea.SAVING),
-				FocusArea.fromGoals(List.of("crypto", "scams", "budget", "stocks-etfs")));
+	void interestsGiveTheirStoriesAreasInThePickedOrderEachOnce() {
+		assertEquals(List.of(FocusArea.DEBT, FocusArea.INVESTING, FocusArea.SAVING), FocusArea.fromInterests(
+				List.of("sao-paulo", "seoul", "berlin", "tokyo", "buenos-aires"), STORIES));
+		assertEquals(List.of(FocusArea.SAVING, FocusArea.DEBT),
+				FocusArea.fromInterests(List.of("buenos-aires", "sao-paulo"), STORIES));
+		assertEquals(List.of(), FocusArea.fromInterests(List.of(), STORIES));
+		// A profile can outlive a story.
+		assertEquals(List.of(FocusArea.INVESTING), FocusArea.fromInterests(List.of("gone", "tokyo"), STORIES));
+	}
+
+	@Test
+	void everyPickedPathOfAnAreaHasItsOwnLineInThePickedOrder() {
+		OnboardingAnswersDto picked = new OnboardingAnswersDto(null, List.of("tokyo", "seoul", "berlin"), null, false);
+
+		assertEquals(List.of("You said Diversification is new to you.", "You said Hype & leverage is new to you."),
+				focusBecause(List.of(FocusArea.INVESTING), picked, null, STORIES));
 	}
 
 	@Test
@@ -215,15 +231,15 @@ class CategorizationRulesTests {
 		assertEquals(List.of("Your current account is below zero.",
 				"Your accounts cover less than a month of spending.", "You spent more than you earned this month.",
 				NEUTRAL_LINE),
-				focusBecause(List.of(FocusArea.DEBT, FocusArea.SAVING, FocusArea.RISK), SKIPPED, LENA));
-		OnboardingAnswersDto laterLife = new OnboardingAnswersDto("later-life", List.of("stocks-etfs"), null, false);
+				focusBecause(List.of(FocusArea.DEBT, FocusArea.SAVING, FocusArea.RISK), SKIPPED, LENA, STORIES));
+		OnboardingAnswersDto laterLife = new OnboardingAnswersDto("later-life", List.of("tokyo"), null, false);
 		assertEquals(List.of("You said retirement is close or already here.",
-				"Your accounts cover more than 6 months of spending.", "You picked investing as a goal.",
+				"Your accounts cover more than 6 months of spending.", "You said Diversification is new to you.",
 				"You are paying off a loan with us.", "Your accounts with us include investment products."),
 				focusBecause(List.of(FocusArea.RETIREMENT, FocusArea.INVESTING, FocusArea.DEBT, FocusArea.RISK),
-						laterLife, ALEX));
+						laterLife, ALEX, STORIES));
 		assertEquals(List.of("You said retirement is close or already here.", NEUTRAL_LINE),
-				focusBecause(List.of(FocusArea.RETIREMENT, FocusArea.SAVING), laterLife, null));
+				focusBecause(List.of(FocusArea.RETIREMENT, FocusArea.SAVING), laterLife, null, STORIES));
 	}
 
 	@Test
@@ -238,10 +254,10 @@ class CategorizationRulesTests {
 		for (FactsDto facts : Arrays.asList(ALEX, LENA, TOM, null)) {
 			for (String experience : Arrays.asList("not-saving", "occasional", "regular", "investing", "planning",
 					null)) {
-				OnboardingAnswersDto a = new OnboardingAnswersDto("later-life", List.of("stocks-etfs", "insurance",
-						"retirement"), experience, false);
+				OnboardingAnswersDto a = new OnboardingAnswersDto("later-life",
+						STORIES.stream().map(Story::id).toList(), experience, false);
 				lines.addAll(roleBecause(a, facts));
-				lines.addAll(focusBecause(List.of(FocusArea.values()), a, facts));
+				lines.addAll(focusBecause(List.of(FocusArea.values()), a, facts, STORIES));
 				saidGaps(a, facts).forEach(gap -> lines.add(gap.because()));
 			}
 		}

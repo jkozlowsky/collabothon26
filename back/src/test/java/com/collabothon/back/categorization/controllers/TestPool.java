@@ -62,6 +62,19 @@ final class TestPool {
 		return answer.toString();
 	}
 
+	/** A picked path as the Jev state carries it. */
+	static String interest(String storyId) {
+		for (JsonNode story : read("/content/stories.json")) {
+			if (story.path("id").asString().equals(storyId)) {
+				return JSON.createObjectNode()
+					.put("category", story.path("category").asString())
+					.put("topic", story.path("topic").asString())
+					.toString();
+			}
+		}
+		throw new IllegalArgumentException(storyId);
+	}
+
 	private static String entry(String questionId, Integer optionIndex) {
 		return "{\"questionId\": \"%s\", \"optionIndex\": %s}".formatted(questionId, optionIndex);
 	}
@@ -77,7 +90,11 @@ final class TestPool {
 	}
 
 	private static JsonNode lesson(String lessonId) {
-		try (InputStream in = TestPool.class.getResourceAsStream("/content/lessons/" + lessonId + ".json")) {
+		return read("/content/lessons/" + lessonId + ".json");
+	}
+
+	private static JsonNode read(String resource) {
+		try (InputStream in = TestPool.class.getResourceAsStream(resource)) {
 			return JSON.readTree(in);
 		}
 		catch (IOException e) {

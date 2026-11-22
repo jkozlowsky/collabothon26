@@ -14,7 +14,8 @@ import lombok.experimental.Accessors;
 public enum ProfileErrorCode implements ErrorCode {
 
 	ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "User account not found."),
-	ACCOUNT_IN_USE(HttpStatus.CONFLICT, "Account is currently in use by another device.");
+	ACCOUNT_IN_USE(HttpStatus.CONFLICT, "Account is currently in use by another device."),
+	UNKNOWN_INTEREST(HttpStatus.BAD_REQUEST, "Pick interests from the lesson paths.");
 
 	private final HttpStatus status;
 	private final String message;

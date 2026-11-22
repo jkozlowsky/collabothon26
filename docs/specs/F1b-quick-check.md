@@ -242,7 +242,7 @@ v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / f
     "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers` and when they might need their money in `profile.horizon`?",
     "criteria": {"<lesson topic in snake case>": "<lesson topic>. Covers: <lesson concepts>."}},
   "first": {"type": "choice",
-    "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given their goals in `goals`, when they might need their money in `profile.horizon` and, when given, the facts about their accounts in `facts`?",
+    "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given when they might need their money in `profile.horizon` and, when given, the topics they said are new to them in `interests` and the facts about their accounts in `facts`?",
     "criteria": {"<lesson topic in snake case>": "<lesson topic>. Covers: <lesson concepts>."}},
   "enough": {"type": "noul", "instructions": "Do the answers so far show clearly enough what this person already understands and what they should learn first?"}
 }

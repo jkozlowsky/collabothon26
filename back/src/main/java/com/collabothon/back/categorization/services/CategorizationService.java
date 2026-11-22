@@ -106,7 +106,7 @@ public class CategorizationService {
 			});
 		}
 		Set<String> completed = new HashSet<>(completions.findLessonIdsByUserId(userId));
-		List<CheckLesson> lessons = QuickCheckRules.lessons(pool);
+		List<CheckLesson> lessons = QuickCheckRules.lessons(QuickCheckRules.pickedFirst(pool, interests));
 		List<CheckLesson> interestLessons = QuickCheckRules.interestLessons(interests, lessons, mastery, history,
 				completed);
 		List<CheckLesson> choices = QuickCheckRules.firstLessonChoices(QuickCheckRules.pool(

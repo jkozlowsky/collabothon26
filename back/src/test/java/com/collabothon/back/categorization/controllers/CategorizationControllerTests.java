@@ -170,15 +170,15 @@ class CategorizationControllerTests {
 				                "You are paying off a loan with us.",
 				                "Your accounts with us include investment products."]}],
 				 "profile": null, "mastery": {}, "answerCount": 0,
-				 "startLesson": {"lessonId": "seoul-1", "title": "%1$s", "area": "investing", "storyId": "seoul",
-				                 "storyCity": "Seoul"},
+				 "startLesson": {"lessonId": "berlin-1", "title": "%1$s", "area": "saving", "storyId": "berlin",
+				                 "storyCity": "Berlin"},
 				 "readyForNext": false,
-				 "pathStoryIds": ["seoul", "berlin", "tokyo", "mumbai", "sao-paulo", "buenos-aires", "nairobi"],
-				 "startHere": {"lessonId": "seoul-1", "title": "%1$s", "area": "investing", "storyId": "seoul",
-				               "storyCity": "Seoul"},
+				 "pathStoryIds": ["berlin", "tokyo", "seoul", "mumbai", "sao-paulo", "buenos-aires", "nairobi"],
+				 "startHere": {"lessonId": "berlin-1", "title": "%1$s", "area": "saving", "storyId": "berlin",
+				               "storyCity": "Berlin"},
 				 "sharedWithModel": {"facts": %2$s, "answers": %3$s, "interests": ["berlin", "tokyo"], "profile": null, "answerCount": 0, "stepCallsMade": 0},
 				 "source": "jev", "model": "jev-2026-05", "categorizedAt": "2026-06-15T10:00:00Z"}"""
-			.formatted(lessonContent.lesson("seoul-1").orElseThrow().path("title").asString(), FACTS, ANSWERS);
+			.formatted(lessonContent.lesson("berlin-1").orElseThrow().path("title").asString(), FACTS, ANSWERS);
 
 		categorize("alex", WITH_FACTS).andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json(expected, JsonCompareMode.STRICT));

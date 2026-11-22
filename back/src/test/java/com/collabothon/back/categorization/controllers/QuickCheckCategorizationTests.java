@@ -549,13 +549,59 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void withoutTheQuickCheckTheFirstLessonFollowsTheJudgedFocus() throws Exception {
-		// Interests put saving first; Jev's focus puts investing ahead of it.
+	void withoutTheQuickCheckAndWithoutPicksTheFirstLessonFollowsTheJudgedFocus() throws Exception {
+		onboardWithInterests();
+		// The area order has saving first; Jev's focus puts investing ahead of it.
 		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(jevFinal(""), MediaType.APPLICATION_JSON));
 
 		categorize(NO_QUICK_CHECK).andExpect(status().isOk())
 			.andExpect(jsonPath("$.startLesson.lessonId").value("seoul-1"))
 			.andExpect(jsonPath("$.pathStoryIds[0]").value("seoul"));
+	}
+
+	@Test
+	void withoutTheQuickCheckThePickedPathStartsWhateverTheJudgedFocus() throws Exception {
+		// Berlin is picked; Jev's focus puts investing ahead of saving.
+		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(jevFinal(""), MediaType.APPLICATION_JSON));
+
+		categorize(NO_QUICK_CHECK).andExpect(status().isOk())
+			.andExpect(jsonPath("$.startLesson.lessonId").value("berlin-1"))
+			.andExpect(jsonPath("$.startLesson.area").value("saving"));
+	}
+
+	private String investingPickedStartsIn(String... history) throws Exception {
+		onboardWithInterests("tokyo", "mumbai");
+		return categorized(onRules(QUICK_CHECK.replace(HISTORY, "[" + history(history) + "]")
+			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{}"))).at("/startLesson/storyId").stringValue();
+	}
+
+	@Test
+	void aMeasuredGapBeatsThePick() throws Exception {
+		// In the picked path's area, then in another one.
+		assertEquals("seoul",
+				investingPickedStartsIn(right("tokyo-1/q1"), right("tokyo-1/q2"), wrong("seoul-1/q1")));
+		assertEquals("berlin", investingPickedStartsIn(right("tokyo-1/q1"), wrong("berlin-1/q1")));
+	}
+
+	@Test
+	void onATieThePickedPathWinsOverTheEarlierAnswer() throws Exception {
+		assertEquals("tokyo", investingPickedStartsIn(wrong("seoul-1/q1"), wrong("tokyo-1/q1")));
+		assertEquals("tokyo", investingPickedStartsIn(wrong("berlin-1/q1"), wrong("tokyo-1/q1")));
+	}
+
+	@Test
+	void jevStillChoosesFromTheGapLessonsAndThePicks() throws Exception {
+		onboardWithInterests("tokyo", "mumbai");
+		jev.expect(requestTo(JEV_URL))
+			.andRespond(withSuccess(jevFinal(firstLesson("seoul-1", "seoul-1", "tokyo-1", "mumbai-1")),
+					MediaType.APPLICATION_JSON));
+
+		// The Seoul mistake leads the options; Jev may take it over both picks.
+		categorize(QUICK_CHECK.replace(HISTORY, "[" + history(right("tokyo-1/q1"), wrong("seoul-1/q1")) + "]")
+			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"investing\": 0.55}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.source").value("jev"))
+			.andExpect(jsonPath("$.startLesson.storyId").value("seoul"));
 	}
 
 	@Test
@@ -660,11 +706,13 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void everyAreaSolidStillPutsThePickedPathSecondAndStartHereMovesOnToIt() throws Exception {
-		assertEquals(json.readTree("[\"seoul\", \"berlin\"]"), categorized(onRules(ALL_SOLID)).get("pathStoryIds"));
-
-		completeStory("seoul");
+	void everyAreaSolidStartsThePickedPathAndAFinishedOneGivesWayToTheNextPick() throws Exception {
+		assertEquals(json.readTree("[\"berlin\"]"), categorized(onRules(ALL_SOLID)).get("pathStoryIds"));
 		stored().andExpect(jsonPath("$.startHere.lessonId").value("berlin-1"));
+
+		onboardWithInterests("berlin", "tokyo");
+		completeStory("berlin");
+		assertEquals("tokyo", categorized(onRules(ALL_SOLID)).at("/startLesson/storyId").stringValue());
 	}
 
 	@ParameterizedTest(name = "Jev {0}, saving mastery {1} -> {2}")

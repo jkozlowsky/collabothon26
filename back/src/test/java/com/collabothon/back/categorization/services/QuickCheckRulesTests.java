@@ -429,6 +429,19 @@ class QuickCheckRulesTests {
 	}
 
 	@Test
+	void aTieGoesToThePickedStoryAndAmongPicksToTheFirst() {
+		assertEquals("s1",
+				planWithInterests(List.of(story("s1")), Set.of(), null, notSure(S31), notSure(S11_A)).start().id());
+		assertEquals("s3", planWithInterests(List.of(story("s3"), story("s1")), Set.of(), null, notSure(S11_A),
+				notSure(S31)).start().id());
+		// Two areas equally weak.
+		assertEquals("s2",
+				planWithInterests(List.of(story("s2")), Set.of(), null, notSure(S11_A), notSure(I21_A)).start().id());
+		// Nothing measured.
+		assertEquals("s4", planWithInterests(List.of(story("s4"), story("s1")), Set.of(), null).start().id());
+	}
+
+	@Test
 	void aPickedLessonGivesItsStoryAndAreaInsteadOfTheRules() {
 		StoryPlan plan = plan(Set.of(), lesson("s4-1"), right(S11_A), notSure(S31), right(I21_A));
 
@@ -479,8 +492,9 @@ class QuickCheckRulesTests {
 		Answer[] allSure = { right(S11_A), right(S31), right(I21_A), right(I41) };
 
 		assertEquals(List.of("s3", "s2", "s1"), planWithInterests(picked, done("s4"), null, answers).pathStoryIds());
-		assertEquals(List.of("s1", "s4"), planWithInterests(picked, Set.of(), null, allSure).pathStoryIds());
-		assertEquals(List.of("s1", "s2"), planWithInterests(picked, done("s4"), null, allSure).pathStoryIds());
+		// With nothing left to learn that path is the start itself.
+		assertEquals(List.of("s4"), planWithInterests(picked, Set.of(), null, allSure).pathStoryIds());
+		assertEquals(List.of("s2"), planWithInterests(picked, done("s4"), null, allSure).pathStoryIds());
 		assertEquals(List.of("s1"), planWithInterests(picked, done("s2", "s4"), null, allSure).pathStoryIds());
 	}
 

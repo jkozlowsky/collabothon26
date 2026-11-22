@@ -73,11 +73,13 @@ Lombok and MapStruct apply as everywhere in `back/`. Each new type goes in its o
 ## 4. Quick check
 
 - **Area order:** `QuickCheckRules.areaOrder` puts interest areas first (`fromInterests`), then the fixed order. The horizon rule stays but never fires for a fresh onboarding, since horizon is null.
+- **Picked paths first (C25):** several map areas share one `FocusArea`, so `pickedFirst` orders the pool once for both services: picked stories in pick order, then the others in content order. Every rule and Jev list that takes "the first of an area" follows.
+- **First question (C25):** from a picked story while one has an open question, with or without Jev. Before the first answer Jev's `first` choices hold only those lessons; with one such lesson Jev is not asked.
 - **Jev step** (`JevClient.step`, the `first` and `next` questions):
   - The state gets `interests`: a list of `{ category, topic }` names of the picked paths, never ids.
   - The question instruction refers to it as the topics the person said are new to them.
   - With `interests: []`, leave the field out of the state, because an empty list reads as a signal.
-- Every area with questions is still tested. Interests change the order, not the coverage.
+- Every area with questions is still tested. Interests decide the first question and change the order after it, not the coverage.
 
 ## 5. First lesson: hybrid pool
 
@@ -96,10 +98,14 @@ The two parts are merged with duplicates removed. The existing per-area and per-
 
 Nothing is added for non-interest lessons. Keep the wording in `JevConsts` or the same place as the other question texts.
 
+**Rule start** (C25). The weakest area still wins, so a measured gap beats a pick. On a tie (areas equally weak, or
+answers equally low) the picked story wins, picks in pick order. Without a check every area ties, so the first picked
+story with a lesson left starts; the same story starts when nothing is left to learn (every area solid).
+
 **Plan order** (`QuickCheckRules.plan`). If the start lesson is not from an interest path:
 
 - the first picked path goes **second** in `path`, right after the start, before the other candidates;
-- this also covers the rules fallback without Jev (`ruleFirstLesson` is unchanged).
+- this also covers the rules fallback without Jev.
 
 ## 6. Tests and demo
 
@@ -171,8 +177,8 @@ The build follows the option marked "chosen".
   reach Jev on main. (a) **chosen:** left as is, outside this change. (b) drop them from `JevAnswerDto` in the Jev
   simplification branch.
 - **C15 A pick steers the area, not the path's own questions.** §4 orders areas, so a Gold pick opens the check with a
-  Seoul question (same area). (a) **chosen:** as §4 says. (b) within an area, picked paths' questions first: a small
-  change to `QuickCheckRules`, closer to §0's "choice of questions".
+  Seoul question (same area). (a) as §4 said. (b) **chosen with C25:** within an area, picked paths' questions first: a
+  small change to `QuickCheckRules`, closer to §0's "choice of questions".
 - **C16 Criteria note and limits.** (a) **chosen:** only the interest lesson carries the note, and it comes on top of
   the two-per-area limit of the gap lessons, as §5 words it. (b) note every lesson of a picked path.
 - **C17 Extra copy on the screen.** (a) **chosen:** the helper "Pick every topic that is new to you. We'll build your
@@ -186,8 +192,9 @@ The build follows the option marked "chosen".
 - **C19 Jev wording.** (a) **chosen:** as §4 words it. (b) explain `interests` in the F1 and `first_lesson` questions
   and drop the horizon clause when it is null: verbatim spec blocks, and needs a live probe.
 - **C20 Every area solid, no Jev pick.** Smoke: picking Inflation & savings and passing everything starts in Seoul,
-  with Berlin second; later picks are not in the path. (a) **chosen:** §5, the rule's start is unchanged. (b) start on
-  the first pick and append the other picks: closer to §0, changes the rules.
+  with Berlin second; later picks are not in the path. (a) §5, the rule's start was unchanged. (b) start on the first
+  pick and append the other picks: closer to §0, changes the rules. **Chosen with C25:** the first half of (b), the
+  start; the other picks are still not appended.
 - **C21 "New to you".** Preselected hints and plain interest are both reported as "new to you". (a) **chosen:** §0's
   meaning. (b) "You chose to learn about X.": softer, a weaker signal.
 - **C22 Risk and retirement focus.** No path maps to them, so a pick cannot raise them. (a) **chosen:** §3's mapping.
@@ -200,6 +207,10 @@ The build follows the option marked "chosen".
 - **C24 Jan, 22.11: tiles use the map's area names; one tile selects every path of that area.** The tiles are drawn as
   the chips of Figma "07 Survey · Goals", without its limit of three, step header and mock labels. The contract stays
   story ids; what Jev receives and the pool and plan rules stay per path.
+- **C25 Jan, 22.11: the picked area has priority.** Map areas that share a focus area (Risk and Investing, Money
+  basics and Saving) no longer leave the choice to content order: within it picked paths come first, the first question
+  is from a picked path, and on a tie, without a check or with nothing left to learn the rule starts on the first pick.
+  A measured gap still beats a pick, Jev still chooses from §5's pool, and without picks nothing changes.
 
 ## Tasks
 
@@ -221,9 +232,9 @@ The build follows the option marked "chosen".
 | A4 | front type lacks sharedWithModel.interests, answers not nullable | `types/categorization.ts:63` | low | defer | already wrong on main, no reader |
 | A5 | F1 questions never say what state.interests means | `JevClient.java:71` | medium | defer | Jev wording: C19 |
 | A6 | first_lesson instruction ignores the interest notes | `JevClient.java:119` | medium | defer | Jev wording: C19 |
-| A7 | step choices never offer Gold as the first question | `QuickCheckRules.java:137` | medium | defer | C15 |
+| A7 | step choices never offer Gold as the first question | `QuickCheckRules.java:137` | medium | fix | C15 (b), chosen with C25 |
 | A8 | step questions refer to a horizon that is always null | `JevClient.java:93` | medium | defer | §1 and §4 keep horizon: C19 |
-| A9 | all areas solid without a Jev pick starts at Seoul | `QuickCheckRules.java:380` | medium | defer | seen in smoke, follows §5 and C6: C20 |
+| A9 | all areas solid without a Jev pick starts at Seoul | `QuickCheckRules.java:380` | medium | fix | C20, chosen with C25: starts on the first pick |
 | A10 | only the first pick is added to an all-solid path | `QuickCheckRules.java:393` | medium | defer | follows §5 and C7: C20 |
 | A11 | Jev's later lesson still opens the path at lesson 1 | `QuickCheckRules.java:385` | medium | reject | C5, lessons unlock in order |
 | A12 | "want to learn" is reported as "new to you", hints included | `InterestsStep.tsx:52` | medium | defer | §0's meaning: C21 |

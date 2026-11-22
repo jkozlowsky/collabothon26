@@ -25,6 +25,7 @@ import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.random.RandomGenerator;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import com.collabothon.back.categorization.consts.JevConsts;
@@ -52,6 +53,22 @@ final class QuickCheckRules {
 		return areas;
 	}
 
+	/**
+	 * The pool with the picked stories' questions first, in pick order. Every rule takes the first of an area, so this
+	 * order is what puts a pick ahead within its area; the sort is stable, so a story keeps its own order.
+	 */
+	static List<CheckQuestion> pickedFirst(List<CheckQuestion> pool, List<Story> picked) {
+		return pool.stream().sorted(Comparator.comparingInt(q -> pickRank(picked, q.storyId()))).toList();
+	}
+
+	/** A story's place among the picks; those not picked share the place after them. */
+	private static int pickRank(List<Story> picked, String storyId) {
+		return IntStream.range(0, picked.size())
+			.filter(i -> picked.get(i).id().equals(storyId))
+			.findFirst()
+			.orElse(picked.size());
+	}
+
 	/** Keeps the nulls: every area with questions is a key, null until it has an answer. */
 	static Map<String, Double> byWire(Map<FocusArea, Double> values) {
 		Map<String, Double> wire = new LinkedHashMap<>();
@@ -74,6 +91,14 @@ final class QuickCheckRules {
 			.filter(q -> !completed.contains(q.lessonId())
 					&& answers.stream().noneMatch(a -> a.question().id().equals(q.id())))
 			.toList();
+	}
+
+	/** Before the first answer only the picked stories' questions, while they have one open. */
+	static List<CheckQuestion> askable(List<CheckQuestion> open, List<Answer> answers, List<Story> picked) {
+		List<CheckQuestion> ofPicked = open.stream()
+			.filter(q -> picked.stream().anyMatch(story -> story.id().equals(q.storyId())))
+			.toList();
+		return answers.isEmpty() && !ofPicked.isEmpty() ? ofPicked : open;
 	}
 
 	/** The lesson the next question comes from; empty when no question is left. */
@@ -112,9 +137,9 @@ final class QuickCheckRules {
 			.findFirst();
 	}
 
-	/** In story order, a lesson with no answer yet before one already asked about. */
+	/** In pool order, a lesson with no answer yet before one already asked about. */
 	private static Optional<CheckQuestion> firstIn(List<CheckQuestion> open, FocusArea area, List<Answer> answers) {
-		// min keeps the first of equals, so story order decides among lessons of the same kind.
+		// min keeps the first of equals, so pool order decides among lessons of the same kind.
 		return open.stream()
 			.filter(q -> q.area() == area)
 			.min(Comparator.comparing(q -> answers.stream().anyMatch(a -> a.question().lessonId().equals(q.lessonId()))));
@@ -272,7 +297,7 @@ final class QuickCheckRules {
 			.comparing((CheckLesson l) -> inArea(answers, l.area()).isEmpty())
 			.thenComparing(l -> inArea(answers, l.area()).isEmpty() ? 0 : masteryOrStart(mastery, l.area()))
 			.thenComparing(l -> order.indexOf(l.area()));
-		// The sort is stable, so lessons of one area stay in story order.
+		// The sort is stable, so lessons of one area stay in pool order.
 		return lessons.stream()
 			.filter(l -> order.contains(l.area()) && !solid(l.area(), mastery, answers)
 					&& storyOf(l.id(), stories).flatMap(s -> startLesson(s, completed)).isPresent())
@@ -329,19 +354,23 @@ final class QuickCheckRules {
 					? JevConsts.SOLID_INTEREST_NOTE : JevConsts.INTEREST_NOTE));
 	}
 
-	static CheckLesson ruleFirstLesson(List<CheckLesson> pool, List<FocusArea> order, Map<FocusArea, Double> mastery,
-			List<Answer> answers) {
-		FocusArea weakest = pool.stream()
-			.map(CheckLesson::area)
-			.min(Comparator.comparing((FocusArea area) -> masteryOrStart(mastery, area)).thenComparing(order::indexOf))
+	static CheckLesson ruleFirstLesson(List<CheckLesson> pool, List<Story> picked, List<FocusArea> order,
+			Map<FocusArea, Double> mastery, List<Answer> answers) {
+		// Without a check every area ties, so the first picked story with a lesson left starts.
+		CheckLesson first = pool.stream()
+			.min(Comparator.comparing((CheckLesson l) -> masteryOrStart(mastery, l.area()))
+				.thenComparingInt(l -> pickRank(picked, l.storyId()))
+				.thenComparingInt(l -> order.indexOf(l.area())))
 			.orElseThrow();
+		FocusArea weakest = first.area();
 		List<CheckLesson> inWeakest = pool.stream().filter(l -> l.area() == weakest).toList();
-		// min keeps the first of equal scores, so a tie goes to the earlier answer.
+		// min keeps the first of equals, so a tie goes to the picked story, then to the earlier answer.
 		return inArea(answers, weakest).stream()
 			.filter(a -> inWeakest.stream().anyMatch(l -> l.id().equals(a.question().lessonId())))
-			.min(Comparator.comparingDouble(Answer::score))
+			.min(Comparator.comparingDouble(Answer::score)
+				.thenComparingInt(a -> pickRank(picked, a.question().storyId())))
 			.flatMap(a -> inWeakest.stream().filter(l -> l.id().equals(a.question().lessonId())).findFirst())
-			.orElse(inWeakest.getFirst());
+			.orElse(first);
 	}
 
 	/**
@@ -352,12 +381,15 @@ final class QuickCheckRules {
 			List<FocusArea> order, Map<FocusArea, Double> mastery, List<Answer> answers, Set<String> completed) {
 		boolean readyForNext = order.stream().allMatch(area -> solid(area, mastery, answers));
 		if (picked == null && candidates.isEmpty()) {
-			Optional<Story> next = stories.stream().filter(s -> startLesson(s, completed).isPresent()).findFirst();
+			// Nothing left to learn: the first pick with a lesson left, else the first such story.
+			Optional<Story> next = Stream.concat(interests.stream(), stories.stream())
+				.filter(s -> startLesson(s, completed).isPresent())
+				.findFirst();
 			return new StoryPlan(next.orElse(null), null, readyForNext,
 					next.map(s -> path(s, List.of(), interests, completed)).orElse(List.of()));
 		}
 		CheckLesson lesson = picked != null ? picked
-				: ruleFirstLesson(pool(candidates, answers), order, mastery, answers);
+				: ruleFirstLesson(pool(candidates, answers), interests, order, mastery, answers);
 		Story start = storyOf(lesson.id(), stories).orElseThrow();
 		return new StoryPlan(start, lesson.area(), readyForNext,
 				path(start,

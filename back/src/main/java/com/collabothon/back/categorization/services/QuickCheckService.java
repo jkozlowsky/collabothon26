@@ -42,14 +42,16 @@ public class QuickCheckService {
 
 	public StepResponseDto step(String userId, StepRequestDto request) {
 		OnboardingAnswersDto onboarding = categorization.onboarding(userId);
-		List<CheckQuestion> pool = checkQuestions.pool();
 		List<Answer> answers = checkQuestions.resolve(request.history());
 		String horizon = request.profile() == null ? null : request.profile().horizon();
 		List<Story> stories = categorization.stories();
+		List<Story> interests = Story.picked(onboarding.interests(), stories);
+		List<CheckQuestion> pool = QuickCheckRules.pickedFirst(checkQuestions.pool(), interests);
 		List<FocusArea> order = QuickCheckRules.areaOrder(FocusArea.fromInterests(onboarding.interests(), stories),
 				horizon, pool);
 		Set<String> completed = new HashSet<>(completions.findLessonIdsByUserId(userId));
-		List<CheckQuestion> open = QuickCheckRules.open(pool, answers, completed);
+		List<CheckQuestion> open = QuickCheckRules.askable(QuickCheckRules.open(pool, answers, completed), answers,
+				interests);
 		Map<FocusArea, Double> ruleMastery = QuickCheckRules.mastery(order, answers);
 		boolean useRules = request.useRules() || !jevProperties.callsJev();
 		if (useRules || request.stepFellBack()) {
@@ -63,7 +65,7 @@ public class QuickCheckService {
 		List<FocusArea> answered = order.stream().filter(area -> !QuickCheckRules.inArea(answers, area).isEmpty())
 			.toList();
 		Optional<StepJudgement> fromJev = jev.step(request.profile(),
-				jevInterestMapper.toJev(Story.picked(onboarding.interests(), stories)), request.facts(),
+				jevInterestMapper.toJev(interests), request.facts(),
 				answers.stream().map(Answer::toJev).toList(), answered, choices);
 		if (fromJev.isEmpty()) {
 			return byRule(order, pool, open, answers, ruleMastery, false, true);

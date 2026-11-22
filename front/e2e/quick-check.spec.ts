@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures';
 
-import { answerSurvey, expectDisabled, openApp, resetOnboarding, tap, type Survey } from './app';
+import { answerSurvey, expectDisabled, openApp, pickAlex, resetOnboarding, tap, type Survey } from './app';
 import { categorization } from '../src/test-utils/categorization';
 import { POOL } from '../src/test-utils/checkPool';
 
@@ -249,6 +249,7 @@ test('a reload of the summary rebuilds it from the stored row', async ({ page })
   const stored = ran();
   await page.route(CATEGORIZATION_URL, (route) => route.fulfill({ json: stored }));
   await page.goto('/learning-path');
+  await pickAlex(page);
   await expect(page.getByTestId('summary-first-lesson')).toContainText('Emergency fund');
   await expect(page.getByTestId('summary-based-on')).toContainText('3 answers');
 });
@@ -278,6 +279,7 @@ test('after a reload the summary draws both markers from the stored row', async 
 
   await page.route(CATEGORIZATION_URL, (route) => route.fulfill({ json: ran({ readyForNext: true, mastery: { saving: 0.9, investing: 0.2 } }) }));
   await page.reload();
+  await pickAlex(page);
   await expect(page.getByTestId('summary-map')).toBeVisible();
   await expect(page.getByTestId('area-level-saving')).toHaveText('Solid');
   await expect(page.getByTestId('area-level-investing')).toHaveText('Just starting');

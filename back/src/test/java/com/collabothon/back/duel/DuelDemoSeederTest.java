@@ -17,6 +17,10 @@ import org.springframework.test.context.bean.override.convention.TestBean;
 import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.duel.services.DuelDemoSeeder;
 import com.collabothon.back.duel.services.DuelRankingService;
+import com.collabothon.back.entities.xp.XpSource;
+import com.collabothon.back.xp.services.WeekWindow;
+import com.collabothon.back.xp.services.XpService;
+import com.collabothon.back.xp.services.XpWeekCalculator;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -36,14 +40,20 @@ class DuelDemoSeederTest {
 	@Autowired
 	DuelRankingService rankingService;
 
+	@Autowired
+	XpService xpService;
+
+	@Autowired
+	XpWeekCalculator weekCalculator;
+
 	@Test
-	void demoSeedingIsIdempotentAndPlacesDemoUserMidTable() {
+	void demoSeedingIsIdempotentAndPlacesDemoUserAtRank6() {
 		// Run seeder
 		seeder.run(new DefaultApplicationArguments());
 
 		// Verify weekly rankings
 		var rankings = rankingService.weeklyRankings("demo-user");
-		assertThat(rankings.top()).isNotEmpty();
+		assertThat(rankings.top()).hasSize(50);
 
 		// Tomasz rank 1 with 310 weekly XP
 		assertThat(rankings.top().get(0).userId()).isEqualTo("demo-tomasz");
@@ -55,12 +65,36 @@ class DuelDemoSeederTest {
 		assertThat(rankings.me().weeklyXp()).isEqualTo(125);
 		assertThat(rankings.me().rank()).isEqualTo(6);
 
+		// Verify Daniel and Elena are in top 50, around ranks 12-25, weekly XP < 125
+		var daniel = rankings.top().stream().filter(r -> r.userId().equals("demo-daniel")).findFirst().orElseThrow();
+		assertThat(daniel.weeklyXp()).isLessThan(125);
+		assertThat(daniel.rank()).isBetween(12, 25);
+
+		var elena = rankings.top().stream().filter(r -> r.userId().equals("demo-elena")).findFirst().orElseThrow();
+		assertThat(elena.weeklyXp()).isLessThan(125);
+		assertThat(elena.rank()).isBetween(12, 25);
+
 		// Run seeder second time -> must be idempotent (no duplicate rows)
 		seeder.run(new DefaultApplicationArguments());
 
 		var rankings2 = rankingService.weeklyRankings("demo-user");
 		assertThat(rankings2.me().weeklyXp()).isEqualTo(125);
+		assertThat(rankings2.me().rank()).isEqualTo(6);
 		assertThat(rankings2.top().get(0).weeklyXp()).isEqualTo(310);
+	}
+
+	@Test
+	void newPlayersAreSeededWhenWeekWasAlreadySeededForExistingPlayers() {
+		// Simulate a DB where existing players already have XP this week
+		WeekWindow week = weekCalculator.currentWeek();
+		xpService.record("demo-tomasz", "berlin", XpSource.DUEL, "preseed-tomasz", 310, week.start().plusSeconds(3600));
+
+		// Run seeder
+		seeder.run(new DefaultApplicationArguments());
+
+		// Verify Daniel was still seeded even though Tomasz already had XP
+		assertThat(xpService.hasXpBetween("demo-daniel", week.start(), week.end())).isTrue();
+		assertThat(xpService.hasXpBetween("demo-elena", week.start(), week.end())).isTrue();
 	}
 
 }

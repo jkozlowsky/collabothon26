@@ -1,7 +1,6 @@
 import { AREAS, FEEDBACK, JUST_STARTING_BELOW, PROFILE_QUESTIONS, SOLID_ABOVE, SOLID_MIN_ANSWERS, type Feedback } from '@/constants/quickCheck';
 import { api } from '@/lib/api';
 import { parseDefinition } from '@/lib/glossaryMarkup';
-import { USER_ID } from '@/lib/user';
 import type { Facts, FocusArea } from '@/types/categorization';
 import type { CheckQuestion, HistoryEntry, Horizon, Mastery, ProfileRanges, StepResponse } from '@/types/quickCheck';
 
@@ -37,8 +36,8 @@ type StepBody = {
   stepFellBack: boolean;
 };
 
-export const postStep = (body: StepBody, signal: AbortSignal) =>
-  api<StepResponse>(`/api/users/${encodeURIComponent(USER_ID)}/quick-check/step`, {
+export const postStep = (body: StepBody, signal: AbortSignal, userId: string = 'demo-user') =>
+  api<StepResponse>(`/api/users/${encodeURIComponent(userId)}/quick-check/step`, {
     method: 'POST',
     body: JSON.stringify(body),
     signal,

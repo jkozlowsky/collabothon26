@@ -35,7 +35,7 @@ export function DepotCard({ testID }: { testID?: string }) {
           </Text>
         </View>
       </View>
-      <Sparkline points={chart.points} />
+      {depotTotal(state) > 0 && <Sparkline points={chart.points} />}
       <View style={styles.ranges} accessibilityRole="tablist">
         {RANGES.map((r) => (
           <Tappable

@@ -23,6 +23,8 @@ import { useBank } from '@/hooks/useBank';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { leaveOnboardingForCheck } from '@/hooks/useOpenLearn';
 import { ageBandOf, ageLabel, factLabels, factsFrom } from '@/lib/categorization';
+import { personaFor } from '@/lib/personas';
+import { useCurrentUser } from '@/lib/user';
 import type { Intake, OnboardingAnswers, Purpose } from '@/types/onboarding';
 import type { Horizon, ProfileRanges } from '@/types/quickCheck';
 
@@ -45,10 +47,13 @@ type Survey = OnboardingAnswers & {
 };
 
 export default function OnboardingScreen() {
+  const { userId } = useCurrentUser();
+  const hints = personaFor(userId).hints;
   const { complete, done } = useOnboarding();
   const { state: bank } = useBank();
   const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState<Survey>({ goals: [] });
+  // A demo persona starts with its answers preselected.
+  const [answers, setAnswers] = useState<Survey>({ goals: [], purpose: hints?.purpose, horizon: hints?.horizon });
 
   const step = STEPS[index];
   const purpose = PURPOSES.find((p) => p.value === answers.purpose);

@@ -9,6 +9,7 @@ import {
   goToConsent,
   openApp,
   passSummary,
+  pickAlex,
   resetOnboarding,
   tap,
   waitForCompletedOnboarding,
@@ -89,6 +90,7 @@ test('two questions lead to the quick check intro, with no way to skip; the purp
   expect(categorization).toMatchObject({ consent: true, bankData: true });
 
   await page.reload();
+  await pickAlex(page);
   await expectOnLearn(page);
 });
 

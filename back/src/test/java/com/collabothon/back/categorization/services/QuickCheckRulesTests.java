@@ -18,12 +18,21 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
+import com.collabothon.back.categorization.FixedRandom;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 import com.collabothon.back.categorization.dto.FactsDto;
 import com.collabothon.back.categorization.dto.GapDto;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.Role;
+import com.collabothon.back.categorization.models.Answer;
+import com.collabothon.back.categorization.models.CheckLesson;
+import com.collabothon.back.categorization.models.CheckQuestion;
+import com.collabothon.back.categorization.models.Measurement;
+import com.collabothon.back.categorization.models.PathInput;
+import com.collabothon.back.categorization.models.StepState;
+import com.collabothon.back.categorization.models.StoryPlan;
+import com.collabothon.back.lesson.models.Story;
 
 class QuickCheckRulesTests {
 
@@ -33,8 +42,7 @@ class QuickCheckRulesTests {
 
 	private static final FocusArea INVESTING = FocusArea.INVESTING;
 
-	// Story sN holds lessons sN-1 and sN-2. s1 and s3 are saving, s2 and s4 investing. s1-1 and s2-1 have two quiz
-	// steps, s1-2, s2-2, s3-1 and s4-1 one, s3-2 and s4-2 none. The pool is in story order, like the real one.
+	// Like the real pool, in story order; s3-2 and s4-2 are the lessons without a quiz.
 	private static final CheckQuestion S11_A = q("s1-1", "q1", SAVING);
 
 	private static final CheckQuestion S11_B = q("s1-1", "q2", SAVING);
@@ -55,20 +63,20 @@ class QuickCheckRulesTests {
 
 	private static final List<FocusArea> ORDER = List.of(SAVING, INVESTING);
 
-	private static final List<CheckLesson> LESSONS = QuickCheckRules.lessons(POOL);
+	private static final List<CheckLesson> LESSONS = OrderRules.lessons(POOL);
 
 	private static final List<Story> STORIES = List.of(story("s1"), story("s2"), story("s3"), story("s4"));
 
 	private static Story story(String id) {
-		return new Story(id, "Category " + id, "City " + id, "Topic " + id,
-				id.equals("s1") || id.equals("s3") ? "Saving" : "Investing", List.of(id + "-1", id + "-2"));
+		return new Story(id, id.equals("s1") || id.equals("s3") ? "Saving" : "Investing", "Category " + id, "City " + id,
+				"Topic " + id, "available", "", "", List.of(id + "-1", id + "-2"), null, null);
 	}
 
 	private static Set<String> done(String... storyIds) {
 		return Arrays.stream(storyIds).flatMap(id -> story(id).lessonIds().stream()).collect(Collectors.toSet());
 	}
 
-	/** Option 0 is correct. */
+	// Option 0 is correct.
 	private static CheckQuestion q(String lessonId, String stepId, FocusArea area) {
 		return new CheckQuestion(lessonId + "/" + stepId, lessonId, lessonId.substring(0, 2), area,
 				"Topic " + lessonId, List.of("concept-" + lessonId), "Prompt " + stepId, List.of("a", "b", "c"), 0,
@@ -80,55 +88,50 @@ class QuickCheckRulesTests {
 	}
 
 	private static Answer right(CheckQuestion q) {
-		return new Answer(q, 0);
+		return new Answer(q, q.resultOf(0));
 	}
 
 	private static Answer wrong(CheckQuestion q) {
-		return new Answer(q, 1);
+		return new Answer(q, q.resultOf(1));
 	}
 
 	private static Answer notSure(CheckQuestion q) {
-		return new Answer(q, null);
+		return new Answer(q, q.resultOf(null));
 	}
 
-	/** Account facts with the two habits a gap reads; the bands are irrelevant to it. */
+	// Account facts with the two habits a gap reads; the bands are irrelevant to it.
 	private static FactsDto facts(boolean savesRegularly, boolean holdsInvestments) {
 		return new FactsDto("2-3.5k", "6+", "20%+", savesRegularly, false, holdsInvestments, false);
 	}
 
 	private static List<CheckQuestion> open(Answer... answers) {
-		return QuickCheckRules.open(POOL, List.of(answers), Set.of());
+		return NextQuestionRules.open(POOL, List.of(answers), Set.of());
 	}
 
 	private static Optional<String> nextLesson(Answer... answers) {
-		return QuickCheckRules.nextLesson(ORDER, POOL, open(answers), List.of(answers));
+		return NextQuestionRules.nextLesson(state(ORDER, open(answers), List.of(answers)));
 	}
 
 	private static RandomGenerator always(int index) {
-		return new RandomGenerator() {
-			@Override
-			public long nextLong() {
-				return 0;
-			}
-
-			@Override
-			public int nextInt(int bound) {
-				return index % bound;
-			}
-		};
+		FixedRandom random = new FixedRandom();
+		random.index = index;
+		return random;
 	}
 
 	private static List<String> ids(List<CheckLesson> lessons) {
 		return lessons.stream().map(CheckLesson::id).toList();
 	}
 
-	private static Map<FocusArea, Double> mastery(Answer... answers) {
-		return QuickCheckRules.mastery(ORDER, List.of(answers));
+	private static Measurement measured(List<Answer> answers) {
+		return Measurement.byRule(ORDER, answers);
 	}
 
-	private static List<CheckLesson> candidates(Set<String> completed, Answer... answers) {
-		List<Answer> list = List.of(answers);
-		return QuickCheckRules.candidates(LESSONS, STORIES, ORDER, QuickCheckRules.mastery(ORDER, list), list, completed);
+	private static Map<FocusArea, Double> mastery(Answer... answers) {
+		return measured(List.of(answers)).mastery();
+	}
+
+	private static StepState state(List<FocusArea> order, List<CheckQuestion> open, List<Answer> answers) {
+		return new StepState(POOL, open, Measurement.byRule(order, answers));
 	}
 
 	private static StoryPlan plan(Set<String> completed, CheckLesson picked, Answer... answers) {
@@ -137,9 +140,8 @@ class QuickCheckRulesTests {
 
 	private static StoryPlan planWithInterests(List<Story> interests, Set<String> completed, CheckLesson picked,
 			Answer... answers) {
-		List<Answer> list = List.of(answers);
-		return QuickCheckRules.plan(STORIES, candidates(completed, answers), picked, interests, ORDER,
-				QuickCheckRules.mastery(ORDER, list), list, completed);
+		PathInput input = new PathInput(STORIES, interests, LESSONS, completed, measured(List.of(answers)));
+		return PathRules.plan(input, Optional.ofNullable(picked));
 	}
 
 	private static StoryPlan plan(Set<String> completed, Answer... answers) {
@@ -152,27 +154,19 @@ class QuickCheckRulesTests {
 
 	private static List<String> firstChoices(List<Story> interests, Set<String> completed,
 			Map<FocusArea, Double> mastery, Answer... answers) {
-		List<Answer> list = List.of(answers);
-		List<CheckLesson> gaps = QuickCheckRules
-			.pool(QuickCheckRules.candidates(LESSONS, STORIES, ORDER, mastery, list, completed), list);
-		return ids(QuickCheckRules.firstLessonChoices(gaps,
-				QuickCheckRules.interestLessons(interests, LESSONS, mastery, list, completed), list, completed));
+		Measurement measurement = new Measurement(ORDER, mastery, List.of(answers));
+		return ids(PathRules.firstLessonChoices(new PathInput(STORIES, interests, LESSONS, completed, measurement)));
 	}
 
 	private static Map<FocusArea, GapDirection> ruleGaps(FactsDto facts, Answer... answers) {
-		Map<FocusArea, GapDirection> gaps = new LinkedHashMap<>();
-		for (FocusArea area : ORDER) {
-			QuickCheckRules.ruleGap(area, QuickCheckRules.inArea(List.of(answers), area), facts)
-				.ifPresent(direction -> gaps.put(area, direction));
-		}
-		return gaps;
+		return GapRules.measuredGaps(measured(List.of(answers)), facts);
 	}
 
 	@Test
 	void aRightAnswerScoresHighAWrongOrNotSureOneLowAndAnAreaIsTheMean() {
 		assertEquals(0.85, mastery(right(S11_A)).get(SAVING), EPSILON);
 		List<Answer> twoRight = List.of(right(S11_A), right(S31));
-		assertTrue(QuickCheckRules.solid(SAVING, QuickCheckRules.mastery(ORDER, twoRight), twoRight));
+		assertTrue(measured(twoRight).isSolid(SAVING));
 		assertEquals(0.25, mastery(wrong(S11_A)).get(SAVING), EPSILON);
 		assertEquals(0.25, mastery(notSure(S11_A)).get(SAVING), EPSILON);
 		Map<FocusArea, Double> mixed = mastery(right(S11_A), wrong(S31));
@@ -183,11 +177,11 @@ class QuickCheckRulesTests {
 
 	@Test
 	void interestAreasComeFirstThenTheFixedOrderKeepingOnlyAreasWithQuestions() {
-		assertEquals(List.of(SAVING, INVESTING), QuickCheckRules.areaOrder(List.of(), null, POOL));
-		assertEquals(List.of(INVESTING, SAVING), QuickCheckRules.areaOrder(List.of(INVESTING), "5y+", POOL));
+		assertEquals(List.of(SAVING, INVESTING), OrderRules.areaOrder(List.of(), null, POOL));
+		assertEquals(List.of(INVESTING, SAVING), OrderRules.areaOrder(List.of(INVESTING), "5y+", POOL));
 		assertEquals(List.of(SAVING, INVESTING),
-				QuickCheckRules.areaOrder(List.of(INVESTING), CategorizationConsts.HORIZON_WITHIN_1Y, POOL));
-		assertEquals(List.of(INVESTING), QuickCheckRules.areaOrder(List.of(FocusArea.RETIREMENT), null, List.of(I21_A)));
+				OrderRules.areaOrder(List.of(INVESTING), CategorizationConsts.HORIZON_WITHIN_1Y, POOL));
+		assertEquals(List.of(INVESTING), OrderRules.areaOrder(List.of(FocusArea.RETIREMENT), null, List.of(I21_A)));
 	}
 
 	@Test
@@ -201,7 +195,7 @@ class QuickCheckRulesTests {
 	@Test
 	void anEmptyHistoryStartsInTheFirstAreasFirstLesson() {
 		assertEquals(Optional.of("s1-1"), nextLesson());
-		assertEquals(Optional.of("s2-1"), QuickCheckRules.nextLesson(List.of(INVESTING, SAVING), POOL, POOL, List.of()));
+		assertEquals(Optional.of("s2-1"), NextQuestionRules.nextLesson(state(List.of(INVESTING, SAVING), POOL, List.of())));
 	}
 
 	@Test
@@ -243,83 +237,83 @@ class QuickCheckRulesTests {
 
 	@Test
 	void aCompletedLessonHasNoOpenQuestion() {
-		List<CheckQuestion> open = QuickCheckRules.open(POOL, List.of(right(I21_A)), Set.of("s1-1", "s2-2"));
+		List<CheckQuestion> open = NextQuestionRules.open(POOL, List.of(right(I21_A)), Set.of("s1-1", "s2-2"));
 
 		assertEquals(List.of(S12, I21_B, S31, I41), open);
-		assertEquals(Optional.of("s1-2"), QuickCheckRules.nextLesson(ORDER, POOL, open, List.of(right(I21_A))));
+		assertEquals(Optional.of("s1-2"), NextQuestionRules.nextLesson(state(ORDER, open, List.of(right(I21_A)))));
 	}
 
 	@Test
 	void theDrawTakesAnyOpenQuestionOfTheLessonAndNeverAnAskedOne() {
-		assertEquals(S11_A, QuickCheckRules.draw(open(), "s1-1", always(0)));
-		assertEquals(S11_B, QuickCheckRules.draw(open(), "s1-1", always(1)));
-		assertEquals(S11_A, QuickCheckRules.draw(open(wrong(S11_B)), "s1-1", always(1)));
+		assertEquals(S11_A, NextQuestionRules.draw(open(), "s1-1", always(0)));
+		assertEquals(S11_B, NextQuestionRules.draw(open(), "s1-1", always(1)));
+		assertEquals(S11_A, NextQuestionRules.draw(open(wrong(S11_B)), "s1-1", always(1)));
 		Random random = new Random(7);
 		Set<CheckQuestion> drawn = new HashSet<>();
 		for (int i = 0; i < 50; i++) {
-			drawn.add(QuickCheckRules.draw(open(right(I21_A)), "s1-1", random));
+			drawn.add(NextQuestionRules.draw(open(right(I21_A)), "s1-1", random));
 		}
 		assertEquals(Set.of(S11_A, S11_B), drawn);
 	}
 
 	@Test
 	void jevChoosesAmongTwoLessonsPerAreaOneOfEachStoryFirst() {
-		assertEquals(List.of("s1-1", "s3-1", "s2-1", "s4-1"), ids(QuickCheckRules.nextLessonChoices(ORDER, LESSONS)));
-		List<CheckLesson> open = QuickCheckRules.lessons(open(right(S11_A), right(S11_B), right(S31)));
+		assertEquals(List.of("s1-1", "s3-1", "s2-1", "s4-1"), ids(NextQuestionRules.nextLessonChoices(ORDER, LESSONS)));
+		List<CheckLesson> open = OrderRules.lessons(open(right(S11_A), right(S11_B), right(S31)));
 		assertEquals(List.of("s2-1", "s4-1", "s1-2"),
-				ids(QuickCheckRules.nextLessonChoices(List.of(INVESTING, SAVING), open)));
+				ids(NextQuestionRules.nextLessonChoices(List.of(INVESTING, SAVING), open)));
 	}
 
 	@Test
 	void theRuleStopsAtFourAnswersOrAtThreeCoveringEveryArea() {
 		Answer[] three = { right(S11_A), right(S11_B), right(S12) };
-		assertFalse(QuickCheckRules.ruleDone(ORDER, open(three), List.of(three)));
+		assertFalse(NextQuestionRules.ruleDone(state(ORDER, open(three), List.of(three))));
 		// An area with no question left to ask counts as covered.
-		assertTrue(QuickCheckRules.ruleDone(ORDER, List.of(S31), List.of(three)));
+		assertTrue(NextQuestionRules.ruleDone(state(ORDER, List.of(S31), List.of(three))));
 		Answer[] covering = { right(S11_A), notSure(S11_B), right(I21_A) };
-		assertTrue(QuickCheckRules.ruleDone(ORDER, open(covering), List.of(covering)));
+		assertTrue(NextQuestionRules.ruleDone(state(ORDER, open(covering), List.of(covering))));
 		Answer[] four = { right(S11_A), right(S11_B), right(S12), notSure(I21_A) };
-		assertTrue(QuickCheckRules.ruleDone(ORDER, open(four), List.of(four)));
-		assertTrue(QuickCheckRules.ruleDone(ORDER, List.of(), List.of(right(S11_A))));
+		assertTrue(NextQuestionRules.ruleDone(state(ORDER, open(four), List.of(four))));
+		assertTrue(NextQuestionRules.ruleDone(state(ORDER, List.of(), List.of(right(S11_A)))));
 	}
 
 	@Test
 	void aRunWithoutAMistakeGoesOnWhileAnAreaIsOneAnswerShortOfSolid() {
 		Answer[] allRight = { right(S11_A), right(I21_A), right(S12) };
-		assertFalse(QuickCheckRules.ruleDone(ORDER, open(allRight), List.of(allRight)));
+		assertFalse(NextQuestionRules.ruleDone(state(ORDER, open(allRight), List.of(allRight))));
 		// Saving and investing tie at 0.85; the second investing question goes before a third saving one.
 		assertEquals(Optional.of("s2-2"), nextLesson(allRight));
-		assertTrue(QuickCheckRules.ruleDone(ORDER, List.of(S31), List.of(allRight)));
+		assertTrue(NextQuestionRules.ruleDone(state(ORDER, List.of(S31), List.of(allRight))));
 		Answer[] oneWrong = { wrong(S11_A), right(S11_B), right(I21_A) };
-		assertTrue(QuickCheckRules.ruleDone(ORDER, open(oneWrong), List.of(oneWrong)));
+		assertTrue(NextQuestionRules.ruleDone(state(ORDER, open(oneWrong), List.of(oneWrong))));
 	}
 
 	@Test
 	void aRunWithoutAMistakeMayGoOnToSixAnswersAndOneWithAMistakeEndsAtFour() {
 		Answer[] fourRight = { right(S11_A), right(S11_B), right(S12), right(S31) };
-		assertFalse(QuickCheckRules.ruleDone(ORDER, open(fourRight), List.of(fourRight)));
+		assertFalse(NextQuestionRules.ruleDone(state(ORDER, open(fourRight), List.of(fourRight))));
 		assertEquals(Optional.of("s2-1"), nextLesson(fourRight));
 		Answer[] fourWithAMistake = { right(S11_A), right(S11_B), right(S12), notSure(S31) };
-		assertTrue(QuickCheckRules.ruleDone(ORDER, open(fourWithAMistake), List.of(fourWithAMistake)));
+		assertTrue(NextQuestionRules.ruleDone(state(ORDER, open(fourWithAMistake), List.of(fourWithAMistake))));
 		// Six right answers end the run even with investing still one answer short of Solid.
 		CheckQuestion debt = q("s5-1", "q1", FocusArea.DEBT);
 		List<FocusArea> threeAreas = List.of(SAVING, FocusArea.DEBT, INVESTING);
 		List<Answer> five = List.of(right(S11_A), right(S11_B), right(S12), right(S31), right(debt));
 		List<Answer> six = List.of(right(S11_A), right(S11_B), right(S12), right(S31), right(debt), right(I21_A));
-		assertFalse(QuickCheckRules.ruleDone(threeAreas, List.of(I21_A, I21_B), five));
-		assertTrue(QuickCheckRules.ruleDone(threeAreas, List.of(I21_B), six));
+		assertFalse(NextQuestionRules.ruleDone(state(threeAreas, List.of(I21_A, I21_B), five)));
+		assertTrue(NextQuestionRules.ruleDone(state(threeAreas, List.of(I21_B), six)));
 	}
 
 	@Test
 	void jevStopsAtSixAtNoQuestionLeftOrWhenEnoughAfterThree() {
 		Answer[] two = { notSure(S11_A), notSure(S11_B) };
-		assertFalse(QuickCheckRules.jevDone(open(two), List.of(two), 0.99));
+		assertFalse(NextQuestionRules.jevDone(state(ORDER, open(two), List.of(two)), 0.99));
 		Answer[] three = { notSure(S11_A), notSure(S11_B), notSure(S12) };
-		assertFalse(QuickCheckRules.jevDone(open(three), List.of(three), 0.69));
-		assertTrue(QuickCheckRules.jevDone(open(three), List.of(three), 0.7));
+		assertFalse(NextQuestionRules.jevDone(state(ORDER, open(three), List.of(three)), 0.69));
+		assertTrue(NextQuestionRules.jevDone(state(ORDER, open(three), List.of(three)), 0.7));
 		List<Answer> six = POOL.stream().limit(6).map(QuickCheckRulesTests::notSure).toList();
-		assertTrue(QuickCheckRules.jevDone(List.of(S31, I41), six, 0));
-		assertTrue(QuickCheckRules.jevDone(List.of(), List.of(three), 0));
+		assertTrue(NextQuestionRules.jevDone(state(ORDER, List.of(S31, I41), six), 0));
+		assertTrue(NextQuestionRules.jevDone(state(ORDER, List.of(), List.of(three)), 0));
 	}
 
 	@Test
@@ -348,31 +342,31 @@ class QuickCheckRulesTests {
 	void withoutFactsOrWithoutAnAnswerInTheAreaThereIsNoGap() {
 		assertEquals(Map.of(), ruleGaps(null, wrong(S11_A), right(I21_A)));
 		assertEquals(Map.of(), ruleGaps(facts(true, false)));
-		assertEquals(Optional.empty(), QuickCheckRules.ruleGap(SAVING, List.of(), facts(false, false)));
+		assertEquals(Optional.empty(), GapRules.measuredGap(SAVING, List.of(), facts(false, false)));
 	}
 
 	@Test
 	void withoutADeclaredExperienceTheRoleFollowsTheStrongAndTheSolidAreas() {
 		List<Answer> bothSolid = List.of(right(S11_A), right(S31),
 				right(I21_A), right(I41));
-		assertEquals(Role.ADVANCED, QuickCheckRules.measuredRole(QuickCheckRules.mastery(ORDER, bothSolid), bothSolid));
+		assertEquals(Role.ADVANCED, CategorizationRules.measuredRole(measured(bothSolid)));
 		// An area nobody asked about does not hold the role back.
 		List<Answer> savingOnly = bothSolid.subList(0, 2);
-		assertEquals(Role.ADVANCED, QuickCheckRules.measuredRole(QuickCheckRules.mastery(ORDER, savingOnly), savingOnly));
+		assertEquals(Role.ADVANCED, CategorizationRules.measuredRole(measured(savingOnly)));
 		// One right answer in investing is Building, not Solid.
 		List<Answer> oneSolid = bothSolid.subList(0, 3);
-		assertEquals(Role.INTERMEDIATE, QuickCheckRules.measuredRole(QuickCheckRules.mastery(ORDER, oneSolid), oneSolid));
+		assertEquals(Role.INTERMEDIATE, CategorizationRules.measuredRole(measured(oneSolid)));
 		// Investing reads high on the map (0.85) with its single answer: enough for intermediate, though nothing is Solid.
 		List<Answer> oneStrong = List.of(wrong(S11_A), right(S31),
 				right(I21_A));
-		assertEquals(Role.INTERMEDIATE, QuickCheckRules.measuredRole(QuickCheckRules.mastery(ORDER, oneStrong), oneStrong));
+		assertEquals(Role.INTERMEDIATE, CategorizationRules.measuredRole(measured(oneStrong)));
 		List<Answer> noneStrong = List.of(right(S11_A), wrong(S31),
 				wrong(I21_A));
-		assertEquals(Role.NOVICE, QuickCheckRules.measuredRole(QuickCheckRules.mastery(ORDER, noneStrong), noneStrong));
+		assertEquals(Role.NOVICE, CategorizationRules.measuredRole(measured(noneStrong)));
 		List<Answer> nothingRight = List.of(wrong(S11_A), notSure(S31), notSure(I21_A));
 		assertEquals(Role.NOVICE,
-				QuickCheckRules.measuredRole(QuickCheckRules.mastery(ORDER, nothingRight), nothingRight));
-		assertEquals(Role.NOVICE, QuickCheckRules.measuredRole(QuickCheckRules.mastery(ORDER, List.of()), List.of()));
+				CategorizationRules.measuredRole(measured(nothingRight)));
+		assertEquals(Role.NOVICE, CategorizationRules.measuredRole(measured(List.of())));
 	}
 
 	@Test
@@ -388,15 +382,15 @@ class QuickCheckRulesTests {
 				new GapDto(SAVING, GapDirection.KNOWLEDGE_AHEAD,
 						"Your Saving answers show you understand how it works. Your account shows no monthly transfer to"
 								+ " savings.")),
-				QuickCheckRules.gapCards(gaps, INVESTING));
+				GapRules.gapCards(gaps, INVESTING));
 		assertEquals("Your account shows you move money to savings every month. Your Saving answers leave a few things"
 				+ " open, which is where your first lesson starts.",
-				QuickCheckRules.gapCards(Map.of(SAVING, GapDirection.HABIT_AHEAD), SAVING).getFirst().because());
+				GapRules.gapCards(Map.of(SAVING, GapDirection.HABIT_AHEAD), SAVING).getFirst().because());
 		assertEquals("Your account shows you move money to savings every month. Your Saving answers leave a few things"
 				+ " open to explore.",
-				QuickCheckRules.gapCards(Map.of(SAVING, GapDirection.HABIT_AHEAD), INVESTING).getFirst().because());
+				GapRules.gapCards(Map.of(SAVING, GapDirection.HABIT_AHEAD), INVESTING).getFirst().because());
 		assertEquals("Your Investing answers show you understand how it works. Your account shows no investment products.",
-				QuickCheckRules.gapCards(Map.of(INVESTING, GapDirection.KNOWLEDGE_AHEAD), SAVING).getFirst().because());
+				GapRules.gapCards(Map.of(INVESTING, GapDirection.KNOWLEDGE_AHEAD), SAVING).getFirst().because());
 	}
 
 	@Test
@@ -407,7 +401,7 @@ class QuickCheckRulesTests {
 		gaps.put(FocusArea.RISK, GapDirection.HABIT_AHEAD);
 
 		assertEquals(List.of(SAVING, INVESTING),
-				QuickCheckRules.gapCards(gaps, null).stream().map(GapDto::area).toList());
+				GapRules.gapCards(gaps, null).stream().map(GapDto::area).toList());
 	}
 
 	@Test
@@ -500,15 +494,15 @@ class QuickCheckRulesTests {
 
 	@Test
 	void theStartLessonIsTheStorysFirstLessonNotDone() {
-		assertEquals(Optional.of("s3-1"), QuickCheckRules.startLesson(story("s3"), Set.of("s1-1")));
-		assertEquals(Optional.of("s3-2"), QuickCheckRules.startLesson(story("s3"), Set.of("s3-1")));
-		assertEquals(Optional.empty(), QuickCheckRules.startLesson(story("s3"), done("s3")));
+		assertEquals(Optional.of("s3-1"), PathRules.startLesson(story("s3"), Set.of("s1-1")));
+		assertEquals(Optional.of("s3-2"), PathRules.startLesson(story("s3"), Set.of("s3-1")));
+		assertEquals(Optional.empty(), PathRules.startLesson(story("s3"), done("s3")));
 	}
 
 	@Test
 	void aStorysAreaIsItsLessonsAreaAndNullWithoutAQuiz() {
-		assertEquals(INVESTING, QuickCheckRules.areaOf(story("s4"), LESSONS));
-		assertNull(QuickCheckRules.areaOf(story("s9"), LESSONS));
+		assertEquals(INVESTING, PathRules.areaOf(story("s4"), LESSONS));
+		assertNull(PathRules.areaOf(story("s9"), LESSONS));
 	}
 
 	@Test
@@ -558,22 +552,20 @@ class QuickCheckRulesTests {
 	@Test
 	void jevChoosesTheFirstLessonAmongTwoPerAnsweredAreaTheOnesAnsweredNotRightFirst() {
 		Answer[] answers = { wrong(S12), right(I21_A) };
-		List<CheckLesson> pool = QuickCheckRules.pool(candidates(Set.of(), answers), List.of(answers));
 
 		// Saving: the lesson answered wrong, then one of each story. Investing: one of each story.
 		assertEquals(List.of("s1-2", "s1-1", "s2-1", "s4-1"),
-				ids(QuickCheckRules.firstLessonChoices(pool, List.of(), List.of(answers), Set.of())));
+				firstChoices(List.of(), Set.of(), answers));
 		assertEquals(List.of("s1-2", "s3-1", "s2-1", "s4-1"),
-				ids(QuickCheckRules.firstLessonChoices(pool, List.of(), List.of(answers), Set.of("s1-1"))));
+				firstChoices(List.of(), Set.of("s1-1"), answers));
 	}
 
 	@Test
 	void withOneLessonToStartWithJevIsNotAsked() {
 		Answer[] answers = { wrong(S31), right(I21_A), right(I41) };
 		Set<String> completed = Set.of("s1-1", "s1-2");
-		List<CheckLesson> pool = QuickCheckRules.pool(candidates(completed, answers), List.of(answers));
 
-		assertEquals(List.of(), QuickCheckRules.firstLessonChoices(pool, List.of(), List.of(answers), completed));
+		assertEquals(List.of(), firstChoices(List.of(), completed, answers));
 	}
 
 	@Test
@@ -641,7 +633,7 @@ class QuickCheckRulesTests {
 	@Test
 	void anAreaTheFactsSayNothingAboutHasNoGap() {
 		List<Answer> riskRight = List.of(right(q("s1-1", "q9", FocusArea.RISK)));
-		assertEquals(Optional.empty(), QuickCheckRules.ruleGap(FocusArea.RISK, riskRight, facts(false, false)));
+		assertEquals(Optional.empty(), GapRules.measuredGap(FocusArea.RISK, riskRight, facts(false, false)));
 	}
 
 }

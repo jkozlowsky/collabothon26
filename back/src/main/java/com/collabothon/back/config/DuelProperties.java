@@ -12,22 +12,39 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("app.duel")
 @Validated
 public record DuelProperties(
-		@Min(1) @DefaultValue("6") int questionsPerMatch,
-		@Positive @DefaultValue("10000") long minTimeLimitMs,
-		@Positive @DefaultValue("60000") long maxTimeLimitMs,
-		@Positive @DefaultValue("4.0") double readingWordsPerSecond,
-		@Positive @DefaultValue("12000") long quizBaseMs,
-		@Positive @DefaultValue("20000") long predictBaseMs,
-		@Positive @DefaultValue("25000") long chartBaseMs,
-		@Positive @DefaultValue("20000") long sortBaseMs,
-		@Positive @DefaultValue("25000") long matchBaseMs,
-		@PositiveOrZero @DefaultValue("1000") long botMinDelayMs,
-		@PositiveOrZero @DefaultValue("4000") long botMaxDelayMs,
-		@DefaultValue("true") boolean seedDemoXp) {
-
-	public DuelProperties() {
-		this(6, 10000, 60000, 4.0, 12000, 20000, 25000, 20000, 25000, 1000, 4000, false);
-	}
+		@Min(1)
+		@DefaultValue("6")
+		int questionsPerMatch,
+		@Positive
+		@DefaultValue("10000")
+		long minTimeLimitMs,
+		@Positive
+		@DefaultValue("60000")
+		long maxTimeLimitMs,
+		@Positive
+		@DefaultValue("4.0")
+		double readingWordsPerSecond,
+		@Positive
+		@DefaultValue("12000")
+		long quizBaseMs,
+		@Positive
+		@DefaultValue("20000")
+		long predictBaseMs,
+		@Positive
+		@DefaultValue("25000")
+		long chartBaseMs,
+		@Positive
+		@DefaultValue("20000")
+		long sortBaseMs,
+		@Positive
+		@DefaultValue("25000")
+		long matchBaseMs,
+		@PositiveOrZero
+		@DefaultValue("1000")
+		long botMinDelayMs,
+		@PositiveOrZero
+		@DefaultValue("4000")
+		long botMaxDelayMs) {
 
 	@AssertTrue(message = "app.duel.bot-max-delay-ms must not be below app.duel.bot-min-delay-ms")
 	public boolean isBotDelayRangeValid() {

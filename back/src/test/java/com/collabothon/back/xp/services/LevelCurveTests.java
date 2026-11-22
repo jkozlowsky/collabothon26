@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import com.collabothon.back.xp.services.LevelCurve.LevelInfo;
+import com.collabothon.back.xp.consts.XpConsts;
 
 class LevelCurveTests {
 
@@ -25,7 +25,7 @@ class LevelCurveTests {
 
 	@Test
 	void levelIsCappedAtTheMaximum() {
-		assertThat(curve.fromXp(Integer.MAX_VALUE).level()).isEqualTo(LevelCurve.MAX_LEVEL);
+		assertThat(curve.fromXp(Integer.MAX_VALUE).level()).isEqualTo(XpConsts.MAX_LEVEL);
 	}
 
 }

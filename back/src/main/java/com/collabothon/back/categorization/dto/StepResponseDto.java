@@ -2,11 +2,16 @@ package com.collabothon.back.categorization.dto;
 
 import java.util.Map;
 
-/** {@code mastery} has every area with questions, null until it has an answer; {@code done} comes with no next question. */
+import lombok.Builder;
+import lombok.With;
+
+@Builder
 public record StepResponseDto(
 		Map<String, Double> mastery,
 		String nextQuestionId,
 		boolean done,
+		@With
 		boolean useRules,
+		@With
 		boolean stepFellBack
 ) {}

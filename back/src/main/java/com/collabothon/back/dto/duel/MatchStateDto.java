@@ -16,7 +16,5 @@ public record MatchStateDto(
 		RivalSnapshotDto rivalProgress,
 		YourFinalDto yourFinal,
 		boolean finished,
-		/** True in a live duel against another human. */
 		boolean live
-) {
-}
+) {}

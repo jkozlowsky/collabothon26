@@ -1,77 +1,79 @@
 package com.collabothon.back.duel.services;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
 import com.collabothon.back.config.DuelProperties;
-import com.collabothon.back.entities.duel.DuelQuestion;
+import com.collabothon.back.duel.consts.DuelConsts;
+import com.collabothon.back.duel.consts.DuelStepConsts;
+import com.collabothon.back.duel.models.DuelQuestion;
+import com.collabothon.back.lesson.consts.LessonConsts;
 
 import lombok.RequiredArgsConstructor;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * Time limit per question: a base time per step type plus reading time for the words shown, clamped to the
- * configured range. A {@code timeLimitMs} in the content file overrides it.
- */
+/** A question's time limit: a base per step type plus reading time, clamped, unless the content sets one. */
 @Component
 @RequiredArgsConstructor
 public class DuelTimerCalculator {
 
-	private static final long DEFAULT_BASE_MS = 20_000L;
-
-	private static final long MS_PER_SECOND = 1000L;
-
-	private static final int PAIR_SIZE = 2;
-
 	private final DuelProperties properties;
 
-	public long timeLimitMs(DuelQuestion question) {
+	Instant deadline(DuelQuestion question, Instant startedAt) {
+		return startedAt.plusMillis(timeLimitMs(question));
+	}
+
+	long timeLimitMs(DuelQuestion question) {
 		if (question.timeLimitMs() != null) {
 			return question.timeLimitMs();
 		}
-		long readingMs = (long) Math.ceil(countWords(question.step()) / properties.readingWordsPerSecond())
-				* MS_PER_SECOND;
-		return Math.clamp(baseMs(question.type()) + readingMs, properties.minTimeLimitMs(),
-				properties.maxTimeLimitMs());
+		long readingSeconds = (long) Math.ceil(countWords(question.step()) / properties.readingWordsPerSecond());
+		return Math.clamp(baseMs(question.type()) + readingSeconds * DuelConsts.MS_PER_SECOND,
+				properties.minTimeLimitMs(), properties.maxTimeLimitMs());
 	}
 
 	private long baseMs(String type) {
 		return switch (type) {
-			case "quiz" -> properties.quizBaseMs();
-			case "predict" -> properties.predictBaseMs();
-			case "chart" -> properties.chartBaseMs();
-			case "sort" -> properties.sortBaseMs();
-			case "match" -> properties.matchBaseMs();
-			default -> DEFAULT_BASE_MS;
+			case DuelStepConsts.QUIZ -> properties.quizBaseMs();
+			case DuelStepConsts.PREDICT -> properties.predictBaseMs();
+			case DuelStepConsts.CHART -> properties.chartBaseMs();
+			case DuelStepConsts.SORT -> properties.sortBaseMs();
+			case DuelStepConsts.MATCH -> properties.matchBaseMs();
+			default -> DuelConsts.DEFAULT_BASE_MS;
 		};
 	}
 
-	/** Words the player has to read: the prompt plus the type's options, items, pairs or labels. */
-	public static int countWords(ObjectNode step) {
-		List<JsonNode> texts = new ArrayList<>();
-		texts.add(step.path("prompt"));
-		switch (step.path("type").asString()) {
-			case "quiz" -> step.path("options").forEach(texts::add);
-			case "sort" -> step.path("items").forEach(item -> texts.add(itemText(item)));
-			case "match" -> step.path("pairs").forEach(pair -> addPair(texts, pair));
-			case "chart" -> {
-				texts.add(step.path("output").path("label"));
-				texts.add(step.path("output").path("unit"));
-			}
-			case "predict" -> texts.add(step.path("input").path("unit"));
-			default -> {
-				// prompt only
-			}
-		}
-		String text = String.join(" ", texts.stream().filter(DuelTimerCalculator::hasText).map(JsonNode::asString)
-			.toList()).trim();
+	static int countWords(ObjectNode step) {
+		String text = shownTexts(step).stream()
+			.filter(DuelTimerCalculator::hasText)
+			.map(JsonNode::asString)
+			.collect(Collectors.joining(" "))
+			.trim();
 		if (text.isEmpty()) {
 			return 0;
 		}
-		return text.split("\\s+").length;
+		return LessonConsts.WHITESPACE.split(text).length;
+	}
+
+	private static List<JsonNode> shownTexts(ObjectNode step) {
+		List<JsonNode> texts = new ArrayList<>();
+		texts.add(step.path("prompt"));
+		switch (step.path("type").asString()) {
+			case DuelStepConsts.QUIZ -> step.path("options").forEach(texts::add);
+			case DuelStepConsts.SORT -> step.path("items").forEach(item -> texts.add(itemText(item)));
+			case DuelStepConsts.MATCH -> step.path("pairs").forEach(pair -> addPair(texts, pair));
+			case DuelStepConsts.CHART -> {
+				texts.add(step.path("output").path("label"));
+				texts.add(step.path("output").path("unit"));
+			}
+			case DuelStepConsts.PREDICT -> texts.add(step.path("input").path("unit"));
+		}
+		return texts;
 	}
 
 	private static JsonNode itemText(JsonNode item) {
@@ -82,7 +84,7 @@ public class DuelTimerCalculator {
 	}
 
 	private static void addPair(List<JsonNode> texts, JsonNode pair) {
-		if (pair.isArray() && pair.size() >= PAIR_SIZE) {
+		if (pair.isArray() && pair.size() >= DuelStepConsts.PAIR_SIZE) {
 			texts.add(pair.get(0));
 			texts.add(pair.get(1));
 		}
@@ -93,7 +95,7 @@ public class DuelTimerCalculator {
 	}
 
 	private static boolean hasText(JsonNode node) {
-		return node != null && !node.isMissingNode() && !node.isNull();
+		return !node.isMissingNode() && !node.isNull();
 	}
 
 }

@@ -7,29 +7,28 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import com.collabothon.back.MutableClock;
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.duel.consts.DuelStepConsts;
+import com.collabothon.back.duel.models.DuelQuestion;
+import com.collabothon.back.duel.models.MatchPermutations;
 import com.collabothon.back.duel.repositories.DuelContentRepository;
 import com.collabothon.back.duel.services.DuelShuffle;
 import com.collabothon.back.profile.services.AccountSessionService;
@@ -38,28 +37,17 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /** Two real WebSocket clients, signed in as two demo accounts, play one live duel through socket and REST. */
-@Import({ TestcontainersConfiguration.class, DuelLiveSocketIntegrationTests.TimersConfig.class })
+@Import({ TestcontainersConfiguration.class, ManualDuelTimers.class })
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class DuelLiveSocketIntegrationTests {
 
-	static final TestClock CLOCK = new TestClock(Instant.parse("2026-11-23T10:00:00Z"));
+	static final MutableClock CLOCK = new MutableClock(Instant.parse("2026-11-23T10:00:00Z"));
 
 	@TestBean
 	Clock clock;
 
 	static Clock clock() {
 		return CLOCK;
-	}
-
-	@TestConfiguration
-	static class TimersConfig {
-
-		@Bean
-		@Primary
-		ManualDuelTimers manualDuelTimers() {
-			return new ManualDuelTimers();
-		}
-
 	}
 
 	@LocalServerPort
@@ -88,8 +76,8 @@ class DuelLiveSocketIntegrationTests {
 
 	@Test
 	void twoPlayersMatchPlayAndOneWinsWhileTheOtherLoses() throws Exception {
-		Client daniel = connect("demo-daniel", "device-daniel");
-		Client elena = connect("demo-elena", "device-elena");
+		DuelSocketTestClient daniel = connect("demo-daniel", "device-daniel");
+		DuelSocketTestClient elena = connect("demo-elena", "device-elena");
 
 		daniel.send("{\"type\":\"queue\",\"categories\":[\"saving\"]}");
 		assertThat(daniel.next().path("type").asString()).isEqualTo("queued");
@@ -141,8 +129,8 @@ class DuelLiveSocketIntegrationTests {
 
 	@Test
 	void demoUserVersusAnotherPlayerBothGetRiskAndTheSameFixedSet() throws Exception {
-		Client alex = connect("demo-user", "device-alex");
-		Client daniel = connect("demo-daniel", "device-daniel");
+		DuelSocketTestClient alex = connect("demo-user", "device-alex");
+		DuelSocketTestClient daniel = connect("demo-daniel", "device-daniel");
 		alex.send("{\"type\":\"queue\",\"categories\":[\"saving\"]}");
 		assertThat(alex.next().path("type").asString()).isEqualTo("queued");
 		daniel.send("{\"type\":\"queue\",\"categories\":[\"saving\"]}");
@@ -170,8 +158,8 @@ class DuelLiveSocketIntegrationTests {
 
 	@Test
 	void equalScoresEndInADrawForBothPlayers() throws Exception {
-		Client daniel = connect("demo-daniel", "device-daniel");
-		Client elena = connect("demo-elena", "device-elena");
+		DuelSocketTestClient daniel = connect("demo-daniel", "device-daniel");
+		DuelSocketTestClient elena = connect("demo-elena", "device-elena");
 		daniel.send("{\"type\":\"queue\",\"categories\":[\"saving\"]}");
 		assertThat(daniel.next().path("type").asString()).isEqualTo("queued");
 		elena.send("{\"type\":\"queue\",\"categories\":[\"saving\"]}");
@@ -196,7 +184,7 @@ class DuelLiveSocketIntegrationTests {
 
 	@Test
 	void aLoneClientGetsNoRivalAfterFifteenSeconds() throws Exception {
-		Client alex = connect("demo-user", "device-alex");
+		DuelSocketTestClient alex = connect("demo-user", "device-alex");
 		alex.send("{\"type\":\"queue\",\"categories\":[\"saving\"]}");
 		assertThat(alex.next().path("type").asString()).isEqualTo("queued");
 
@@ -208,14 +196,14 @@ class DuelLiveSocketIntegrationTests {
 
 	@Test
 	void aSocketWithoutTheAccountLockIsRejected() throws Exception {
-		Client intruder = connect("demo-daniel", "some-other-device");
+		DuelSocketTestClient intruder = connect("demo-daniel", "some-other-device");
 
 		assertThat(intruder.next().path("code").asString()).isEqualTo("NOT_LOCKED");
 		assertThat(intruder.closed.poll(5, TimeUnit.SECONDS)).isEqualTo(CloseStatus.POLICY_VIOLATION);
 	}
 
-	private Client connect(String userId, String deviceId) throws Exception {
-		Client client = new Client();
+	private DuelSocketTestClient connect(String userId, String deviceId) throws Exception {
+		DuelSocketTestClient client = new DuelSocketTestClient(json);
 		String url = "ws://localhost:" + port + "/ws/duel?userId=" + userId + "&deviceId=" + deviceId;
 		WebSocketSession session = new StandardWebSocketClient().execute(client, url).get(10, TimeUnit.SECONDS);
 		client.session = session;
@@ -245,28 +233,28 @@ class DuelLiveSocketIntegrationTests {
 			.body(String.class));
 	}
 
-	private java.util.Optional<com.collabothon.back.entities.duel.DuelQuestion> findServed(JsonNode servedStep) {
-		return java.util.stream.Stream.of("money-basics", "saving", "borrowing", "investing", "risk")
-			.flatMap(area -> content.findByStory(area).stream())
+	private Optional<DuelQuestion> findServed(JsonNode servedStep) {
+		return Stream.of("money-basics", "saving", "borrowing", "investing", "risk")
+			.flatMap(area -> content.findByArea(area).stream())
 			.filter(q -> q.step().path("prompt").asString().equals(servedStep.path("prompt").asString()))
 			.findFirst();
 	}
 
 	/** The request body of a right or wrong answer to {@code question}, graded against the player's own shuffle. */
 	private String answerBody(String userId, int index, long matchId, JsonNode question, boolean correct) {
-		var step = findServed(question.path("step")).orElseThrow();
+		DuelQuestion step = findServed(question.path("step")).orElseThrow();
 		String head = "{\"userId\":\"" + userId + "\",\"index\":" + index + ",";
 		return switch (step.type()) {
-			case "quiz" -> {
+			case DuelStepConsts.QUIZ -> {
 				int right = step.step().path("correctIndex").asInt();
 				yield head + "\"option\":" + (correct ? right : (right + 1) % 4) + "}";
 			}
-			case "predict", "chart" -> {
+			case DuelStepConsts.PREDICT, DuelStepConsts.CHART -> {
 				double target = step.step().path("answer").asDouble();
 				yield head + "\"value\":" + (correct ? target : target + 50000) + "}";
 			}
-			case "sort" -> {
-				var items = step.step().path("items");
+			case DuelStepConsts.SORT -> {
+				JsonNode items = step.step().path("items");
 				List<Integer> buckets = new ArrayList<>(DuelShuffle.sortPermutation(matchId, index, items.size())
 					.stream().map(i -> items.get(i).path("bucket").asInt()).toList());
 				if (!correct) {
@@ -276,7 +264,7 @@ class DuelLiveSocketIntegrationTests {
 			}
 			default -> {
 				int size = step.step().path("pairs").size();
-				var perms = DuelShuffle.matchPermutations(matchId, index, size);
+				MatchPermutations perms = DuelShuffle.matchPermutations(matchId, index, size);
 				List<Integer> pairs = new ArrayList<>();
 				for (int i = 0; i < size; i++) {
 					pairs.add(perms.right().indexOf(perms.left().get(i)));
@@ -287,46 +275,6 @@ class DuelLiveSocketIntegrationTests {
 				yield head + "\"pairs\":" + pairs + "}";
 			}
 		};
-	}
-
-	private class Client extends TextWebSocketHandler {
-
-		final BlockingQueue<JsonNode> messages = new LinkedBlockingQueue<>();
-
-		final BlockingQueue<CloseStatus> closed = new LinkedBlockingQueue<>();
-
-		volatile WebSocketSession session;
-
-		@Override
-		protected void handleTextMessage(WebSocketSession session, TextMessage message) {
-			messages.add(json.readTree(message.getPayload()));
-		}
-
-		@Override
-		public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-			closed.add(status);
-		}
-
-		void send(String text) throws Exception {
-			session.sendMessage(new TextMessage(text));
-		}
-
-		JsonNode next() throws Exception {
-			JsonNode message = messages.poll(10, TimeUnit.SECONDS);
-			assertThat(message).as("a socket message within 10 s").isNotNull();
-			return message;
-		}
-
-		/** The next message of this type, skipping the rival-progress pushes before it. */
-		JsonNode drainUntil(String type) throws Exception {
-			JsonNode message;
-			do {
-				message = next();
-			}
-			while (!type.equals(message.path("type").asString()));
-			return message;
-		}
-
 	}
 
 }

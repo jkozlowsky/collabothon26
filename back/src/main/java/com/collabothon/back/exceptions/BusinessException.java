@@ -2,10 +2,7 @@ package com.collabothon.back.exceptions;
 
 import lombok.Getter;
 
-/**
- * The only exception a service throws for an expected failure. The response carries the code's status and Polish
- * message; the optional detail goes to the exception message only, for logs and debugging.
- */
+// The detail stays in the exception message for debugging; the response shows only the code's message.
 @Getter
 public class BusinessException extends RuntimeException {
 

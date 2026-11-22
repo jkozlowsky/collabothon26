@@ -4,69 +4,57 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 
 import com.collabothon.back.entities.duel.DuelAnswer;
 import com.collabothon.back.entities.duel.DuelMatch;
 
-/**
- * A match with the player's answers so far, in question order, and the counts derived from them. Question {@code k}
- * starts when question {@code k - 1} was answered (the first one when the match started).
- */
+import lombok.AccessLevel;
+import lombok.Getter;
+
+/** A match with the answers so far, in question order. A question starts when the previous one was answered. */
 public final class DuelProgress {
 
+	@Getter(AccessLevel.PACKAGE)
 	private final DuelMatch match;
 
 	private final List<DuelAnswer> answers;
 
+	@Getter(AccessLevel.PACKAGE)
 	private final int questionCount;
 
-	/** The opponent's own answers in a live duel; null otherwise (the rival is then simulated). */
+	@Getter(AccessLevel.PACKAGE)
 	private final List<DuelAnswer> opponentAnswers;
 
 	DuelProgress(DuelMatch match, List<DuelAnswer> answers, int questionCount) {
-		this(match, answers, questionCount, null);
+		this(match, answers, questionCount, List.of());
 	}
 
 	DuelProgress(DuelMatch match, List<DuelAnswer> answers, int questionCount, List<DuelAnswer> opponentAnswers) {
 		this.match = match;
 		this.answers = new ArrayList<>(answers);
 		this.questionCount = questionCount;
-		this.opponentAnswers = opponentAnswers == null ? null : List.copyOf(opponentAnswers);
+		this.opponentAnswers = List.copyOf(opponentAnswers);
 	}
 
-	/** The opponent's answers, empty unless this is a live duel. */
-	List<DuelAnswer> opponentAnswers() {
-		return opponentAnswers == null ? List.of() : opponentAnswers;
-	}
-
-	/** Whether the opponent of a live duel has answered, or timed out on, every question. */
-	boolean isOpponentComplete() {
-		return opponentAnswers != null && opponentAnswers.size() >= questionCount;
-	}
-
-	DuelMatch match() {
-		return match;
-	}
-
-	List<DuelAnswer> answers() {
+	List<DuelAnswer> getAnswers() {
 		return Collections.unmodifiableList(answers);
-	}
-
-	int questionCount() {
-		return questionCount;
 	}
 
 	void add(DuelAnswer answer) {
 		answers.add(answer);
 	}
 
-	/** Index of the question the player has to answer next; equals {@link #questionCount()} once all are answered. */
 	int nextIndex() {
 		return answers.size();
 	}
 
 	boolean isComplete() {
 		return answers.size() >= questionCount;
+	}
+
+	boolean isOpponentComplete() {
+		return opponentAnswers.size() >= questionCount;
 	}
 
 	DuelAnswer answer(int index) {
@@ -78,7 +66,7 @@ public final class DuelProgress {
 	}
 
 	int rivalScore() {
-		if (opponentAnswers != null) {
+		if (match.isLive()) {
 			return (int) opponentAnswers.stream().filter(DuelAnswer::isCorrect).count();
 		}
 		return (int) answers.stream().filter(DuelAnswer::isRivalCorrect).count();
@@ -91,12 +79,10 @@ public final class DuelProgress {
 		return answers.get(index - 1).getCreatedAt();
 	}
 
-	/** The player's result per question, null for questions not answered yet. */
-	List<Boolean> results() {
+	/** One entry per question, null where {@code shown} has no answer yet. */
+	List<Boolean> resultsPerQuestion(List<DuelAnswer> shown, Function<DuelAnswer, Boolean> result) {
 		List<Boolean> results = new ArrayList<>(Collections.nCopies(questionCount, null));
-		for (DuelAnswer answer : answers) {
-			results.set(answer.getPosition(), answer.isCorrect());
-		}
+		shown.forEach(answer -> results.set(answer.getPosition(), result.apply(answer)));
 		return results;
 	}
 

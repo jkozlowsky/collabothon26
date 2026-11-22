@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.entities.glossary.GlossaryFavorite;
-import com.collabothon.back.entities.glossary.GlossaryFavorite.GlossaryFavoriteId;
+import com.collabothon.back.entities.glossary.GlossaryFavoriteId;
 
 @Transactional(propagation = Propagation.MANDATORY)
 public interface GlossaryFavoriteRepository extends JpaRepository<GlossaryFavorite, GlossaryFavoriteId> {
@@ -36,4 +36,5 @@ public interface GlossaryFavoriteRepository extends JpaRepository<GlossaryFavori
 			WHERE user_id = :userId AND term_id = (SELECT id FROM glossary_term WHERE slug = :slug)
 			""")
 	int deleteFavorite(@Param("userId") String userId, @Param("slug") String slug);
+
 }

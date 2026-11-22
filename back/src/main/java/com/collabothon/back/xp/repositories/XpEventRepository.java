@@ -9,22 +9,16 @@ import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.entities.xp.XpEvent;
 import com.collabothon.back.entities.xp.XpSource;
 
-@Repository
 @Transactional(propagation = Propagation.MANDATORY)
 public interface XpEventRepository extends JpaRepository<XpEvent, Long> {
 
-	/**
-	 * Inserts the event unless the same (user, source, sourceRef, category) is already recorded. Native because JPQL
-	 * has no {@code ON CONFLICT}; a find-then-save would race under concurrent requests.
-	 * @return 1 if inserted, 0 if it was a duplicate
-	 */
+	// Native, because find-then-save races under concurrent requests. Returns 0 for a duplicate.
 	@Modifying
 	@Query(value = """
 			INSERT INTO xp_event (user_id, category, source, source_ref, xp, created_at)
@@ -49,7 +43,6 @@ public interface XpEventRepository extends JpaRepository<XpEvent, Long> {
 	@Query("SELECT e.userId AS userId, SUM(e.xp) AS xp FROM XpEvent e WHERE e.userId IN :userIds GROUP BY e.userId")
 	List<UserXpProjection> sumXpPerUser(Collection<String> userIds);
 
-	/** Users ranked by XP earned in [from, to), ties broken by user id. */
 	@Query("""
 			SELECT e.userId AS userId, SUM(e.xp) AS xp FROM XpEvent e
 			WHERE e.createdAt >= :from AND e.createdAt < :to
@@ -64,7 +57,7 @@ public interface XpEventRepository extends JpaRepository<XpEvent, Long> {
 			""")
 	long sumXpByUserIdBetween(String userId, Instant from, Instant to);
 
-	/** How many other users rank above one with {@code xp} in [from, to), using the same order as {@link #rankUsersBetween}. */
+	// Same order as rankUsersBetween: a tie goes to the smaller user id.
 	@Query("""
 			SELECT COUNT(*) FROM (
 			    SELECT e.userId AS userId, SUM(e.xp) AS total FROM XpEvent e

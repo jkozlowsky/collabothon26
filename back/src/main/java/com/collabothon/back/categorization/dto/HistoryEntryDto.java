@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 
-/** {@code optionIndex} null = "Not sure". */
+// A null optionIndex is "Not sure".
 public record HistoryEntryDto(
 		@NotBlank
 		@Size(max = CategorizationConsts.MAX_QUESTION_ID_LENGTH)

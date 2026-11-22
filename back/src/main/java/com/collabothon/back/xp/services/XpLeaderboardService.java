@@ -14,7 +14,7 @@ import com.collabothon.back.xp.repositories.XpEventRepository;
 
 import lombok.RequiredArgsConstructor;
 
-/** Weekly XP ranking over the ledger: highest weekly XP first, ties broken by user id. */
+// REQUIRED: the ranking calls both inside its transaction and must not need a second connection.
 @Service
 @RequiredArgsConstructor
 public class XpLeaderboardService {
@@ -29,7 +29,6 @@ public class XpLeaderboardService {
 		return xpEvents.rankUsersBetween(week.start(), week.end(), Limit.of(limit));
 	}
 
-	/** The user's standing this week, or empty if they earned no XP this week. */
 	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
 	public Optional<WeeklyStanding> weeklyStanding(String userId) {
 		if (userId == null || userId.isBlank()) {
@@ -40,36 +39,31 @@ public class XpLeaderboardService {
 		if (weeklyXp == 0) {
 			return Optional.empty();
 		}
-		long above = xpEvents.countUsersRankedAbove(userId, weeklyXp, week.start(), week.end());
-		int rank = Math.toIntExact(above + 1);
+		WeeklyStanding standing = new WeeklyStanding(rankWith(userId, weeklyXp, week), Math.toIntExact(weeklyXp),
+				null, null);
+		return Optional.of(xpEvents
+			.findTopByUserIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByIdDesc(userId, week.start(), week.end())
+			.map(latest -> withLatestAward(standing, latest, week))
+			.orElse(standing));
+	}
 
-		var latestEventOpt = xpEvents
-			.findTopByUserIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByIdDesc(userId, week.start(), week.end());
-
+	// An award can span several categories, so the rank before it leaves out all of that award's events.
+	private WeeklyStanding withLatestAward(WeeklyStanding standing, XpEvent latest, WeekWindow week) {
+		String userId = latest.getUserId();
+		List<XpEvent> award = xpEvents.findByUserIdAndSourceAndSourceRefOrderByIdDesc(userId, latest.getSource(),
+				latest.getSourceRef());
+		long lastEventId = award.stream().mapToLong(XpEvent::getId).max().orElse(latest.getId());
+		long awardXp = award.stream().filter(event -> week.contains(event.getCreatedAt())).mapToLong(XpEvent::getXp).sum();
+		int rankBefore = rankWith(userId, Math.max(0, standing.weeklyXp() - awardXp), week);
 		Integer previousRank = null;
-		Long lastXpEventId = null;
-
-		if (latestEventOpt.isPresent()) {
-			var latestEvent = latestEventOpt.get();
-			List<XpEvent> groupEvents = xpEvents.findByUserIdAndSourceAndSourceRefOrderByIdDesc(userId,
-					latestEvent.getSource(), latestEvent.getSourceRef());
-			lastXpEventId = groupEvents.stream()
-				.mapToLong(XpEvent::getId)
-				.max()
-				.orElse(latestEvent.getId());
-			long groupXp = groupEvents.stream()
-				.filter(e -> !e.getCreatedAt().isBefore(week.start()) && e.getCreatedAt().isBefore(week.end()))
-				.mapToLong(XpEvent::getXp)
-				.sum();
-			long previousXp = Math.max(0, weeklyXp - groupXp);
-			long prevAbove = xpEvents.countUsersRankedAbove(userId, previousXp, week.start(), week.end());
-			int prevRank = Math.toIntExact(prevAbove + 1);
-			if (prevRank != rank) {
-				previousRank = prevRank;
-			}
+		if (rankBefore != standing.rank()) {
+			previousRank = rankBefore;
 		}
+		return new WeeklyStanding(standing.rank(), standing.weeklyXp(), previousRank, lastEventId);
+	}
 
-		return Optional.of(new WeeklyStanding(rank, Math.toIntExact(weeklyXp), previousRank, lastXpEventId));
+	private int rankWith(String userId, long xp, WeekWindow week) {
+		return Math.toIntExact(xpEvents.countUsersRankedAbove(userId, xp, week.start(), week.end()) + 1);
 	}
 
 }

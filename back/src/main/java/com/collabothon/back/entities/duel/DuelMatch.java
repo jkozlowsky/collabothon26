@@ -6,6 +6,8 @@ import java.util.List;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import com.collabothon.back.common.consts.UserConsts;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -18,7 +20,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** One duel (V17 {@code duel_match}). The player's answers live in {@link DuelAnswer}. */
+/** One player's side of one duel. */
 @Entity
 @Table(name = "duel_match")
 @Getter
@@ -38,13 +40,13 @@ public class DuelMatch {
 	@Column(name = "categories", nullable = false, updatable = false, columnDefinition = "text[]")
 	private List<String> categories;
 
-	@Column(name = "user_id", nullable = false, length = 64, updatable = false)
+	@Column(name = "user_id", nullable = false, length = UserConsts.MAX_USER_ID_LENGTH, updatable = false)
 	private String userId;
 
-	@Column(name = "rival_user_id", length = 64, updatable = false)
+	@Column(name = "rival_user_id", length = UserConsts.MAX_USER_ID_LENGTH, updatable = false)
 	private String rivalUserId;
 
-	/** The other player's row of a live duel (V24); null in bot and solo matches. */
+	/** The other player's row in a live duel; null against the simulated rival and in SOLO. */
 	@Column(name = "opponent_match_id")
 	private Long opponentMatchId;
 
@@ -90,7 +92,6 @@ public class DuelMatch {
 		return status == MatchStatus.FINISHED;
 	}
 
-	/** A live duel between two humans: the rival is the opponent's real answers, not the simulator. */
 	public boolean isLive() {
 		return opponentMatchId != null;
 	}
@@ -103,7 +104,15 @@ public class DuelMatch {
 		return mode == DuelMode.HUMAN;
 	}
 
-	/** The player answered every question: their score and XP are final, even while the rival still plays. */
+	public boolean hasSimulatedRival() {
+		return hasRival() && !isLive();
+	}
+
+	public boolean hasPlayerScore() {
+		return score != null;
+	}
+
+	/** Final as soon as the player has answered everything, even while the rival still plays. */
 	public void recordPlayerScore(int score, int xpGained) {
 		this.score = score;
 		this.xpGained = xpGained;

@@ -2,43 +2,41 @@ package com.collabothon.back.duel.services;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.config.DuelProperties;
-import com.collabothon.back.dto.lesson.Story;
+import com.collabothon.back.duel.demo.DuelDemoRules;
+import com.collabothon.back.duel.demo.RiskQuestions;
+import com.collabothon.back.duel.models.DuelQuestion;
 import com.collabothon.back.duel.repositories.DuelAnswerRepository;
 import com.collabothon.back.duel.repositories.DuelContentRepository;
 import com.collabothon.back.duel.repositories.DuelMatchRepository;
 import com.collabothon.back.entities.duel.DuelAnswer;
 import com.collabothon.back.entities.duel.DuelMatch;
-import com.collabothon.back.entities.duel.DuelQuestion;
+import com.collabothon.back.lesson.models.Story;
 import com.collabothon.back.lesson.repositories.StoryRepository;
 
 import lombok.RequiredArgsConstructor;
 
 /**
- * Deterministic question selection for a duel match (spec §3.3):
- * - Slots split evenly over ticked categories (remainder to random categories)
- * - Questions unseen in player's last 2 matches prioritized
- * - Top-up via duelFallback story id or other available categories
- * - At most 2 of the same step type in a row when possible
- * - Seeded by matchId
+ * A match's questions are recomputed from its seed on every request instead of stored, so the order of the random
+ * draws here is part of the contract.
  */
 @Service
 @RequiredArgsConstructor
 public class DuelSelectionService {
-
-	public static final List<String> ALEX_FIXED_RISK_IDS = List.of(
-			"seoul-d01", "seoul-d02", "seoul-d03", "seoul-d04", "seoul-d05"
-	);
 
 	private final DuelContentRepository content;
 
@@ -50,251 +48,108 @@ public class DuelSelectionService {
 
 	private final DuelProperties properties;
 
+	@Transactional(readOnly = true, propagation = Propagation.MANDATORY)
 	public List<DuelQuestion> selectQuestions(DuelMatch match) {
-		boolean isAlexMatch = DuelMatchService.DEMO_USER_ID.equals(match.getUserId())
-				|| (match.isLive() && DuelMatchService.DEMO_USER_ID.equals(match.getRivalUserId()));
+		RiskQuestions riskQuestions = DuelDemoRules.riskQuestions(match);
+		int slots = properties.questionsPerMatch();
 		if (match.isLive()) {
-			// Both players of a live duel get the same questions in the same order: one shared seed, no per-player history.
+			// Both players of a live duel get the same questions: one shared seed and no per-player history.
 			long sharedSeed = Math.min(match.getId(), match.getOpponentMatchId());
-			return select(sharedSeed, match.getCategories(), Set.of(), properties.questionsPerMatch(), isAlexMatch);
+			return select(sharedSeed, match.getCategories(), Set.of(), slots, riskQuestions);
 		}
-		Set<String> seenQuestionIds = findSeenQuestionIds(match.getUserId(), match.getId());
-		return select(match.getId(), match.getCategories(), seenQuestionIds, properties.questionsPerMatch(), isAlexMatch);
+		return select(match.getId(), match.getCategories(), seenInPreviousMatches(match), slots, riskQuestions);
 	}
 
-	public Set<String> findSeenQuestionIds(String userId, Long matchId) {
-		if (userId == null || userId.isBlank() || matchId == null) {
+	List<DuelQuestion> select(long seed, List<String> categories, Set<String> seenIds, int totalSlots,
+			RiskQuestions riskQuestions) {
+		if (categories.isEmpty()) {
+			throw new IllegalArgumentException("Categories cannot be empty");
+		}
+		Random random = new Random(seed);
+		Map<String, Integer> slots = slotsPerCategory(categories, totalSlots, random);
+		QuestionDraw draw = new QuestionDraw(random, seenIds);
+		for (String category : categories) {
+			if (riskQuestions.areFixedFor(category)) {
+				DuelDemoRules.fixedRiskQuestions(content, slots.get(category)).forEach(draw::add);
+			}
+			else {
+				drawForCategory(category, slots.get(category), draw);
+			}
+		}
+		if (draw.size() < totalSlots) {
+			drawFromAreas(stories.canonicalAreaSlugs(), totalSlots - draw.size(), draw);
+		}
+		return arrange(draw.questions(), random, riskQuestions);
+	}
+
+	private Set<String> seenInPreviousMatches(DuelMatch match) {
+		List<DuelMatch> previous = matches.findTop2ByUserIdAndIdLessThanOrderByIdDesc(match.getUserId(), match.getId());
+		if (previous.isEmpty()) {
 			return Set.of();
 		}
-		List<DuelMatch> prevMatches = matches.findTop2ByUserIdAndIdLessThanOrderByIdDesc(userId, matchId);
-		if (prevMatches.isEmpty()) {
-			return Set.of();
-		}
-		List<Long> matchIds = prevMatches.stream().map(DuelMatch::getId).toList();
-		return answers.findByMatchIdInOrderByPosition(matchIds)
+		return answers.findByMatchIdInOrderByPosition(previous.stream().map(DuelMatch::getId).toList())
 			.stream()
 			.map(DuelAnswer::getQuestionId)
 			.collect(Collectors.toSet());
 	}
 
-	public List<DuelQuestion> select(long matchId, List<String> tickedCategories, Set<String> seenQuestionIds, int totalSlots) {
-		return select(matchId, tickedCategories, seenQuestionIds, totalSlots, false);
-	}
-
-	public List<DuelQuestion> select(long matchId, List<String> tickedCategories, Set<String> seenQuestionIds,
-			int totalSlots, boolean isAlexMatch) {
-		if (tickedCategories == null || tickedCategories.isEmpty()) {
-			throw new IllegalArgumentException("Categories cannot be empty");
-		}
-		Random random = new Random(matchId);
-
-		int k = tickedCategories.size();
-		int base = totalSlots / k;
-		int remainder = totalSlots % k;
-
-		Map<String, Integer> slotsPerCategory = new LinkedHashMap<>();
-		for (String cat : tickedCategories) {
-			slotsPerCategory.put(cat, base);
-		}
+	private static Map<String, Integer> slotsPerCategory(List<String> categories, int totalSlots, Random random) {
+		Map<String, Integer> slots = new LinkedHashMap<>();
+		categories.forEach(category -> slots.put(category, totalSlots / categories.size()));
+		int remainder = totalSlots % categories.size();
 		if (remainder > 0) {
-			List<String> shuffledCats = new ArrayList<>(tickedCategories);
-			Collections.shuffle(shuffledCats, random);
-			for (int i = 0; i < remainder; i++) {
-				String cat = shuffledCats.get(i);
-				slotsPerCategory.put(cat, slotsPerCategory.get(cat) + 1);
-			}
+			List<String> shuffled = new ArrayList<>(categories);
+			Collections.shuffle(shuffled, random);
+			shuffled.subList(0, remainder).forEach(category -> slots.merge(category, 1, Integer::sum));
 		}
-
-		Set<String> chosenIds = new HashSet<>();
-		List<DuelQuestion> chosenQuestions = new ArrayList<>(totalSlots);
-
-		for (String cat : tickedCategories) {
-			int needed = slotsPerCategory.get(cat);
-			if (isAlexMatch && DuelMatchService.RISK_CATEGORY.equals(cat)) {
-				collectAlexRiskQuestions(needed, chosenIds, chosenQuestions);
-			} else {
-				collectQuestionsForCategory(cat, needed, seenQuestionIds, chosenIds, chosenQuestions, random);
-			}
-		}
-
-		// If still short of totalSlots, fill from any available category
-		if (chosenQuestions.size() < totalSlots) {
-			fillRemaining(totalSlots - chosenQuestions.size(), seenQuestionIds, chosenIds, chosenQuestions, random);
-		}
-
-		return arrangeQuestions(chosenQuestions, random, isAlexMatch);
+		return slots;
 	}
 
-	private void collectAlexRiskQuestions(int needed, Set<String> chosenIds, List<DuelQuestion> chosenQuestions) {
-		int added = 0;
-		for (String id : ALEX_FIXED_RISK_IDS) {
-			if (added >= needed) {
-				break;
-			}
-			DuelQuestion q = content.findById(id)
-					.orElseThrow(() -> new IllegalStateException("Missing Alex risk question " + id));
-			chosenIds.add(q.id());
-			chosenQuestions.add(q);
-			added++;
+	private void drawForCategory(String category, int needed, QuestionDraw draw) {
+		int missing = needed - draw.draw(content.findByArea(category), needed);
+		if (missing > 0) {
+			drawFromAreas(backupAreas(category), missing, draw);
 		}
 	}
 
-	private void collectQuestionsForCategory(String cat, int needed, Set<String> seenQuestionIds,
-			Set<String> chosenIds, List<DuelQuestion> chosenQuestions, Random random) {
-		int collected = drawFromCategory(cat, needed, seenQuestionIds, chosenIds, chosenQuestions, random);
-		if (collected >= needed) {
-			return;
-		}
-
-		// Fallback category
-		String fallback = findFallbackForArea(cat);
-		if (fallback != null && !fallback.isBlank()) {
-			collected += drawFromCategory(fallback, needed - collected, seenQuestionIds, chosenIds, chosenQuestions, random);
-			if (collected >= needed) {
+	private void drawFromAreas(List<String> areas, int needed, QuestionDraw draw) {
+		int missing = needed;
+		for (String area : areas) {
+			missing -= draw.draw(content.findByArea(area), missing);
+			if (missing <= 0) {
 				return;
 			}
 		}
-
-		// Any other available category
-		for (String otherCat : stories.canonicalAreaSlugs()) {
-			if (!otherCat.equals(cat) && !otherCat.equals(fallback)) {
-				collected += drawFromCategory(otherCat, needed - collected, seenQuestionIds, chosenIds, chosenQuestions, random);
-				if (collected >= needed) {
-					return;
-				}
-			}
-		}
 	}
 
-	private String findFallbackForArea(String areaSlug) {
-		for (Story s : stories.findByAreaSlug(areaSlug)) {
-			if (s.duelFallback() != null) {
-				Story fallbackStory = stories.findById(s.duelFallback()).orElse(null);
-				return fallbackStory != null ? fallbackStory.areaSlug() : s.duelFallback();
-			}
-		}
-		return null;
+	/** The area's fallback first, then every other area in canonical order. */
+	private List<String> backupAreas(String category) {
+		List<String> areas = new ArrayList<>(stories.canonicalAreaSlugs());
+		areas.remove(category);
+		fallbackArea(category).ifPresent(fallback -> {
+			areas.remove(fallback);
+			areas.addFirst(fallback);
+		});
+		return areas;
 	}
 
-	private void fillRemaining(int remainingNeeded, Set<String> seenQuestionIds, Set<String> chosenIds,
-			List<DuelQuestion> chosenQuestions, Random random) {
-		for (String area : stories.canonicalAreaSlugs()) {
-			if (content.hasDuelContent(area)) {
-				int got = drawFromCategory(area, remainingNeeded, seenQuestionIds, chosenIds, chosenQuestions, random);
-				remainingNeeded -= got;
-				if (remainingNeeded <= 0) {
-					return;
-				}
-			}
-		}
+	private Optional<String> fallbackArea(String category) {
+		return stories.findByAreaSlug(category).stream()
+			.map(Story::duelFallback)
+			.filter(Objects::nonNull)
+			.findFirst()
+			.map(storyId -> stories.findById(storyId).map(Story::areaSlug).orElse(storyId))
+			.filter(Predicate.not(String::isBlank));
 	}
 
-	private int drawFromCategory(String category, int countNeeded, Set<String> seenQuestionIds,
-			Set<String> chosenIds, List<DuelQuestion> chosenQuestions, Random random) {
-		List<DuelQuestion> pool = content.findByStory(category);
-		if (pool.isEmpty() || countNeeded <= 0) {
-			return 0;
+	private List<DuelQuestion> arrange(List<DuelQuestion> questions, Random random, RiskQuestions riskQuestions) {
+		List<DuelQuestion> shuffled = new ArrayList<>(questions);
+		Collections.shuffle(shuffled, random);
+		List<DuelQuestion> arranged = DuelQuestionOrder.withoutThreeInARow(shuffled);
+		if (riskQuestions == RiskQuestions.RANDOM) {
+			return arranged;
 		}
-
-		List<DuelQuestion> available = pool.stream()
-			.filter(q -> !chosenIds.contains(q.id()))
-			.toList();
-
-		List<DuelQuestion> unseen = new ArrayList<>();
-		List<DuelQuestion> seen = new ArrayList<>();
-		for (DuelQuestion q : available) {
-			if (seenQuestionIds.contains(q.id())) {
-				seen.add(q);
-			} else {
-				unseen.add(q);
-			}
-		}
-
-		Collections.shuffle(unseen, random);
-		Collections.shuffle(seen, random);
-
-		int added = 0;
-		for (DuelQuestion q : unseen) {
-			if (added >= countNeeded) break;
-			chosenIds.add(q.id());
-			chosenQuestions.add(q);
-			added++;
-		}
-		for (DuelQuestion q : seen) {
-			if (added >= countNeeded) break;
-			chosenIds.add(q.id());
-			chosenQuestions.add(q);
-			added++;
-		}
-		return added;
-	}
-
-	private List<DuelQuestion> arrangeQuestions(List<DuelQuestion> questions, Random random, boolean isAlexMatch) {
-		List<DuelQuestion> list = new ArrayList<>(questions);
-		Collections.shuffle(list, random);
-		List<DuelQuestion> baseList = (!hasThreeInARow(list)) ? list : arrangeWithBacktrack(list);
-
-		if (!isAlexMatch) {
-			return baseList;
-		}
-
-		// For Alex, place Risk questions in fixed relative order: seoul-d01, seoul-d02, etc.
-		int riskIndex = 0;
-		List<DuelQuestion> result = new ArrayList<>(baseList.size());
-		for (DuelQuestion q : baseList) {
-			if (DuelMatchService.RISK_CATEGORY.equals(q.category())) {
-				String fixedId = ALEX_FIXED_RISK_IDS.get(riskIndex++);
-				result.add(content.findById(fixedId).orElse(q));
-			} else {
-				result.add(q);
-			}
-		}
-		if (hasThreeInARow(result)) {
-			return arrangeWithBacktrack(result);
-		}
-		return result;
-	}
-
-	private static List<DuelQuestion> arrangeWithBacktrack(List<DuelQuestion> list) {
-		List<DuelQuestion> result = new ArrayList<>(list.size());
-		boolean[] used = new boolean[list.size()];
-		if (backtrack(list, used, result)) {
-			return result;
-		}
-		return list;
-	}
-
-	private static boolean hasThreeInARow(List<DuelQuestion> list) {
-		for (int i = 0; i < list.size() - 2; i++) {
-			if (list.get(i).type().equals(list.get(i + 1).type())
-					&& list.get(i).type().equals(list.get(i + 2).type())) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private static boolean backtrack(List<DuelQuestion> questions, boolean[] used, List<DuelQuestion> current) {
-		if (current.size() == questions.size()) {
-			return true;
-		}
-		int pos = current.size();
-		for (int i = 0; i < questions.size(); i++) {
-			if (used[i]) continue;
-			DuelQuestion candidate = questions.get(i);
-			if (pos >= 2 && candidate.type().equals(current.get(pos - 1).type())
-					&& candidate.type().equals(current.get(pos - 2).type())) {
-				continue;
-			}
-			used[i] = true;
-			current.add(candidate);
-			if (backtrack(questions, used, current)) {
-				return true;
-			}
-			current.removeLast();
-			used[i] = false;
-		}
-		return false;
+		return DuelQuestionOrder.withoutThreeInARow(DuelDemoRules.inFixedRiskOrder(content, arranged));
 	}
 
 }

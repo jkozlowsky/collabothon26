@@ -46,12 +46,13 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
 import com.collabothon.back.lesson.repositories.LessonCompletionRepository;
 import com.collabothon.back.lesson.repositories.LessonContentRepository;
+import com.collabothon.back.lesson.repositories.StoryRepository;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -61,7 +62,6 @@ import tools.jackson.databind.node.ObjectNode;
 @SpringBootTest(properties = "jev.api-key=test-key")
 @AutoConfigureMockMvc
 @AutoConfigureMockRestServiceServer
-@Transactional
 class QuickCheckCategorizationTests {
 
 	private static final String SENTINEL = "zzsentinelzz";
@@ -76,12 +76,11 @@ class QuickCheckCategorizationTests {
 
 	private static final String PROFILE = "{\"ageBand\": null, \"savingsCover\": \"1-3\", \"horizon\": \"1-5y\"}";
 
-	// Saving: right in berlin-1, then wrong in berlin-2. Investing: right in seoul-1, then Not sure in tokyo-1.
-	// The picked Berlin path puts saving first; debt has no answer.
+	// Saving: right, then wrong. Investing: right, then Not sure. The picked Berlin path puts saving first.
 	private static final String HISTORY = "[" + history(right("berlin-1/q1"), wrong("berlin-2/q1"), right("seoul-1/q2"),
 			notSure("tokyo-1/q1")) + "]";
 
-	/** What Jev chooses the first lesson from after those answers: per area the lesson answered not right, then one more. */
+	// What Jev chooses the first lesson from after those answers: per area the lesson answered not right, then one more.
 	private static final String[] CHOICES = { "berlin-2", "berlin-1", "tokyo-1", "seoul-1" };
 
 	private static final String ONE_RIGHT = "[" + right("berlin-1/q1") + "]";
@@ -100,7 +99,7 @@ class QuickCheckCategorizationTests {
 
 	private static final String PROFILE_FOR_JEV = "{\"horizon\": \"1-5y\"}";
 
-	/** The same Quick check with consent: an account that saves every month and holds investments. */
+	// The same Quick check with consent: an account that saves every month and holds investments.
 	private static final String WITH_FACTS = QUICK_CHECK
 		.replace("\"consent\": false", "\"consent\": true, \"facts\": " + FACTS)
 		.replace(PROFILE, PROFILE_WITH_CONSENT);
@@ -143,6 +142,12 @@ class QuickCheckCategorizationTests {
 	@Autowired
 	LessonContentRepository lessonContent;
 
+	@Autowired
+	StoryRepository stories;
+
+	@Autowired
+	TransactionTemplate tx;
+
 	private String userId;
 
 	@BeforeEach
@@ -172,22 +177,19 @@ class QuickCheckCategorizationTests {
 	}
 
 	private void complete(String... lessonIds) {
-		for (String lessonId : lessonIds) {
-			completions.insertFirst(userId, lessonId, 10);
-		}
+		tx.executeWithoutResult(status -> {
+			for (String lessonId : lessonIds) {
+				completions.insertIfAbsent(userId, lessonId, 10, Instant.now(clock), null);
+			}
+		});
 	}
 
 	private void completeStory(String storyId) {
-		complete(lessonContent.lessonIdsOf(story(storyId)).toArray(String[]::new));
-	}
-
-	private JsonNode story(String storyId) {
-		return lessonContent.stories().stream().filter(s -> s.path("id").asString().equals(storyId)).findFirst()
-			.orElseThrow();
+		complete(stories.findById(storyId).orElseThrow().lessonIds().toArray(String[]::new));
 	}
 
 	private String title(String lessonId) {
-		return lessonContent.lesson(lessonId).orElseThrow().path("title").asString();
+		return lessonContent.findById(lessonId).orElseThrow().title();
 	}
 
 	private ResultActions stored() throws Exception {
@@ -212,7 +214,7 @@ class QuickCheckCategorizationTests {
 		return "{\"model\": \"jev-2026-05\", \"answers\": {" + F1_ANSWERS + extra + "}}";
 	}
 
-	/** Jev's answer to the first lesson, among the lessons it was given. */
+	// Jev's answer to the first lesson, among the lessons it was given.
 	private static String firstLesson(String chosen, String... lessonIds) {
 		return choice("first_lesson", label(chosen), Arrays.stream(lessonIds).map(TestPool::label).toArray(String[]::new));
 	}
@@ -375,7 +377,7 @@ class QuickCheckCategorizationTests {
 
 		categorize(onRules(QUICK_CHECK.replace(HISTORY, history))).andExpect(status().isOk());
 
-		String data = categorizations.findData(userId).orElseThrow();
+		String data = tx.execute(status -> categorizations.findData(userId)).orElseThrow();
 		JsonNode row = json.readTree(data);
 		assertEquals(3, row.get("answerCount").intValue());
 		assertFalse(row.has("startHere"));
@@ -424,9 +426,9 @@ class QuickCheckCategorizationTests {
 		stored().andExpect(content().json("{\"startHere\": {\"lessonId\": \"buenos-aires-1\", \"area\": \"saving\"}}",
 				JsonCompareMode.LENIENT));
 
-		ObjectNode data = (ObjectNode) json.readTree(categorizations.findData(userId).orElseThrow());
+		ObjectNode data = (ObjectNode) json.readTree(tx.execute(status -> categorizations.findData(userId)).orElseThrow());
 		data.set("pathStoryIds", json.readTree("[\"gone\", \"tokyo\"]"));
-		categorizations.saveIfOnboarded(userId, json.writeValueAsString(data));
+		tx.execute(status -> categorizations.saveIfOnboarded(userId, json.writeValueAsString(data)));
 		stored().andExpect(jsonPath("$.startHere.storyId").value("tokyo"));
 	}
 
@@ -456,13 +458,13 @@ class QuickCheckCategorizationTests {
 
 	@Test
 	void aRowFromBeforeTheQuickCheckReadsWithDefaults() throws Exception {
-		categorizations.saveIfOnboarded(userId, """
+		tx.execute(status -> categorizations.saveIfOnboarded(userId, """
 					{"userId": "%s", "consent": false, "bankData": false, "role": "novice", "lifeStage": null,
 					 "focusAreas": ["saving"], "confidenceGaps": [], "checks": [],
 					 "lessonVariant": {"persona": null, "level": "beginner", "lang": "plain"}, "explanation": [],
 					 "startLesson": {"lessonId": 1, "title": "Emergency fund"}, "pathLessonIds": [1],
 					 "sharedWithModel": null, "source": "fallback", "model": null,
-					 "categorizedAt": "%s"}""".formatted(userId, Instant.now(clock)));
+					 "categorizedAt": "%s"}""".formatted(userId, Instant.now(clock))));
 
 		stored().andExpect(status().isOk())
 			.andExpect(content().json("""
@@ -633,8 +635,7 @@ class QuickCheckCategorizationTests {
 			.andRespond(withSuccess(jevFinal(firstLesson("berlin-3", "seoul-1", "tokyo-1", "berlin-3", "sao-paulo-1")),
 					MediaType.APPLICATION_JSON));
 
-		// Saving is Solid through berlin-1 and berlin-2, investing has the gap, debt was not asked about.
-		// Jev weighs berlin-3, yet the app still opens Berlin at its first lesson not done.
+		// Saving is Solid and investing has the gap; Jev weighs berlin-3, yet Berlin opens at its first lesson not done.
 		categorize(QUICK_CHECK
 			.replace(HISTORY, "[" + history(right("berlin-1/q1"), right("berlin-2/q1"), wrong("seoul-1/q2")) + "]")
 			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": 0.9, \"investing\": 0.25}"))

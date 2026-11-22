@@ -5,6 +5,8 @@ import java.util.List;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import com.collabothon.back.glossary.consts.GlossaryConsts;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -16,7 +18,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -30,7 +31,7 @@ public class GlossaryTerm {
 	@Column(name = "id", nullable = false)
 	private Long id;
 
-	@Column(name = "slug", nullable = false, length = 60, unique = true)
+	@Column(name = "slug", nullable = false, length = GlossaryConsts.MAX_SLUG_LENGTH, unique = true)
 	private String slug;
 
 	@Column(name = "name", nullable = false, length = 80)
@@ -68,21 +69,4 @@ public class GlossaryTerm {
 	@OrderColumn(name = "position")
 	private List<GlossaryTerm> related;
 
-	@Builder
-	public GlossaryTerm(Long id, String slug, String name, String fullName, GlossaryCategory category,
-			int position, String shortDescription, String definitionStandard,
-			String example, List<String> aliases, String graphicKey, List<GlossaryTerm> related) {
-		this.id = id;
-		this.slug = slug;
-		this.name = name;
-		this.fullName = fullName;
-		this.category = category;
-		this.position = position;
-		this.shortDescription = shortDescription;
-		this.definitionStandard = definitionStandard;
-		this.example = example;
-		this.aliases = aliases;
-		this.graphicKey = graphicKey;
-		this.related = related;
-	}
 }

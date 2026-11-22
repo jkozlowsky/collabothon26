@@ -4,15 +4,10 @@ import java.time.Duration;
 
 public final class CategorizationConsts {
 
-	/** {@code user_profile.user_id} is VARCHAR(64). */
-	public static final int MAX_USER_ID_LENGTH = 64;
-
-	/** A repeated POST with the same answers, consent and facts inside this window reuses the Jev result. */
 	public static final Duration RECATEGORIZE_AFTER = Duration.ofMinutes(5);
 
 	public static final double FOCUS_THRESHOLD = 0.5;
 
-	/** Longer than any {@code <lessonId>/<stepId>}. */
 	public static final int MAX_QUESTION_ID_LENGTH = 64;
 
 	public static final String AGE_18_25 = "18-25";
@@ -24,6 +19,15 @@ public final class CategorizationConsts {
 	public static final String HORIZON_WITHIN_1Y = "within-1y";
 
 	public static final String HORIZONS = "within-1y|1-5y|5y\\+|not-sure";
+
+	// A lesson counts its own quiz steps in the prompt, which means nothing in the test.
+	public static final String CHECKPOINT_PREFIX_PATTERN = "^Checkpoint \\d+ of \\d+ · ";
+
+	public static final String LABEL_SEPARATOR = "_";
+
+	public static final String NOT_IN_LABEL_PATTERN = "[^a-z0-9]+";
+
+	public static final String LABEL_EDGE_PATTERN = "^_|_$";
 
 	public static final double RULE_START = 0.5;
 
@@ -47,7 +51,6 @@ public final class CategorizationConsts {
 
 	public static final int MAX_GAP_CARDS = 2;
 
-	/** Lessons per area that Jev chooses among, for the next question and for the first lesson. */
 	public static final int LESSON_CHOICES_PER_AREA = 2;
 
 }

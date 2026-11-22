@@ -18,5 +18,4 @@ public record MatchEndDto(
 		int xpGained,
 		Map<String, Integer> xpByCategory,
 		List<ReviewItemDto> review
-) {
-}
+) {}

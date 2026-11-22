@@ -29,31 +29,31 @@ public class AccountService {
 	private final XpService xpService;
 	private final AccountMapper accountMapper;
 
-	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
 	public AccountDto getAccount(String userId) {
 		Account account = findAccount(userId);
 		return accountMapper.toDto(account);
 	}
 
-	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = false, propagation = Propagation.REQUIRES_NEW)
 	public AccountDto changeAvatar(String userId, String avatar) {
 		Account account = findAccount(userId);
 		account.changeAvatar(avatar);
 		return accountMapper.toDto(account);
 	}
 
-	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
 	public StatsDto getStats(String userId, LocalDate today) {
 		List<LocalDate> days = activities.findCompletedOnByUserId(userId);
 		Streak streak = Streak.of(days, today);
 		int totalXp = xpService.totalXp(userId);
 		long completed = completions.countByIdUserId(userId);
-		return new StatsDto(streak.current(), streak.longest(), streak.doneToday(),
-				streak.week(), totalXp, completed);
+		return accountMapper.toStatsDto(streak, totalXp, completed);
 	}
 
 	private Account findAccount(String userId) {
 		return accounts.findById(userId)
 				.orElseThrow(() -> new BusinessException(ProfileErrorCode.ACCOUNT_NOT_FOUND));
 	}
+
 }

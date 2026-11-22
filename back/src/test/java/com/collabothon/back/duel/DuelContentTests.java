@@ -21,11 +21,7 @@ import org.junit.jupiter.api.TestInstance;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Validates duel content files according to Duel v3 spec §3.4.
- * Reads JSON content directly with Jackson so it remains independent
- * of ongoing backend model refactorings.
- */
+/** Reads the content files directly, independently of the backend's models. */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DuelContentTests {
 
@@ -42,12 +38,6 @@ class DuelContentTests {
 	private final Map<String, LessonInfo> lessons = new HashMap<>();
 
 	private final List<DuelFileInfo> duelFiles = new ArrayList<>();
-
-	record StoryInfo(String id, String category, List<String> lessonIds) {}
-
-	record LessonInfo(String id, String story, Set<String> stepIds) {}
-
-	record DuelFileInfo(String fileName, String story, List<JsonNode> questions) {}
 
 	@BeforeAll
 	void loadContent() throws IOException {

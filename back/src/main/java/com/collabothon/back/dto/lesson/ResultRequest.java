@@ -8,7 +8,15 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
-public record ResultRequest(@NotNull List<@Valid StepResult> steps, Map<String, Integer> scenarioChoices,
-		@NotNull @Pattern(regexp = "classic|video") String mode,
-		LocalDate completedOn) {
-}
+import com.collabothon.back.lesson.validation.CompletionDay;
+import com.collabothon.back.profile.consts.ProfileConsts;
+
+public record ResultRequest(
+		@NotNull
+		List<@NotNull @Valid StepResult> steps,
+		Map<String, Integer> scenarioChoices,
+		@NotNull
+		@Pattern(regexp = ProfileConsts.LESSON_MODE_PATTERN)
+		String mode,
+		@CompletionDay
+		LocalDate completedOn) {}

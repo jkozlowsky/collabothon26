@@ -10,8 +10,11 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+
+import com.collabothon.back.common.consts.UserConsts;
+import com.collabothon.back.profile.consts.ProfileConsts;
+
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -22,7 +25,7 @@ import lombok.NoArgsConstructor;
 public class UserProfile {
 
 	@Id
-	@Column(name = "user_id", nullable = false, length = 64)
+	@Column(name = "user_id", nullable = false, length = UserConsts.MAX_USER_ID_LENGTH)
 	private String userId;
 
 	@Column(name = "life_stage", length = 32)
@@ -44,29 +47,12 @@ public class UserProfile {
 	@Column(name = "onboarding_completed_at")
 	private Instant onboardingCompletedAt;
 
-	/** "classic" or "video": the mode lessons with a video track open in. Switched inside a lesson (V20). */
 	@Column(name = "preferred_lesson_mode", nullable = false, length = 8)
-	private String preferredLessonMode = "video";
-
-	@Builder
-	public UserProfile(String userId, String lifeStage, List<String> interests, String experience,
-			boolean onboardingCompleted, boolean onboardingSkipped, Instant onboardingCompletedAt) {
-		this.userId = userId;
-		this.lifeStage = lifeStage;
-		if (interests != null) {
-			this.interests = List.copyOf(interests);
-		}
-		else {
-			this.interests = List.of();
-		}
-		this.experience = experience;
-		this.onboardingCompleted = onboardingCompleted;
-		this.onboardingSkipped = onboardingSkipped;
-		this.onboardingCompletedAt = onboardingCompletedAt;
-	}
+	private String preferredLessonMode = ProfileConsts.LESSON_MODE_VIDEO;
 
 	public UserProfile(String userId) {
-		this(userId, null, List.of(), null, false, false, null);
+		this.userId = userId;
+		this.interests = List.of();
 	}
 
 	public void completeOnboarding(String lifeStage, List<String> interests, String experience, boolean skipped,
@@ -91,4 +77,5 @@ public class UserProfile {
 		this.onboardingCompleted = false;
 		this.onboardingCompletedAt = null;
 	}
+
 }

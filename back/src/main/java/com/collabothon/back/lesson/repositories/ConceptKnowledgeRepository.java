@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
 import com.collabothon.back.entities.lesson.ConceptKnowledge;
 import com.collabothon.back.entities.lesson.ConceptKnowledgeId;
 
@@ -22,4 +23,5 @@ public interface ConceptKnowledgeRepository extends JpaRepository<ConceptKnowled
 			    attempts = concept_knowledge.attempts + 1
 			""")
 	void recordConcept(@Param("userId") String userId, @Param("concept") String concept, @Param("correct") int correct);
+
 }

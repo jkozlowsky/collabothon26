@@ -12,5 +12,4 @@ public record MatchStartDto(
 		PlayerCardDto rival,
 		int questionCount,
 		DuelQuestionDto question
-) {
-}
+) {}

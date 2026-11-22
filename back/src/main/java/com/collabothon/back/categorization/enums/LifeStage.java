@@ -3,6 +3,7 @@ package com.collabothon.back.categorization.enums;
 import java.util.Arrays;
 
 import com.collabothon.back.categorization.consts.CategorizationConsts;
+import com.collabothon.back.profile.consts.ProfileConsts;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 import lombok.RequiredArgsConstructor;
@@ -10,9 +11,11 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum LifeStage {
 
-	STUDENT("starting-out"), FAMILY("building"), ESTABLISHED("settled"), PRE_RETIREMENT("later-life");
+	STUDENT(ProfileConsts.LIFE_STAGE_STARTING_OUT),
+	FAMILY(ProfileConsts.LIFE_STAGE_BUILDING),
+	ESTABLISHED(ProfileConsts.LIFE_STAGE_SETTLED),
+	PRE_RETIREMENT(ProfileConsts.LIFE_STAGE_LATER_LIFE);
 
-	/** The onboarding answer (main's {@code user_profile.life_stage}) this stage comes from. */
 	private final String answer;
 
 	@JsonValue
@@ -20,17 +23,21 @@ public enum LifeStage {
 		return WireNames.of(this);
 	}
 
-	/** Only the clear ends of the range (D1); no family status is inferred from an age band. */
+	// Only the clear ends of the range: no family status is inferred from an age band (GDPR accuracy).
 	public static LifeStage fromAgeBand(String ageBand) {
-		if (CategorizationConsts.AGE_18_25.equals(ageBand)) {
-			return STUDENT;
-		}
-		return CategorizationConsts.AGE_60_PLUS.equals(ageBand) ? PRE_RETIREMENT : null;
+		return switch (ageBand) {
+			case CategorizationConsts.AGE_18_25 -> STUDENT;
+			case CategorizationConsts.AGE_60_PLUS -> PRE_RETIREMENT;
+			case null, default -> null;
+		};
 	}
 
-	/** Null stays null; an unknown answer is an error, never a silent mapping. */
+	// A skipped answer stays null; an unknown one is an error, never a silent mapping.
 	public static LifeStage fromAnswer(String answer) {
-		return answer == null ? null : Arrays.stream(values())
+		if (answer == null) {
+			return null;
+		}
+		return Arrays.stream(values())
 			.filter(stage -> stage.answer.equals(answer))
 			.findFirst()
 			.orElseThrow(() -> new IllegalArgumentException("Unknown life stage: " + answer));

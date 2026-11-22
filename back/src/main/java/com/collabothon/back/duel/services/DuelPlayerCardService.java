@@ -2,28 +2,26 @@ package com.collabothon.back.duel.services;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.collabothon.back.dto.converters.duel.DuelPlayerMapper;
 import com.collabothon.back.dto.duel.PlayerCardDto;
+import com.collabothon.back.duel.models.PlayerIdentity;
 import com.collabothon.back.entities.duel.DuelMatch;
 import com.collabothon.back.lesson.repositories.StoryRepository;
-import com.collabothon.back.entities.profile.Account;
 import com.collabothon.back.profile.repositories.AccountRepository;
 import com.collabothon.back.xp.services.LevelCurve;
 import com.collabothon.back.xp.services.XpService;
 
 import lombok.RequiredArgsConstructor;
 
-/** Builds the player cards shown in a duel: full name and avatar from the account, level per story from XP. */
+// REQUIRED: the duel services call this inside their transaction, with rows that are not committed yet.
 @Service
 @RequiredArgsConstructor
 public class DuelPlayerCardService {
-
-	static final String DEFAULT_AVATAR = "m1";
 
 	private final AccountRepository accounts;
 
@@ -33,6 +31,8 @@ public class DuelPlayerCardService {
 
 	private final StoryRepository stories;
 
+	private final DuelPlayerMapper playerMapper;
+
 	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
 	public PlayerCardDto card(String userId) {
 		Map<String, Integer> xpPerCategory = xpService.xpPerCategory(userId);
@@ -40,19 +40,17 @@ public class DuelPlayerCardService {
 		for (String area : stories.canonicalAreaSlugs()) {
 			levels.put(area, levelCurve.fromXp(xpPerCategory.getOrDefault(area, 0)).level());
 		}
-		Optional<Account> account = accounts.findById(userId);
-		String name = account.map(Account::getFullName).filter(n -> !n.isBlank()).orElse(userId);
-		String avatar = account.map(Account::getAvatar).orElse(DEFAULT_AVATAR);
-		return new PlayerCardDto(name, avatar, levels);
+		return playerMapper.toCard(PlayerIdentity.of(userId, accounts.findById(userId)), levels);
 	}
 
-	/** The rival's card, or null in SOLO matches. */
+	/** Null in SOLO matches. */
 	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
 	public PlayerCardDto rivalCard(DuelMatch match) {
-		if (match.getRivalUserId() == null) {
+		String rivalUserId = match.getRivalUserId();
+		if (rivalUserId == null) {
 			return null;
 		}
-		return card(match.getRivalUserId());
+		return card(rivalUserId);
 	}
 
 }

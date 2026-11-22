@@ -2,7 +2,7 @@ package com.collabothon.back.categorization.dto;
 
 import java.util.List;
 
-/** What reached Jev in the step calls or the final call: categories and counts, never the answers themselves. */
+// The disclosure of what reached Jev: categories and counts, never the knowledge answers themselves.
 public record SharedWithModelDto(
 		FactsDto facts,
 		OnboardingAnswersDto answers,

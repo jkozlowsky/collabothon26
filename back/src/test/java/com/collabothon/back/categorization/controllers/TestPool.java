@@ -11,7 +11,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-/** History entries and Jev labels for the Quick check's questions, read from the lesson files the pool is built from. */
+// History entries and Jev labels for the Quick check's questions, read from the lesson files the pool is built from.
 final class TestPool {
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -32,7 +32,7 @@ final class TestPool {
 		return String.join(", ", entries);
 	}
 
-	/** Jev's option name for a lesson, written out again here so the format is pinned. */
+	// Jev's option name for a lesson, written out again here so the format is pinned.
 	static String label(String lessonId) {
 		return topic(lessonId).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "_").replaceAll("^_|_$", "");
 	}
@@ -53,7 +53,7 @@ final class TestPool {
 		return concepts;
 	}
 
-	/** An answer as the Jev state carries it. */
+	// An answer as the Jev state carries it.
 	static String jevAnswer(String area, String lessonId, String result) {
 		ObjectNode answer = JSON.createObjectNode();
 		answer.put("area", area);
@@ -64,7 +64,7 @@ final class TestPool {
 		return answer.toString();
 	}
 
-	/** A picked path as the Jev state carries it. */
+	// A picked path as the Jev state carries it.
 	static String interest(String storyId) {
 		for (JsonNode story : read("/content/stories.json")) {
 			if (story.path("id").asString().equals(storyId)) {

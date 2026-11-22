@@ -9,5 +9,4 @@ public record DuelQuestionDto(
 		ObjectNode step,
 		long deadline,
 		long timeLimitMs
-) {
-}
+) {}

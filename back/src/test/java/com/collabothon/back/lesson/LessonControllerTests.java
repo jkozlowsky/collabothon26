@@ -1,5 +1,6 @@
 package com.collabothon.back.lesson;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -146,7 +147,7 @@ class LessonControllerTests {
 		}
 		mvc.perform(get("/api/lessons/seoul-5").param("userId", "grandpa"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.steps[3].body").value(org.hamcrest.Matchers.containsString("Close to retirement")))
+			.andExpect(jsonPath("$.steps[3].body").value(containsString("Close to retirement")))
 			.andExpect(jsonPath("$.glossary.drawdown").exists());
 	}
 
@@ -189,7 +190,9 @@ class LessonControllerTests {
 			.andExpect(jsonPath("$.totalXp").value(50))
 			.andExpect(jsonPath("$.lessonsCompleted").value(1))
 			.andExpect(jsonPath("$.currentStreak").value(1));
-		assertEquals(2, concepts.findById(new ConceptKnowledgeId(userId, "volatility")).orElseThrow().getAttempts());
+		assertEquals(2, tx.execute(status -> concepts.findById(new ConceptKnowledgeId(userId, "volatility")))
+			.orElseThrow()
+			.getAttempts());
 	}
 
 	private MvcResult finish(String userId) throws Exception {

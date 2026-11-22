@@ -1,12 +1,13 @@
 package com.collabothon.back.entities.lesson;
 
 import java.time.Instant;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -25,10 +26,4 @@ public class LessonCompletion {
 	@Column(name = "xp", nullable = false)
 	private int xp;
 
-	@Builder
-	public LessonCompletion(LessonCompletionId id, Instant completedAt, int xp) {
-		this.id = id;
-		this.completedAt = completedAt;
-		this.xp = xp;
-	}
 }

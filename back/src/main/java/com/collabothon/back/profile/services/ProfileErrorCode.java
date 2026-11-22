@@ -6,10 +6,8 @@ import com.collabothon.back.exceptions.ErrorCode;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 
 @Getter
-@Accessors(fluent = true)
 @RequiredArgsConstructor
 public enum ProfileErrorCode implements ErrorCode {
 
@@ -19,4 +17,5 @@ public enum ProfileErrorCode implements ErrorCode {
 
 	private final HttpStatus status;
 	private final String message;
+
 }

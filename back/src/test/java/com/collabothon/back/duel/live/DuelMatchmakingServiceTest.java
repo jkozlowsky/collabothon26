@@ -1,10 +1,11 @@
 package com.collabothon.back.duel.live;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -20,8 +21,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import com.collabothon.back.MutableClock;
 import com.collabothon.back.dto.duel.PlayerCardDto;
-import com.collabothon.back.duel.services.DuelMatchService;
+import com.collabothon.back.duel.services.DuelStartService;
 import com.collabothon.back.duel.services.LiveMatch;
 
 class DuelMatchmakingServiceTest {
@@ -30,13 +32,13 @@ class DuelMatchmakingServiceTest {
 
 	private static final PlayerCardDto CARD_B = new PlayerCardDto("Elena Petrova", "f3", Map.of());
 
-	DuelMatchService matches = mock(DuelMatchService.class);
+	DuelStartService matches = mock(DuelStartService.class);
 
 	DuelLiveNotifier notifier = mock(DuelLiveNotifier.class);
 
 	ManualDuelTimers timers = new ManualDuelTimers();
 
-	TestClock clock = new TestClock(Instant.parse("2026-11-23T10:00:00Z"));
+	MutableClock clock = new MutableClock(Instant.parse("2026-11-23T10:00:00Z"));
 
 	DuelMatchmakingService matchmaking;
 
@@ -137,12 +139,12 @@ class DuelMatchmakingServiceTest {
 	@SuppressWarnings("unchecked")
 	private Map<String, Object> sent(String userId, String type) {
 		ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
-		verify(notifier, org.mockito.Mockito.atLeastOnce()).send(eq(userId), captor.capture());
+		verify(notifier, atLeastOnce()).send(eq(userId), captor.capture());
 		return captor.getAllValues().stream().filter(message -> type.equals(message.get("type"))).findFirst().orElseThrow();
 	}
 
 	private static Map<String, Object> eqType(String type) {
-		return org.mockito.ArgumentMatchers.argThat(message -> message != null && type.equals(message.get("type")));
+		return argThat(message -> message != null && type.equals(message.get("type")));
 	}
 
 }

@@ -20,9 +20,6 @@ public interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, Long
 
 	boolean existsBySlug(String slug);
 
-	@Query("select t.id from GlossaryTerm t where t.slug = :slug")
-	Optional<Long> findIdBySlug(@Param("slug") String slug);
-
 	@Query(nativeQuery = true, value = """
 			SELECT t.* FROM glossary_term t
 			WHERE strpos(lower(t.name), :q) > 0
@@ -30,23 +27,25 @@ public interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, Long
 			ORDER BY CASE WHEN starts_with(lower(t.name), :q) THEN 0
 			              WHEN strpos(lower(t.name), :q) > 0 THEN 1 ELSE 2 END,
 			         t.name
-			LIMIT 20
+			LIMIT :limit
 			""")
-	List<GlossaryTerm> searchByName(@Param("q") String q);
+	List<GlossaryTerm> searchByName(@Param("q") String q, @Param("limit") int limit);
 
 	@Query(nativeQuery = true, value = """
 			SELECT t.* FROM glossary_term t
 			WHERE strpos(lower(t.definition_standard), :q) > 0
 			ORDER BY t.name
-			LIMIT 50
+			LIMIT :limit
 			""")
-	List<GlossaryTerm> findDefinitionsContaining(@Param("q") String q);
+	List<GlossaryTerm> findDefinitionsContaining(@Param("q") String q, @Param("limit") int limit);
 
 	@Query(nativeQuery = true, value = """
 			SELECT t.* FROM glossary_term t
-			WHERE similarity(lower(t.name), :q) > 0.3
+			WHERE similarity(lower(t.name), :q) > :minSimilarity
 			ORDER BY similarity(lower(t.name), :q) DESC, t.name
-			LIMIT 3
+			LIMIT :limit
 			""")
-	List<GlossaryTerm> findSimilarByName(@Param("q") String q);
+	List<GlossaryTerm> findSimilarByName(@Param("q") String q, @Param("minSimilarity") double minSimilarity,
+			@Param("limit") int limit);
+
 }

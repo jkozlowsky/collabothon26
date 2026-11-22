@@ -17,10 +17,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * The player's answer to one question of a match (V17 {@code duel_answer}), timeouts included, plus the simulated
- * rival's answer to the same question. Written once, never updated.
- */
+/** One answer or timeout, with the simulated rival's answer to the same question. Never updated. */
 @Entity
 @Table(name = "duel_answer")
 @Getter
@@ -61,11 +58,11 @@ public class DuelAnswer {
 	@Column(name = "ms_taken", updatable = false)
 	private Integer msTaken;
 
-	/** Null in SOLO matches. */
+	/** Null without a simulated rival. */
 	@Column(name = "rival_correct", updatable = false)
 	private Boolean rivalCorrect;
 
-	/** When the rival's answer becomes visible; null in SOLO matches. */
+	/** When the rival's answer becomes visible; null without a simulated rival. */
 	@Column(name = "rival_answer_at", updatable = false)
 	private Instant rivalAnswerAt;
 
@@ -80,7 +77,6 @@ public class DuelAnswer {
 		return Boolean.TRUE.equals(rivalCorrect);
 	}
 
-	/** Whether the rival's answer to this question is visible at {@code now}. */
 	public boolean isRivalAnsweredAt(Instant now) {
 		return rivalAnswerAt != null && !now.isBefore(rivalAnswerAt);
 	}

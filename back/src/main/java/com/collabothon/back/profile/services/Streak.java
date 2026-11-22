@@ -2,49 +2,55 @@ package com.collabothon.back.profile.services;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 
-public record Streak(int current, int longest, boolean doneToday, List<Boolean> week) {
+public record Streak(
+		int current,
+		int longest,
+		boolean doneToday,
+		List<Boolean> week) {
 
 	public static Streak of(Collection<LocalDate> lessonDays, LocalDate today) {
-		TreeSet<LocalDate> days = new TreeSet<>(lessonDays);
-		boolean doneToday = days.contains(today);
+		SortedSet<LocalDate> days = new TreeSet<>(lessonDays);
+		return new Streak(currentRun(days, today), longestRun(days), days.contains(today), weekOf(days, today));
+	}
 
-		LocalDate startDay;
-		if (doneToday) {
-			startDay = today;
+	private static int currentRun(Set<LocalDate> days, LocalDate today) {
+		LocalDate day = today;
+		// A streak ending yesterday still counts until today is over.
+		if (!days.contains(today)) {
+			day = today.minusDays(1);
 		}
-		else {
-			startDay = today.minusDays(1);
+		int run = 0;
+		while (days.contains(day)) {
+			run++;
+			day = day.minusDays(1);
 		}
+		return run;
+	}
 
-		int current = 0;
-		for (LocalDate d = startDay; days.contains(d); d = d.minusDays(1)) {
-			current++;
-		}
-
+	private static int longestRun(SortedSet<LocalDate> days) {
 		int longest = 0;
 		int run = 0;
-		LocalDate prev = null;
 		for (LocalDate day : days) {
-			if (prev != null && day.equals(prev.plusDays(1))) {
+			if (days.contains(day.minusDays(1))) {
 				run++;
 			}
 			else {
 				run = 1;
 			}
 			longest = Math.max(longest, run);
-			prev = day;
 		}
-
-		LocalDate monday = today.with(DayOfWeek.MONDAY);
-		List<Boolean> week = new ArrayList<>(7);
-		for (int i = 0; i < 7; i++) {
-			week.add(days.contains(monday.plusDays(i)));
-		}
-		return new Streak(current, longest, doneToday, week);
+		return longest;
 	}
+
+	private static List<Boolean> weekOf(Set<LocalDate> days, LocalDate today) {
+		return Arrays.stream(DayOfWeek.values()).map(day -> days.contains(today.with(day))).toList();
+	}
+
 }

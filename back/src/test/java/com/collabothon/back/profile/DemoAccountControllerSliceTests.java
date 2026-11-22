@@ -67,7 +67,7 @@ class DemoAccountControllerSliceTests {
 
 	@Test
 	void heartbeatCallsService() throws Exception {
-		given(sessionService.heartbeat("demo-user", "dev-1"))
+		given(sessionService.acquireSession("demo-user", "dev-1"))
 				.willReturn(new SessionResponse("demo-user", 120000, 30000));
 
 		mvc.perform(put("/api/users/demo-user/session")

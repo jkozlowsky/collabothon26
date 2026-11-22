@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.dto.converters.xp.CategoryXpMapper;
-import com.collabothon.back.dto.lesson.Story;
 import com.collabothon.back.dto.xp.CategoryXpDto;
 import com.collabothon.back.entities.xp.XpSource;
 import com.collabothon.back.exceptions.BusinessException;
@@ -22,10 +21,8 @@ import com.collabothon.back.xp.repositories.XpEventRepository;
 
 import lombok.RequiredArgsConstructor;
 
-/**
- * The shared XP ledger: lessons and duels write here, and every XP number in the app (profile total, category
- * levels, weekly rankings) is a sum over it.
- */
+// The one XP ledger: lessons and duels write here, every XP number in the app is a sum over it.
+// All but categoryBreakdown are REQUIRED, so the XP commits or rolls back with the transaction that earned it.
 @Service
 @RequiredArgsConstructor
 public class XpService {
@@ -40,10 +37,7 @@ public class XpService {
 
 	private final StoryRepository stories;
 
-	/**
-	 * Records XP once per (user, source, sourceRef, category); a repeated call is a no-op, and so is zero XP.
-	 * @return true if the event was new
-	 */
+	// Idempotent per (user, source, sourceRef, category); true only for a new event.
 	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
 	public boolean record(String userId, String category, XpSource source, String sourceRef, int xp, Instant at) {
 		if (xp < 0) {
@@ -55,7 +49,6 @@ public class XpService {
 		return xpEvents.insertIfAbsent(userId, category, source.name(), sourceRef, xp, at) == 1;
 	}
 
-	/** Credits a completed lesson's XP to its category. Idempotent per (user, lesson). */
 	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
 	public void awardLesson(String userId, String lessonId, String category, int xp, Instant at) {
 		record(userId, category, XpSource.LESSON, lessonId, xp, at);
@@ -69,13 +62,11 @@ public class XpService {
 		return Math.toIntExact(xpEvents.sumXpByUserId(userId));
 	}
 
-	/** Whether the user earned any XP in [from, to). */
 	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
 	public boolean hasXpBetween(String userId, Instant from, Instant to) {
 		return xpEvents.existsByUserIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(userId, from, to);
 	}
 
-	/** All-time XP per category; categories without XP are absent. */
 	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
 	public Map<String, Integer> xpPerCategory(String userId) {
 		if (isBlank(userId)) {
@@ -84,7 +75,6 @@ public class XpService {
 		return toCategoryMap(xpEvents.sumXpPerCategory(userId));
 	}
 
-	/** All-time XP per user for the given users; users without XP are absent. */
 	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
 	public Map<String, Integer> totalXpPerUser(Collection<String> userIds) {
 		if (userIds.isEmpty()) {
@@ -95,15 +85,13 @@ public class XpService {
 			.collect(Collectors.toMap(UserXpProjection::getUserId, row -> Math.toIntExact(row.getXp())));
 	}
 
-	/** Every story category in stories.json order, with the user's all-time and this week's XP. */
-	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
 	public List<CategoryXpDto> categoryBreakdown(String userId) {
 		Map<String, Integer> total = xpPerCategory(userId);
 		Map<String, Integer> weekly = weeklyXpPerCategory(userId);
 		return stories.findAll()
 			.stream()
-			.map(Story::id)
-			.map(category -> toCategoryXp(category, total, weekly))
+			.map(story -> toCategoryXp(story.id(), total, weekly))
 			.toList();
 	}
 

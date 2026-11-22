@@ -1,19 +1,16 @@
 package com.collabothon.back.duel.live;
 
-import java.time.Duration;
-
 import org.springframework.stereotype.Service;
 
+import com.collabothon.back.duel.consts.DuelSocketConsts;
 import com.collabothon.back.duel.services.DuelMatchService;
 
 import lombok.RequiredArgsConstructor;
 
-/** Tells the opponent of a live duel when a player's socket stays closed for {@link #GRACE}. */
+/** Tells the opponents of a player whose socket stays closed past the grace period. */
 @Service
 @RequiredArgsConstructor
 public class DuelPresenceService {
-
-	public static final Duration GRACE = Duration.ofSeconds(10);
 
 	private final DuelLiveNotifier notifier;
 
@@ -22,10 +19,10 @@ public class DuelPresenceService {
 	private final DuelTimers timers;
 
 	public void onDisconnected(String userId) {
-		timers.schedule(() -> notifyIfStillGone(userId), GRACE);
+		timers.schedule(() -> notifyIfStillGone(userId), DuelSocketConsts.DISCONNECT_GRACE);
 	}
 
-	void notifyIfStillGone(String userId) {
+	private void notifyIfStillGone(String userId) {
 		if (notifier.isConnected(userId)) {
 			return;
 		}

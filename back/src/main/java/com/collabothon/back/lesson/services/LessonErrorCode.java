@@ -1,13 +1,13 @@
 package com.collabothon.back.lesson.services;
 
 import org.springframework.http.HttpStatus;
+
 import com.collabothon.back.exceptions.ErrorCode;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 
 @Getter
-@Accessors(fluent = true)
 @RequiredArgsConstructor
 public enum LessonErrorCode implements ErrorCode {
 

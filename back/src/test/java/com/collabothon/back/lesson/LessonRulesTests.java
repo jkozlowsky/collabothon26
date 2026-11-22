@@ -8,15 +8,19 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import org.junit.jupiter.api.Test;
 
-import com.collabothon.back.lesson.services.LessonRules;
+import com.collabothon.back.lesson.models.LessonJson;
+import com.collabothon.back.lesson.validation.LessonRules;
 
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 class LessonRulesTests {
+
+	private static final Predicate<String> NO_AUDIO = audio -> false;
 
 	private final JsonMapper json = JsonMapper.builder().build();
 
@@ -41,7 +45,7 @@ class LessonRulesTests {
 				                        "a1": { "body": "beginner" } } }""");
 
 		// Keys arrive in any order; merging still runs level → persona.
-		ObjectNode merged = LessonRules.applyVariants(l, List.of("persona:student", "level:beginner"));
+		ObjectNode merged = LessonJson.applyVariants(l, List.of("persona:student", "level:beginner"));
 
 		assertThat(merged.has("variants")).isFalse();
 		assertThat(merged.at("/steps/0/goal/hint").asString()).isEqualTo("beginner hint");
@@ -52,32 +56,31 @@ class LessonRulesTests {
 		// The base lesson is untouched.
 		assertThat(l.at("/steps/1/prompt").asString()).isEqualTo("base");
 
-		ObjectNode studentOnly = LessonRules.applyVariants(l, List.of("persona:student"));
+		ObjectNode studentOnly = LessonJson.applyVariants(l, List.of("persona:student"));
 		assertThat(studentOnly.at("/steps/2/body").asString()).isEqualTo("student");
 	}
 
 	@Test
 	void validationRejectsBrokenContent() {
 		Set<String> glossary = Set.of("leverage");
-		LessonRules.validate(lesson("{}"), glossary);
+		LessonRules.validate(lesson("{}"), glossary, NO_AUDIO);
 
-		assertThatThrownBy(() -> LessonRules.validate(lesson("{}"), Set.of()))
+		assertThatThrownBy(() -> LessonRules.validate(lesson("{}"), Set.of(), NO_AUDIO))
 			.hasMessageContaining("concept 'leverage'");
 		assertThatThrownBy(() -> LessonRules.validate(lesson("""
-				{ "level:advanced": { "q1": { "correctIndex": 0 } } }"""), glossary))
+				{ "level:advanced": { "q1": { "correctIndex": 0 } } }"""), glossary, NO_AUDIO))
 			.hasMessageContaining("answer fields");
 		assertThatThrownBy(() -> LessonRules.validate(lesson("""
-				{ "persona:family": { "q1": { "prompt": "x" } } }"""), glossary))
+				{ "persona:family": { "q1": { "prompt": "x" } } }"""), glossary, NO_AUDIO))
 			.hasMessageContaining("only override action");
 		assertThatThrownBy(() -> LessonRules.validate(lesson("""
-				{ "level:beginner": { "zz": { "prompt": "x" } } }"""), glossary))
+				{ "level:beginner": { "zz": { "prompt": "x" } } }"""), glossary, NO_AUDIO))
 			.hasMessageContaining("unknown step 'zz'");
 		// Plain language is gone (lesson-video-mode-spec §9).
 		assertThatThrownBy(() -> LessonRules.validate(lesson("""
-				{ "lang:plain": { "q1": { "prompt": "x" } } }"""), glossary))
+				{ "lang:plain": { "q1": { "prompt": "x" } } }"""), glossary, NO_AUDIO))
 			.hasMessageContaining("unknown variant 'lang:plain'");
 	}
-
 
 	@Test
 	void phasesAreAllOrNothingInOrderAndDecideOnlyActs() {
@@ -90,12 +93,12 @@ class LessonRulesTests {
 				    "params": { "homeShare": { "label": "l", "min": 0, "max": 100, "step": 5, "value": 50, "fromBank": "europeShare" } },
 				    "output": { "label": "o", "unit": "%" }, "goal": { "condition": { "of": "output", "min": -100 }, "hint": "h" } },
 				  { "type": "action", "id": "a1", "phase": "decide", "body": "b", "bodyNoData": "n" } ] }""");
-		assertThatCode(() -> LessonRules.validate(ok, Set.of())).doesNotThrowAnyException();
+		assertThatCode(() -> LessonRules.validate(ok, Set.of(), NO_AUDIO)).doesNotThrowAnyException();
 
 		BiConsumer<Consumer<ObjectNode>, String> fails = (breakIt, message) -> {
 			ObjectNode l = ok.deepCopy();
 			breakIt.accept(l);
-			assertThatThrownBy(() -> LessonRules.validate(l, Set.of())).hasMessageContaining(message);
+			assertThatThrownBy(() -> LessonRules.validate(l, Set.of(), NO_AUDIO)).hasMessageContaining(message);
 		};
 		fails.accept(l -> ((ObjectNode) l.at("/steps/0")).remove("phase"), "every step has a phase or none");
 		fails.accept(l -> ((ObjectNode) l.at("/steps/1")).put("phase", "you"), "a phased lesson needs a 'challenge' step");

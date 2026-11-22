@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
 
 import com.collabothon.back.dto.duel.CategoryMatchEndDto;
 import com.collabothon.back.dto.duel.DuelQuestionDto;
@@ -19,7 +20,7 @@ import com.collabothon.back.dto.duel.RivalSnapshotDto;
 import com.collabothon.back.dto.duel.YourFinalDto;
 import com.collabothon.back.entities.duel.DuelMatch;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface DuelMatchMapper {
 
 	@Mapping(target = "matchId", source = "match.id")

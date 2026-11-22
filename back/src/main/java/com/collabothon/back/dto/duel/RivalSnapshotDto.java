@@ -6,5 +6,4 @@ import java.util.List;
 public record RivalSnapshotDto(
 		int answered,
 		List<Boolean> results
-) {
-}
+) {}

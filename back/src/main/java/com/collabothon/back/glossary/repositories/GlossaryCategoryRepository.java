@@ -14,4 +14,5 @@ public interface GlossaryCategoryRepository extends JpaRepository<GlossaryCatego
 
 	@EntityGraph(attributePaths = "terms")
 	List<GlossaryCategory> findAllByOrderByPosition();
+
 }

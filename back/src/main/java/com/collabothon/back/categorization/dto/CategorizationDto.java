@@ -3,15 +3,18 @@ package com.collabothon.back.categorization.dto;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.collabothon.back.categorization.enums.CategorizationSource;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.LifeStage;
 import com.collabothon.back.categorization.enums.Role;
 
+import lombok.Builder;
 import lombok.With;
 
-/** Stored as JSONB; rows from before the Quick check read with the defaults below. {@code startHere} is never stored. */
+// Stored as JSONB: the component order is the JSON order; the defaults read rows from before the Quick check.
+@Builder
 public record CategorizationDto(
 		String userId,
 		boolean consent,
@@ -37,11 +40,11 @@ public record CategorizationDto(
 ) {
 
 	public CategorizationDto {
-		mastery = mastery == null ? Map.of() : mastery;
-		gaps = gaps == null ? List.of() : gaps;
-		answerCount = answerCount == null ? 0 : answerCount;
+		mastery = Objects.requireNonNullElse(mastery, Map.of());
+		gaps = Objects.requireNonNullElse(gaps, List.of());
+		answerCount = Objects.requireNonNullElse(answerCount, 0);
 		readyForNext = Boolean.TRUE.equals(readyForNext);
-		pathStoryIds = pathStoryIds == null ? List.of() : pathStoryIds;
+		pathStoryIds = Objects.requireNonNullElse(pathStoryIds, List.of());
 	}
 
 }

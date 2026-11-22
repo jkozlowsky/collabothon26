@@ -8,6 +8,7 @@ import java.util.TreeMap;
 import org.springframework.stereotype.Component;
 
 import com.collabothon.back.dto.duel.YourFinalDto;
+import com.collabothon.back.duel.consts.DuelConsts;
 import com.collabothon.back.entities.duel.DuelAnswer;
 import com.collabothon.back.entities.duel.DuelMatch;
 import com.collabothon.back.entities.duel.MatchOutcome;
@@ -16,53 +17,37 @@ import com.collabothon.back.xp.services.XpService;
 
 import lombok.RequiredArgsConstructor;
 
-/**
- * Scores and settles matches. XP is awarded as soon as the player has answered every question (5 per correct answer,
- * HUMAN only), even while the rival still plays; the match is finished once the rival's last answer is visible.
- */
+/** XP is awarded as soon as the player is done; the match finishes once the rival is done too. */
 @Component
 @RequiredArgsConstructor
 public class DuelScoring {
-
-	static final int XP_PER_CORRECT_ANSWER = 5;
 
 	private final XpService xpService;
 
 	private final Clock clock;
 
-	/**
-	 * Awards XP and finishes the match when it is due. Safe to call on every request: each step runs once. Runs in
-	 * the caller's transaction; the match changes are flushed by dirty checking.
-	 */
+	/** Safe to call on every request: each step runs once. Runs in the caller's transaction. */
 	void settle(DuelProgress progress) {
-		DuelMatch match = progress.match();
+		DuelMatch match = progress.getMatch();
 		if (!progress.isComplete() || match.isFinished()) {
 			return;
 		}
-		if (match.getScore() == null) {
+		if (!match.hasPlayerScore()) {
 			awardXp(progress);
 		}
-		if (!match.hasRival()) {
-			match.finish(MatchOutcome.SOLO, progress.score(), null, clock.instant());
-			return;
-		}
-		if (match.isLive()) {
-			// A live duel ends when the opponent has answered or timed out on every question.
-			if (progress.isOpponentComplete()) {
-				match.finish(outcome(progress.score(), progress.rivalScore()), progress.score(), progress.rivalScore(),
-						clock.instant());
-			}
-			return;
-		}
-		Instant lastRivalAnswer = progress.answer(progress.questionCount() - 1).getRivalAnswerAt();
 		Instant now = clock.instant();
-		if (lastRivalAnswer != null && !now.isBefore(lastRivalAnswer)) {
-			match.finish(outcome(progress.score(), progress.rivalScore()), progress.score(), progress.rivalScore(),
-					now);
+		if (!match.hasRival()) {
+			match.finish(MatchOutcome.SOLO, progress.score(), null, now);
+			return;
+		}
+		if (hasRivalFinished(progress, now)) {
+			int score = progress.score();
+			int rivalScore = progress.rivalScore();
+			match.finish(outcome(score, rivalScore), score, rivalScore, now);
 		}
 	}
 
-	/** The player's final score and XP, or null until every question is answered. */
+	/** Null until every question is answered. */
 	YourFinalDto yourFinal(DuelProgress progress) {
 		if (!progress.isComplete()) {
 			return null;
@@ -70,22 +55,29 @@ public class DuelScoring {
 		return new YourFinalDto(progress.score(), xpGained(progress));
 	}
 
-	/** XP earned per story category; empty in SOLO matches. */
+	/** Empty in SOLO matches. */
 	Map<String, Integer> xpByCategory(DuelProgress progress) {
 		Map<String, Integer> xp = new TreeMap<>();
-		if (!progress.match().hasRival()) {
+		if (!progress.getMatch().hasRival()) {
 			return xp;
 		}
-		for (DuelAnswer answer : progress.answers()) {
+		for (DuelAnswer answer : progress.getAnswers()) {
 			if (answer.isCorrect()) {
-				xp.merge(answer.getCategory(), XP_PER_CORRECT_ANSWER, Integer::sum);
+				xp.merge(answer.getCategory(), DuelConsts.XP_PER_CORRECT_ANSWER, Integer::sum);
 			}
 		}
 		return xp;
 	}
 
+	private static boolean hasRivalFinished(DuelProgress progress, Instant now) {
+		if (progress.getMatch().isLive()) {
+			return progress.isOpponentComplete();
+		}
+		return progress.answer(progress.getQuestionCount() - 1).isRivalAnsweredAt(now);
+	}
+
 	private void awardXp(DuelProgress progress) {
-		DuelMatch match = progress.match();
+		DuelMatch match = progress.getMatch();
 		String sourceRef = String.valueOf(match.getId());
 		xpByCategory(progress).forEach((category, xp) -> xpService.record(match.getUserId(), category, XpSource.DUEL,
 				sourceRef, xp, clock.instant()));
@@ -93,10 +85,10 @@ public class DuelScoring {
 	}
 
 	private static int xpGained(DuelProgress progress) {
-		if (!progress.match().hasRival()) {
+		if (!progress.getMatch().hasRival()) {
 			return 0;
 		}
-		return progress.score() * XP_PER_CORRECT_ANSWER;
+		return progress.score() * DuelConsts.XP_PER_CORRECT_ANSWER;
 	}
 
 	private static MatchOutcome outcome(int score, int rivalScore) {

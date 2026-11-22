@@ -1,6 +1,5 @@
 package com.collabothon.back.profile.services;
 
-import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
@@ -14,10 +13,12 @@ import com.collabothon.back.dto.profile.ProfileDto;
 import com.collabothon.back.entities.profile.UserProfile;
 import com.collabothon.back.exceptions.BusinessException;
 import com.collabothon.back.lesson.repositories.StoryRepository;
+import com.collabothon.back.profile.consts.ProfileConsts;
 import com.collabothon.back.profile.repositories.UserProfileRepository;
 
 import lombok.RequiredArgsConstructor;
 
+// lessonMode is REQUIRED: LessonService calls it inside its transaction and must not need a second connection.
 @Service
 @RequiredArgsConstructor
 public class UserProfileService {
@@ -25,46 +26,47 @@ public class UserProfileService {
 	private final UserProfileRepository profiles;
 	private final UserProfileMapper mapper;
 	private final StoryRepository stories;
-	private final Clock clock;
 
-	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
 	public ProfileDto getProfile(String userId) {
-		UserProfile profile = profiles.findById(userId).orElseGet(() -> new UserProfile(userId));
-		return mapper.toDto(profile);
+		return mapper.toDto(profileOrNew(userId));
 	}
 
-	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = false, propagation = Propagation.REQUIRES_NEW)
 	public ProfileDto saveOnboarding(String userId, OnboardingRequest req) {
 		List<String> interests = req.interests().stream().distinct().toList();
 		if (interests.stream().anyMatch(id -> stories.findById(id).isEmpty())) {
 			throw new BusinessException(ProfileErrorCode.UNKNOWN_INTEREST);
 		}
-		UserProfile profile = profiles.findById(userId).orElseGet(() -> new UserProfile(userId));
+		UserProfile profile = profileOrNew(userId);
+		// Not the injected Clock: the V17 trigger forgets the categorisation only if this instant changes.
 		profile.completeOnboarding(req.lifeStage(), interests, req.experience(), req.skipped(), Instant.now());
 		UserProfile saved = profiles.save(profile);
 		return mapper.toDto(saved);
 	}
 
-	/** Remembers the lesson mode the user last switched to, so the next lesson opens in it. */
-	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = false, propagation = Propagation.REQUIRES_NEW)
 	public void saveLessonMode(String userId, String mode) {
-		UserProfile profile = profiles.findById(userId).orElseGet(() -> new UserProfile(userId));
+		UserProfile profile = profileOrNew(userId);
 		profile.preferLessonMode(mode);
 		profiles.save(profile);
 	}
 
-	/** The mode lessons open in; {@code video} for a user without a profile. */
 	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
 	public String lessonMode(String userId) {
 		if (userId == null) {
-			return "video";
+			return ProfileConsts.LESSON_MODE_VIDEO;
 		}
-		return profiles.findById(userId).map(UserProfile::getPreferredLessonMode).orElse("video");
+		return profileOrNew(userId).getPreferredLessonMode();
 	}
 
-	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = false, propagation = Propagation.REQUIRES_NEW)
 	public void resetOnboarding(String userId) {
 		profiles.findById(userId).ifPresent(UserProfile::resetOnboarding);
+	}
+
+	private UserProfile profileOrNew(String userId) {
+		return profiles.findById(userId).orElseGet(() -> new UserProfile(userId));
 	}
 
 }

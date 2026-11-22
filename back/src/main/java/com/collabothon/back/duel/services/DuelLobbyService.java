@@ -8,8 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.collabothon.back.dto.converters.duel.DuelCategoryMapper;
 import com.collabothon.back.dto.duel.CategoryDto;
-import com.collabothon.back.dto.lesson.Story;
+import com.collabothon.back.duel.demo.DuelDemoRules;
 import com.collabothon.back.duel.repositories.DuelContentRepository;
 import com.collabothon.back.lesson.repositories.StoryRepository;
 import com.collabothon.back.xp.services.LevelCurve;
@@ -17,7 +18,7 @@ import com.collabothon.back.xp.services.XpService;
 
 import lombok.RequiredArgsConstructor;
 
-/** The duel lobby: the 5 area categories in canonical order, with the user's level in each. */
+/** The lobby tiles: the areas in canonical order, each styled like its first story. */
 @Service
 @RequiredArgsConstructor
 public class DuelLobbyService {
@@ -30,8 +31,10 @@ public class DuelLobbyService {
 
 	private final LevelCurve levelCurve;
 
-	/** @param userId may be null or blank: every category then shows level 1 */
-	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	private final DuelCategoryMapper categoryMapper;
+
+	/** Without a user id every category shows level 1. */
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
 	public List<CategoryDto> categories(String userId) {
 		Map<String, Integer> xpPerCategory = xpService.xpPerCategory(userId);
 		return stories.canonicalAreaSlugs().stream()
@@ -42,24 +45,11 @@ public class DuelLobbyService {
 	}
 
 	private Optional<CategoryDto> toCategory(String areaSlug, int xp) {
-		Optional<Story> firstOpt = stories.findFirstByAreaSlug(areaSlug);
-		if (firstOpt.isEmpty()) {
-			return Optional.empty();
-		}
-		Story first = firstOpt.get();
-		String icon = "risk".equals(areaSlug) ? "alert-triangle" : first.icon();
-		String color = "risk".equals(areaSlug) ? "violet" : first.color();
-		LevelCurve.LevelInfo level = levelCurve.fromXp(xp);
-		return Optional.of(new CategoryDto(
-				areaSlug,
-				first.area(),
-				icon,
-				color,
-				xp,
-				level.level(),
-				level.xpIntoLevel(),
-				level.xpForLevel()
-		));
+		return stories.findByAreaSlug(areaSlug)
+			.stream()
+			.findFirst()
+			.map(first -> categoryMapper.toDto(areaSlug, first, DuelDemoRules.lobbyStyle(areaSlug, first), xp,
+					levelCurve.fromXp(xp)));
 	}
 
 }

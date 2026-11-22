@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.collabothon.back.duel.models.MatchPermutations;
 import com.collabothon.back.duel.services.DuelShuffle;
 
 import tools.jackson.databind.JsonNode;
@@ -25,7 +26,7 @@ class DuelQuestionConverterTests {
 		ObjectNode step = json.createObjectNode().put("type", "quiz").put("prompt", "p").put("correctIndex", 1)
 			.put("explanation", "e");
 
-		ObjectNode stripped = converter.withoutAnswerFields(step);
+		ObjectNode stripped = converter.toDuelStep(0L, 0, step);
 
 		assertThat(stripped.propertyNames()).containsExactlyInAnyOrder("type", "prompt");
 		assertThat(step.has("correctIndex")).as("the content step is not modified").isTrue();
@@ -36,7 +37,7 @@ class DuelQuestionConverterTests {
 		ObjectNode step = json.createObjectNode().put("type", "predict").put("answer", 1).put("reveal", "r")
 			.put("tolerance", 1).put("explanation", "e");
 
-		assertThat(converter.withoutAnswerFields(step).propertyNames()).containsExactly("type");
+		assertThat(converter.toDuelStep(0L, 0, step).propertyNames()).containsExactly("type");
 	}
 
 	@Test
@@ -44,7 +45,7 @@ class DuelQuestionConverterTests {
 		ObjectNode step = json.createObjectNode().put("type", "chart").put("answer", 1).put("tolerance", 1)
 			.put("explanation", "e").put("model", "leverage");
 
-		assertThat(converter.withoutAnswerFields(step).propertyNames()).containsExactlyInAnyOrder("type", "model");
+		assertThat(converter.toDuelStep(0L, 0, step).propertyNames()).containsExactlyInAnyOrder("type", "model");
 	}
 
 	@Test
@@ -104,7 +105,7 @@ class DuelQuestionConverterTests {
 		assertThat(duelStep.path("pairs").isMissingNode()).isTrue();
 		assertThat(duelStep.path("explanation").isMissingNode()).isTrue();
 
-		DuelShuffle.MatchPermutations perms = DuelShuffle.matchPermutations(matchId, index, 4);
+		MatchPermutations perms = DuelShuffle.matchPermutations(matchId, index, 4);
 		List<String> expectedLeft = perms.left().stream().map(idx -> "L" + idx).toList();
 		List<String> expectedRight = perms.right().stream().map(idx -> "R" + idx).toList();
 
@@ -152,7 +153,7 @@ class DuelQuestionConverterTests {
 		assertThat(matchReview.has("shownLeft")).isTrue();
 		assertThat(matchReview.has("shownRight")).isTrue();
 
-		DuelShuffle.MatchPermutations matchPerms = DuelShuffle.matchPermutations(matchId, matchIndex, 2);
+		MatchPermutations matchPerms = DuelShuffle.matchPermutations(matchId, matchIndex, 2);
 		assertThat(matchReview.path("shownLeft").get(0).asString()).isEqualTo("L" + matchPerms.left().get(0));
 		assertThat(matchReview.path("shownRight").get(0).asString()).isEqualTo("R" + matchPerms.right().get(0));
 	}

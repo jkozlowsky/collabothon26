@@ -66,10 +66,8 @@ class XpLeaderboardServiceTest {
 			.createdAt(IN_WEEK)
 			.build();
 
-		// findTop returns event2 (id 102)
 		when(xpEvents.findTopByUserIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByIdDesc(userId, WEEK_START, WEEK_END))
 			.thenReturn(Optional.of(event2));
-		// Both events belong to the same award group (DUEL, match-99)
 		when(xpEvents.findByUserIdAndSourceAndSourceRefOrderByIdDesc(userId, XpSource.DUEL, "match-99"))
 			.thenReturn(List.of(event2, event1));
 

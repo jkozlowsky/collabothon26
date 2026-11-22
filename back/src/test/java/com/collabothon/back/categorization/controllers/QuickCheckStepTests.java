@@ -19,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.net.SocketTimeoutException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -48,11 +49,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.categorization.FixedRandom;
 import com.collabothon.back.lesson.repositories.LessonCompletionRepository;
-import com.collabothon.back.lesson.repositories.LessonContentRepository;
+import com.collabothon.back.lesson.repositories.StoryRepository;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -62,7 +64,6 @@ import tools.jackson.databind.node.ObjectNode;
 @SpringBootTest(properties = "jev.api-key=test-key")
 @AutoConfigureMockMvc
 @AutoConfigureMockRestServiceServer
-@Transactional
 class QuickCheckStepTests {
 
 	private static final String SENTINEL = "zzsentinelzz";
@@ -76,13 +77,10 @@ class QuickCheckStepTests {
 
 	private static final String SAO_PAULO_1_Q1 = "sao-paulo-1/q1";
 
-	/** Right on saving, wrong on debt: the rule stays in sao-paulo-1 for its other question. */
+	// Right on saving, wrong on debt: the rule stays in sao-paulo-1 for its other question.
 	private static final String TWO_ANSWERS = body("1-5y", history(right(BERLIN_1_Q1), wrong(SAO_PAULO_1_Q1)), false);
 
-	/**
-	 * What Jev chooses among after one or two answers, and before the first without a pick: two lessons per area, one
-	 * of each story where the area has more than one (Berlin and Buenos Aires for saving, Seoul and Tokyo for investing).
-	 */
+	// What Jev chooses among without a pick to follow: two lessons per area, one of each story where it has several.
 	private static final List<String> CHOICES = List.of("berlin-1", "buenos-aires-1", "sao-paulo-1", "sao-paulo-2",
 			"seoul-1", "tokyo-1");
 
@@ -90,7 +88,7 @@ class QuickCheckStepTests {
 			{"incomeBand": "2-3.5k", "cashBufferMonths": "6+", "savingsRate": "20%+", "savesRegularly": true,
 			 "inOverdraft": false, "holdsInvestments": true, "hasLoan": true}""";
 
-	/** A valid step body: consent with facts, the time-frame tile answered, one knowledge answer. */
+	// A valid step body: consent with facts, the time-frame tile answered, one knowledge answer.
 	private static final String VALID = """
 			{"consent": true, "facts": %s, "profile": {"ageBand": null, "savingsCover": null, "horizon": "1-5y"},
 			 "history": [%s], "useRules": true}"""
@@ -112,7 +110,10 @@ class QuickCheckStepTests {
 	MockRestServiceServer jev;
 
 	@Autowired
-	LessonContentRepository lessonContent;
+	StoryRepository stories;
+
+	@Autowired
+	TransactionTemplate tx;
 
 	@Autowired
 	LessonCompletionRepository completions;
@@ -158,12 +159,17 @@ class QuickCheckStepTests {
 				useRules);
 	}
 
-	/** Before the first answer Jev chooses among the picked story's lessons only; Berlin is picked here. */
+	// Before the first answer Jev chooses among the picked story's lessons only; Berlin is picked here.
 	private static final List<String> FIRST_CHOICES = List.of("berlin-1", "berlin-2");
 
 	private void completeAllBut(String... lessonIds) {
-		lessonContent.allLessons().keySet().stream().filter(id -> !Set.of(lessonIds).contains(id))
-			.forEach(id -> completions.insertFirst(userId, id, 10));
+		stories.findAll().stream().flatMap(story -> story.lessonIds().stream())
+			.filter(id -> !Set.of(lessonIds).contains(id))
+			.forEach(this::complete);
+	}
+
+	private void complete(String lessonId) {
+		tx.executeWithoutResult(status -> completions.insertIfAbsent(userId, lessonId, 10, Instant.now(), null));
 	}
 
 	private static ResultMatcher nextIs(String questionId) {
@@ -213,7 +219,7 @@ class QuickCheckStepTests {
 	@Test
 	void withNothingOpenOnThePickedPathsTheFirstQuestionComesFromTheOthers() throws Exception {
 		onboard("\"nairobi\"");
-		completions.insertFirst(userId, "nairobi-1", 10);
+		complete("nairobi-1");
 
 		next("").andExpect(nextIs(BERLIN_1_Q1));
 	}
@@ -253,7 +259,7 @@ class QuickCheckStepTests {
 		step(body(null, "", false)).andExpect(status().isOk()).andExpect(nextIs("buenos-aires-1/q1"));
 	}
 
-	/** The option names in the order sent, which Jev can lean on. */
+	// The option names in the order sent, which Jev can lean on.
 	private static List<String> optionNames(JsonNode sent) {
 		return List.copyOf(sent.at("/questions/next/criteria").propertyNames());
 	}
@@ -305,7 +311,7 @@ class QuickCheckStepTests {
 
 	@Test
 	void aCompletedLessonIsNeverAskedAbout() throws Exception {
-		completions.insertFirst(userId, "berlin-1", 10);
+		complete("berlin-1");
 
 		next("").andExpect(nextIs("berlin-2/q1"));
 	}
@@ -368,7 +374,7 @@ class QuickCheckStepTests {
 		step("x".repeat(65), VALID).andExpect(status().isBadRequest());
 	}
 
-	/** A contract-valid Jev step answer; {@code nextLesson} null leaves the next question out. */
+	// A contract-valid Jev step answer; nextLesson null leaves the next question out.
 	private static String jevStep(String mastery, String nextLesson, List<String> lessons, double enough) {
 		StringBuilder answers = new StringBuilder(mastery);
 		if (nextLesson != null) {
@@ -378,7 +384,7 @@ class QuickCheckStepTests {
 		return "{\"model\": \"jev-2026-05\", \"answers\": {" + answers + "}}";
 	}
 
-	/** Jev's answer before the first knowledge answer: the lesson and nothing else. */
+	// Jev's answer before the first knowledge answer: the lesson and nothing else.
 	private static String jevFirst(String lesson, List<String> lessons) {
 		return "{\"model\": \"jev-2026-05\", \"answers\": {" + nextAnswer(lesson, lessons) + "}}";
 	}

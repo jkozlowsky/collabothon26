@@ -4,20 +4,33 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.URI;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.validation.autoconfigure.ValidationAutoConfiguration;
 import org.springframework.core.NestedExceptionUtils;
 
 import com.collabothon.back.categorization.consts.JevConsts;
 
+@ExtendWith(OutputCaptureExtension.class)
 class JevPropertiesTests {
+
+	private static final String FAKE_KEY = "FAKE-NOT-A-KEY";
 
 	private final ApplicationContextRunner context = new ApplicationContextRunner()
 		.withConfiguration(AutoConfigurations.of(ConfigurationPropertiesAutoConfiguration.class,
@@ -73,6 +86,33 @@ class JevPropertiesTests {
 		assertTrue(properties("http://localhost:8000", "").callsJev());
 		assertTrue(properties("https://api.typesafe.ai", "key").callsJev());
 		assertEquals("key", properties("https://api.typesafe.ai", " key \n").apiKey());
+	}
+
+	// Through SpringApplication, as the failure analysis it prints is where a rejected value shows up.
+	@ParameterizedTest
+	@CsvSource({
+			"FAKE-NOT-A-KEY with-space, https://jev.example, jev.api-key must be printable ASCII",
+			"FAKE-NOT-A-KEY, http://localhost:99999, jev.base-url must be an absolute http(s) URL",
+			"FAKE-NOT-A-KEY, http://jev.example, jev.api-key is only sent over https",
+			"FAKE-NOT-A-KEY, http://bad host, jev.base-url" })
+	void failedStartupNeverShowsTheKey(String key, String baseUrl, String reason, CapturedOutput output) {
+		SpringApplicationBuilder app = new SpringApplicationBuilder(PropertiesOnly.class).web(WebApplicationType.NONE);
+		Exception failure = assertThrows(Exception.class,
+				() -> app.run("--jev.api-key=" + key, "--jev.base-url=" + baseUrl));
+
+		StringWriter chain = new StringWriter();
+		failure.printStackTrace(new PrintWriter(chain, true));
+		assertFalse(chain.toString().contains(FAKE_KEY), "the key is in the cause chain");
+		assertFalse(output.getAll().contains(FAKE_KEY), "the key is in the startup output");
+		assertTrue(output.getAll().contains(reason), reason);
+	}
+
+	@Test
+	void toStringHidesTheKey() {
+		String text = properties("https://jev.example", FAKE_KEY).toString();
+
+		assertFalse(text.contains(FAKE_KEY), "the key is in toString");
+		assertTrue(text.contains("https://jev.example"), "the URL is still shown");
 	}
 
 	private static JevProperties properties(String baseUrl, String apiKey) {

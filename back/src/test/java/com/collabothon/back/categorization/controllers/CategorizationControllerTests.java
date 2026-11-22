@@ -42,8 +42,9 @@ import org.springframework.test.web.client.ResponseCreator;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import com.collabothon.back.MutableClock;
 import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
@@ -63,11 +64,11 @@ class CategorizationControllerTests {
 			{"lifeStage": "building", "interests": ["berlin", "tokyo"], "experience": "occasional",
 			 "skipped": false}""";
 
-	/** The same answers as Jev gets them: only those with a value, and no interest ids. */
+	// The same answers as Jev gets them: only those with a value, and no interest ids.
 	private static final String ANSWERS_FOR_JEV = """
 			{"lifeStage": "building", "experience": "occasional"}""";
 
-	/** What the app computes from the front seed customer (spec: `factsFrom` on the seed). */
+	// What the app computes from the front seed customer (spec: `factsFrom` on the seed).
 	private static final String FACTS = """
 			{"incomeBand": "2-3.5k", "cashBufferMonths": "6+", "savingsRate": "20%+", "savesRegularly": true,
 			 "inOverdraft": false, "holdsInvestments": true, "hasLoan": true}""";
@@ -87,7 +88,7 @@ class CategorizationControllerTests {
 
 	private static final Instant START = Instant.parse("2026-06-15T10:00:00Z");
 
-	private static final MovableClock CLOCK = new MovableClock(START);
+	private static final MutableClock CLOCK = new MutableClock(START);
 
 	@TestBean
 	Clock clock;
@@ -114,11 +115,13 @@ class CategorizationControllerTests {
 	@Autowired
 	CategorizationRepository categorizations;
 
-	// Boot resets the Jev stub after each test; the clock needs its own reset, before the test, so a failed
-	// verify in an earlier test cannot leave it moved.
+	@Autowired
+	TransactionTemplate tx;
+
+	// Boot resets only the stub; the clock is reset before each test, as a failed verify would skip an after-hook.
 	@BeforeEach
 	void resetClock() {
-		CLOCK.reset();
+		CLOCK.set(START);
 	}
 
 	@AfterEach
@@ -139,7 +142,6 @@ class CategorizationControllerTests {
 	}
 
 	@Test
-	@Transactional
 	void alexIsCategorisedByJev() throws Exception {
 		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL))
@@ -178,7 +180,7 @@ class CategorizationControllerTests {
 				               "storyCity": "Berlin"},
 				 "sharedWithModel": {"facts": %2$s, "answers": %3$s, "interests": ["berlin", "tokyo"], "profile": null, "answerCount": 0, "stepCallsMade": 0},
 				 "source": "jev", "model": "jev-2026-05", "categorizedAt": "2026-06-15T10:00:00Z"}"""
-			.formatted(lessonContent.lesson("berlin-1").orElseThrow().path("title").asString(), FACTS, ANSWERS);
+			.formatted(lessonContent.findById("berlin-1").orElseThrow().title(), FACTS, ANSWERS);
 
 		categorize("alex", WITH_FACTS).andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json(expected, JsonCompareMode.STRICT));
@@ -449,7 +451,7 @@ class CategorizationControllerTests {
 	@Test
 	void unreadableStoredResultIs404() throws Exception {
 		onboard("alex", ANSWERS);
-		categorizations.saveIfOnboarded("alex", "{\"role\": \"wizard\"}");
+		tx.execute(status -> categorizations.saveIfOnboarded("alex", "{\"role\": \"wizard\"}"));
 
 		mvc.perform(get("/api/users/alex/categorization")).andExpect(status().isNotFound());
 	}

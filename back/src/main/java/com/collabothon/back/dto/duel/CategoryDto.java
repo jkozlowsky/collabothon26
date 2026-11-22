@@ -1,6 +1,6 @@
 package com.collabothon.back.dto.duel;
 
-/** One lobby tile of {@code GET /api/duel/categories}: a story and the user's level in it. */
+/** One lobby tile; {@code story} holds the area slug. */
 public record CategoryDto(
 		String story,
 		String name,
@@ -10,5 +10,4 @@ public record CategoryDto(
 		int level,
 		int xpIntoLevel,
 		int xpForLevel
-) {
-}
+) {}

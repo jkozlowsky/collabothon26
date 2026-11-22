@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { spawnSync } from 'child_process';
-import { readFileSync, writeFileSync } from 'fs';
+import { copyFileSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
@@ -27,24 +27,31 @@ import {
 /**
  * Demo recording "Berlin, from first lesson to first step". Not a test: run it with `make record`.
  *
- *  0. (off camera) Alex signs in.
- *  1. The bank: Atlas's notification shows, runs out and drops into the Learn button.
- *  2. Atlas's onboarding up to "How we see you", which must start in Berlin (else the step is filmed again).
- *  3. The globe: the "Start here" story (Berlin), its path, up to the "Start mission" button.
- *  4. The lesson: the first scene as video, the transcript instead of the second one and the rest as text, a
- *     glossary word opened in Myth or fact, up to "Lesson complete" and the XP.
- *  5. Back to the path, scrolled slowly to the lessons still ahead.
- *  6. (off camera) The other four Berlin lessons are finished, as if played in between.
- *  7. "Take the first step": the recap, the bank's products, the fixed-term deposit lit in the bank, its terms, then
- *     the bank's main screen.
- *  8. A duel on Berlin and Seoul against a rival, won with two mistakes.
- *  9. The review: the Berlin mistake opens its lesson (done), the Seoul one a lesson that is still locked.
- * 10. Back to the duel lobby and the overall ranking.
+ * One clip per slot of the pitch deck (presentation/clips/README.txt), in the order the deck plays them:
  *
- * Output in recordings/out/berlin/: one clip per step (01-…mp4 to 10-rankings.mp4) and all of them in one
- * berlin-first-step.mp4.
+ *  -  (off camera) Alex signs in.
+ * 01-bank-nudge     The bank: Atlas's notification shows, runs out and drops into the Learn button.
+ * 02-onboarding     Atlas's intro slides, the consent, what the money is for and when.
+ * 03-quick-check    The Quick check.
+ * 04-learning-path  "How we see you", which must start in Berlin (else 02 to 04 are filmed again).
+ * 05-map-to-berlin  The globe: the "Start here" story (Berlin), its path, "Start mission", the first scene as video
+ *                   and the transcript instead of the second one.
+ * 06-lesson-start   The basket slider, Myth or fact with a glossary word opened, the challenge question.
+ * 07-lesson-yours   The checkpoints, his own accounts, his own basket.
+ * 08-lesson-end     "Lesson complete" and the XP, back to the path, slowly down to the missions ahead.
+ *  -  (off camera) The other four Berlin missions are finished, as if played in between.
+ * 09-first-step     "Take the first step": the recap, the bank's products, the fixed-term deposit picked.
+ * 10-deposit        The deposit lit in the bank, its terms, then the bank's main screen.
+ * 11-duel           A duel on Berlin and Seoul against a rival, won with two mistakes.
+ * 12-duel-review    The review: the Berlin mistake opens its mission (done), the Seoul one a mission still locked;
+ *                   then the duel lobby and the weekly ranking.
+ *
+ * Output in recordings/out/berlin/ (the clips and all of them in one berlin-first-step.mp4). A take that passes also
+ * copies the clips into presentation/clips/, where the deck plays them.
  */
 const OUT_DIR = 'recordings/out/berlin';
+/** Where the pitch deck (presentation/atlas-pitch.html) looks for its clips; relative to front/. */
+const DECK_CLIPS_DIR = '../presentation/clips';
 /** The glossary word opened in Myth or fact: it is underlined in the explanation once every card is sorted. */
 const GLOSSARY_WORD = 'inflation';
 /** The bank product picked at the end of Berlin: a fixed-term deposit, in Overview › Save. */
@@ -92,8 +99,9 @@ async function notificationDropsIntoLearn(page: Page) {
   await expect(page.getByTestId('nav-learn-dot')).toBeVisible();
 }
 
-/** Learn → onboarding → the Quick check → "How we see you". Returns whether the first stop is in Berlin. */
-async function onboard(page: Page): Promise<boolean> {
+/** Learn → onboarding → the Quick check → "How we see you", as clips 02 to 04. Returns whether it starts in Berlin. */
+async function onboard(page: Page, rec: ClipRecorder): Promise<boolean> {
+  await rec.start('02-onboarding');
   await tap(page, 'nav-learn', 800);
   await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
   await beat(page, 2500);
@@ -115,6 +123,7 @@ async function onboard(page: Page): Promise<boolean> {
 
   // The Quick check: after each answer the right one shows with the lesson's explanation.
   await expect(page.getByTestId('onboarding-check-intro')).toBeVisible({ timeout: 20_000 });
+  await rec.start('03-quick-check');
   await beat(page, 2000);
   await tap(page, 'check-start');
   const answer = async (testId: string) => {
@@ -130,6 +139,7 @@ async function onboard(page: Page): Promise<boolean> {
 
   // "How we see you": the level, then slowly down to the first stop.
   await expect(page.getByTestId('learning-path')).toBeVisible({ timeout: 30_000 });
+  await rec.start('04-learning-path');
   await beat(page, 3000);
   const first = page.getByTestId('summary-first-lesson');
   await glide(page, first);
@@ -179,15 +189,14 @@ test('Berlin: from the bank notification to the first step, a duel and the ranki
   // The bank renders at 412 CSS px; a wider value means the 3× rendering broke the mobile layout.
   expect(await page.evaluate(() => window.innerWidth)).toBe(412);
 
-  // 1. The bank and Atlas's notification, until it drops into the Learn button.
-  await rec.start('01-bank-notification');
+  // 01. The bank and Atlas's notification, until it drops into the Learn button.
+  await rec.start('01-bank-nudge');
   await notificationDropsIntoLearn(page);
   await beat(page, 1500);
 
-  // 2. Onboarding up to the summary; filmed again until the summary starts in Berlin.
+  // 02–04. Onboarding up to the summary; filmed again until the summary starts in Berlin.
   for (let take = 1; ; take++) {
-    await rec.start('02-onboarding');
-    if (await onboard(page)) break;
+    if (await onboard(page, rec)) break;
     expect(take, 'the summary never started in Berlin').toBeLessThan(MAX_ONBOARDING_TAKES);
     await rec.discard();
     await resetOnboarding(request);
@@ -197,10 +206,10 @@ test('Berlin: from the bank notification to the first step, a duel and the ranki
   await tap(page, 'summary-start');
   await rec.stop();
 
-  // 3. The globe, filmed once it is drawn (the first WebGL frame takes a few seconds): the "Start here" story,
-  // which must be Berlin, its path, and the first lesson's "Start mission".
+  // 05. The globe, filmed once it is drawn (the first WebGL frame takes a few seconds): the "Start here" story,
+  // which must be Berlin, its path, the first lesson's "Start mission", the video, then the transcript.
   await waitForGlobe(page);
-  await rec.start('03-start-here');
+  await rec.start('05-map-to-berlin');
   await beat(page, 2500);
   await expect(page.getByTestId('story-card-berlin').getByTestId('story-card-start-here')).toBeVisible();
   await tap(page, 'story-card-berlin', 800);
@@ -211,18 +220,22 @@ test('Berlin: from the bank notification to the first step, a duel and the ranki
   const startMission = page.getByTestId('lesson-berlin-1');
   await expect(startMission).toHaveText(/Start mission/);
   await glide(page, startMission);
-  await beat(page, 2500);
-
-  // 4. The whole first lesson.
-  await rec.start('04-lesson');
+  await beat(page, 2000);
   await tap(page, 'lesson-berlin-1', 600);
-  expect(await playLesson(page, { glossary: GLOSSARY_WORD }), `the glossary word ${GLOSSARY_WORD} was not opened`).toBe(true);
+
+  // 06 and 07 start inside the lesson: at the basket slider and at the first checkpoint.
+  const glossaryOpened = await playLesson(page, {
+    glossary: GLOSSARY_WORD,
+    onPractice: () => rec.start('06-lesson-start'),
+    onCheckpoints: () => rec.start('07-lesson-yours'),
+  });
+  expect(glossaryOpened, `the glossary word ${GLOSSARY_WORD} was not opened`).toBe(true);
+
+  // 08. "Lesson complete" and the XP, back to the path, slowly down to the missions still ahead.
   await expect(page.getByTestId('lesson-end')).toBeVisible();
+  await rec.start('08-lesson-end');
   await expect(page.getByTestId('lesson-xp')).toBeVisible();
   await beat(page, 4500); // "Lesson complete", the XP and the concepts learned
-
-  // 5. Back to the path, slowly down to the lessons still ahead.
-  await rec.start('05-more-lessons');
   await tap(page, 'back-to-list', 800);
   const story = page.getByTestId('screen-story').filter({ visible: true }).last();
   await expect(story).toBeVisible();
@@ -230,8 +243,8 @@ test('Berlin: from the bank notification to the first step, a duel and the ranki
   await beat(page, 2500);
   await rec.stop();
 
-  // 6. Off camera: the other four Berlin lessons, then Berlin's path again with every stop done. The reload opens
-  // the bank first, so its notification is out of the way and the globe is drawn before step 8 comes back to it.
+  // Off camera: the other four Berlin missions, then Berlin's path again with every stop done. The reload opens
+  // the bank first, so its notification is out of the way and the globe is drawn before 11 comes back to it.
   await finishRestOfBerlin(request);
   await signIn(page);
   await notificationDropsIntoLearn(page).catch(() => {}); // after Berlin there may be no notification
@@ -242,8 +255,8 @@ test('Berlin: from the bank notification to the first step, a duel and the ranki
   await expect(page.getByTestId('offers-entry-open')).toBeVisible({ timeout: 60_000 });
   await story.evaluate((el) => el.scrollTo({ top: 0 }));
 
-  // 7. The end of the line: what Berlin taught, the bank's products, the fixed-term deposit in the bank.
-  await rec.start('07-first-step');
+  // 09. The end of the line: what Berlin taught, the bank's products, the fixed-term deposit picked.
+  await rec.start('09-first-step');
   await beat(page, 2000); // five stamps on Berlin's line
   await tap(page, 'offers-entry-open', 800);
   await expect(page.getByTestId('path-recap')).toBeVisible();
@@ -253,6 +266,9 @@ test('Berlin: from the bank notification to the first step, a duel and the ranki
   await beat(page, 4000); // the products, each with the lesson it connects to
   await tap(page, `offer-${OFFER}`, 1000);
   await expect(page.getByTestId('spotlight-note')).toBeVisible({ timeout: 20_000 });
+
+  // 10. The deposit in the bank: lit, its terms, then the bank's main screen.
+  await rec.start('10-deposit');
   await beat(page, 4500); // the product's button lit in the bank, the rest dimmed
   await tap(page, 'spotlight-ok', 600);
   await expect(page.getByTestId('spotlight-note')).toBeHidden();
@@ -264,8 +280,8 @@ test('Berlin: from the bank notification to the first step, a duel and the ranki
   await expect(page.getByTestId('screen-overview')).toBeVisible();
   await beat(page, 2500);
 
-  // 8. Back to Atlas, a duel on Berlin and Seoul against a rival, two mistakes on purpose (see playDuel).
-  await rec.start('08-duel');
+  // 11. Back to Atlas, a duel on Berlin and Seoul against a rival, two mistakes on purpose (see playDuel).
+  await rec.start('11-duel');
   await tap(page, 'nav-learn', 800);
   await waitForGlobe(page);
   await beat(page, 1500);
@@ -289,8 +305,9 @@ test('Berlin: from the bank notification to the first step, a duel and the ranki
   }
   await beat(page, 1500);
 
-  // 9. The review: slowly down to the mistakes, then each one's lesson: Berlin's is done, Seoul's still locked.
-  await rec.start('09-review');
+  // 12. The review: slowly down to the mistakes, then each one's mission: Berlin's is done, Seoul's still locked.
+  // Then back to the duel lobby and the weekly ranking.
+  await rec.start('12-duel-review');
   await glide(page, page.getByTestId('review-wrong-title'));
   await beat(page, 2500);
   await openMistake(page, mistakes.open);
@@ -307,9 +324,6 @@ test('Berlin: from the bank notification to the first step, a duel and the ranki
   await beat(page, 1500);
   await page.goBack();
   await expect(page.getByTestId('duel-result')).toBeVisible();
-
-  // 10. Back to the duel lobby and the overall ranking.
-  await rec.start('10-rankings');
   await beat(page, 1000);
   await tap(page, 'result-back-lobby', 800);
   await expect(page.getByTestId('screen-duel')).toBeVisible();
@@ -322,8 +336,11 @@ test('Berlin: from the bank notification to the first step, a duel and the ranki
   await rec.stop();
 });
 
-/** Frees Alex for other devices, encodes the clips (also after a failed step), then joins them into one film. */
-test.afterEach(async ({ page, request }) => {
+/**
+ * Frees Alex for other devices, encodes the clips (also after a failed step, to show where it stopped) and joins them
+ * into one film. Only a take that passed replaces the deck's clips.
+ */
+test.afterEach(async ({ page, request }, testInfo) => {
   await clips?.stop();
   // Closed before the lock is freed: an open page keeps renewing it with its heartbeat.
   await page.close();
@@ -334,6 +351,10 @@ test.afterEach(async ({ page, request }) => {
   console.log(`\nClips:\n${files.map((f) => `  front/${f}`).join('\n')}\n`);
   const film = joinClips(files);
   if (film) console.log(`Whole take: front/${film}\n`);
+  if (testInfo.status === testInfo.expectedStatus) {
+    for (const file of files) copyFileSync(file, path.join(DECK_CLIPS_DIR, path.basename(file)));
+    console.log(`Copied to presentation/clips/: ${files.map((f) => path.basename(f)).join(', ')}\n`);
+  }
 });
 
 test.afterAll(async ({ request }) => {

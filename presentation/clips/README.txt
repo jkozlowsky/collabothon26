@@ -1,4 +1,4 @@
-Put the app recordings here. The deck looks for <name>.mp4 first, then <name>.webm.
+Put the app recordings here; `make record` (repo root) films them all and copies them here. The deck looks for <name>.mp4 first, then <name>.webm.
 
 01-bank-nudge       stop 2  Bank app -> the Atlas notification slides in -> Alex taps it
 02-onboarding       stop 3  Atlas intro, how it works, what awaits
@@ -11,5 +11,6 @@ Put the app recordings here. The deck looks for <name>.mp4 first, then <name>.we
 09-first-step       stop 6  Saving done -> Alex picks the fixed-term deposit
 10-deposit          stop 6  The fixed-term deposit in the mock bank           (3rd click)
 11-duel             stop 7  A duel in the Arena
+12-duel-review      stop 7  Review of the duel's mistakes (one mission open, one locked), weekly ranking (2nd click)
 
 Each clip plays once and holds its last frame. Click the phone to replay.

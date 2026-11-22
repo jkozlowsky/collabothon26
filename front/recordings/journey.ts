@@ -225,9 +225,13 @@ const LESSON_TIMEOUT_MS = 8 * 60_000;
  * as soon as the second scene starts, the transcript instead, and the rest of the lesson as text. Steps are recognised
  * by their testIDs and quiz answers come from the lesson file, so the order of the beats can change. In Myth or fact,
  * once every card is sorted, `glossary` (a word underlined in the explanation) opens in the glossary for a second.
- * Returns whether the glossary word was opened.
+ * `onPractice` runs as the first exercise (the basket slider) shows, `onCheckpoints` as the first checkpoint shows,
+ * so the caller can cut the lesson into clips there. Returns whether the glossary word was opened.
  */
-export async function playLesson(page: Page, { glossary }: { glossary: string }): Promise<boolean> {
+export async function playLesson(
+  page: Page,
+  { glossary, onPractice, onCheckpoints }: { glossary: string; onPractice: () => Promise<void>; onCheckpoints: () => Promise<void> },
+): Promise<boolean> {
   await expect(page.getByTestId('video-lesson')).toBeVisible({ timeout: 20_000 });
   // The first scene plays to its end; the transcript replaces the second one and the lesson stays in reading mode.
   await expect(page.getByTestId('scene-caption')).toContainText(LESSON.secondScene, { timeout: 60_000 });
@@ -238,6 +242,8 @@ export async function playLesson(page: Page, { glossary }: { glossary: string })
   const step = (id: string) => visible(page, id);
   let sorted = false;
   let glossaryOpened = false;
+  let practising = false;
+  let checkpoints = false;
   const next = async (before: number) => {
     await expect(step('continue')).toBeEnabled({ timeout: 20_000 });
     await beat(page, before);
@@ -249,6 +255,10 @@ export async function playLesson(page: Page, { glossary }: { glossary: string })
   while (!(await end.isVisible())) {
     if (Date.now() > deadline) throw new Error('berlin-1 did not reach its end screen');
     if ((await step('slider-interest').isVisible()) && !(await step('goal-reached').isVisible())) {
+      if (!practising) {
+        practising = true;
+        await onPractice();
+      }
       await beat(page, 3000);
       await drag(page, 'slider-interest', 0.5, 3, 0, 5); // up to the 3 % price rise
       await expect(page.getByTestId('goal-reached')).toBeVisible();
@@ -287,6 +297,10 @@ export async function playLesson(page: Page, { glossary }: { glossary: string })
       await expect(page.getByTestId('scenario-ending')).toBeVisible();
       await next(5000);
     } else if (await step('option-0').isVisible()) {
+      if (!checkpoints) {
+        checkpoints = true;
+        await onCheckpoints();
+      }
       const options = page.locator('[data-testid^="option-"]').filter({ visible: true });
       const texts = (await options.allInnerTexts()).map(normalise);
       const right = Math.max(0, texts.findIndex((t) => LESSON.correct.has(t)));

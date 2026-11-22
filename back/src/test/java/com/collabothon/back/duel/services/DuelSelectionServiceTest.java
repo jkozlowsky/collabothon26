@@ -144,7 +144,8 @@ class DuelSelectionServiceTest {
 		when(content.findByStory("tokyo")).thenReturn(tokyoPool);
 
 		Story mumbaiStory = storyWithFallback("mumbai", "tokyo");
-		when(stories.findById("mumbai")).thenReturn(Optional.of(mumbaiStory));
+		when(stories.findByAreaSlug("mumbai")).thenReturn(List.of(mumbaiStory));
+		when(stories.findById("tokyo")).thenReturn(Optional.of(storyWithFallback("tokyo", null)));
 
 		// Needs 6 questions from mumbai
 		List<DuelQuestion> selected = service.select(100L, List.of("mumbai"), Set.of(), 6);
@@ -190,6 +191,37 @@ class DuelSelectionServiceTest {
 			.containsExactlyElementsOf(second.stream().map(DuelQuestion::id).toList());
 	}
 
+	@Test
+	void alexAlwaysGetsTheFixedRiskQuestionsInTheSameOrder() {
+		List<DuelQuestion> risk = new ArrayList<>();
+		for (String id : DuelSelectionService.ALEX_FIXED_RISK_IDS) {
+			risk.addAll(createQuestions("risk", 1, "quiz").stream()
+				.map(q -> new DuelQuestion(id, q.lessonId(), null, List.of(), null, "risk", q.step())).toList());
+			org.mockito.Mockito.lenient().when(content.findById(id)).thenReturn(Optional.of(risk.getLast()));
+		}
+		org.mockito.Mockito.lenient().when(content.findByStory("risk")).thenReturn(risk);
+		when(content.findByStory("saving")).thenReturn(createQuestions("saving", 10, "match"));
+
+		List<List<String>> riskOrders = new ArrayList<>();
+		for (long matchId : new long[] { 11L, 12L, 13L }) {
+			List<DuelQuestion> selected = service.select(matchId, List.of("saving", "risk"), Set.of(), 6, true);
+			assertThat(selected).hasSize(6);
+			riskOrders.add(selected.stream().filter(q -> "risk".equals(q.category())).map(DuelQuestion::id).toList());
+		}
+		assertThat(riskOrders.get(0)).containsExactlyElementsOf(
+				DuelSelectionService.ALEX_FIXED_RISK_IDS.subList(0, 3));
+		assertThat(riskOrders).allMatch(order -> order.equals(riskOrders.get(0)));
+	}
+
+	@Test
+	void adjustCategoriesAddsRiskForAlexAndDropsTheLastTickedWhenFull() {
+		assertThat(DuelMatchService.adjustCategories("demo-user", List.of("saving")))
+			.containsExactly("saving", "risk");
+		assertThat(DuelMatchService.adjustCategories("demo-user", List.of("saving", "borrowing", "investing", "money-basics")))
+			.containsExactly("saving", "borrowing", "investing", "risk");
+		assertThat(DuelMatchService.adjustCategories("someone", List.of("saving"))).containsExactly("saving");
+	}
+
 	private static List<DuelQuestion> createQuestions(String category, int count, String stepType) {
 		List<DuelQuestion> questions = new ArrayList<>(count);
 		for (int i = 0; i < count; i++) {
@@ -202,7 +234,7 @@ class DuelSelectionServiceTest {
 	}
 
 	private static Story storyWithFallback(String id, String fallback) {
-		return new Story(id, id, id, id, "available", null, "", "", null, null, "", List.of(), null, List.of(), fallback, null);
+		return new Story(id, id, id, id, id, "available", null, "", "", null, null, "", List.of(), null, List.of(), fallback, null);
 	}
 
 }

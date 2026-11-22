@@ -58,8 +58,13 @@ export function ResultView({ result, youName, youAvatar, onSeeRankings, onBackTo
 
   const solo = result.mode === 'SOLO' || result.outcome === 'SOLO';
   const outcome: ResultOutcome = solo ? 'SOLO' : result.outcome === 'WIN' || result.outcome === 'LOSS' ? result.outcome : 'DRAW';
-  const win = outcome === 'WIN';
   const total = result.review.length || 6;
+  // D14: solo is celebrated by score. 100 % gets the full win show, 60 % and up confetti only.
+  const soloRatio = solo && total > 0 ? result.score / total : 0;
+  const soloTier = soloRatio >= 1 ? 'full' : soloRatio >= 0.6 ? 'good' : 'low';
+  const win = outcome === 'WIN' || (solo && soloTier === 'full');
+  const confettiOnly = solo && soloTier === 'good';
+  const soloXp = solo && result.xpGained > 0;
 
   const categories = normalizeCategories(result.categories, result.xpByCategory);
   const levelUps = categories.filter((c) => c.levelAfter > c.levelBefore);
@@ -109,12 +114,13 @@ export function ResultView({ result, youName, youAvatar, onSeeRankings, onBackTo
           rivalScore={result.rivalScore ?? 0}
           total={total}
           xpGained={result.xpGained}
-          overlay={win ? <HeaderFx /> : null}
+          soloTier={soloTier}
+          overlay={win && !reduced ? <HeaderFx /> : null}
           onXpDone={onXpDone}
         />
 
         <View style={styles.content}>
-          {solo ? (
+          {solo && !soloXp ? (
             <PracticeCard />
           ) : (
             <XpCard
@@ -130,7 +136,7 @@ export function ResultView({ result, youName, youAvatar, onSeeRankings, onBackTo
           <ReviewCard review={result.review} />
 
           <View style={styles.actions}>
-            <Button label={solo ? 'Back to lobby' : 'Back to arena'} onPress={onBackToLobby} testID="result-back-lobby" />
+            <Button label="Back to arena" onPress={onBackToLobby} testID="result-back-lobby" />
             {onSeeRankings && !solo && (
               <Tappable
                 onPress={onSeeRankings}
@@ -146,7 +152,7 @@ export function ResultView({ result, youName, youAvatar, onSeeRankings, onBackTo
         </View>
       </ScrollView>
 
-      {win && <ScreenShower />}
+      {(win || confettiOnly) && !reduced && <ScreenShower />}
       {finale && <Finale at={{ x: 0.5, y: 0.55 }} />}
 
       {overlayOpen && !overlayDone && levelUps.length > 0 && (

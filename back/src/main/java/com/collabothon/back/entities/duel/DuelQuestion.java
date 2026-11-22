@@ -22,6 +22,10 @@ public record DuelQuestion(
 		this(id, lessonId, null, List.of(), timeLimitMs, category, step);
 	}
 
+	public DuelQuestion withCategory(String newCategory) {
+		return new DuelQuestion(id, lessonId, sourceStepId, concepts, timeLimitMs, newCategory, step);
+	}
+
 	public String type() {
 		return step.path("type").asString();
 	}

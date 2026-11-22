@@ -12,18 +12,18 @@
       "step": {
         "type": "predict",
         "id": "d01",
-        "prompt": "Min-seo buys shares in a tech firm that jump 30% in June but plummet 30% in July. What is her total percentage return over the two months?",
+        "prompt": "Min-seo buys shares in an AI tech firm that jump 20% in March but fall 20% in April. What is her net percentage return over the two months?",
         "input": {
           "kind": "slider",
-          "min": -40,
-          "max": 20,
+          "min": -30,
+          "max": 10,
           "step": 1,
           "unit": "%"
         },
-        "answer": -9,
-        "tolerance": 2,
-        "reveal": "−9%. A 30% rise followed by a 30% fall leaves you with 91% of your starting money.",
-        "explanation": "Returns chain multiplicatively: (1 + 0.30) × (1 − 0.30) = 1.30 × 0.70 = 0.91, which represents a net loss of 9%."
+        "answer": -4,
+        "tolerance": 1,
+        "reveal": "\u22124%. A 20% rise followed by a 20% fall leaves you with 96% of your starting capital.",
+        "explanation": "Returns multiply: (1 + 0.20) \u00d7 (1 \u2212 0.20) = 1.20 \u00d7 0.80 = 0.96, which is a net loss of 4%."
       }
     },
     {
@@ -37,15 +37,15 @@
       "step": {
         "type": "quiz",
         "id": "d02",
-        "prompt": "After an aggressive market correction, a popular crypto token plunges 60% below its record peak. What percentage gain is needed to recover to that peak?",
+        "prompt": "After an intense market sell-off, a volatile tech stock plunges 50% from its all-time high. What percentage gain is required to climb back to that high?",
         "options": [
-          "+150% gain",
-          "+60% gain",
-          "+120% gain",
-          "+100% gain"
+          "+100% gain",
+          "+50% gain",
+          "+75% gain",
+          "+150% gain"
         ],
         "correctIndex": 0,
-        "explanation": "After falling 60% (from 100 to 40), getting back to 100 requires gaining 60 on 40: 60 / 40 = +150%."
+        "explanation": "After dropping 50% from 100 to 50, getting back to 100 requires gaining 50 on 50: 50 / 50 = +100%."
       }
     },
     {
@@ -59,7 +59,7 @@
       "step": {
         "type": "chart",
         "id": "d03",
-        "prompt": "Jin-woo takes a leveraged trade where he borrows 100% on top of his capital (2x leverage). If the asset price falls 25%, what percentage of his own capital is lost?",
+        "prompt": "Jin-woo enters a leveraged position, borrowing 100% on top of his capital (2x leverage). If the asset price drops by 20%, what percentage of his own capital is lost?",
         "model": "leverage",
         "params": {
           "move": {
@@ -67,7 +67,7 @@
             "min": -50,
             "max": 50,
             "step": 5,
-            "value": -25,
+            "value": -20,
             "unit": "%"
           },
           "borrowed": {
@@ -90,9 +90,9 @@
           "step": 5,
           "unit": "%"
         },
-        "answer": -50,
+        "answer": -40,
         "tolerance": 5,
-        "explanation": "With 100% borrowed funds (2x leverage), any percentage asset drop is doubled on personal capital: −25% × 2 = −50%."
+        "explanation": "With 2x leverage (100% borrowed), an asset drop of 20% causes a double loss on personal equity: \u221220% \u00d7 2 = \u221240%."
       }
     },
     {
@@ -107,15 +107,15 @@
       "step": {
         "type": "quiz",
         "id": "d04",
-        "prompt": "Sora puts €5,000 of her savings into a margin trading account and borrows €10,000 to buy €15,000 worth of shares. If the share price drops by 20%, how is her initial capital affected?",
+        "prompt": "Sora puts \u20ac4,000 of her savings into margin trading and borrows \u20ac8,000 to buy \u20ac12,000 of shares. If share prices fall 25%, how much of her initial savings is lost?",
         "options": [
-          "She loses €3,000, wiping out 60% of her initial savings",
-          "She loses €1,000, which is 20% of her initial savings",
-          "Her capital is completely wiped out with a 100% loss",
-          "She breaks even because the broker absorbs margin losses"
+          "She loses \u20ac3,000, which wipes out 75% of her initial savings",
+          "She loses \u20ac1,000, which is 25% of her initial savings",
+          "She loses \u20ac8,000, matching the borrowed amount",
+          "Her account breaks even as the broker absorbs margin losses"
         ],
         "correctIndex": 0,
-        "explanation": "Total position = €15,000. A 20% loss equals €3,000, all deducted from her €5,000 equity: €3,000 / €5,000 = 60% loss."
+        "explanation": "Total position = \u20ac12,000. A 25% loss is \u20ac3,000. Subtracted from her \u20ac4,000 capital, that is \u20ac3,000 / \u20ac4,000 = 75% loss."
       }
     },
     {
@@ -136,27 +136,27 @@
         ],
         "items": [
           {
-            "text": "Guaranteed 50% monthly profit with zero risk",
+            "text": "Guaranteed 40% monthly returns with zero risk",
             "bucket": 0
           },
           {
-            "text": "Quarterly earnings report showed net revenue grew 8%",
+            "text": "Quarterly financial statement showed net revenue grew 6%",
             "bucket": 1
           },
           {
-            "text": "Secret VIP signal: buy at 10:00 AM sharp before the blast",
+            "text": "VIP trading group: buy this micro-cap stock at 09:30 AM sharp",
             "bucket": 0
           },
           {
-            "text": "Semiconductor sector ETF holds 45 global chip manufacturers",
+            "text": "Global equity index fund holds 1,500 diversified companies",
             "bucket": 1
           },
           {
-            "text": "Only 2 VIP slots left today, transfer funds now",
+            "text": "Only 3 VIP memberships remaining today, transfer crypto now",
             "bucket": 0
           },
           {
-            "text": "Central bank announced a 25 basis point benchmark rate cut",
+            "text": "The central bank kept the benchmark interest rate unchanged",
             "bucket": 1
           }
         ],
@@ -165,6 +165,72 @@
     },
     {
       "id": "seoul-d06",
+      "lessonId": "seoul-1",
+      "sourceStepId": "q1",
+      "concepts": [
+        "volatility"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d06",
+        "prompt": "Why does a 40% gain followed by a 40% loss fail to return an investor to their starting capital?",
+        "options": [
+          "The 40% loss applies to a larger capital base, exceeding the earlier gain",
+          "Stock brokerages charge a mandatory 40% liquidation fee on returns",
+          "Capital gains taxes automatically deduct 40% from any subsequent loss",
+          "Exchange rate fluctuations always reduce positive compound returns"
+        ],
+        "correctIndex": 0,
+        "explanation": "Starting at 100, +40% reaches 140. A 40% loss on 140 is \u221256, leaving 84 (a net 16% loss)."
+      }
+    },
+    {
+      "id": "seoul-d07",
+      "lessonId": "seoul-2",
+      "sourceStepId": "q2",
+      "concepts": [
+        "risk-capacity"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d07",
+        "prompt": "Which category of money can responsibly be used for a speculative high-risk trade?",
+        "options": [
+          "Only disposable capital whose complete loss will not impair your life",
+          "Emergency reserves kept for unforeseen health and living expenses",
+          "Money borrowed from a home equity mortgage or credit card cash advance",
+          "Funds designated for next year's apartment lease down payment"
+        ],
+        "correctIndex": 0,
+        "explanation": "High-risk speculative bets should only ever involve capital you can afford to lose 100% without distress."
+      }
+    },
+    {
+      "id": "seoul-d08",
+      "lessonId": "seoul-3",
+      "sourceStepId": "q1",
+      "concepts": [
+        "scam-warning"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d08",
+        "prompt": "Which message in a social media investment channel represents the strongest warning sign of fraud?",
+        "options": [
+          "'Risk-free guarantee: double your investment in 7 days or full refund'",
+          "'The company reported a 10% increase in research and development spending'",
+          "'Bond yields across European treasuries decreased by 15 basis points'",
+          "'Diversified mutual fund annual expense ratios average 0.20%'"
+        ],
+        "correctIndex": 0,
+        "explanation": "Guarantees of high returns without risk are a universal indicator of fraudulent schemes."
+      }
+    },
+    {
+      "id": "seoul-d09",
       "lessonId": "seoul-3",
       "sourceStepId": "q2",
       "concepts": [
@@ -173,10 +239,10 @@
       "timeLimitMs": null,
       "step": {
         "type": "quiz",
-        "id": "d06",
-        "prompt": "In a stock tip chat room, why do organizers instruct all members to buy simultaneously at a set minute?",
+        "id": "d09",
+        "prompt": "In an online stock tip channel, why do group leaders instruct followers to buy simultaneously at a specific minute?",
         "options": [
-          "The buying surge spikes the price so organizers can sell at a profit",
+          "The buying surge spikes the price so leaders can sell at a profit",
           "Simultaneous group orders qualify for institutional commission rates",
           "Stock market regulations require retail community orders to be pooled",
           "Buying at the exact same minute guarantees equal dividend allocations"
@@ -186,17 +252,17 @@
       }
     },
     {
-      "id": "seoul-d07",
+      "id": "seoul-d10",
       "lessonId": "seoul-4",
-      "sourceStepId": "t1",
+      "sourceStepId": "s1",
       "concepts": [
         "diversification"
       ],
       "timeLimitMs": null,
       "step": {
         "type": "predict",
-        "id": "d07",
-        "prompt": "Elena builds an equally weighted equity portfolio holding 25 different companies. If sudden fraud causes two of the companies to collapse to zero, how much of her total portfolio is lost?",
+        "id": "d10",
+        "prompt": "Elena builds an equally weighted equity portfolio holding 20 different companies. If two companies go completely bankrupt to zero, how much of her portfolio is lost?",
         "input": {
           "kind": "slider",
           "min": -30,
@@ -204,14 +270,14 @@
           "step": 1,
           "unit": "%"
         },
-        "answer": -8,
+        "answer": -10,
         "tolerance": 1,
-        "reveal": "−8%. Each company was 4% of the portfolio, so two bankruptcies cost 8%.",
-        "explanation": "Each company represents 1 / 25 = 4% of the portfolio. Two bankruptcies cause a loss of 2 × 4% = 8%."
+        "reveal": "\u221210%. Each holding was 5% of her portfolio, so two bankruptcies cost 10%.",
+        "explanation": "Each holding is 1 / 20 = 5%. Losing two companies equals 2 \u00d7 5% = 10% loss."
       }
     },
     {
-      "id": "seoul-d08",
+      "id": "seoul-d11",
       "lessonId": "seoul-4",
       "sourceStepId": "s1",
       "concepts": [
@@ -220,8 +286,8 @@
       "timeLimitMs": null,
       "step": {
         "type": "chart",
-        "id": "d08",
-        "prompt": "A single stock makes up 30% of a portfolio. If that company crashes by 60%, how much does the entire portfolio lose?",
+        "id": "d11",
+        "prompt": "A single stock makes up 25% of a portfolio. If that company crashes by 60%, how much does the entire portfolio lose?",
         "model": "oneCompanyCrash",
         "params": {
           "share": {
@@ -229,7 +295,7 @@
             "min": 0,
             "max": 100,
             "step": 5,
-            "value": 30,
+            "value": 25,
             "unit": "%"
           }
         },
@@ -244,13 +310,46 @@
           "step": 1,
           "unit": "%"
         },
-        "answer": -18,
+        "answer": -15,
         "tolerance": 2,
-        "explanation": "Concentrated loss = 30% allocation × −60% decline = −18% total portfolio impact."
+        "explanation": "Portfolio impact = 25% allocation \u00d7 \u221260% decline = \u221215% total portfolio impact."
       }
     },
     {
-      "id": "seoul-d09",
+      "id": "seoul-d12",
+      "lessonId": "seoul-4",
+      "sourceStepId": "m1",
+      "concepts": [
+        "risk-management"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "match",
+        "id": "d12",
+        "prompt": "Match each risk concept with its fundamental definition:",
+        "pairs": [
+          [
+            "Leverage",
+            "Using borrowed money to amplify potential gains and losses"
+          ],
+          [
+            "Drawdown",
+            "The peak-to-trough percentage decline in an investment portfolio"
+          ],
+          [
+            "Concentration risk",
+            "Holding an excessive share of capital in a single individual company"
+          ],
+          [
+            "Diversification",
+            "Spreading capital across multiple holdings to reduce single-company loss"
+          ]
+        ],
+        "explanation": "Understanding leverage, drawdowns, and concentration enables effective portfolio risk management."
+      }
+    },
+    {
+      "id": "seoul-d13",
       "lessonId": "seoul-5",
       "sourceStepId": "q1",
       "concepts": [
@@ -259,7 +358,7 @@
       "timeLimitMs": null,
       "step": {
         "type": "quiz",
-        "id": "d09",
+        "id": "d13",
         "prompt": "Why is it vital to decide risk limits and maximum position sizes before entering a volatile trade?",
         "options": [
           "Emotions like FOMO and fear impair objective judgement during volatility",
@@ -272,7 +371,7 @@
       }
     },
     {
-      "id": "seoul-d10",
+      "id": "seoul-d14",
       "lessonId": "seoul-5",
       "sourceStepId": "q2",
       "concepts": [
@@ -281,7 +380,7 @@
       "timeLimitMs": null,
       "step": {
         "type": "quiz",
-        "id": "d10",
+        "id": "d14",
         "prompt": "Min-ho enforces strict risk management by limiting any speculative trade to at most 5% of his liquid portfolio. If one high-risk token goes completely to zero, what happens to his total savings?",
         "options": [
           "His overall portfolio declines by 5%, preserving 95% of his wealth",
@@ -291,6 +390,28 @@
         ],
         "correctIndex": 0,
         "explanation": "Capping any single position at 5% ensures that a total wipeout is contained to a survivable 5% portfolio loss."
+      }
+    },
+    {
+      "id": "seoul-d15",
+      "lessonId": "seoul-5",
+      "sourceStepId": "q1",
+      "concepts": [
+        "risk-rules"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d15",
+        "prompt": "What is the primary danger of altering your risk rules in the middle of a market hype cycle?",
+        "options": [
+          "Excitement and social proof lead to over-allocating into overvalued assets",
+          "Regulatory agencies levy administrative penalties for updating rules",
+          "Investment brokerages charge higher execution fees on mid-cycle changes",
+          "Automated banking protocols cancel pending sell orders when limits change"
+        ],
+        "correctIndex": 0,
+        "explanation": "Changing rules in the heat of market hype removes discipline, exposing investors to large losses when the cycle turns."
       }
     }
   ]

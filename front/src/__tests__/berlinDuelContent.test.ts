@@ -13,10 +13,10 @@ const byType = (type: string) => questions.filter((q) => q.step.type === type);
 const PREDICT_RECOMPUTE: Record<string, () => number> = {
   // €30,000 at 1% interest, 4% inflation, 10 years, in today's purchasing power
   'berlin-d01': () => 30000 * (1 + realValueChange(10, 1, 4) / 100),
-  // €12,000 at 6% compound for 15 years
-  'berlin-d03': () => compoundGrowth(12000, 15, 6),
   // 4 months of €3,200 expenses
-  'berlin-d05': () => 4 * 3200,
+  'berlin-d04': () => 4 * 3200,
+  // €12,000 at 6% compound for 15 years
+  'berlin-d10': () => compoundGrowth(12000, 15, 6),
 };
 
 function expectSliderAnswer(step: any, expected: number) {

@@ -24,8 +24,11 @@ type Props = {
 
 /** Expand and collapse take 250 ms ease-out (Figma frame 13). */
 const EXPAND_MS = 250;
-/** More wrong answers than this: the first one stays a card, the rest fold into "More to review". */
-const MAX_WRONG_CARDS = 3;
+
+/** Lesson ids are `<story>-<n>` ("berlin-3"); `category` is a duel area, not a story, so the story comes from the lesson. */
+export function storyOfLesson(lessonId: string): string {
+  return lessonId.replace(/-\d+$/, '');
+}
 
 function formatAnswerTexts(item: ReviewItem): { yourText: string; rightText: string } {
   const step = item.step;
@@ -120,7 +123,7 @@ function ReviewItemCard({ item, place, testID }: CardProps) {
   const lines = expanded ? 4 : 1;
 
   function goToLesson() {
-    router.push({ pathname: '/story/[id]', params: { id: item.category, lesson: item.lessonId } });
+    router.push({ pathname: '/story/[id]', params: { id: storyOfLesson(item.lessonId), lesson: item.lessonId } });
   }
 
   return (
@@ -205,56 +208,93 @@ type GroupProps = {
   testID: string;
 };
 
-/** Review Group: one collapsed row that opens a list of cards ("Correct (5)", "More to review (5)"). */
+/** Review Group (Figma v4·5): a collapsed row; a tap opens its cards with a 250 ms height animation and a half-turn chevron. */
 function ReviewGroup({ tone, title, items, place, testID }: GroupProps) {
+  const reduced = useReducedMotion();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [settled, setSettled] = useState(false);
+  const [contentHeight, setContentHeight] = useState(0);
+  const height = useSharedValue(0);
+  const turn = useSharedValue(0);
+  const duration = reduced ? 0 : EXPAND_MS;
   const correct = tone === 'correct';
+
+  useEffect(() => {
+    const easing = Easing.out(Easing.cubic);
+    turn.value = withTiming(open ? 1 : 0, { duration, easing });
+    if (open) {
+      if (contentHeight === 0) return;
+      height.value = withTiming(contentHeight, { duration, easing });
+      // Once open the height is left to the cards, which expand on their own.
+      const timer = setTimeout(() => setSettled(true), duration);
+      return () => clearTimeout(timer);
+    }
+    height.value = contentHeight;
+    height.value = withTiming(0, { duration, easing });
+    const timer = setTimeout(() => setMounted(false), duration);
+    return () => clearTimeout(timer);
+  }, [open, contentHeight, duration, height, turn]);
+
+  const bodyStyle = useAnimatedStyle(() => (settled ? {} : { height: height.value, opacity: contentHeight > 0 ? 1 : 0 }));
+  const chevronStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value * 180}deg` }] }));
+
   return (
     <View style={styles.group}>
       <Tappable
-        onPress={() => setOpen((v) => !v)}
+        onPress={() => {
+          if (!open) setMounted(true);
+          else setSettled(false);
+          setOpen((v) => !v);
+        }}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
+        aria-expanded={open}
         accessibilityLabel={title}
         testID={testID}
         style={styles.groupRow}
         pressedScale={0.99}
       >
-        <View style={[styles.groupStatus, { backgroundColor: correct ? colors.feedbackSuccess : colors.feedbackDanger }]}>
-          <Feather name={correct ? 'check' : 'x'} size={14} color={colors.textOnBrand} />
-        </View>
+        <View style={[styles.groupDot, { backgroundColor: correct ? colors.feedbackSuccess : colors.feedbackDanger }]} />
         <View style={styles.groupText}>
           <Text style={styles.groupTitle}>{title}</Text>
-          <Text style={styles.groupMeta}>{questionList(items)} · tap to {open ? 'collapse' : 'expand'}</Text>
+          <Text style={styles.groupMeta}>
+            {questionList(items)} · tap to {open ? 'collapse' : 'expand'}
+          </Text>
         </View>
-        <Feather name={open ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textMuted} />
+        <Animated.View style={chevronStyle}>
+          <Feather name="chevron-down" size={20} color={colors.textMuted} />
+        </Animated.View>
       </Tappable>
-      {open && items.map((item) => <ReviewItemCard key={item.index} item={item} place={place(item)} />)}
+      {(open || mounted) && (
+        <Animated.View style={[styles.groupBody, bodyStyle]}>
+          <View
+            style={[styles.groupInner, settled && styles.groupInnerSettled]}
+            onLayout={(e) => setContentHeight(Math.ceil(e.nativeEvent.layout.height))}
+          >
+            {items.map((item) => (
+              <ReviewItemCard key={item.index} item={item} place={place(item)} />
+            ))}
+          </View>
+        </Animated.View>
+      )}
     </View>
   );
 }
 
-/** The review section of the result screen: wrong answers as collapsed cards, right ones in one group. */
+/** The review section of the result screen: "Wrong answers (n)" and "Correct answers (n)", both collapsed; empty groups are hidden. */
 export function ReviewCard({ review }: Props) {
   const lookup = useLessonLookup();
   const { wrong, correct } = partitionReview(review);
-  const place = (item: ReviewItem) => lookup(item.category, item.lessonId);
-  const folded = wrong.length > MAX_WRONG_CARDS;
-  const cards = folded ? wrong.slice(0, 1) : wrong;
-  const rest = folded ? wrong.slice(1) : [];
+  const place = (item: ReviewItem) => lookup(storyOfLesson(item.lessonId), item.lessonId);
 
   return (
     <View style={styles.container} testID="result-review">
-      {wrong.length > 0 && (
-        <Text style={styles.sectionTitle} accessibilityRole="header" testID="review-wrong-title">
-          To review ({wrong.length})
-        </Text>
-      )}
-      {cards.map((item) => (
-        <ReviewItemCard key={item.index} item={item} place={place(item)} />
-      ))}
-      {rest.length > 0 && <ReviewGroup tone="wrong" title={`More to review (${rest.length})`} items={rest} place={place} testID="toggle-more-review" />}
-      {correct.length > 0 && <ReviewGroup tone="correct" title={`Correct (${correct.length})`} items={correct} place={place} testID="toggle-correct-review" />}
+      <Text style={styles.sectionTitle} accessibilityRole="header" testID="review-title">
+        Your answers
+      </Text>
+      {wrong.length > 0 && <ReviewGroup tone="wrong" title={`Wrong answers (${wrong.length})`} items={wrong} place={place} testID="toggle-wrong-review" />}
+      {correct.length > 0 && <ReviewGroup tone="correct" title={`Correct answers (${correct.length})`} items={correct} place={place} testID="toggle-correct-review" />}
     </View>
   );
 }
@@ -300,7 +340,7 @@ const styles = StyleSheet.create({
   lessonText: { ...type.labelStrong, color: colors.textOnAccent, flexShrink: 1 },
   placeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
   placeText: { ...type.labelDefault, color: colors.textMuted },
-  group: { gap: spacing.md },
+  group: { gap: 0 },
   groupRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -314,8 +354,11 @@ const styles = StyleSheet.create({
     paddingRight: spacing.mdPlus,
     ...elevation.low,
   },
-  groupStatus: { width: 24, height: 24, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
+  groupDot: { width: 24, height: 24, borderRadius: radii.pill },
   groupText: { flex: 1, gap: 2 },
   groupTitle: { ...type.titleCard, color: colors.textPrimary },
   groupMeta: { ...type.labelDefault, color: colors.textMuted },
+  groupBody: { overflow: 'hidden' },
+  groupInner: { position: 'absolute', top: 0, left: 0, right: 0, gap: spacing.md, paddingTop: spacing.md },
+  groupInnerSettled: { position: 'relative' },
 });

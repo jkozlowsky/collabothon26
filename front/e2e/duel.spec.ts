@@ -2,7 +2,7 @@ import { expect, type Page, test } from './fixtures';
 
 import { openApp, resetOnboarding, skipOnboarding } from './app';
 
-const CATEGORY_SLUGS = ['seoul', 'berlin', 'sao-paulo', 'tokyo'] as const;
+const CATEGORY_SLUGS = ['money-basics', 'saving', 'borrowing', 'investing', 'risk'] as const;
 
 test.beforeEach(async ({ request }) => {
   await skipOnboarding(request);
@@ -72,51 +72,66 @@ async function playMatchQuestions(page: Page) {
 }
 
 test.describe('Duel flow', () => {
-  test('duel lobby shows categories, play and history tabs, human and solo modes, plays a solo match, and views weekly rankings', async ({ page }) => {
+  test('duel lobby shows area categories, history tile, human and solo modes, plays a solo match, and views weekly rankings', async ({ page }) => {
     test.setTimeout(300_000);
     await openDuelLobby(page);
 
-    // 1. Lobby checks: verify 4 categories with level (Lv N)
+    // 1. Lobby checks: the 5 area categories; the first 4 (the match limit) start selected
     for (const slug of CATEGORY_SLUGS) {
-      const row = page.getByTestId(`duel-category-${slug}`);
-      await expect(row).toBeVisible();
-      await expect(row).toContainText(/Lv \d+/);
+      await expect(page.getByTestId(`duel-category-${slug}`)).toBeVisible();
     }
+    await expect(page.getByTestId('duel-category-counter')).toHaveText('4 / 4');
+    await expect(page.getByTestId('duel-start-cta')).toBeEnabled();
 
-    // 2. Play and History tabs
-    const historyTab = page.getByTestId('duel-tab-history');
-    await expect(historyTab).toBeVisible();
-    await historyTab.click();
+    // 2. History tile opens the history screen
+    await page.getByTestId('duel-open-history').click();
+    await expect(page.getByTestId('screen-duel-history')).toBeVisible();
     await expect(
-      page.getByTestId('duel-history-finished').or(page.getByTestId('history-empty')),
+      page.getByTestId('duel-history-finished').or(page.getByTestId('history-empty')).or(page.getByTestId('duel-history-pending')).first(),
     ).toBeVisible();
+    await page.getByTestId('history-back').click();
+    await expect(page.getByTestId('screen-duel')).toBeVisible();
 
-    const playTab = page.getByTestId('duel-tab-play');
-    await expect(playTab).toBeVisible();
-    await playTab.click();
-    await expect(page.getByTestId('duel-category-list')).toBeVisible();
-
-    // 3. Modes: Human and Solo, no bot, no Elo
+    // 3. Modes: Human and Solo tiles
     const humanMode = page.getByTestId('duel-mode-human');
     const soloMode = page.getByTestId('duel-mode-solo');
     await expect(humanMode).toBeVisible();
     await expect(soloMode).toBeVisible();
-
-    // Switch to Solo mode
     await soloMode.click();
-    await expect(page.getByTestId('duel-solo-note')).toBeVisible();
+    await expect(page.getByTestId('duel-mode-solo-check')).toBeVisible();
 
-    // 4. Play a SOLO match to result screen
+    await expect(page.getByTestId('duel-start-cta')).toContainText('Start solo');
+
+    // 4. Narrow to one category (deselect 3 of the 4 defaults) and play a SOLO match to the result screen
+    for (const slug of ['saving', 'borrowing', 'investing']) {
+      await page.getByTestId(`duel-category-${slug}`).click();
+    }
+    await expect(page.getByTestId('duel-category-counter')).toHaveText('1 / 4');
+    await expect(page.getByTestId('duel-start-cta')).toContainText('Start solo · 1 category');
     await page.getByTestId('duel-start-cta').click();
 
-    // Answer all 6 questions
     await playMatchQuestions(page);
 
-    // Result screen and review list
+    // Result screen: solo gives no XP, only a practice note
     await expect(page.getByTestId('duel-result')).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByTestId('result-practice-card')).toBeVisible();
+
+    // Review: collapsed Wrong / Correct groups; expanding one shows its cards
     const reviewCard = page.getByTestId('result-review');
     await expect(reviewCard).toBeVisible();
-    await expect(reviewCard.locator('[data-testid^="review-"]').first()).toBeVisible();
+    const wrongToggle = page.getByTestId('toggle-wrong-review');
+    const correctToggle = page.getByTestId('toggle-correct-review');
+    await expect(wrongToggle.or(correctToggle).first()).toBeVisible();
+    if (await wrongToggle.isVisible()) {
+      await expect(wrongToggle).toContainText(/Wrong answers \(\d+\)/);
+      await wrongToggle.click();
+      await expect(reviewCard.locator('[data-testid^="review-mistake-"]').first()).toBeVisible();
+    }
+    if (await correctToggle.isVisible()) {
+      await expect(correctToggle).toContainText(/Correct answers \(\d+\)/);
+      await correctToggle.click();
+      await expect(reviewCard.locator('[data-testid^="review-correct-"]').first()).toBeVisible();
+    }
 
     // Return to lobby
     await page.getByTestId('result-back-lobby').click();

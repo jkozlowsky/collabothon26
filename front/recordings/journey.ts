@@ -51,9 +51,9 @@ export const ALEX = categorization({
   ],
   explanation: [
     { output: 'role', probabilities: {}, because: ['You save regularly and keep a solid safety net.', 'Real interest is still new to you.'] },
-    { output: 'focusAreas', probabilities: {}, because: ['Your goal is a home in 2–3 years.', 'You picked saving and ETFs as goals.'] },
+    { output: 'focusAreas', probabilities: {}, because: ['You said Inflation & savings is new to you.'] },
   ],
-  profile: { ageBand: null, savingsCover: null, horizon: '1-5y' },
+  profile: { ageBand: null, savingsCover: null, horizon: null },
   mastery: MASTERY,
   answerCount: 3,
   startLesson: { lessonId: 'berlin-1', title: LESSON.title, area: 'saving', storyId: 'berlin', storyCity: 'Berlin' },
@@ -344,10 +344,8 @@ export async function onboardToFirstLesson(page: Page, rec: ClipRecorder) {
   await expect(page.getByTestId('onboarding-consent')).toBeVisible();
   await beat(page, 2500);
   await tap(page, 'consent-accept');
-  // What the money is for, and when: a flat in 2–3 years → "1–5 years".
-  await tap(page, 'option-home', 1000);
-  await tap(page, 'onboarding-continue');
-  await tap(page, 'option-1-5y', 1000);
+  // What to learn first: the Berlin take starts from inflation and savings.
+  await tap(page, 'interest-berlin', 1000);
   await tap(page, 'onboarding-continue');
   await beat(page, 600);
 

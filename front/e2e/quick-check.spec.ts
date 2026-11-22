@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures';
 
-import { answerSurvey, expectDisabled, openApp, pickAlex, resetOnboarding, tap, type Survey } from './app';
+import { answerSurvey, expectDisabled, openApp, pickAlex, resetOnboarding, tap } from './app';
 import { categorization } from '../src/test-utils/categorization';
 import { POOL } from '../src/test-utils/checkPool';
 
@@ -66,10 +66,10 @@ const CORRECT = ORDER.map((id) => byId(id).correctIndex);
 const FIRST = byId(ORDER[0]);
 
 /** A fresh onboarding up to "Start the quick check"; registered after openApp, so these stubs win over its empty question list. */
-async function toCheck(page: Page, options: Parameters<typeof stubQuickCheck>[1] & { survey?: Survey } = {}) {
+async function toCheck(page: Page, options: Parameters<typeof stubQuickCheck>[1] = {}) {
   await openApp(page);
   const calls = await stubQuickCheck(page, options);
-  await answerSurvey(page, options.survey);
+  await answerSurvey(page);
   await tap(page, 'check-start');
   return calls;
 }
@@ -126,7 +126,6 @@ test('three questions with the right answer shown after each, the summary, then 
   // done after three answers, before the maximum of six
   await expect(page.getByTestId('quick-check-status')).toHaveText('All set · That is enough to place you');
   await summary(page);
-  await expect(page.getByTestId('summary-saving-for')).toHaveText('Saving for: A home of my own · needed in 1–5 years');
   await expect(page.getByTestId('summary-role')).toHaveText("You're an intermediate learner");
   await expect(page.getByTestId('summary-based-on')).toHaveText('Based on 3 answers and what your account shows.');
   await expect(page.getByTestId('summary-first-lesson')).toContainText('Emergency fund');
@@ -139,7 +138,7 @@ test('three questions with the right answer shown after each, the summary, then 
   expect(finals).toHaveLength(1);
   expect(finals[0]).toMatchObject({
     consent: true,
-    profile: { ageBand: '26-40', savingsCover: null, horizon: '1-5y' },
+    profile: { ageBand: '26-40', savingsCover: null, horizon: null },
     mastery: MASTERY,
     useRules: false,
     // The first step and one per answer.
@@ -156,12 +155,12 @@ test('three questions with the right answer shown after each, the summary, then 
   await expect(page.getByTestId('screen-learn')).toBeVisible();
 });
 
-test('the survey\'s time frame is sent with the steps, and an answer is sent with only its option', async ({ page }) => {
-  const { steps } = await toCheck(page, { survey: { horizon: 'within-1y' } });
+test('the steps carry no time frame, and an answer is sent with only its option', async ({ page }) => {
+  const { steps } = await toCheck(page);
 
   await question(page, 1);
   await expect(page.getByTestId('onboarding-close')).toHaveCount(0);
-  expect(steps[0]).toMatchObject({ consent: true, profile: { ageBand: '26-40', savingsCover: null, horizon: 'within-1y' } });
+  expect(steps[0]).toMatchObject({ consent: true, profile: { ageBand: '26-40', savingsCover: null, horizon: null } });
   expect(steps[0]).toHaveProperty('facts');
 
   const wrong = (CORRECT[0] + 1) % FIRST.options.length;
@@ -213,7 +212,7 @@ test('a later step that fails is retried with stepFellBack and the test goes on'
 test('the line "We used a simpler check this time" shows when the model was asked and then failed', async ({ page }) => {
   const reply = ran({
     source: 'fallback',
-    sharedWithModel: { facts: null, answers: { lifeStage: null, goals: [], experience: null, skipped: true }, profile: null, answerCount: 1, stepCallsMade: 1 },
+    sharedWithModel: { facts: null, answers: { lifeStage: null, interests: [], experience: null, skipped: true }, profile: null, answerCount: 1, stepCallsMade: 1 },
   });
   await toCheck(page, { step: stepper(1), reply });
   await answer(page, 0);

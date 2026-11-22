@@ -5,14 +5,14 @@ import path from 'path';
 
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
-import { pickAlex, resetOnboarding } from '../e2e/app';
+import { pickAlex, resetOnboarding, skipOnboarding } from '../e2e/app';
 import { ClipRecorder } from './clips';
 import {
   act,
   beat,
   CLIP_SIZE,
   correctOption,
-  DUEL_STORIES,
+  DUEL_AREAS,
   glide,
   ORDER,
   playDuel,
@@ -50,6 +50,8 @@ import {
  * copies the clips into presentation/clips/, where the deck plays them.
  */
 const OUT_DIR = 'recordings/out/berlin';
+/** `make record-duel` films only clips 11 and 12, apart from the whole take. */
+const DUEL_OUT_DIR = 'recordings/out/duel';
 /** Where the pitch deck (presentation/atlas-pitch.html) looks for its clips; relative to front/. */
 const DECK_CLIPS_DIR = '../presentation/clips';
 /** The glossary word opened in Myth or fact: it is underlined in the explanation once every card is sorted. */
@@ -65,9 +67,9 @@ const LEVEL_UP_WAIT_MS = 10_000;
 
 let clips: ClipRecorder | undefined;
 
-/** Finishes berlin-2 to berlin-5 through the API, all answers right, as if played in between. */
-async function finishRestOfBerlin(request: APIRequestContext) {
-  for (const id of ['berlin-2', 'berlin-3', 'berlin-4', 'berlin-5']) {
+/** Finishes Berlin's missions through the API, all answers right, as if played in between. */
+async function finishBerlin(request: APIRequestContext, ids: string[]) {
+  for (const id of ids) {
     const lesson = JSON.parse(readFileSync(path.resolve(`../back/src/main/resources/content/lessons/${id}.json`), 'utf8')) as {
       steps: { id: string; type: string }[];
     };
@@ -145,16 +147,20 @@ async function onboard(page: Page, rec: ClipRecorder): Promise<boolean> {
   return (await first.innerText()).includes('Berlin');
 }
 
-/** Leaves exactly `stories` ticked in the duel lobby. */
-async function pickCategories(page: Page, stories: string[]) {
-  await expect(page.getByTestId('duel-category-berlin')).toBeVisible({ timeout: 20_000 });
-  const ids = await page
-    .locator('[data-testid^="duel-category-"]:not([data-testid="duel-category-list"])')
-    .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!));
-  for (const id of ids) {
-    const checked = (await page.getByTestId(id).getAttribute('aria-checked')) === 'true';
-    if (checked !== stories.includes(id.replace('duel-category-', ''))) await tap(page, id, 350);
-  }
+/** Leaves exactly `areas` ticked in the duel lobby: the others off first, since at most 4 can be ticked. */
+async function pickCategories(page: Page, areas: string[]) {
+  const chips = page.locator('[data-testid^="duel-category-"][aria-checked]');
+  await expect(chips.first()).toBeVisible({ timeout: 20_000 });
+  const ids = await chips.evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!));
+  const ticked = async (id: string) => (await page.getByTestId(id).getAttribute('aria-checked')) === 'true';
+  for (const id of ids) if (!areas.includes(id.replace('duel-category-', '')) && (await ticked(id))) await tap(page, id, 350);
+  for (const id of ids) if (areas.includes(id.replace('duel-category-', '')) && !(await ticked(id))) await tap(page, id, 350);
+}
+
+/** Opens the "Wrong answers" group of the review, unless it is open already. */
+async function openWrongAnswers(page: Page, index: number) {
+  if (!(await page.getByTestId(`review-mistake-${index}`).isVisible())) await tap(page, 'toggle-wrong-review', 800);
+  await expect(page.getByTestId(`review-mistake-${index}`)).toBeVisible();
 }
 
 /** Opens the review card of the mistake on question `index` (0-based) and follows its lesson link. */
@@ -162,6 +168,70 @@ async function openMistake(page: Page, index: number) {
   await tap(page, `review-mistake-${index}`, 800);
   await beat(page, 3500); // the explanation and where the lesson is
   await tap(page, `review-repeat-lesson-${index}`, 800);
+}
+
+/**
+ * Clips 11 and 12, from the bank's main screen: back to Atlas, a duel on Saving and Risk against a rival with two
+ * mistakes on purpose (see playDuel), the review of both mistakes, the duel lobby and the weekly ranking.
+ */
+async function filmDuel(page: Page, rec: ClipRecorder) {
+  // 11. Back to Atlas, a duel on Saving and Risk against a rival, two mistakes on purpose (see playDuel).
+  await rec.start('11-duel');
+  await tap(page, 'nav-learn', 800);
+  await waitForGlobe(page);
+  await beat(page, 1500);
+  await tap(page, 'nav-duel', 800);
+  await expect(page.getByTestId('screen-duel')).toBeVisible();
+  await pickCategories(page, DUEL_AREAS);
+  await tap(page, 'duel-mode-human', 700);
+  await tap(page, 'duel-start-cta', 1000);
+  const mistakes = await playDuel(page);
+  await expect(page.getByTestId('duel-result')).toBeVisible({ timeout: 120_000 });
+  await beat(page, 4000); // the win, the score and XP
+  // A category that levelled up gets an overlay once the XP bars have filled (a few seconds after the result shows).
+  // Each tap moves on to the next category or closes it.
+  const levelUp = page.getByTestId('level-up-overlay');
+  await levelUp.waitFor({ state: 'visible', timeout: LEVEL_UP_WAIT_MS }).catch(() => {});
+  while (await levelUp.isVisible()) {
+    await beat(page, 3000);
+    await act(page);
+    await levelUp.click();
+    await page.waitForTimeout(800); // the next category, or the overlay fading out
+  }
+  await beat(page, 1500);
+
+  // 12. The review: slowly down to the mistakes, then each one's mission: Berlin's is done, Seoul's still locked.
+  // Then back to the duel lobby and the weekly ranking.
+  await rec.start('12-duel-review');
+  await glide(page, page.getByTestId('review-title'));
+  await beat(page, 1500);
+  await openWrongAnswers(page, mistakes.open);
+  await beat(page, 1500);
+  await openMistake(page, mistakes.open);
+  // The path loads before its stops show; the pause starts once they are there.
+  await expect(page.locator('[data-testid^="lesson-berlin-"]').filter({ visible: true }).first()).toBeVisible({ timeout: 20_000 });
+  await beat(page, 4000); // the lesson, highlighted on Berlin's line
+  await page.goBack();
+  await expect(page.getByTestId('duel-result')).toBeVisible();
+  await beat(page, 1500);
+  await openWrongAnswers(page, mistakes.locked);
+  await openMistake(page, mistakes.locked);
+  await expect(page.getByTestId('story-locked-sheet')).toBeVisible({ timeout: 20_000 });
+  await beat(page, 4500); // "lesson locked" and which lesson opens it
+  await tap(page, 'story-locked-close', 600);
+  await beat(page, 1500);
+  await page.goBack();
+  await expect(page.getByTestId('duel-result')).toBeVisible();
+  await beat(page, 1000);
+  await tap(page, 'result-back-lobby', 800);
+  await expect(page.getByTestId('screen-duel')).toBeVisible();
+  await beat(page, 1500);
+  await tap(page, 'duel-open-rankings', 800);
+  await expect(page.getByTestId('screen-duel-rankings')).toBeVisible();
+  await beat(page, 2000);
+  await glide(page, page.getByTestId('rankings-scroll'), 'end');
+  await beat(page, 3000);
+  await rec.stop();
 }
 
 test.beforeAll(async ({ request }) => {
@@ -174,13 +244,18 @@ test.beforeAll(async ({ request }) => {
   expect(mode.ok()).toBe(true);
 });
 
-test('Berlin: from the bank notification to the first step, a duel and the ranking', async ({ page, request }) => {
-  test.setTimeout(25 * 60_000);
-  const rec = (clips = new ClipRecorder(page, OUT_DIR, CLIP_SIZE));
+/** The page as every take films it: touch rings, the stubbed Jev, and always the same device. */
+async function preparePage(page: Page) {
   await page.addInitScript(TOUCH_RINGS);
   // Every take signs in from the same device, so Alex's lock left by an earlier take (it lives 2 minutes) is its own.
   await page.addInitScript((id) => window.localStorage.setItem('fq_device_id', id), RECORDING_DEVICE_ID);
   await stubJev(page);
+}
+
+test('Berlin: from the bank notification to the first step, a duel and the ranking', { tag: '@take' }, async ({ page, request }) => {
+  test.setTimeout(25 * 60_000);
+  const rec = (clips = new ClipRecorder(page, OUT_DIR, CLIP_SIZE));
+  await preparePage(page);
 
   // 0. Off camera: sign in as Alex.
   await signIn(page);
@@ -243,7 +318,7 @@ test('Berlin: from the bank notification to the first step, a duel and the ranki
 
   // Off camera: the other four Berlin missions, then Berlin's path again with every stop done. The reload opens
   // the bank first, so its notification is out of the way and the globe is drawn before 11 comes back to it.
-  await finishRestOfBerlin(request);
+  await finishBerlin(request, ['berlin-2', 'berlin-3', 'berlin-4', 'berlin-5']);
   await signIn(page);
   await notificationDropsIntoLearn(page).catch(() => {}); // after Berlin there may be no notification
   await page.getByTestId('nav-learn').click();
@@ -278,60 +353,28 @@ test('Berlin: from the bank notification to the first step, a duel and the ranki
   await expect(page.getByTestId('screen-overview')).toBeVisible();
   await beat(page, 2500);
 
-  // 11. Back to Atlas, a duel on Berlin and Seoul against a rival, two mistakes on purpose (see playDuel).
-  await rec.start('11-duel');
-  await tap(page, 'nav-learn', 800);
-  await waitForGlobe(page);
-  await beat(page, 1500);
-  await tap(page, 'nav-duel', 800);
-  await expect(page.getByTestId('screen-duel')).toBeVisible();
-  await pickCategories(page, DUEL_STORIES);
-  await tap(page, 'duel-mode-human', 700);
-  await tap(page, 'duel-start-cta', 1000);
-  const mistakes = await playDuel(page);
-  await expect(page.getByTestId('duel-result')).toBeVisible({ timeout: 120_000 });
-  await beat(page, 4000); // the win, the score and XP
-  // A category that levelled up gets an overlay once the XP bars have filled (a few seconds after the result shows).
-  // Each tap moves on to the next category or closes it.
-  const levelUp = page.getByTestId('level-up-overlay');
-  await levelUp.waitFor({ state: 'visible', timeout: LEVEL_UP_WAIT_MS }).catch(() => {});
-  while (await levelUp.isVisible()) {
-    await beat(page, 3000);
-    await act(page);
-    await levelUp.click();
-    await page.waitForTimeout(800); // the next category, or the overlay fading out
-  }
-  await beat(page, 1500);
-
-  // 12. The review: slowly down to the mistakes, then each one's mission: Berlin's is done, Seoul's still locked.
-  // Then back to the duel lobby and the weekly ranking.
-  await rec.start('12-duel-review');
-  await glide(page, page.getByTestId('review-wrong-title'));
-  await beat(page, 2500);
-  await openMistake(page, mistakes.open);
-  // The path loads before its stops show; the pause starts once they are there.
-  await expect(page.locator('[data-testid^="lesson-berlin-"]').filter({ visible: true }).first()).toBeVisible({ timeout: 20_000 });
-  await beat(page, 4000); // the lesson, highlighted on Berlin's line
-  await page.goBack();
-  await expect(page.getByTestId('duel-result')).toBeVisible();
-  await beat(page, 1500);
-  await openMistake(page, mistakes.locked);
-  await expect(page.getByTestId('story-locked-sheet')).toBeVisible({ timeout: 20_000 });
-  await beat(page, 4500); // "lesson locked" and which lesson opens it
-  await tap(page, 'story-locked-close', 600);
-  await beat(page, 1500);
-  await page.goBack();
-  await expect(page.getByTestId('duel-result')).toBeVisible();
-  await beat(page, 1000);
-  await tap(page, 'result-back-lobby', 800);
-  await expect(page.getByTestId('screen-duel')).toBeVisible();
-  await beat(page, 1500);
-  await tap(page, 'duel-open-rankings', 800);
-  await expect(page.getByTestId('screen-duel-rankings')).toBeVisible();
-  await beat(page, 2000);
-  await glide(page, page.getByTestId('rankings-scroll'), 'end');
-  await beat(page, 3000);
+  await filmDuel(page, rec);
   await rec.stop();
+});
+
+/**
+ * Clips 11 and 12 alone (`make record-duel`): Alex is set up off camera as after the whole take up to 10 (onboarding
+ * done, all of Berlin finished), then the duel is filmed from the bank's main screen.
+ */
+test('Duel: a match, its review and the ranking', { tag: '@duel' }, async ({ page, request }) => {
+  test.setTimeout(10 * 60_000);
+  const rec = (clips = new ClipRecorder(page, DUEL_OUT_DIR, CLIP_SIZE));
+  await preparePage(page);
+  await skipOnboarding(request);
+  await finishBerlin(request, ['berlin-1', 'berlin-2', 'berlin-3', 'berlin-4', 'berlin-5']);
+  await signIn(page);
+  await notificationDropsIntoLearn(page).catch(() => {}); // there may be no notification once Berlin is done
+  // The globe draws its first frame off camera, so clip 11 does not open on an empty globe.
+  await page.getByTestId('nav-learn').click();
+  await waitForGlobe(page);
+  await page.getByTestId('nav-bank').click();
+  await expect(page.getByTestId('screen-overview')).toBeVisible();
+  await filmDuel(page, rec);
 });
 
 /**
@@ -347,8 +390,10 @@ test.afterEach(async ({ page, request }, testInfo) => {
   test.setTimeout(40 * 60_000);
   const files = await clips.encode();
   console.log(`\nClips:\n${files.map((f) => `  front/${f}`).join('\n')}\n`);
-  const film = joinClips(files);
-  if (film) console.log(`Whole take: front/${film}\n`);
+  if (testInfo.tags.includes('@take')) {
+    const film = joinClips(files);
+    if (film) console.log(`Whole take: front/${film}\n`);
+  }
   if (testInfo.status === testInfo.expectedStatus) {
     for (const file of files) copyFileSync(file, path.join(DECK_CLIPS_DIR, path.basename(file)));
     console.log(`Copied to presentation/clips/: ${files.map((f) => path.basename(f)).join(', ')}\n`);

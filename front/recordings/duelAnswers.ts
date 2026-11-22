@@ -15,7 +15,8 @@ export type DuelStep =
   | (Common & { type: 'quiz'; options: string[]; correctIndex: number })
   | (Common & { type: 'predict'; input: { min: number; max: number }; answer: number })
   | (Common & { type: 'chart'; input: { min: number; max: number }; answer: number })
-  | (Common & { type: 'sort'; items: { text: string; bucket: number }[] });
+  | (Common & { type: 'sort'; items: { text: string; bucket: number }[] })
+  | (Common & { type: 'match'; pairs: [string, string][] });
 
 export type DuelQuestion = { story: string; lessonId: string; step: DuelStep };
 

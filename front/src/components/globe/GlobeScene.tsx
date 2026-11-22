@@ -13,6 +13,10 @@ type Props = {
   radius: number;
   yaw: SharedValue<number>;
   pitch: SharedValue<number>;
+  /** Pinch zoom: the sphere is drawn this many times bigger. */
+  zoom: SharedValue<number>;
+  /** Px from the canvas centre up to the sphere's centre: the canvas reaches further down than up. */
+  offsetY?: number;
   /** False pauses rendering entirely (tab not visible). */
   active: boolean;
   /** No frame within FIRST_FRAME_TIMEOUT: the GL context or the texture never came up. */
@@ -24,6 +28,12 @@ type Props = {
 const FIRST_FRAME_TIMEOUT = 5000;
 
 const LAND_TEXTURE = require('../../../assets/globe/land-2048.png');
+const landUri = () => Asset.fromModule(LAND_TEXTURE).uri;
+
+/** Starts loading the land texture into useLoader's cache, so the first frame does not wait for it. */
+export function preloadLand() {
+  useLoader.preload(TextureLoader, landUri());
+}
 
 /** Hex token → raw sRGB vector, so the shader paints exactly the Figma colour (no colour management). */
 function rgb(hex: string) {
@@ -78,7 +88,7 @@ void main() {
  * The three.js globe: one textured sphere turned by `yaw`/`pitch`. Pins and the plane are RN overlays.
  * The canvas fills its parent.
  */
-export function GlobeScene({ radius, yaw, pitch, active, onFail, onReady }: Props) {
+export function GlobeScene({ radius, yaw, pitch, zoom, offsetY = 0, active, onFail, onReady }: Props) {
   const drawn = useRef(false);
   useEffect(() => {
     const timer = setTimeout(() => !drawn.current && onFail(), FIRST_FRAME_TIMEOUT);
@@ -92,7 +102,7 @@ export function GlobeScene({ radius, yaw, pitch, active, onFail, onReady }: Prop
       frameloop={active ? 'demand' : 'never'}
       gl={{ antialias: true, alpha: true }}
     >
-      <Sphere yaw={yaw} pitch={pitch} onFirstFrame={() => {
+      <Sphere yaw={yaw} pitch={pitch} zoom={zoom} lift={offsetY / radius} onFirstFrame={() => {
           drawn.current = true;
           onReady?.();
         }} />
@@ -100,19 +110,23 @@ export function GlobeScene({ radius, yaw, pitch, active, onFail, onReady }: Prop
   );
 }
 
-function Sphere({ yaw, pitch, onFirstFrame }: Pick<Props, 'yaw' | 'pitch'> & { onFirstFrame: () => void }) {
+function Sphere({ yaw, pitch, zoom, lift, onFirstFrame }: Pick<Props, 'yaw' | 'pitch' | 'zoom'> & { lift: number; onFirstFrame: () => void }) {
   const group = useRef<Group>(null);
   const invalidate = useThree((s) => s.invalidate);
-  const loaded = useLoader(TextureLoader, Asset.fromModule(LAND_TEXTURE).uri);
+  const loaded = useLoader(TextureLoader, landUri());
+  // A new layout moves the sphere: draw a frame for it.
+  useEffect(() => {
+    invalidate();
+  }, [lift, invalidate]);
 
   const uniforms = useMemo(
     () => ({ land: { value: prepareLand(loaded) }, oceanLight: { value: rgb(colors.globeOceanLight) }, oceanDeep: { value: rgb(colors.globeOceanDeep) } }),
     [loaded],
   );
 
-  // Render on demand: a new frame only when the orientation changes.
+  // Render on demand: a new frame only when the orientation or the zoom changes.
   useAnimatedReaction(
-    () => yaw.value + pitch.value * 1e3,
+    () => yaw.value + pitch.value * 1e3 + zoom.value * 1e6,
     (next, prev) => {
       if (next !== prev) scheduleOnRN(invalidate);
     },
@@ -121,6 +135,9 @@ function Sphere({ yaw, pitch, onFirstFrame }: Pick<Props, 'yaw' | 'pitch'> & { o
   const first = useRef(true);
   useFrame(() => {
     group.current?.rotation.set(pitch.value, yaw.value, 0, 'XYZ');
+    group.current?.scale.setScalar(zoom.value);
+    // World units are sphere radii; lifts the sphere from the canvas centre to the globe area's centre.
+    group.current?.position.setY(lift);
     if (first.current) {
       first.current = false;
       onFirstFrame();

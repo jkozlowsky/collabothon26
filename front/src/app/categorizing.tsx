@@ -5,6 +5,7 @@ import { AccessibilityInfo, ActivityIndicator, BackHandler, Platform } from 'rea
 import { FlowMessage } from '@/components/categorizing/FlowMessage';
 import { LiveRegions } from '@/components/categorizing/LiveRegions';
 import { LockedLessons } from '@/components/categorizing/LockedLessons';
+import { preloadGlobe } from '@/components/globe/Globe';
 import { PathSteps, type Step } from '@/components/categorizing/PathSteps';
 import { QuickCheckPage } from '@/components/categorizing/QuickCheckPage';
 import { Page } from '@/components/onboarding/Page';
@@ -68,6 +69,9 @@ export default function CategorizingScreen() {
   const [retryable, setRetryable] = useState(true);
   const inFlight = useRef(false);
   const visit = useRef<AbortController | null>(null);
+
+  // The Map comes next: load the globe now, so it is drawn when the user gets there.
+  useEffect(preloadGlobe, []);
 
   useEffect(() => {
     const ctrl = new AbortController();

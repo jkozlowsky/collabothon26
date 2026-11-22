@@ -2,150 +2,275 @@
   "story": "berlin",
   "questions": [
     {
-      "id": "berlin-d1",
+      "id": "berlin-d01",
       "lessonId": "berlin-1",
-      "timeLimitMs": null,
-      "step": {
-        "type": "quiz",
-        "id": "d1",
-        "prompt": "A savings account offers 2% per year, while inflation is 5%. What happens to the real value of this money?",
-        "options": [
-          "It falls by about 3% per year, even though the account balance grows",
-          "It grows by 2% per year because the bank regularly adds interest",
-          "It falls by exactly 5% per year, losing all value to inflation",
-          "It does not change because bank savings are protected"
-        ],
-        "correctIndex": 0,
-        "explanation": "The real rate of return is approximately interest minus inflation (2% − 5% = −3%). Although the account balance nominally grows, the purchasing power of the money drops by about 3% per year."
-      }
-    },
-    {
-      "id": "berlin-d2",
-      "lessonId": "berlin-1",
+      "sourceStepId": "p1",
+      "concepts": [
+        "inflation",
+        "real-return"
+      ],
       "timeLimitMs": null,
       "step": {
         "type": "predict",
-        "id": "d2",
-        "prompt": "Lena keeps €25,000 in an account with 0.5% annual interest while inflation is 3%. How much will these savings realistically be worth (in today's purchasing power) after 10 years?",
+        "id": "d01",
+        "prompt": "Maya keeps €30,000 in an account with 1% annual interest while inflation is 4%. What will these savings be worth in today's purchasing power after 10 years?",
         "input": {
           "kind": "slider",
-          "min": 10000,
-          "max": 30000,
+          "min": 15000,
+          "max": 35000,
           "step": 500,
           "unit": "€"
         },
-        "answer": 19500,
+        "answer": 22500,
         "tolerance": 1500,
-        "reveal": "Around €19,500. After 10 years, the nominal amount will be around €26,270, but inflation will reduce its purchasing power by more than 22%.",
-        "explanation": "Real value formula: €25,000 × ((1 + 0.005) / (1 + 0.03))^10 = €25,000 × 0.7798 ≈ €19,494. With a €500 step, the slider value is €19,500."
+        "reveal": "About €22,500. Nominally the balance rises to €33,140, but 4% inflation reduces its real purchasing power by over 25%.",
+        "explanation": "Real value formula: €30,000 × ((1 + 0.01) / (1 + 0.04))^10 = €30,000 × (1.01 / 1.04)^10 ≈ €22,272. At €500 step increments, the closest slider value is €22,500."
       }
     },
     {
-      "id": "berlin-d3",
-      "lessonId": "berlin-2",
+      "id": "berlin-d02",
+      "lessonId": "berlin-1",
+      "sourceStepId": "q2",
+      "concepts": [
+        "inflation",
+        "real-return"
+      ],
       "timeLimitMs": null,
       "step": {
         "type": "quiz",
-        "id": "d3",
-        "prompt": "Why does compound interest generate the largest gains only after many years?",
+        "id": "d02",
+        "prompt": "A fixed-income bond yields 2.5% annual interest while inflation runs at 4.5%. What happens to the real purchasing power of the invested funds?",
         "options": [
-          "In subsequent years, returns are also earned on previously accumulated interest",
-          "Banks raise interest rates for long-term clients",
-          "The impact of inflation decreases to zero over time",
-          "Investments become tax-free only after 10 years"
+          "It loses about 2% of its purchasing power each year",
+          "It gains 2.5% each year because bond interest is fixed",
+          "It remains unchanged because bonds return full principal",
+          "It loses exactly 4.5% of its purchasing power each year"
         ],
         "correctIndex": 0,
-        "explanation": "With compound interest, gains from previous years increase the principal and start generating returns themselves. As a result, capital growth accelerates year over year."
+        "explanation": "The real return rate is approx. nominal interest minus inflation (2.5% − 4.5% = −2.0%). Purchasing power drops by about 2% annually."
       }
     },
     {
-      "id": "berlin-d4",
-      "lessonId": "berlin-1",
+      "id": "berlin-d03",
+      "lessonId": "berlin-2",
+      "sourceStepId": "p1",
+      "concepts": [
+        "compound-interest"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d03",
+        "prompt": "Daniel invests €12,000 into a fund with 6% annual compound return. If all earnings are reinvested, how much will he have after 15 years?",
+        "input": {
+          "kind": "slider",
+          "min": 10000,
+          "max": 40000,
+          "step": 500,
+          "unit": "€"
+        },
+        "answer": 29000,
+        "tolerance": 1500,
+        "reveal": "About €28,759. Compound growth nearly multiplies the starting capital by 2.4x over 15 years.",
+        "explanation": "Compound growth formula: €12,000 × (1 + 0.06)^15 = €12,000 × 2.39656 ≈ €28,759. On a €500 step slider, €29,000 is within tolerance."
+      }
+    },
+    {
+      "id": "berlin-d04",
+      "lessonId": "berlin-2",
+      "sourceStepId": "q2",
+      "concepts": [
+        "compound-interest"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d04",
+        "prompt": "Why does compound growth generate dramatically larger monetary gains in later years than in initial years?",
+        "options": [
+          "Returns are earned on both principal and accumulated past earnings",
+          "Commercial banks pay higher interest rates to long-term accounts",
+          "The impact of price inflation drops to zero over long periods",
+          "Investment tax rates decrease automatically after ten years"
+        ],
+        "correctIndex": 0,
+        "explanation": "With compound interest, each year's gains expand the capital base, accelerating growth in later decades."
+      }
+    },
+    {
+      "id": "berlin-d05",
+      "lessonId": "berlin-3",
+      "sourceStepId": "p1",
+      "concepts": [
+        "emergency-fund"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d05",
+        "prompt": "Felix calculates that his family needs €3,200 each month for rent, groceries, and bills. How much cash do they need for a 4-month emergency fund?",
+        "input": {
+          "kind": "slider",
+          "min": 0,
+          "max": 25000,
+          "step": 400,
+          "unit": "€"
+        },
+        "answer": 12800,
+        "tolerance": 800,
+        "reveal": "€12,800. A 4-month emergency buffer equals 4 × €3,200.",
+        "explanation": "A 4-month emergency fund equals 4 × €3,200 = €12,800."
+      }
+    },
+    {
+      "id": "berlin-d06",
+      "lessonId": "berlin-3",
+      "sourceStepId": "so1",
+      "concepts": [
+        "time-horizon",
+        "emergency-fund"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "sort",
+        "id": "d06",
+        "prompt": "Sort each financial need into the appropriate bucket based on time horizon:",
+        "buckets": [
+          "Emergency reserve",
+          "Long-term investment"
+        ],
+        "items": [
+          {
+            "text": "Urgent roof repair after a severe storm",
+            "bucket": 0
+          },
+          {
+            "text": "Retirement fund needed in 25 years",
+            "bucket": 1
+          },
+          {
+            "text": "Living expenses during 3 months between jobs",
+            "bucket": 0
+          },
+          {
+            "text": "University tuition fund for a newborn child",
+            "bucket": 1
+          },
+          {
+            "text": "Emergency veterinary surgery for a family pet",
+            "bucket": 0
+          },
+          {
+            "text": "Global equity ETF portfolio held for 15 years",
+            "bucket": 1
+          }
+        ],
+        "explanation": "Emergency reserves cover unexpected immediate costs; long-term money can be invested for higher expected returns."
+      }
+    },
+    {
+      "id": "berlin-d07",
+      "lessonId": "berlin-4",
+      "sourceStepId": "s1",
+      "concepts": [
+        "drawdown"
+      ],
       "timeLimitMs": null,
       "step": {
         "type": "chart",
-        "id": "d4",
-        "prompt": "The chart shows the change in purchasing power with 0% interest and 3% inflation. After how many years will savings lose about 1/4 (25%) of their real value?",
-        "model": "realValue",
+        "id": "d07",
+        "prompt": "The chart shows recovery gains needed after losses. What percentage gain is needed to recover from a 20% drawdown?",
+        "model": "drawdownRecovery",
         "params": {
-          "years": {
-            "label": "Years",
-            "min": 0,
-            "max": 20,
-            "step": 1,
-            "value": 10
-          },
-          "interest": {
-            "label": "Interest",
-            "min": 0,
-            "max": 5,
-            "step": 0.5,
-            "value": 0,
-            "unit": "%"
-          },
-          "inflation": {
-            "label": "Inflation",
-            "min": 0,
-            "max": 8,
-            "step": 0.5,
-            "value": 3,
+          "loss": {
+            "label": "Loss",
+            "min": -80,
+            "max": 0,
+            "step": 5,
+            "value": -20,
             "unit": "%"
           }
         },
         "output": {
-          "label": "Purchasing power change",
+          "label": "Gain needed",
           "unit": "%"
         },
         "input": {
           "kind": "slider",
-          "min": 1,
-          "max": 20,
-          "step": 1,
-          "unit": "years"
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "unit": "%"
         },
-        "answer": 10,
-        "tolerance": 1,
-        "explanation": "The chart shows that with 3% inflation, the drop in purchasing power reaches approx. −25% after 10 years ((1 / 1.03)^10 − 1 = −25.6%)."
+        "answer": 25,
+        "tolerance": 5,
+        "explanation": "After a 20% drop from 100 to 80, returning to 100 requires a gain of 20 on 80: 20 / 80 = +25%."
       }
     },
     {
-      "id": "berlin-d5",
-      "lessonId": "berlin-3",
+      "id": "berlin-d08",
+      "lessonId": "berlin-4",
+      "sourceStepId": "q1",
+      "concepts": [
+        "drawdown"
+      ],
       "timeLimitMs": null,
       "step": {
-        "type": "sort",
-        "id": "d5",
-        "prompt": "Assign each situation to the appropriate financial bucket:",
-        "buckets": [
-          "Emergency fund",
-          "Long-term investments"
+        "type": "quiz",
+        "id": "d08",
+        "prompt": "Hannah experiences a 25% drawdown in her equity fund during a market downturn. What percentage gain does the fund require to recover to its starting value?",
+        "options": [
+          "33.3% gain",
+          "25.0% gain",
+          "50.0% gain",
+          "20.0% gain"
         ],
-        "items": [
-          { "text": "Heating boiler breakdown in winter", "bucket": 0 },
-          { "text": "Building retirement capital for 20 years away", "bucket": 1 },
-          { "text": "3 months of expenses after job loss", "bucket": 0 },
-          { "text": "Starter fund for a one-year-old child", "bucket": 1 },
-          { "text": "Urgent car gearbox repair", "bucket": 0 },
-          { "text": "Global equity portfolio for 15 years", "bucket": 1 }
-        ],
-        "explanation": "An emergency fund (Notgroschen) covers sudden, unexpected expenses and must be immediately accessible. Money set aside for decades can be invested for higher returns."
+        "correctIndex": 0,
+        "explanation": "After a 25% drop from 100 to 75, recovering 25 on a 75 base requires 25 / 75 = 33.3%."
       }
     },
     {
-      "id": "berlin-d6",
-      "lessonId": "berlin-3",
+      "id": "berlin-d09",
+      "lessonId": "berlin-5",
+      "sourceStepId": "q1",
+      "concepts": [
+        "emergency-fund"
+      ],
       "timeLimitMs": null,
       "step": {
-        "type": "match",
-        "id": "d6",
-        "prompt": "Match the financial terms with their correct definitions:",
-        "pairs": [
-          ["Emergency fund", "Money for unexpected expenses, at least 3 months of living costs"],
-          ["Real rate", "Interest rate minus the inflation rate"],
-          ["Compound interest", "Earning returns on capital along with previously earned interest"],
-          ["Time horizon", "The duration for which money can remain invested"]
+        "type": "quiz",
+        "id": "d09",
+        "prompt": "Why is an emergency fund recommended in months of expenses rather than a fixed sum of €10,000?",
+        "options": [
+          "Living expenses differ greatly between individual households",
+          "Fixed cash amounts earn lower interest from commercial banks",
+          "Tax rules limit personal emergency funds to six monthly pays",
+          "A round sum loses purchasing power faster than a monthly sum"
         ],
-        "explanation": "A good understanding of these 4 pillars enables safe financial planning: an emergency fund provides peace of mind, the time horizon defines strategy, compound interest builds capital, and the real rate protects against inflation."
+        "correctIndex": 0,
+        "explanation": "Emergency buffers cover living commitments, so an appropriate size scales directly with individual expenses."
+      }
+    },
+    {
+      "id": "berlin-d10",
+      "lessonId": "berlin-5",
+      "sourceStepId": "q2",
+      "concepts": [
+        "inflation"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d10",
+        "prompt": "Over a 20-year period with 3% annual inflation, what happens to cash stored in a zero-interest safe?",
+        "options": [
+          "It loses about 45% of its real purchasing power",
+          "It keeps 100% of its value because nominal cash is preserved",
+          "It loses all value because physical currency expires in 10 years",
+          "It gains purchasing power through historical deflation"
+        ],
+        "correctIndex": 0,
+        "explanation": "Real purchasing power after 20 years at 3% inflation is (1 / 1.03)^20 ≈ 55.4%, meaning a loss of about 45%."
       }
     }
   ]

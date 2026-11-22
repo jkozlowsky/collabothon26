@@ -10,18 +10,21 @@ import org.springframework.transaction.annotation.Transactional;
 import com.collabothon.back.dto.converters.duel.DuelCategoryMapper;
 import com.collabothon.back.dto.duel.CategoryDto;
 import com.collabothon.back.dto.lesson.Story;
+import com.collabothon.back.duel.repositories.DuelContentRepository;
 import com.collabothon.back.lesson.repositories.StoryRepository;
 import com.collabothon.back.xp.services.LevelCurve;
 import com.collabothon.back.xp.services.XpService;
 
 import lombok.RequiredArgsConstructor;
 
-/** The duel lobby: one category per story, in stories.json order, with the user's level in it. */
+/** The duel lobby: one category per story with duel content, in stories.json order, with the user's level in it. */
 @Service
 @RequiredArgsConstructor
 public class DuelLobbyService {
 
 	private final StoryRepository stories;
+
+	private final DuelContentRepository content;
 
 	private final XpService xpService;
 
@@ -35,6 +38,7 @@ public class DuelLobbyService {
 		Map<String, Integer> xpPerCategory = xpService.xpPerCategory(userId);
 		return stories.findAll()
 			.stream()
+			.filter(story -> content.hasDuelContent(story.id()))
 			.map(story -> toCategory(story, xpPerCategory.getOrDefault(story.id(), 0)))
 			.toList();
 	}

@@ -59,18 +59,24 @@ public class DuelRankingService {
 			UserXpProjection row = top.get(i);
 			topRows.add(row(i + 1, row.getUserId(), Math.toIntExact(row.getXp()), accountsById, totalXp));
 		}
-		RankingRowDto me = standing.map(s -> row(s.rank(), userId, s.weeklyXp(), accountsById, totalXp))
+		RankingRowDto me = standing.map(s -> row(s.rank(), userId, s.weeklyXp(), s.previousRank(), s.lastXpEventId(),
+				accountsById, totalXp))
 			.orElse(null);
 		return new RankingsDto(topRows, me);
 	}
 
 	private RankingRowDto row(int rank, String userId, int weeklyXp, Map<String, Account> accountsById,
 			Map<String, Integer> totalXp) {
+		return row(rank, userId, weeklyXp, null, null, accountsById, totalXp);
+	}
+
+	private RankingRowDto row(int rank, String userId, int weeklyXp, Integer previousRank, Long lastXpEventId,
+			Map<String, Account> accountsById, Map<String, Integer> totalXp) {
 		Optional<Account> account = Optional.ofNullable(accountsById.get(userId));
-		String name = account.map(Account::getFirstName).orElse(userId);
+		String name = account.map(Account::getFullName).filter(n -> !n.isBlank()).orElse(userId);
 		String avatar = account.map(Account::getAvatar).orElse(DuelPlayerCardService.DEFAULT_AVATAR);
 		int level = levelCurve.fromXp(totalXp.getOrDefault(userId, 0)).level();
-		return new RankingRowDto(rank, userId, name, avatar, level, weeklyXp);
+		return new RankingRowDto(rank, userId, name, avatar, level, weeklyXp, previousRank, lastXpEventId);
 	}
 
 }

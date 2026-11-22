@@ -5,6 +5,7 @@ module.exports = {
   useAudioPlayer: () => player,
   createAudioPlayer: () => player,
   useAudioPlayerStatus: () => ({ isLoaded: false, playing: false, currentTime: 0, duration: 0, didJustFinish: false }),
+  createAudioPlayer: () => player,
   preload: () => Promise.resolve(),
   setAudioModeAsync: () => Promise.resolve(),
 };

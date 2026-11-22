@@ -68,6 +68,14 @@ export const colors = {
   scrim: 'rgba(0, 31, 41, 0.4)',
   /** Darker dim behind a spotlight, so the one lit feature stands out. */
   spotlightScrim: 'rgba(0, 31, 41, 0.72)',
+
+  // Medal tokens (Figma Duel v3 Kit 166:5407)
+  medalGold: '#B8860B',
+  medalGoldSoft: '#FBF1D6',
+  medalSilver: '#7D8A94',
+  medalSilverSoft: '#EEF1F4',
+  medalBronze: '#A0602E',
+  medalBronzeSoft: '#F7E9DE',
 } as const;
 
 /** Story colours at 14% opacity: icon tiles and avatar backgrounds (Figma recipe). */

@@ -34,6 +34,21 @@ class DuelContentParserTests {
 		assertThat(questions).extracting(DuelQuestion::id).containsExactly("b1", "b2");
 		assertThat(questions).extracting(DuelQuestion::category).containsOnly("berlin");
 		assertThat(questions).extracting(DuelQuestion::timeLimitMs).containsExactly(15_000L, null);
+		assertThat(questions).extracting(DuelQuestion::sourceStepId).containsExactly(null, null);
+		assertThat(questions).extracting(DuelQuestion::concepts).containsExactly(List.of(), List.of());
+	}
+
+	@Test
+	void parsesOptionalSourceStepIdAndConcepts() {
+		List<DuelQuestion> questions = parse("""
+				{ "id": "b1", "lessonId": "berlin-1", "sourceStepId": "p1", "concepts": ["inflation", "savings"],
+				  "step": { "id": "s1", "type": "quiz", "options": ["A", "B"], "correctIndex": 0 } }
+				""");
+
+		assertThat(questions).hasSize(1);
+		DuelQuestion q = questions.getFirst();
+		assertThat(q.sourceStepId()).isEqualTo("p1");
+		assertThat(q.concepts()).containsExactly("inflation", "savings");
 	}
 
 	@Test

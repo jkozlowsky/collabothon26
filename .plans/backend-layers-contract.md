@@ -8,7 +8,7 @@ The whole backend (`back/`) follows a clean layered architecture with JPA/Hibern
 
 This is a **pure refactor**: the REST API (paths, params, JSON shapes, status codes) and the DB schema behaviour stay the same, the front keeps working unchanged, and the existing controller tests keep passing. Change their assertions only where the error body shape intentionally changes (§3).
 
-Rule source: `/home/mchodulski/hackaton/Collabothon/collabothon26/spring-boot-best-practices/SKILL.md` and its `references/*.md`. Read all of it. It was written for another project (`ssbd01`), so §2 lists which rules apply here and how.
+Rule source: [`backend-layers-rules/SKILL.md`](backend-layers-rules/SKILL.md) and its `references/*.md`. Read all of it. It was written for another project (`ssbd01`), so §2 lists which rules apply here and how.
 
 ## 1. Package layout ("feature + layers")
 

@@ -10,8 +10,9 @@ import type { Page } from '@playwright/test';
  * Records a page as separate clips, one per step of a demo.
  *
  * Playwright's own video is captured in CSS pixels at about 1 Mbit/s. Here the browser renders at 3× (see
- * playwright.record.config.ts), every screencast frame is kept as a JPEG while the step runs, and the frames are
- * encoded once the run is over, so encoding does not slow down the app while it is filmed.
+ * playwright.record.config.ts) and every screencast frame is kept as a JPEG while the step runs. A finished clip is
+ * encoded in the background while the next one is filmed, at the lowest CPU priority and on a few threads, so the
+ * encoder does not slow down the app on camera and only the last clip is left to encode when the take ends.
  *
  * Output: MP4 (H.264) when an ffmpeg with libx264 is on PATH or in $FFMPEG, else WebM (VP9) through the ffmpeg
  * Playwright downloads with its browsers.
@@ -20,12 +21,18 @@ import type { Page } from '@playwright/test';
 const FPS = 30;
 /** JPEG quality of each captured frame (Chromium's screencast). */
 const JPEG_QUALITY = 95;
+/** Encoder threads per clip: leaves the other cores to the browser, Metro and the backend while filming. */
+const ENCODER_THREADS = 4;
+/** `nice` runs the encoder at the lowest priority; Windows has no such command. */
+const NICE = process.platform === 'win32' ? [] : ['nice', '-n', '19'];
 
 type Frame = { file: string; at: number };
 type Clip = { name: string; dir: string; frames: Frame[]; startedAt: number; endedAt: number };
 
 export class ClipRecorder {
-  private readonly clips: Clip[] = [];
+  /** One per finished clip, in filming order: the file it is being encoded into. */
+  private readonly encoding: Promise<string>[] = [];
+  private encoder?: Encoder;
   private current?: Clip;
 
   constructor(
@@ -61,7 +68,20 @@ export class ClipRecorder {
     this.current = undefined;
     await this.page.screencast.stop();
     clip.endedAt = Date.now();
-    this.clips.push(clip);
+    if (clip.frames.length) this.encoding.push(this.encodeInBackground(clip));
+  }
+
+  private encodeInBackground(clip: Clip): Promise<string> {
+    this.encoder ??= findEncoder();
+    const out = path.join(this.outDir, `${clip.name}.${this.encoder.ext}`);
+    console.log(`Encoding ${out} (${Math.round((clip.endedAt - clip.startedAt) / 1000)} s)…`);
+    const job = encodeClip(clip, this.encoder, out).then(() => {
+      rmSync(clip.dir, { recursive: true, force: true });
+      return out;
+    });
+    // A failure is reported by encode(); until then it must not count as an unhandled rejection.
+    job.catch(() => {});
+    return job;
   }
 
   /** Drops the clip being recorded, frames and all, so a step can be filmed again under the same name. */
@@ -73,19 +93,10 @@ export class ClipRecorder {
     rmSync(clip.dir, { recursive: true, force: true });
   }
 
-  /** Encodes every recorded clip; returns the written files. */
+  /** Stops the clip being filmed and waits until every clip is encoded; returns the written files. */
   async encode(): Promise<string[]> {
     await this.stop();
-    const encoder = findEncoder();
-    const written: string[] = [];
-    for (const clip of this.clips) {
-      if (!clip.frames.length) continue;
-      const out = path.join(this.outDir, `${clip.name}.${encoder.ext}`);
-      console.log(`Encoding ${out} (${Math.round((clip.endedAt - clip.startedAt) / 1000)} s)…`);
-      await encodeClip(clip, encoder, out);
-      rmSync(clip.dir, { recursive: true, force: true });
-      written.push(out);
-    }
+    const written = await Promise.all(this.encoding);
     rmSync(path.join(this.outDir, '.frames'), { recursive: true, force: true });
     return written;
   }
@@ -140,15 +151,18 @@ function playwrightFfmpeg(): string | undefined {
  */
 function encodeClip(clip: Clip, encoder: Encoder, out: string): Promise<void> {
   const total = Math.max(1, Math.round(((clip.endedAt - clip.startedAt) / 1000) * FPS));
+  const [bin, ...prefix] = [...NICE, encoder.bin];
   const ffmpeg = spawn(
-    encoder.bin,
+    bin,
     [
+      ...prefix,
       '-loglevel', 'error', '-y',
       '-f', 'image2pipe', '-c:v', 'mjpeg', '-framerate', String(FPS), '-i', 'pipe:0',
       '-an', '-r', String(FPS),
       // Even sizes, which yuv420p needs.
       '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
       ...encoder.args,
+      '-threads', String(ENCODER_THREADS),
       out,
     ],
     { stdio: ['pipe', 'inherit', 'inherit'] },

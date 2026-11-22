@@ -9,7 +9,7 @@ Status: **review** (agreed in interview, 2026-11-22). Written against `origin/ma
 
 ## 0. Goal
 
-A fresh onboarding asks two questions today: "What are you saving for?" (`purpose`) and when the money is needed (`horizon`). Asking about savings at the very first screen makes no sense to the user. Both go. In their place: **one screen, "What would you like to learn?"**, with one chip per area (C23). The areas come from the backend, so the chips carry the names the map uses.
+A fresh onboarding asks two questions today: "What are you saving for?" (`purpose`) and when the money is needed (`horizon`). Asking about savings at the very first screen makes no sense to the user. Both go. In their place: **one screen, "What would you like to learn?"**, with one chip per area (C24). The areas come from the backend, so the chips carry the names the map uses.
 
 What a pick means: **"I want to get better at this because I don't know it yet."** Each pick is a self-reported weak spot. It feeds:
 
@@ -165,7 +165,7 @@ The build follows the option marked "chosen".
   the list is an argument of `JevClient.ask` and `JevQuickCheck` drops `goals` instead of renaming it. (b) only inside
   `JevQuickCheck`: that call would lose the interests entirely.
 - **C13 Several picks in one area.** (a) one "You said X is new to you." line per picked path, naming its category.
-  (b) **chosen with C23:** one per area, naming the area as the map and the chips do.
+  (b) **chosen with C24:** one per area, naming the area as the map and the chips do.
 - **C14 Lesson ids in Jev's knowledge answers.** `answers[].lessonId` and `checkAnswers[].lessonId` (`seoul-1`) already
   reach Jev on main. (a) **chosen:** left as is, outside this change. (b) drop them from `JevAnswerDto` in the Jev
   simplification branch.
@@ -190,7 +190,12 @@ The build follows the option marked "chosen".
   meaning. (b) "You chose to learn about X.": softer, a weaker signal.
 - **C22 Risk and retirement focus.** No path maps to them, so a pick cannot raise them. (a) **chosen:** §3's mapping.
   (b) a separate focus mapping for interests.
-- **C23 Jan, 22.11: tiles use the map's area names; one tile selects every path of that area.** The tiles are drawn as
+- **C23 A second branch carries this feature.** At 03:03 `jkozlowsky/onboarding-interests-jev` was cut from this
+  branch (`481ff1b`) and merged `simplify-jev` (`b15e32d`); it keeps C3 by `givenAnswers` (read, its tests not run
+  here), and has uncommitted front work. (a) **recommended:** merge this branch first, then that one as the Jev
+  simplification on top, with its own review. (b) merge only that branch: one merge, but it also changes Jev's
+  behaviour (gap labels, pinned model), which this review did not see.
+- **C24 Jan, 22.11: tiles use the map's area names; one tile selects every path of that area.** The tiles are drawn as
   the chips of Figma "07 Survey · Goals", without its limit of three, step header and mock labels. The contract stays
   story ids; what Jev receives and the pool and plan rules stay per path.
 
@@ -201,7 +206,7 @@ The build follows the option marked "chosen".
 - [x] T2 Quick check, pool, plan, Jev (§4, §5, C3-C8): done when every backend case of §6 has a passing test.
 - [x] T3 Screen, personas, frontend contract (§1, §2, §3, C9, C10): done when the jest cases of §6 pass, with tsc and
       lint clean.
-- [ ] T4 e2e and recordings (§6): done when the touched Playwright specs pass against this branch's backend.
+- [x] T4 e2e and recordings (§6): done when the touched Playwright specs pass against this branch's backend.
 - [x] T5 Smoke without a Jev key (§6): done when the picked path is first or second on a real run.
 
 ## Review triage

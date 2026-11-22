@@ -90,15 +90,13 @@ What is mocked: the bank data (accounts, transactions, products) is seeded on th
 
 **Current limitations.**
 - Bank data is seeded, and there is no authentication (demo accounts only).
-- Jev needs an API key; without one, the rule-based fallback profiles the user.
-- Recommendations come from the profile and the quick check; collaborative filtering ("people like you also learned…") is not built.
-- Video mode exists for the Berlin and Tokyo paths only. Berlin has recorded narration; Tokyo plays captions without audio.
-- The Retirement path is "coming soon", and some story data is still a local file.
-- The duel queue is in memory, so it works on a single backend instance.
+- Video mode exists for the Berlin and Tokyo paths only, and only Berlin has recorded narration.
+- The Retirement path is "coming soon".
+- The app is in English only.
 
 **Next steps.**
 - Connect to real (sandboxed) banking APIs and the bank's login.
 - Event-based nudges ("lots of idle cash → inflation lesson", "market dropped → investor-emotion lesson").
 - Collaborative filtering on learning events.
-- The Retirement path, more languages, and video with narration for every lesson.
+- The Retirement path, other languages, and video with narration for every lesson.
 - Accessibility pass (font scaling, contrast) and usability tests with real users from each generation.

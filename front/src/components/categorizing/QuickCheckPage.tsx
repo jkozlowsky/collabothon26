@@ -5,16 +5,15 @@ import { AnswerTile, type AnswerState } from '@/components/categorizing/AnswerTi
 import { FeedbackBanner } from '@/components/categorizing/FeedbackBanner';
 import { Page } from '@/components/onboarding/Page';
 import { BigButton, FadeIn, haptic, StepHeader, type as text } from '@/components/onboarding/ui';
-import { AREA_LABEL, STATUS_TEXT } from '@/constants/quickCheck';
+import { AREA_LABEL, MAX_QUESTIONS, STATUS_TEXT } from '@/constants/quickCheck';
 import { colors, spacing, type } from '@/constants/theme';
 import type { QuestionView } from '@/hooks/useQuickCheck';
 
 type Props = {
   /** Null while a step decides or the test is done: the status line shows in its place. */
   view: QuestionView | null;
-  /** The shown question's number, and how many there can be at most. */
+  /** The shown question's number, out of at most MAX_QUESTIONS. */
   position: number;
-  total: number;
   status: 'waiting' | 'done' | null;
   /** `optionIndex` null = "Not sure". */
   onAnswer: (optionIndex: number | null) => void;
@@ -24,7 +23,7 @@ type Props = {
 // react-native-web takes tabIndex on Text so focus() works; RN's TextProps do not declare it.
 const WEB_FOCUSABLE = { tabIndex: -1 };
 
-export function QuickCheckPage({ view, position, total, status, onAnswer, onContinue }: Props) {
+export function QuickCheckPage({ view, position, status, onAnswer, onContinue }: Props) {
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   // The feedback lands under the tiles, which a long question pushes below the fold.
   const answer = (optionIndex: number | null) => {
@@ -39,13 +38,13 @@ export function QuickCheckPage({ view, position, total, status, onAnswer, onCont
     <Page
       testID="quick-check"
       scrollRef={scroll}
-      header={<StepHeader label={`Question ${position} of up to ${total}`} progress={position / total} />}
+      header={<StepHeader label={`Question ${position} of up to ${MAX_QUESTIONS}`} progress={position / MAX_QUESTIONS} />}
       footer={<BigButton label="Continue" onPress={next} disabled={!view?.result} testID="quick-check-continue" />}
     >
       {/* Keyed per question, so the focus and the entrance start fresh while the header stays. */}
       {view && (
         <FadeIn key={view.key} style={styles.question}>
-          <Question view={view} position={position} total={total} onAnswer={answer} />
+          <Question view={view} position={position} onAnswer={answer} />
         </FadeIn>
       )}
       {status && (
@@ -57,9 +56,9 @@ export function QuickCheckPage({ view, position, total, status, onAnswer, onCont
   );
 }
 
-type QuestionProps = Pick<Props, 'onAnswer' | 'position' | 'total'> & { view: QuestionView };
+type QuestionProps = Pick<Props, 'onAnswer' | 'position'> & { view: QuestionView };
 
-function Question({ view, position, total, onAnswer }: QuestionProps) {
+function Question({ view, position, onAnswer }: QuestionProps) {
   const promptRef = useRef<ComponentRef<typeof Text>>(null);
   const { result, correctIndex } = view;
 
@@ -86,7 +85,7 @@ function Question({ view, position, total, onAnswer }: QuestionProps) {
       <Text style={text.overline}>QUICK CHECK · {AREA_LABEL[view.area].toUpperCase()}</Text>
       <Text
         ref={promptRef}
-        accessibilityLabel={`Question ${position} of up to ${total}. ${view.prompt}`}
+        accessibilityLabel={`Question ${position} of up to ${MAX_QUESTIONS}. ${view.prompt}`}
         {...WEB_FOCUSABLE}
         style={styles.prompt}
         accessibilityRole="header"

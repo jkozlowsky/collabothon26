@@ -20,7 +20,7 @@ To send the deck, zip the whole `presentation/` folder: the recordings sit next 
 
 ## App recordings
 
-Put them in `clips/` with the names listed in [`clips/README.txt`](clips/README.txt), as `.mp4` (H.264) or `.webm`. They are git-ignored, because they are large and can be recorded again.
+They live in `clips/` with the names listed in [`clips/README.txt`](clips/README.txt), as `.mp4` (H.264) or `.webm`. `make record` (repo root) films all of them and copies them there; the `.mp4` files are committed, so the deck plays straight from a checkout.
 
 - A missing clip shows a labelled placeholder in the phone frame.
 

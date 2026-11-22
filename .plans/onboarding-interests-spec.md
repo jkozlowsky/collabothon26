@@ -187,6 +187,11 @@ The build follows the option marked "chosen".
   meaning. (b) "You chose to learn about X.": softer, a weaker signal.
 - **C22 Risk and retirement focus.** No path maps to them, so a pick cannot raise them. (a) **chosen:** §3's mapping.
   (b) a separate focus mapping for interests.
+- **C23 A second branch carries this feature.** At 03:03 `jkozlowsky/onboarding-interests-jev` was cut from this
+  branch (`481ff1b`) and merged `simplify-jev` (`b15e32d`); it keeps C3 by `givenAnswers` (read, its tests not run
+  here), and has uncommitted front work. (a) **recommended:** merge this branch first, then that one as the Jev
+  simplification on top, with its own review. (b) merge only that branch: one merge, but it also changes Jev's
+  behaviour (gap labels, pinned model), which this review did not see.
 
 ## Tasks
 
@@ -195,7 +200,7 @@ The build follows the option marked "chosen".
 - [x] T2 Quick check, pool, plan, Jev (§4, §5, C3-C8): done when every backend case of §6 has a passing test.
 - [x] T3 Screen, personas, frontend contract (§1, §2, §3, C9, C10): done when the jest cases of §6 pass, with tsc and
       lint clean.
-- [ ] T4 e2e and recordings (§6): done when the touched Playwright specs pass against this branch's backend.
+- [x] T4 e2e and recordings (§6): done when the touched Playwright specs pass against this branch's backend.
 - [x] T5 Smoke without a Jev key (§6): done when the picked path is first or second on a real run.
 
 ## Review triage

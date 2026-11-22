@@ -90,13 +90,14 @@ What is mocked: the bank data (accounts, transactions, products) is seeded on th
 
 **Current limitations.**
 - Bank data is seeded, and there is no authentication (demo accounts only).
-- Video mode exists for the Berlin and Tokyo paths only, and only Berlin has recorded narration.
+- Video mode exists for the Berlin and Tokyo paths only, and only Berlin has recorded audio narration.
 - The Retirement path is "coming soon".
 - The app is in English only.
 
 **Next steps.**
-- Connect to real (sandboxed) banking APIs and the bank's login.
+- Connect to real (sandboxed) banking APIs and the bank's login. 
 - Event-based nudges ("lots of idle cash → inflation lesson", "market dropped → investor-emotion lesson").
 - Collaborative filtering on learning events.
-- The Retirement path, other languages, and video with narration for every lesson.
+- The Retirement path and more lesson paths in general, other languages,  and video with narration for every lesson.
 - Accessibility pass (font scaling, contrast) and usability tests with real users from each generation.
+- Admin/expert panel and ability to add and control the lessons from inside the app.

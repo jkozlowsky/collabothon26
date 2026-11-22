@@ -1,11 +1,11 @@
 ---
-status: in-progress
+status: review
 baseline_commit: c65aeb40e6793aa7876092aa3789b6d5c1371328
 branch: jkozlowsky/restore-interests-onboarding
 ---
 # Onboarding: "What would you like to learn?" replaces the savings questions
 
-Status: **in-progress** (agreed in interview, 2026-11-22). Written against `origin/main` @ `00804f8`, built on `c65aeb4`. Branch `jkozlowsky/restore-interests-onboarding`.
+Status: **review** (agreed in interview, 2026-11-22). Written against `origin/main` @ `00804f8`, built on `c65aeb4`. Branch `jkozlowsky/restore-interests-onboarding`.
 
 ## 0. Goal
 
@@ -166,13 +166,20 @@ The build follows the option marked "chosen".
 - **C14 Lesson ids in Jev's knowledge answers.** `answers[].lessonId` and `checkAnswers[].lessonId` (`seoul-1`) already
   reach Jev on main. (a) **chosen:** left as is, outside this change. (b) drop them from `JevAnswerDto` in the Jev
   simplification branch.
+- **C15 A pick steers the area, not the path's own questions.** §4 orders areas, so a Gold pick opens the check with a
+  Seoul question (same area). (a) **chosen:** as §4 says. (b) within an area, picked paths' questions first: a small
+  change to `QuickCheckRules`, closer to §0's "choice of questions".
+- **C16 Criteria note and limits.** (a) **chosen:** only the interest lesson carries the note, and it comes on top of
+  the two-per-area limit of the gap lessons, as §5 words it. (b) note every lesson of a picked path.
+- **C17 Extra copy on the screen.** (a) **chosen:** a helper line "Pick every topic that is new to you." and a
+  subtitle on "Not sure yet", which `OptionCard` requires. (b) title only.
 
 ## Tasks
 
 - [x] T1 Contract (§3, C1, C2), backend, first and in its own commit: done when the backend compiles, its tests pass,
       `interests` round-trips through the profile and an unknown id is a 400.
-- [ ] T2 Quick check, pool, plan, Jev (§4, §5, C3-C8): done when every backend case of §6 has a passing test.
-- [ ] T3 Screen, personas, frontend contract (§1, §2, §3, C9, C10): done when the jest cases of §6 pass, with tsc and
+- [x] T2 Quick check, pool, plan, Jev (§4, §5, C3-C8): done when every backend case of §6 has a passing test.
+- [x] T3 Screen, personas, frontend contract (§1, §2, §3, C9, C10): done when the jest cases of §6 pass, with tsc and
       lint clean.
 - [ ] T4 e2e and recordings (§6): done when the touched Playwright specs pass against this branch's backend.
 - [ ] T5 Smoke without a Jev key (§6): done when the picked path is first or second on a real run.

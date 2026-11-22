@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import com.collabothon.back.categorization.dto.CheckQuestionDto;
 import com.collabothon.back.categorization.dto.HistoryEntryDto;
 import com.collabothon.back.categorization.enums.FocusArea;
-import com.collabothon.back.categorization.mappers.CheckLessonMapper;
 import com.collabothon.back.categorization.mappers.CheckQuestionMapper;
 import com.collabothon.back.exceptions.BusinessException;
 import com.collabothon.back.lesson.repositories.LessonContentRepository;
@@ -31,7 +30,7 @@ public class CheckQuestionService {
 
 	private final CheckQuestionMapper mapper;
 
-	CheckQuestionService(LessonContentRepository content, CheckQuestionMapper mapper, CheckLessonMapper lessonMapper) {
+	CheckQuestionService(LessonContentRepository content, CheckQuestionMapper mapper) {
 		this.mapper = mapper;
 		List<CheckQuestion> questions = new ArrayList<>();
 		for (JsonNode story : content.stories()) {
@@ -51,18 +50,15 @@ public class CheckQuestionService {
 			}
 		}
 		this.pool = List.copyOf(questions);
-		List<String> labels = QuickCheckRules.lessons(pool, lessonMapper::toLesson).stream().map(CheckLesson::label)
-			.toList();
+		List<CheckLesson> lessons = QuickCheckRules.lessons(pool);
 		// Jev answers with a lesson's label, so two lessons must never share one.
-		if (labels.stream().distinct().count() != labels.size()) {
+		if (lessons.stream().map(CheckLesson::label).distinct().count() != lessons.size()) {
 			throw new IllegalStateException("Two lessons with a quiz share a topic");
 		}
 	}
 
 	private static List<String> strings(JsonNode array) {
-		List<String> values = new ArrayList<>();
-		array.forEach(value -> values.add(value.asString()));
-		return List.copyOf(values);
+		return array.valueStream().map(JsonNode::asString).toList();
 	}
 
 	public List<CheckQuestionDto> questions() {

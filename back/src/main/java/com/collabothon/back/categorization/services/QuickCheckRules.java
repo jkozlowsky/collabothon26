@@ -23,9 +23,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.function.ToDoubleFunction;
 import java.util.random.RandomGenerator;
+import java.util.stream.Stream;
 
 import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.FactsDto;
@@ -60,14 +59,9 @@ final class QuickCheckRules {
 	}
 
 	static Map<FocusArea, Double> mastery(List<FocusArea> areas, List<Answer> answers) {
-		return meanPerArea(areas, answers, Answer::score);
-	}
-
-	private static Map<FocusArea, Double> meanPerArea(List<FocusArea> areas, List<Answer> answers,
-			ToDoubleFunction<Answer> value) {
 		Map<FocusArea, Double> means = new LinkedHashMap<>();
 		for (FocusArea area : areas) {
-			OptionalDouble mean = inArea(answers, area).stream().mapToDouble(value).average();
+			OptionalDouble mean = inArea(answers, area).stream().mapToDouble(Answer::score).average();
 			means.put(area, mean.isPresent() ? mean.getAsDouble() : null);
 		}
 		return means;
@@ -263,10 +257,8 @@ final class QuickCheckRules {
 	}
 
 	/** The questions' lessons, each once, in the questions' order. */
-	static List<CheckLesson> lessons(List<CheckQuestion> questions, Function<CheckQuestion, CheckLesson> toLesson) {
-		Map<String, CheckLesson> lessons = new LinkedHashMap<>();
-		questions.forEach(q -> lessons.computeIfAbsent(q.lessonId(), id -> toLesson.apply(q)));
-		return List.copyOf(lessons.values());
+	static List<CheckLesson> lessons(List<CheckQuestion> questions) {
+		return questions.stream().map(CheckQuestion::lesson).distinct().toList();
 	}
 
 	static Optional<Story> storyOf(String lessonId, List<Story> stories) {
@@ -297,11 +289,6 @@ final class QuickCheckRules {
 					&& storyOf(l.id(), stories).flatMap(s -> startLesson(s, completed)).isPresent())
 			.sorted(pathOrder)
 			.toList();
-	}
-
-	/** The candidates' stories, each once, in candidate order. */
-	static List<Story> stories(List<CheckLesson> candidates, List<Story> stories) {
-		return candidates.stream().flatMap(l -> storyOf(l.id(), stories).stream()).distinct().toList();
 	}
 
 	/** Jev and the rule pick from answered areas when any have a candidate. */
@@ -356,8 +343,11 @@ final class QuickCheckRules {
 		CheckLesson lesson = picked != null ? picked
 				: ruleFirstLesson(pool(candidates, answers), order, mastery, answers);
 		Story start = storyOf(lesson.id(), stories).orElseThrow();
-		List<String> path = new ArrayList<>(List.of(start.id()));
-		stories(candidates, stories).stream().map(Story::id).filter(id -> !id.equals(start.id())).forEach(path::add);
+		List<String> path = Stream.concat(Stream.of(start), candidates.stream()
+			.flatMap(l -> storyOf(l.id(), stories).stream()))
+			.map(Story::id)
+			.distinct()
+			.toList();
 		return new StoryPlan(start, lesson.area(), false, path);
 	}
 

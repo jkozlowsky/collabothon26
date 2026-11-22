@@ -17,7 +17,6 @@ import java.util.random.RandomGenerator;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
 
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 import com.collabothon.back.categorization.dto.FactsDto;
@@ -25,7 +24,6 @@ import com.collabothon.back.categorization.dto.GapDto;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.Role;
-import com.collabothon.back.categorization.mappers.CheckLessonMapper;
 
 class QuickCheckRulesTests {
 
@@ -57,8 +55,7 @@ class QuickCheckRulesTests {
 
 	private static final List<FocusArea> ORDER = List.of(SAVING, INVESTING);
 
-	private static final List<CheckLesson> LESSONS = QuickCheckRules.lessons(POOL,
-			Mappers.getMapper(CheckLessonMapper.class)::toLesson);
+	private static final List<CheckLesson> LESSONS = QuickCheckRules.lessons(POOL);
 
 	private static final List<Story> STORIES = List.of(story("s1"), story("s2"), story("s3"), story("s4"));
 
@@ -249,8 +246,7 @@ class QuickCheckRulesTests {
 	@Test
 	void jevChoosesAmongTwoLessonsPerAreaOneOfEachStoryFirst() {
 		assertEquals(List.of("s1-1", "s3-1", "s2-1", "s4-1"), ids(QuickCheckRules.nextLessonChoices(ORDER, LESSONS)));
-		List<CheckLesson> open = QuickCheckRules.lessons(open(right(S11_A), right(S11_B), right(S31)),
-				Mappers.getMapper(CheckLessonMapper.class)::toLesson);
+		List<CheckLesson> open = QuickCheckRules.lessons(open(right(S11_A), right(S11_B), right(S31)));
 		assertEquals(List.of("s2-1", "s4-1", "s1-2"),
 				ids(QuickCheckRules.nextLessonChoices(List.of(INVESTING, SAVING), open)));
 	}

@@ -31,10 +31,7 @@ import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.LifeStage;
 import com.collabothon.back.categorization.enums.Role;
-import com.collabothon.back.categorization.mappers.CheckLessonMapper;
-import com.collabothon.back.categorization.mappers.JevAnswerMapper;
 import com.collabothon.back.categorization.mappers.OnboardingAnswersMapper;
-import com.collabothon.back.categorization.mappers.StartLessonMapper;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
 import com.collabothon.back.categorization.repositories.ProfileAnswersRepository;
 import com.collabothon.back.exceptions.BusinessException;
@@ -63,12 +60,6 @@ public class CategorizationService {
 	private final JevClient jev;
 
 	private final CheckQuestionService checkQuestions;
-
-	private final StartLessonMapper startLessonMapper;
-
-	private final CheckLessonMapper lessonMapper;
-
-	private final JevAnswerMapper jevAnswerMapper;
 
 	private final LessonContentRepository content;
 
@@ -110,13 +101,13 @@ public class CategorizationService {
 		}
 		Set<String> completed = new HashSet<>(completions.findLessonIdsByUserId(userId));
 		List<Story> stories = stories();
-		List<CheckLesson> lessons = QuickCheckRules.lessons(pool, lessonMapper::toLesson);
+		List<CheckLesson> lessons = QuickCheckRules.lessons(pool);
 		List<CheckLesson> choices = QuickCheckRules.firstLessonChoices(QuickCheckRules.pool(
 				QuickCheckRules.candidates(lessons, stories, order, mastery, history, completed), history), history,
 				completed);
 		List<FocusArea> gapAreas = QuickCheckRules.gapAreas(order, history, facts);
 		JevQuickCheck quickCheck = ran ? new JevQuickCheck(profile, answers.goals(),
-				history.stream().map(jevAnswerMapper::toJev).toList(), gapAreas, choices) : null;
+				history.stream().map(Answer::toJev).toList(), gapAreas, choices) : null;
 		JevResult fromJev = request.useRules() ? JevResult.SKIPPED : jev.ask(answers, facts, quickCheck);
 
 		LifeStage lifeStage = answers.lifeStage() == null && ran ? LifeStage.fromAgeBand(profile.ageBand())
@@ -197,8 +188,8 @@ public class CategorizationService {
 	/** Call only for a story with a lesson left. */
 	private StartLessonDto startLesson(Story story, FocusArea area, Set<String> completed) {
 		String lessonId = QuickCheckRules.startLesson(story, completed).orElseThrow();
-		return startLessonMapper.toStartLesson(story, lessonId,
-				content.lesson(lessonId).orElseThrow().path("title").asString(), area);
+		return new StartLessonDto(lessonId, content.lesson(lessonId).orElseThrow().path("title").asString(), area,
+				story.id(), story.city());
 	}
 
 	private List<Story> stories() {
@@ -218,7 +209,7 @@ public class CategorizationService {
 		return categorizations.findData(userId)
 			.flatMap(this::read)
 			.map(c -> c.withStartHere(startHere(c, stories(),
-					QuickCheckRules.lessons(checkQuestions.pool(), lessonMapper::toLesson),
+					QuickCheckRules.lessons(checkQuestions.pool()),
 					new HashSet<>(completions.findLessonIdsByUserId(userId)))));
 	}
 

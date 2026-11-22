@@ -1,6 +1,6 @@
 # Spec: Ekran główny z globusem (zakładka Map)
 
-> Wynik wywiadu z 2026-11-20. Powiązane: [`f4-f5-lessons-spec.md`](f4-f5-lessons-spec.md) (lekcje, `GET /api/stories`), [`doc/historie.md`](../doc/historie.md) (treść historii).
+> Wynik wywiadu z 2026-11-20. Powiązane: [`f4-f5-lessons-spec.md`](f4-f5-lessons-spec.md) (lekcje, `GET /api/stories`), [`docs/historie.md`](../docs/historie.md) (treść historii).
 > Wygląd: Figma „Finance Quest — Globe Learn Screen”, frame `3:496` (Learn — Globe), sheet `3:616`, callout `3:599`, nav `26:663`. Tokeny i wymiary: `.claude/skills/finance-quest-ui/DESIGN-REFERENCE.md`. Przed implementacją przejść workflow skilla `finance-quest-ui`.
 
 ## 1. Zakres
@@ -152,7 +152,7 @@ scripts/make-globe-texture.*      # generator tekstury
 
 ## 9. Miasta na globusie (demo)
 
-Pełna treść: **Seul** i **Berlin** (ewentualnie kolejne). Pozostałe jako „Coming soon”, max jedno miasto na region, żeby piny się nie nakładały. Propozycja z `doc/historie.md` §5: Buenos Aires **albo** São Paulo, Nairobi **albo** Lagos, Mumbaj; bez Tokio (za blisko Seulu) i bez Frankfurtu/Amsterdamu (za blisko Berlina). Ostateczna lista to decyzja treściowa.
+Pełna treść: **Seul** i **Berlin** (ewentualnie kolejne). Pozostałe jako „Coming soon”, max jedno miasto na region, żeby piny się nie nakładały. Propozycja z `docs/historie.md` §5: Buenos Aires **albo** São Paulo, Nairobi **albo** Lagos, Mumbaj; bez Tokio (za blisko Seulu) i bez Frankfurtu/Amsterdamu (za blisko Berlina). Ostateczna lista to decyzja treściowa.
 
 ## 10. Wydajność i dostępność
 

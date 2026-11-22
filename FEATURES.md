@@ -85,7 +85,7 @@ Pobranie appki → Profilowanie AI (dane z banku) → Test / onboarding (wiedza,
 ---
 
 ### F4. Lekcje: core aplikacji
-> Szczegóły: [`doc/F4-lekcje.md`](doc/F4-lekcje.md)
+> Szczegóły: [`docs/F4-lekcje.md`](docs/F4-lekcje.md)
 📝 Lekcje w różnych formach, jak w Duolingo:
 - quizy
 - łączenie kafelków (pojęcie ↔ definicja)
@@ -108,7 +108,7 @@ Pobranie appki → Profilowanie AI (dane z banku) → Test / onboarding (wiedza,
 ---
 
 ### F5. Warianty lekcji: inkluzywność
-> Szczegóły: [`doc/F5-warianty.md`](doc/F5-warianty.md)
+> Szczegóły: [`docs/F5-warianty.md`](docs/F5-warianty.md)
 📝 Każda lekcja może mieć różne warianty: ta sama treść przechowywana w różnych wersjach.
 
 ✅ Wymagania:

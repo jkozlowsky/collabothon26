@@ -1,11 +1,11 @@
 # Spec: F4 Lekcje + F5 Warianty
 
-> Wynik wywiadu z 2026-11-20. Uzupełnia i miejscami nadpisuje [`doc/F4-lekcje.md`](../doc/F4-lekcje.md), [`doc/F5-warianty.md`](../doc/F5-warianty.md), [`doc/historie.md`](../doc/historie.md).
-> Gdzie dokumenty w `doc/` mówią co innego, **obowiązuje ten spec**.
+> Wynik wywiadu z 2026-11-20. Uzupełnia i miejscami nadpisuje [`docs/F4-lekcje.md`](../docs/F4-lekcje.md), [`docs/F5-warianty.md`](../docs/F5-warianty.md), [`docs/historie.md`](../docs/historie.md).
+> Gdzie dokumenty w `docs/` mówią co innego, **obowiązuje ten spec**.
 
 ## 1. Zakres
 
-- **Treść:** współczesne historie ze świata (globus). Misje demo z pełną treścią: **Seul** (wzór w `doc/historie.md` §4) i **Berlin**, ewentualnie kolejne, jeśli zostanie czas. Pozostałe piny widoczne jako „Coming soon”.
+- **Treść:** współczesne historie ze świata (globus). Misje demo z pełną treścią: **Seul** (wzór w `docs/historie.md` §4) i **Berlin**, ewentualnie kolejne, jeśli zostanie czas. Pozostałe piny widoczne jako „Coming soon”.
 - **Język:** angielski (UI, treść). Wariant plain usunięty, zob. [`lesson-video-mode-spec.md`](lesson-video-mode-spec.md) §9.
 - **Platformy:** muszą działać **web i Android** (sposób demo jeszcze nieustalony). Każda interakcja gestem ma odpowiednik klikany.
 
@@ -172,8 +172,8 @@ Bez nazw prawdziwych akcji, funduszy i marek. Wykresy przyszłych wartości: „
 
 ## 13. Do zrobienia poza kodem
 
-- [ ] Rozpisać lekcję Berlin w `doc/historie.md` według wzoru Seulu.
+- [ ] Rozpisać lekcję Berlin w `docs/historie.md` według wzoru Seulu.
 - [ ] Uzgodnić z topikiem B: kontrakt mockowanych kont i identyfikację użytkownika; listę metryk.
 - [ ] Uzgodnić z topikiem C: `GET /api/stories` dla globusa, ekran końcowy, fiszki ze słabych pojęć.
-- [ ] Zaktualizować `doc/F4-lekcje.md` i `doc/F5-warianty.md` (JSONB → pliki JSON, nowe typy `chat`/swipe, persona tylko w `action`, usunąć wzmiankę o historycznych historiach).
+- [ ] Zaktualizować `docs/F4-lekcje.md` i `docs/F5-warianty.md` (JSONB → pliki JSON, nowe typy `chat`/swipe, persona tylko w `action`, usunąć wzmiankę o historycznych historiach).
 - [ ] Podmienić pin „Tulip mania” na makiecie.

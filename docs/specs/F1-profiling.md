@@ -43,7 +43,7 @@ What the jury should see:
 | 3 | rules only, Jev for answers alone | best | low: Jev barely used |
 
 ## Contract
-Consumers: the consent card and loading screen, F5 lesson variants (`lessonVariant`, `doc/F5-warianty.md` §4), the Profile tab later. Changes here also go to `.planning/decisions.md` and the team channel. Front types: `front/src/types/categorization.ts`; onboarding types stay in `front/src/types/onboarding.ts`; bank types in `front/src/types/bank.ts`.
+Consumers: the consent card and loading screen, F5 lesson variants (`lessonVariant`, `docs/F5-warianty.md` §4), the Profile tab later. Changes here also go to `.planning/decisions.md` and the team channel. Front types: `front/src/types/categorization.ts`; onboarding types stay in `front/src/types/onboarding.ts`; bank types in `front/src/types/bank.ts`.
 
 ```
 POST /api/users/{userId}/categorization       {consent: boolean, facts?: Facts} → Categorization

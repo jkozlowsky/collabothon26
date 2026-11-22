@@ -13,13 +13,14 @@ type Props = {
 
 /** Answer feedback with the why. Right/wrong is told by icon and words, not only colour. */
 export function Feedback({ correct, explanation, onContinue }: Props) {
+  const tone = correct ? colors.feedbackSuccess : colors.feedbackDanger;
   return (
-    <View style={[styles.panel, correct ? styles.correct : styles.wrong]} testID="feedback" accessibilityLiveRegion="polite">
+    <View style={[styles.panel, { borderColor: tone }]} testID="feedback" accessibilityLiveRegion="polite">
       <View style={styles.titleRow}>
-        <View style={[styles.badge, { backgroundColor: correct ? colors.feedbackSuccess : colors.feedbackDanger }]}>
+        <View style={[styles.badge, { backgroundColor: tone }]}>
           <Icon name={correct ? 'check' : 'close'} size={16} color={colors.textOnBrand} />
         </View>
-        <Text style={[styles.title, { color: correct ? colors.feedbackSuccess : colors.feedbackDanger }]}>
+        <Text style={[styles.title, { color: tone }]}>
           {correct ? 'Correct!' : 'Not quite'}
         </Text>
       </View>
@@ -31,9 +32,7 @@ export function Feedback({ correct, explanation, onContinue }: Props) {
 }
 
 const styles = StyleSheet.create({
-  panel: { gap: spacing.md, borderRadius: radii.card, padding: spacing.lg, ...elevation.mid },
-  correct: { backgroundColor: colors.bgSurface, borderWidth: 2, borderColor: colors.feedbackSuccess },
-  wrong: { backgroundColor: colors.bgSurface, borderWidth: 2, borderColor: colors.feedbackDanger },
+  panel: { gap: spacing.md, borderRadius: radii.card, padding: spacing.lg, backgroundColor: colors.bgSurface, borderWidth: 2, ...elevation.mid },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   badge: { width: 24, height: 24, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   title: type.titleSection,

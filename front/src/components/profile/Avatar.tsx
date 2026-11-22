@@ -15,10 +15,15 @@ const BACKGROUND: Record<AvatarId, string> = {
   f3: tints.orange,
 };
 
+type Props = { id: AvatarId; size: number };
+
 export const AVATAR_IDS = Object.keys(AVATAR_SVG) as AvatarId[];
 
+/** Shown until the account has loaded, or when it cannot be loaded. */
+export const DEFAULT_AVATAR: AvatarId = 'm1';
+
 /** An illustrated avatar on a coloured circle. */
-export function Avatar({ id, size }: { id: AvatarId; size: number }) {
+export function Avatar({ id, size }: Props) {
   return (
     <View style={[styles.circle, { width: size, height: size, borderRadius: size / 2 }]}>
       <View style={[StyleSheet.absoluteFill, { backgroundColor: BACKGROUND[id] }]} />

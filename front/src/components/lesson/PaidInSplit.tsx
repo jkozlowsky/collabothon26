@@ -56,7 +56,7 @@ const GROW = { transitionProperty: 'flexGrow', transitionDuration: 250 } satisfi
 
 const styles = StyleSheet.create({
   card: { gap: spacing.md, backgroundColor: colors.bgSurface, borderRadius: radii.card, padding: spacing.lg, ...elevation.low },
-  bar: { flexDirection: 'row', height: 18, borderRadius: radii.pill, overflow: 'hidden', backgroundColor: colors.borderDefault, gap: 2 },
+  bar: { flexDirection: 'row', height: 18, borderRadius: radii.pill, overflow: 'hidden', backgroundColor: colors.borderDefault, gap: spacing.xxs },
   paid: { backgroundColor: colors.brandPrimary, flexBasis: 0 },
   growth: { backgroundColor: colors.feedbackSuccess, flexBasis: 0 },
   legend: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },

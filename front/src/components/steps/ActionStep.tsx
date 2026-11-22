@@ -23,7 +23,9 @@ export function ActionStep({ step, onDone }: Props) {
   const rule = step.rule;
   const [ruleValue, setRuleValue] = useState(rule?.value ?? 0);
   const amount = rule?.appliesTo ? AMOUNTS[rule.appliesTo]?.(state) : undefined;
-  const ruleAmount = amount === undefined ? undefined : rule?.kind === 'multiple' ? amount * ruleValue : (amount * ruleValue) / 100;
+  // A multiple rule is the amount times the value; a share rule is the value as a percent of the amount.
+  const divisor = rule?.kind === 'multiple' ? 1 : 100;
+  const ruleAmount = amount === undefined ? undefined : (amount * ruleValue) / divisor;
   // Months the compared amount covers (savings ÷ monthly spending), for the months meter.
   const compared = rule?.kind === 'multiple' && rule.compareTo ? AMOUNTS[rule.compareTo]?.(state) : undefined;
   const haveMonths = compared !== undefined && amount ? compared / amount : undefined;

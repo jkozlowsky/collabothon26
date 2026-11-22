@@ -7,7 +7,9 @@ import type { BankIconName } from '@/types/bank';
 
 type Props = { name: BankIconName; size?: number; color: string };
 
-type Glyph = { set: 'feather'; name: ComponentProps<typeof Feather>['name'] } | { set: 'ion'; name: ComponentProps<typeof Ionicons>['name'] }
+type Glyph =
+  | { set: 'feather'; name: ComponentProps<typeof Feather>['name'] }
+  | { set: 'ion'; name: ComponentProps<typeof Ionicons>['name'] }
   | { set: 'mci'; name: ComponentProps<typeof MaterialCommunityIcons>['name'] };
 
 /** Figma uses 2px-stroke line icons; Feather matches them, Ionicons outline and Material Community fill the few gaps (swords, bot, brain, coins). */

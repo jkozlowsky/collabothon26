@@ -8,10 +8,12 @@ import { MatchmakingView } from '@/components/duel/MatchmakingView';
 import { QuestionView } from '@/components/duel/QuestionView';
 import { ResultView } from '@/components/duel/ResultView';
 import { WaitingView } from '@/components/duel/WaitingView';
+import { DEFAULT_AVATAR } from '@/components/profile/Avatar';
 import { useAccount } from '@/hooks/useAccount';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useOpenLearn } from '@/hooks/useOpenLearn';
 import { isDuelMode } from '@/lib/duel/meta';
+import { backToLobby } from '@/lib/duel/navigation';
 import { useDuelMatch } from '@/lib/duel/useDuelMatch';
 import type { DuelMode } from '@/types/duel';
 
@@ -57,31 +59,22 @@ function MatchSession({
   mode: DuelMode;
   reloadMatchId?: number;
 }) {
-  const {
-    state,
-    search,
-    secondsLeft,
-    submitAnswer,
-    nextQuestion,
-    leave,
-    retry,
-  } = useDuelMatch({ categories, mode, reloadMatchId });
+  const { state, search, secondsLeft, submitAnswer, nextQuestion, leave, retry } = useDuelMatch({
+    categories,
+    mode,
+    reloadMatchId,
+  });
+  const { account } = useAccount();
+  const youAvatar = account?.avatar ?? state.you?.avatar ?? DEFAULT_AVATAR;
 
   function exitToLobby() {
     leave();
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/duel');
-    }
+    backToLobby();
   }
 
   function openRankings() {
     router.replace('/duel/rankings');
   }
-
-  const { account } = useAccount();
-  const youAvatar = account?.avatar ?? state.you?.avatar ?? 'm1';
 
   if (state.error && state.phase !== 'result') {
     return (
@@ -115,7 +108,6 @@ function MatchSession({
         result={state.result}
         youName={account?.firstName ?? state.you?.name}
         youAvatar={youAvatar}
-        onPlayAgain={retry}
         onSeeRankings={openRankings}
         onBackToLobby={exitToLobby}
       />

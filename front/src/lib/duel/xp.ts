@@ -1,7 +1,7 @@
 import type { CategoryMatchEnd } from '@/types/duel';
 
 /** XP to climb from level n to n+1 (same curve as the backend's LevelCurve). */
-export function levelCost(level: number): number {
+function levelCost(level: number): number {
   return Math.round(20 + 2 * level ** 1.15);
 }
 

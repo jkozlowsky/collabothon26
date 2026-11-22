@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useReducedMotion } from 'react-native-reanimated';
 
-const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
+export const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 
 /** A number that runs from `from` to `to` over `ms`, eased out; jumps straight to `to` under reduced motion. */
 export function useCountUp(to: number, { from = 0, ms = 900, delay = 0 }: { from?: number; ms?: number; delay?: number } = {}) {

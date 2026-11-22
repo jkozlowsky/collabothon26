@@ -11,6 +11,9 @@ type Props = {
   children: ReactNode;
 };
 
+/** Brings the 16 px link up to a 44 px touch target; it stays inside the 12 px gap under the header. */
+const ACTION_HIT_SLOP = 14;
+
 /** A titled block of the bank page (Figma: Title/Section + Label/Strong link). */
 export function Section({ title, action, children }: Props) {
   return (
@@ -20,7 +23,7 @@ export function Section({ title, action, children }: Props) {
           {title}
         </Text>
         {action && (
-          <Tappable onPress={action.onPress} accessibilityRole="button" testID={action.testID} hitSlop={8}>
+          <Tappable onPress={action.onPress} accessibilityRole="button" testID={action.testID} hitSlop={ACTION_HIT_SLOP}>
             <Text style={styles.action}>{action.label}</Text>
           </Tappable>
         )}

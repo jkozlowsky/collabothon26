@@ -66,9 +66,10 @@ export function resolveScene(scene: Scene, choices: Record<string, number>, metr
 
 /** Seconds an amount stays on screen: until the next amount starts, else to the end. */
 export function amountUntil(layers: readonly ResolvedLayer[], index: number, length: number): number {
-  const at = (layers[index] as ResolvedAmount).at ?? 0;
-  const later = layers.filter((l, i) => i !== index && l.kind === 'amount' && ((l as ResolvedAmount).at ?? 0) > at);
-  return Math.min(length, ...later.map((l) => (l as ResolvedAmount).at ?? 0));
+  const startOf = (layer: ResolvedLayer) => (layer.kind === 'amount' ? (layer.at ?? 0) : 0);
+  const at = startOf(layers[index]);
+  const later = layers.filter((l, i) => i !== index && l.kind === 'amount').map(startOf);
+  return Math.min(length, ...later.filter((start) => start > at));
 }
 
 const SYMBOLS: Record<string, string> = { KRW: '₩', EUR: '€', BRL: 'R$', JPY: '¥', USD: '$' };

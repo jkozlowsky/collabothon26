@@ -68,7 +68,7 @@ export function ListRow({ icon, title, meta, value, valueNote, tone = 'default',
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: 12, paddingVertical: 10, minHeight: 60 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.smPlus, minHeight: 60 },
   pressed: { backgroundColor: colors.bgCanvas },
   tile: {
     width: 36,
@@ -78,10 +78,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  body: { flex: 1, gap: 2 },
+  body: { flex: 1, gap: spacing.xxs },
   title: type.titleCard,
   meta: { ...type.labelDefault, color: colors.textMuted },
-  right: { alignItems: 'flex-end', gap: 2, flexShrink: 0 },
+  right: { alignItems: 'flex-end', gap: spacing.xxs, flexShrink: 0 },
   value: type.titleCard,
   note: { ...type.labelDefault, color: colors.textMuted },
 });

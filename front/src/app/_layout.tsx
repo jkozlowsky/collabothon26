@@ -24,6 +24,15 @@ import { CurrentUserProvider, useCurrentUser } from '@/lib/user';
 /** Widest "phone" on web; on a wide desktop window the app is centered at this width. */
 const WEB_PHONE_WIDTH = 430;
 
+/** The native header of the story and lesson screens: a back arrow on the canvas colour, no title, no shadow. */
+const BARE_HEADER = {
+  headerShown: true,
+  title: '',
+  headerShadowVisible: false,
+  headerTintColor: colors.brandPrimary,
+  headerStyle: { backgroundColor: colors.bgCanvas },
+};
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
@@ -60,12 +69,13 @@ function RootContent() {
   const persona = personaFor(userId);
 
   return (
+    // Keyed by user: switching accounts remounts every provider below, so none keeps the previous user's state.
     <OnboardingProvider key={userId}>
-      <AccountProvider key={userId}>
-        <BankProvider key={userId} seed={persona.bankSeed}>
-          <ToastProvider key={userId}>
-            <TransferSheetProvider key={userId}>
-              <SpotlightProvider key={userId}>
+      <AccountProvider>
+        <BankProvider seed={persona.bankSeed}>
+          <ToastProvider>
+            <TransferSheetProvider>
+              <SpotlightProvider>
                 <RootStack />
               </SpotlightProvider>
             </TransferSheetProvider>
@@ -96,26 +106,10 @@ function RootStack() {
         {/* A fresh onboarding continues here; leaveOnboardingForCheck opens it. */}
         <Stack.Screen name="categorizing" options={{ animation: 'fade' }} />
         <Stack.Screen name="learning-path" options={{ animation: 'fade' }} />
-        <Stack.Screen
-          name="story/[id]"
-          options={{
-            headerShown: true,
-            title: '',
-            headerShadowVisible: false,
-            headerTintColor: colors.brandPrimary,
-            headerStyle: { backgroundColor: colors.bgCanvas },
-          }}
-        />
+        <Stack.Screen name="story/[id]" options={BARE_HEADER} />
         <Stack.Screen
           name="lesson/[id]"
-          options={{
-            headerShown: true,
-            title: '',
-            headerShadowVisible: false,
-            headerTintColor: colors.brandPrimary,
-            headerStyle: { backgroundColor: colors.bgCanvas },
-            headerTitleStyle: { fontFamily: fonts.semiBold, color: colors.textPrimary },
-          }}
+          options={{ ...BARE_HEADER, headerTitleStyle: { fontFamily: fonts.semiBold, color: colors.textPrimary } }}
         />
         <Stack.Screen name="offers/[id]" options={{ animation: 'slide_from_right' }} />
       </Stack.Protected>

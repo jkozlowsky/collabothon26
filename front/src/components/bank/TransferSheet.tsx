@@ -21,6 +21,10 @@ type Step = 'recipient' | 'amount' | 'confirm' | 'done';
 
 type Props = { start: TransferStart | null; onClose: () => void };
 
+const TITLE: Record<Step, string> = { recipient: 'Send money', amount: 'Amount', confirm: 'Check and send', done: 'Sent' };
+/** Where the sheet's back arrow leads; the first and the last step have none. */
+const PREVIOUS: Partial<Record<Step, Step>> = { amount: 'recipient', confirm: 'amount' };
+
 /** Three-step transfer: recipient → amount → confirm, then a success state. Books into the mock bank. */
 export function TransferSheet({ start, onClose }: Props) {
   const { state, sendTransfer } = useBank();
@@ -37,12 +41,11 @@ export function TransferSheet({ start, onClose }: Props) {
   const [sent, setSent] = useState<{ amount: number; name: string } | null>(null);
 
   const amount = parseAmount(amountText) ?? 0;
-  const contact = recipient ? resolveRecipient(state, { recipient, amount: 1, reference: '' }) : null;
+  const contact = recipient ? resolveRecipient(state, recipient) : null;
   const amountError = recipient && amountText ? validateTransfer(state, { recipient, amount, reference }) : null;
   const newRecipientError = name.trim() && iban && !isValidIban(iban) ? 'Enter a German IBAN: DE followed by 20 digits.' : null;
 
-  const back =
-    step === 'amount' ? () => setStep('recipient') : step === 'confirm' ? () => setStep('amount') : undefined;
+  const previous = PREVIOUS[step];
 
   const send = () => {
     if (!recipient || !contact) return;
@@ -53,54 +56,49 @@ export function TransferSheet({ start, onClose }: Props) {
     }
   };
 
-  const title = { recipient: 'Send money', amount: 'Amount', confirm: 'Check and send', done: 'Sent' }[step];
-
   return (
-    <Sheet visible={!!start} onClose={onClose} title={title} onBack={back} testID="transfer-sheet">
+    <Sheet visible={!!start} onClose={onClose} title={TITLE[step]} onBack={previous && (() => setStep(previous))} testID="transfer-sheet">
       <Animated.View key={step} style={[styles.step, motion.swap]}>
-        {step === 'recipient' && (
-          <>
-            {!newMode ? (
-              <>
-                <View style={styles.contacts}>
-                  {state.contacts.map((c) => (
-                    <ContactAvatar
-                      key={c.id}
-                      contact={c}
-                      onPress={() => {
-                        setRecipient({ contactId: c.id });
-                        setStep('amount');
-                      }}
-                    />
-                  ))}
-                </View>
-                <Button label="New recipient" variant="secondary" onPress={() => setNewMode(true)} testID="transfer-new" />
-              </>
-            ) : (
-              <>
-                <Field label="Name" value={name} onChangeText={setName} placeholder="e.g. Julia Weber" testID="transfer-name" />
-                <Field
-                  label="IBAN"
-                  value={iban}
-                  onChangeText={setIban}
-                  placeholder="DE00 0000 0000 0000 0000 00"
-                  autoCapitalize="characters"
-                  testID="transfer-iban"
-                />
-                {newRecipientError && <Text style={styles.error}>{newRecipientError}</Text>}
-                <Button
-                  label="Continue"
-                  onPress={() => {
-                    if (!name.trim() || !isValidIban(iban)) return;
-                    setRecipient({ name: name.trim(), iban });
-                    setStep('amount');
-                  }}
-                  testID="transfer-recipient-continue"
-                />
-              </>
-            )}
-          </>
-        )}
+        {step === 'recipient' &&
+          (newMode ? (
+            <>
+              <Field label="Name" value={name} onChangeText={setName} placeholder="e.g. Julia Weber" testID="transfer-name" />
+              <Field
+                label="IBAN"
+                value={iban}
+                onChangeText={setIban}
+                placeholder="DE00 0000 0000 0000 0000 00"
+                autoCapitalize="characters"
+                testID="transfer-iban"
+              />
+              {newRecipientError && <Text style={styles.error}>{newRecipientError}</Text>}
+              <Button
+                label="Continue"
+                onPress={() => {
+                  if (!name.trim() || !isValidIban(iban)) return;
+                  setRecipient({ name: name.trim(), iban });
+                  setStep('amount');
+                }}
+                testID="transfer-recipient-continue"
+              />
+            </>
+          ) : (
+            <>
+              <View style={styles.contacts}>
+                {state.contacts.map((c) => (
+                  <ContactAvatar
+                    key={c.id}
+                    contact={c}
+                    onPress={() => {
+                      setRecipient({ contactId: c.id });
+                      setStep('amount');
+                    }}
+                  />
+                ))}
+              </View>
+              <Button label="New recipient" variant="secondary" onPress={() => setNewMode(true)} testID="transfer-new" />
+            </>
+          ))}
 
         {step === 'amount' && contact && (
           <>

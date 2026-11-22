@@ -39,6 +39,7 @@ type Props = {
 export function VideoLessonPlayer({ lesson, session, onClose, onNext, onOpenGlossary, onOffers }: Props) {
   const { progress, xp, complete, switchTo } = session;
   const { beats, scenes } = lesson.video;
+  const nextLesson = lesson.next;
   const { state: bank } = useBank();
   const reducedMotion = useReducedMotion();
   const window = useWindowDimensions();
@@ -135,7 +136,7 @@ export function VideoLessonPlayer({ lesson, session, onClose, onNext, onOpenGlos
                 xp={xp}
                 concepts={lesson.concepts.map((key) => ({ key, term: lesson.glossary[key]?.term ?? key, weak: weak.has(key) }))}
                 onConcept={setConcept}
-                onNext={lesson.next ? () => onNext(lesson.next!) : undefined}
+                onNext={nextLesson ? () => onNext(nextLesson) : undefined}
                 onOffers={onOffers}
                 onClose={onClose}
                 onWatchAgain={

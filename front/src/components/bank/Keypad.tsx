@@ -7,9 +7,13 @@ import { colors, radii, type } from '@/constants/theme';
 type Props = { value: string; onChange: (next: string) => void };
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'back'] as const;
+type Key = (typeof KEYS)[number];
+
+/** Spoken names of the keys that are not a digit. */
+const KEY_LABEL: Partial<Record<Key, string>> = { back: 'Delete', '.': 'Decimal point' };
 
 /** Applies one key to the typed amount: one decimal point, at most 2 decimals, max 7 whole digits. */
-export function pressKey(value: string, key: (typeof KEYS)[number]): string {
+export function pressKey(value: string, key: Key): string {
   if (key === 'back') return value.slice(0, -1);
   if (key === '.') return value.includes('.') ? value : `${value || '0'}.`;
   const [whole, dec] = value.split('.');
@@ -28,7 +32,7 @@ export function Keypad({ value, onChange }: Props) {
           key={k}
           onPress={() => onChange(pressKey(value, k))}
           accessibilityRole="button"
-          accessibilityLabel={k === 'back' ? 'Delete' : k === '.' ? 'Decimal point' : k}
+          accessibilityLabel={KEY_LABEL[k] ?? k}
           testID={`key-${k === '.' ? 'dot' : k}`}
           haptic="selection"
           pressedScale={0.94}

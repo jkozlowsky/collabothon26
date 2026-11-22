@@ -47,13 +47,17 @@ export async function getDeviceId(): Promise<string> {
       cachedDeviceId = stored;
       return stored;
     }
-  } catch {}
+  } catch {
+    // Storage unavailable (private mode, quota): carry on with a fresh id.
+  }
 
   const fresh = generateUuid();
   cachedDeviceId = fresh;
   try {
     await AsyncStorage.setItem(DEVICE_ID_KEY, fresh);
-  } catch {}
+  } catch {
+    // Not persisted: the id still holds for this run from the cache.
+  }
   return fresh;
 }
 
@@ -84,7 +88,9 @@ export async function releaseSession(userId: string, deviceId: string): Promise<
     await api<void>(`/api/users/${encodeURIComponent(userId)}/session?deviceId=${encodeURIComponent(deviceId)}`, {
       method: 'DELETE',
     });
-  } catch {}
+  } catch {
+    // Best effort: a session that was not released expires by its TTL on the backend.
+  }
 }
 
 export type HeartbeatHandle = {

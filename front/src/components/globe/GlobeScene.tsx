@@ -91,9 +91,15 @@ void main() {
 export function GlobeScene({ radius, yaw, pitch, zoom, offsetY = 0, active, onFail, onReady }: Props) {
   const drawn = useRef(false);
   useEffect(() => {
-    const timer = setTimeout(() => !drawn.current && onFail(), FIRST_FRAME_TIMEOUT);
+    const timer = setTimeout(() => {
+      if (!drawn.current) onFail();
+    }, FIRST_FRAME_TIMEOUT);
     return () => clearTimeout(timer);
   }, [onFail]);
+  const onFirstFrame = () => {
+    drawn.current = true;
+    onReady?.();
+  };
 
   return (
     <Canvas
@@ -102,15 +108,18 @@ export function GlobeScene({ radius, yaw, pitch, zoom, offsetY = 0, active, onFa
       frameloop={active ? 'demand' : 'never'}
       gl={{ antialias: true, alpha: true }}
     >
-      <Sphere yaw={yaw} pitch={pitch} zoom={zoom} lift={offsetY / radius} onFirstFrame={() => {
-          drawn.current = true;
-          onReady?.();
-        }} />
+      <Sphere yaw={yaw} pitch={pitch} zoom={zoom} lift={offsetY / radius} onFirstFrame={onFirstFrame} />
     </Canvas>
   );
 }
 
-function Sphere({ yaw, pitch, zoom, lift, onFirstFrame }: Pick<Props, 'yaw' | 'pitch' | 'zoom'> & { lift: number; onFirstFrame: () => void }) {
+type SphereProps = Pick<Props, 'yaw' | 'pitch' | 'zoom'> & {
+  /** How far above the canvas centre the sphere sits, in sphere radii. */
+  lift: number;
+  onFirstFrame: () => void;
+};
+
+function Sphere({ yaw, pitch, zoom, lift, onFirstFrame }: SphereProps) {
   const group = useRef<Group>(null);
   const invalidate = useThree((s) => s.invalidate);
   const loaded = useLoader(TextureLoader, landUri());

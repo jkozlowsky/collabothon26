@@ -8,7 +8,7 @@ import type { Phase } from '@/types/lessons';
 /** The current step's place in the lesson flow, set by StepView, shown as a label over the step. */
 export const PhaseContext = createContext<Phase | undefined>(undefined);
 
-export const PHASE_LABEL: Record<Phase, string> = {
+const PHASE_LABEL: Record<Phase, string> = {
   learn: 'Learn',
   challenge: 'Challenge',
   you: 'Your situation',
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderDefault,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
   },
   phaseYou: { color: colors.textOnBrand, backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
   prompt: type.titleSection,

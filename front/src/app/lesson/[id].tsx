@@ -59,8 +59,7 @@ function LessonRun({ lesson }: { lesson: Lesson }) {
   const session = useLessonSession(lesson, { saveResult, rememberMode });
 
   // The last lesson of a city, finished for the first time: the map plays the "city done" flight.
-  const pathDone =
-    lesson.next === null && lesson.position === lesson.total && typeof session.xp === 'number' && session.xp > 0 ? { city: lesson.city } : undefined;
+  const pathDone = lesson.next === null && lesson.position === lesson.total && typeof session.xp === 'number' && session.xp > 0;
   const close = () => {
     if (pathDone) router.dismissTo({ pathname: '/map', params: { celebrate: lesson.story } });
     else if (router.canGoBack()) router.back();

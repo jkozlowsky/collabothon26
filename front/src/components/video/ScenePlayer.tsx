@@ -1,5 +1,5 @@
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
@@ -52,8 +52,16 @@ type Props = {
   reducedMotion: boolean;
 };
 
+type MediaButtonProps = {
+  icon: 'close' | 'volume-on' | 'volume-off' | 'replay' | 'pause' | 'play-fill';
+  label: string;
+  onPress: () => void;
+  testID: string;
+};
+
 /** Drift between the narration and the clock that triggers a resync, in seconds. */
 const MAX_DRIFT = 0.15;
+const CAPTION_FADE_MS = 200;
 
 /**
  * The full-screen dark video player: segments, title row (close, lesson, mute, transcript), the scene, captions,
@@ -142,26 +150,29 @@ export function ScenePlayer({
     if (latest.current.hasAudio) player.pause();
   }, [t, player]);
 
+  const startOnMount = useEffectEvent(() => {
+    if (!autoplay) return;
+    run(0);
+    if (latest.current.hasAudio) player.play();
+  });
+  // Runs once: `t` is the same shared value for the player's life, and the parent remounts it for a new scene.
   useEffect(() => {
-    if (autoplay) {
-      run(0);
-      if (latest.current.hasAudio) player.play();
-    }
+    startOnMount();
     return () => cancelAnimation(t);
-    // Mount only: the parent remounts the player for a new scene.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [t]);
 
   // The file usually loads after the scene started on its JSON timing: retarget the clock to the file's length
   // and start the narration where the clock is.
-  useEffect(() => {
-    if (!hasAudio || !playing || endedRef.current) return;
+  const syncToAudio = useEffectEvent(() => {
+    if (!playing || endedRef.current) return;
     const at = t.get();
     run(at);
     player.seekTo(at).catch(() => {});
     player.play();
-    // Only when the file becomes ready.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+  // Only when the file becomes ready: pausing and resuming go through `play`.
+  useEffect(() => {
+    if (hasAudio) syncToAudio();
   }, [hasAudio]);
 
   // The narration is the master: resync the clock when it drifts, end the scene with the file.
@@ -196,11 +207,11 @@ export function ScenePlayer({
   const progressStyle = useAnimatedStyle(() => ({ width: `${layerProgress(t.get(), 0, length) * 100}%` }));
 
   const line = caption >= 0 ? captions[caption]?.text : undefined;
-  const control = ended
-    ? { icon: 'replay' as const, label: 'Replay', onPress: () => play(true) }
+  const control: Omit<MediaButtonProps, 'testID'> = ended
+    ? { icon: 'replay', label: 'Replay', onPress: () => play(true) }
     : playing
-      ? { icon: 'pause' as const, label: 'Pause', onPress: pause }
-      : { icon: 'play-fill' as const, label: 'Play', onPress: () => play(false) };
+      ? { icon: 'pause', label: 'Pause', onPress: pause }
+      : { icon: 'play-fill', label: 'Play', onPress: () => play(false) };
 
   // Scenes are drawn landscape: full width at their own ratio, centred in the vertical player.
   const sceneHeight = Math.min(height, Math.round((width * CANVAS.height) / CANVAS.width));
@@ -257,14 +268,14 @@ export function ScenePlayer({
 
       <View style={styles.captions} pointerEvents="none" aria-hidden>
         {line && (
-          <Animated.Text key={caption} entering={reducedMotion ? undefined : FadeIn.duration(200)} style={styles.caption} numberOfLines={2} testID="scene-caption">
+          <Animated.Text key={caption} entering={reducedMotion ? undefined : FadeIn.duration(CAPTION_FADE_MS)} style={styles.caption} numberOfLines={2} testID="scene-caption">
             {line}
           </Animated.Text>
         )}
       </View>
 
       <View style={styles.bottom}>
-        <MediaButton icon={control.icon} label={control.label} onPress={control.onPress} testID="scene-play" />
+        <MediaButton {...control} testID="scene-play" />
         <View style={styles.track}>
           <Animated.View style={[styles.fill, progressStyle]} />
         </View>
@@ -278,7 +289,7 @@ export function ScenePlayer({
   );
 }
 
-function MediaButton({ icon, label, onPress, testID }: { icon: 'close' | 'volume-on' | 'volume-off' | 'replay' | 'pause' | 'play-fill'; label: string; onPress: () => void; testID: string }) {
+function MediaButton({ icon, label, onPress, testID }: MediaButtonProps) {
   return (
     <Tappable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} testID={testID} style={styles.iconButton}>
       <Icon name={icon} size={22} color={scenePalette.onScene} />
@@ -290,7 +301,7 @@ function MediaButton({ icon, label, onPress, testID }: { icon: 'close' | 'volume
 function Scrim({ edge, height }: { edge: 'top' | 'bottom'; height: number }) {
   const id = `scrim-${edge}`;
   return (
-    <Svg pointerEvents="none" style={[styles.scrim, edge === 'top' ? { top: 0 } : { bottom: 0 }, { height }]} width="100%" height={height}>
+    <Svg pointerEvents="none" style={[styles.scrim, edge === 'top' ? styles.scrimTop : styles.scrimBottom, { height }]} width="100%" height={height}>
       <Defs>
         <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor={edge === 'top' ? scenePalette.scrimStrong : scenePalette.scrimClear} />
@@ -306,6 +317,8 @@ const styles = StyleSheet.create({
   player: { backgroundColor: scenePalette.surface, overflow: 'hidden' },
   scene: { position: 'absolute', left: 0, right: 0 },
   scrim: { position: 'absolute', left: 0, right: 0 },
+  scrimTop: { top: 0 },
+  scrimBottom: { bottom: 0 },
   top: { position: 'absolute', top: 0, left: 0, right: 0, gap: spacing.xs, paddingHorizontal: spacing.sm },
   segments: { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.xs },
   segment: { flex: 1, height: 3, borderRadius: 2 },

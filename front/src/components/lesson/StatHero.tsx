@@ -1,7 +1,7 @@
+import Feather from '@expo/vector-icons/Feather';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
-import Feather from '@expo/vector-icons/Feather';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import { formatLike, parseDisplayNumber, useCountUp } from '@/hooks/useCountUp';
 import type { Stat } from '@/types/lessons';

@@ -8,6 +8,8 @@ export type DuelSocketStatus = 'idle' | 'connecting' | 'open' | 'closed';
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 8000;
 const PING_INTERVAL_MS = 25_000;
+/** `WebSocket.OPEN`. */
+const SOCKET_OPEN = 1;
 
 /** `http(s)://host` → `ws(s)://host/ws/duel?userId=&deviceId=`. */
 export function duelSocketUrl(apiUrl: string, userId: string, deviceId: string): string {
@@ -54,8 +56,9 @@ export function useDuelSocket({ userId, deviceId, enabled, onMessage }: Params):
   }, [onMessage, active]);
 
   useEffect(() => {
-    if (!active) return;
+    if (!active || !deviceId) return;
 
+    const url = duelSocketUrl(API_URL, userId, deviceId);
     let disposed = false;
     let attempt = 0;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
@@ -66,7 +69,7 @@ export function useDuelSocket({ userId, deviceId, enabled, onMessage }: Params):
       setStatus('connecting');
       let socket: WebSocket;
       try {
-        socket = new WebSocket(duelSocketUrl(API_URL, userId, deviceId as string));
+        socket = new WebSocket(url);
       } catch {
         openWaitersRef.current.splice(0).forEach((resolve) => resolve(false));
         scheduleReconnect();
@@ -79,7 +82,7 @@ export function useDuelSocket({ userId, deviceId, enabled, onMessage }: Params):
         setStatus('open');
         openWaitersRef.current.splice(0).forEach((resolve) => resolve(true));
         pingTimer = setInterval(() => {
-          if (socket.readyState === 1) socket.send(JSON.stringify({ type: 'ping' }));
+          if (socket.readyState === SOCKET_OPEN) socket.send(JSON.stringify({ type: 'ping' }));
         }, PING_INTERVAL_MS);
       };
 
@@ -130,7 +133,7 @@ export function useDuelSocket({ userId, deviceId, enabled, onMessage }: Params):
 
   const send = useCallback((message: DuelSocketRequest) => {
     const socket = socketRef.current;
-    if (!socket || socket.readyState !== 1) return false;
+    if (!socket || socket.readyState !== SOCKET_OPEN) return false;
     socket.send(JSON.stringify(message));
     return true;
   }, []);
@@ -138,7 +141,7 @@ export function useDuelSocket({ userId, deviceId, enabled, onMessage }: Params):
   const waitForOpen = useCallback((timeoutMs: number) => {
     if (!activeRef.current) return Promise.resolve(false);
     const socket = socketRef.current;
-    if (socket && socket.readyState === 1) return Promise.resolve(true);
+    if (socket && socket.readyState === SOCKET_OPEN) return Promise.resolve(true);
     return new Promise<boolean>((resolve) => {
       const timer = setTimeout(() => {
         openWaitersRef.current = openWaitersRef.current.filter((waiter) => waiter !== done);

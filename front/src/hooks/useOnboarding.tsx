@@ -23,17 +23,20 @@ const OnboardingContext = createContext<OnboardingState | null>(null);
 
 const EMPTY_ANSWERS: OnboardingAnswers = { interests: [] };
 
-/** Profile writes run in order, so a reset's DELETE can never land after the next onboarding's PUT. */
-let profileWrites: Promise<unknown> = Promise.resolve();
+/** The last queued profile write. At module scope because code outside React waits for it (see profileWritesSettled). */
+let lastProfileWrite: Promise<unknown> = Promise.resolve();
 /** Resolves once every queued profile write has landed (or failed). */
-export const profileWritesSettled = () => profileWrites;
+export const profileWritesSettled = () => lastProfileWrite;
 export function resetProfileWrites() {
-  profileWrites = Promise.resolve();
+  lastProfileWrite = Promise.resolve();
 }
 
-function writeProfile(userId: string, init: RequestInit, failure: string) {
+// Writes are serialised: each starts when the one before has settled, so a reset's DELETE can never land after the next onboarding's PUT.
+function enqueueProfileWrite(userId: string, init: RequestInit, failure: string) {
   const onboardingPath = `/api/users/${encodeURIComponent(userId)}/profile/onboarding`;
-  profileWrites = profileWrites.then(() => api(onboardingPath, init)).catch((e: unknown) => console.warn(failure, e));
+  lastProfileWrite = lastProfileWrite
+    .then(() => api(onboardingPath, init))
+    .catch((e: unknown) => console.warn(failure, e));
 }
 
 function toAnswers(p: UserProfile): OnboardingAnswers {
@@ -57,17 +60,16 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     api<UserProfile>(profilePath)
-      .then(
-        (p) =>
-          !cancelled &&
-          setState({
-            loaded: true,
-            intake: null,
-            // The profile's flag decides: onboarding shows until the user finished it once.
-            done: p.onboardingCompleted,
-            answers: p.onboardingCompleted ? toAnswers(p) : EMPTY_ANSWERS,
-          }),
-      )
+      .then((p) => {
+        if (cancelled) return;
+        setState({
+          loaded: true,
+          intake: null,
+          // The profile's flag decides: onboarding shows until the user finished it once.
+          done: p.onboardingCompleted,
+          answers: p.onboardingCompleted ? toAnswers(p) : EMPTY_ANSWERS,
+        });
+      })
       .catch((e: unknown) => {
         if (cancelled) return;
         // Backend unreachable: show onboarding rather than block the app.
@@ -82,12 +84,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const complete = useCallback((answers: OnboardingAnswers, intake: Intake | null = null) => {
     // Move on right away; the save runs in the background so a slow network never blocks the user.
     setState({ loaded: true, done: true, answers, intake });
-    writeProfile(userId, { method: 'PUT', body: JSON.stringify({ ...answers, skipped: false }) }, 'Could not save onboarding answers');
+    enqueueProfileWrite(userId, { method: 'PUT', body: JSON.stringify({ ...answers, skipped: false }) }, 'Could not save onboarding answers');
   }, [userId]);
 
   const reset = useCallback(() => {
     setState({ loaded: true, done: false, answers: EMPTY_ANSWERS, intake: null });
-    writeProfile(userId, { method: 'DELETE' }, 'Could not reset profile');
+    enqueueProfileWrite(userId, { method: 'DELETE' }, 'Could not reset profile');
   }, [userId]);
 
   const value = useMemo(() => ({ ...state, complete, reset }), [state, complete, reset]);

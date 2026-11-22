@@ -121,3 +121,9 @@ export function orientationFacing(v: Vec3, fromYaw = 0): Orientation {
   const yaw = -toRad(lng);
   return { yaw: fromYaw + wrapAngle(yaw - fromYaw), pitch: clampPitch(toRad(lat)) };
 }
+
+/** Centre of the view as a point on the sphere (inverse of orientationFacing). */
+export function viewCentre(yaw: number, pitch: number): Vec3 {
+  'worklet';
+  return latLngToVector({ lat: (pitch * 180) / Math.PI, lng: (-yaw * 180) / Math.PI });
+}

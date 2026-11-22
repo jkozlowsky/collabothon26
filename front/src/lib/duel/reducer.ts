@@ -66,16 +66,14 @@ export type DuelAction =
   | { type: 'match.state'; state: MatchState }
   | { type: 'match.end'; result: MatchEnd }
   | { type: 'error'; code: string; message: string }
-  | { type: 'ui.clearError' }
-  | { type: 'ui.reset'; categories: string[]; mode: DuelMode };
+  | { type: 'ui.clearError' };
 
 const DEFAULT_QUESTION_COUNT = 6;
+/** XP shown in the feedback for a correct answer against a rival; solo practice earns none. */
+const XP_PER_CORRECT_ANSWER = 5;
 
-function emptyDots(count: number): LocalDot[] {
-  return Array.from({ length: count }, () => null);
-}
-
-function emptyRivalResults(count: number): DotResult[] {
+/** Unanswered dots, for either player. */
+function emptyDots(count: number): null[] {
   return Array.from({ length: count }, () => null);
 }
 
@@ -99,7 +97,7 @@ export function createInitialDuelState(
     you: null,
     rival: null,
     yourDots: initialDots,
-    rivalDots: emptyRivalResults(DEFAULT_QUESTION_COUNT),
+    rivalDots: emptyDots(DEFAULT_QUESTION_COUNT),
     rivalAnswered: 0,
 
     question: null,
@@ -155,7 +153,7 @@ export function duelReducer(state: DuelMatchState, action: DuelAction): DuelMatc
         questionCount: payload.questionCount,
         question: payload.question,
         yourDots: emptyDots(payload.questionCount),
-        rivalDots: emptyRivalResults(payload.questionCount),
+        rivalDots: emptyDots(payload.questionCount),
         rivalAnswered: 0,
         feedback: null,
         nextQuestion: null,
@@ -194,7 +192,7 @@ export function duelReducer(state: DuelMatchState, action: DuelAction): DuelMatc
           index: action.index,
           correct: action.correct,
           timedOut: action.timedOut,
-          xpGained: action.correct && state.mode === 'HUMAN' ? 5 : 0,
+          xpGained: action.correct && state.mode === 'HUMAN' ? XP_PER_CORRECT_ANSWER : 0,
         },
         nextQuestion: action.nextQuestion,
         yourFinal: action.yourFinal ?? state.yourFinal,
@@ -216,7 +214,7 @@ export function duelReducer(state: DuelMatchState, action: DuelAction): DuelMatc
       // All questions answered: wait for rival or show result
       return {
         ...state,
-        phase: state.result ? 'result' : state.finished ? 'result' : 'waiting',
+        phase: state.result || state.finished ? 'result' : 'waiting',
         question: null,
         feedback: null,
       };
@@ -287,10 +285,6 @@ export function duelReducer(state: DuelMatchState, action: DuelAction): DuelMatc
 
     case 'ui.clearError': {
       return { ...state, error: null };
-    }
-
-    case 'ui.reset': {
-      return createInitialDuelState(action.categories, action.mode);
     }
 
     default:

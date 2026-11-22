@@ -165,7 +165,7 @@ function LevelUpItem({ item, onNext, testID }: { item: CategoryMatchEnd; onNext:
         <View style={styles.badgeArea}>
           <Rays color={colors.brandAccent} />
           <Shockwave delayMs={120} color={colors.brandAccent} />
-          <Shockwave delayMs={380} color="#FFFFFF" />
+          <Shockwave delayMs={380} color={colors.textOnBrand} />
           <Animated.View style={[styles.badge, { backgroundColor: meta.accent }, badgeStyle]} testID="level-up-badge">
             <Feather name={meta.icon as keyof typeof Feather.glyphMap} size={56} color={colors.textOnBrand} />
           </Animated.View>
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   category: { ...type.titleSection, color: colors.onBrandMuted, textAlign: 'center', marginTop: -spacing.md },
   levels: { flexDirection: 'row', alignItems: 'center', gap: spacing.smPlus, marginTop: -spacing.xs },
   chipFrom: { backgroundColor: colors.onBrandSubtle, paddingVertical: spacing.sm, paddingHorizontal: spacing.mdPlus, borderRadius: radii.pill },
-  chipFromText: { fontFamily: fonts.semiBold, fontSize: 15, lineHeight: 20, color: colors.onBrandMuted },
+  chipFromText: { ...type.titleCard, color: colors.onBrandMuted },
   chipTo: { backgroundColor: colors.brandAccent, paddingVertical: spacing.sm, paddingHorizontal: spacing.mdPlus, borderRadius: radii.pill },
   chipToText: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.textOnAccent },
   progress: { alignItems: 'center', gap: spacing.sm, marginTop: -spacing.xs },

@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     fontSize: 16,
     lineHeight: 20,
-    color: '#FFFFFF',
+    color: colors.textOnBrand,
   },
   main: {
     flex: 1,

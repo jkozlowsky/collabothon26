@@ -1,20 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
-import Svg, { Circle, Line } from 'react-native-svg';
+import { StyleSheet, Text, View, type HostInstance, type LayoutChangeEvent } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
+import Svg from 'react-native-svg';
 
 import { Button } from '@/components/Button';
-import { colors, radii, spacing, type } from '@/constants/theme';
+import { isComplete } from '@/components/duel/questions/draft';
+import { computeLineEndpoints, measureTile, type TileLayout } from '@/components/duel/questions/matchGeometry';
+import { MatchPairLine } from '@/components/duel/questions/MatchPairLine';
+import { MatchTile } from '@/components/duel/questions/MatchTile';
+import { questionStyles } from '@/components/duel/questions/questionStyles';
+import { colors, duelTints, radii, spacing, tints, type } from '@/constants/theme';
 import { haptic } from '@/lib/duel/feedback';
 import type { DuelAnswer, DuelMatchStep } from '@/types/duel';
+
+// The geometry test imports it from this module.
+export { computeLineEndpoints };
 
 type Props = {
   step: DuelMatchStep;
@@ -24,357 +24,159 @@ type Props = {
   hideSubmitButton?: boolean;
 };
 
-// 4-6 kit accent colours for pairs
-export const PAIR_COLORS = [
-  { border: colors.storyTeal, bg: 'rgba(30, 154, 168, 0.12)' },
-  { border: colors.storyViolet, bg: 'rgba(110, 90, 214, 0.12)' },
-  { border: colors.storyOrange, bg: 'rgba(232, 131, 58, 0.12)' },
-  { border: colors.storyRose, bg: 'rgba(217, 87, 122, 0.12)' },
-  { border: colors.feedbackSuccess, bg: 'rgba(30, 138, 94, 0.12)' },
-  { border: colors.brandAccent, bg: 'rgba(255, 204, 0, 0.16)' },
+type Side = 'left' | 'right';
+type Selection = { side: Side; index: number };
+
+/** One colour per pair, reused in order when a question has more pairs than colours. */
+const PAIR_COLORS = [
+  { border: colors.storyTeal, bg: duelTints.teal },
+  { border: colors.storyViolet, bg: duelTints.violet },
+  { border: colors.storyOrange, bg: duelTints.orange },
+  { border: colors.storyRose, bg: duelTints.rose },
+  { border: colors.feedbackSuccess, bg: duelTints.success },
+  { border: colors.brandAccent, bg: tints.accent },
 ];
 
-export interface TileLayout {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+/** A new pair adds a badge that can reflow the tiles below it; they are measured again after this long. */
+const REMEASURE_DELAY_MS = 50;
 
-export interface LineEndpoints {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-}
-
-/**
- * Computes connecting line coordinates between paired left and right tiles.
- * Starts at the RIGHT edge midpoint of left tile: (l.x + l.width, l.y + l.height / 2).
- * Ends at the LEFT edge midpoint of right tile: (r.x, r.y + r.height / 2).
- */
-export function computeLineEndpoints(left: TileLayout, right: TileLayout): LineEndpoints {
-  return {
-    x1: left.x + left.width,
-    y1: left.y + left.height / 2,
-    x2: right.x,
-    y2: right.y + right.height / 2,
-  };
-}
-
+/** Match question: tap a term, then its definition; a line joins each pair. `pairs[left]` holds the right index. */
 export function DuelMatchView({ step, onSubmit, onAnswerChange, isLocked, hideSubmitButton = false }: Props) {
   const reducedMotion = useReducedMotion();
-  const [pairs, setPairs] = useState<(number | null)[]>(() =>
-    Array(step.left.length).fill(null),
-  );
-  const [selectedLeft, setSelectedLeft] = useState<number | null>(null);
-  const [selectedRight, setSelectedRight] = useState<number | null>(null);
+  const [pairs, setPairs] = useState<(number | null)[]>(() => Array(step.left.length).fill(null));
+  const [selected, setSelected] = useState<Selection | null>(null);
 
-  // Measure every tile relative to the contentWrap container (which hosts the SVG overlay)
-  const containerRef = useRef<any>(null);
-  const leftTileRefs = useRef<Record<number, any>>({});
-  const rightTileRefs = useRef<Record<number, any>>({});
+  // Tiles are measured relative to contentWrap, which also hosts the SVG overlay.
+  const containerRef = useRef<HostInstance>(null);
+  const tileRefs = useRef<Record<Side, Record<number, HostInstance | null>>>({ left: {}, right: {} });
+  const [layouts, setLayouts] = useState<Record<Side, Record<number, TileLayout>>>({ left: {}, right: {} });
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const remeasureTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Layout coordinates of individual tiles measured in the same container coordinate space
-  const [leftLayouts, setLeftLayouts] = useState<Record<number, TileLayout>>({});
-  const [rightLayouts, setRightLayouts] = useState<Record<number, TileLayout>>({});
-  const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  useEffect(() => () => clearTimeout(remeasureTimer.current), []);
 
-  const measureTile = (
-    el: any,
-    container: any,
-    cb: (layout: TileLayout) => void,
-  ) => {
-    if (!el || !container) return;
-    if (typeof el.measureLayout === 'function') {
-      el.measureLayout(
-        container,
-        (x: number, y: number, width: number, height: number) => {
-          cb({ x, y, width, height });
-        },
-        () => {},
-      );
-    } else if (typeof el.getBoundingClientRect === 'function' && typeof container.getBoundingClientRect === 'function') {
-      const elR = el.getBoundingClientRect();
-      const contR = container.getBoundingClientRect();
-      cb({
-        x: elR.left - contR.left,
-        y: elR.top - contR.top,
-        width: elR.width,
-        height: elR.height,
-      });
-    }
+  const measure = (side: Side, index: number) => {
+    measureTile(tileRefs.current[side][index], containerRef.current, (layout) => {
+      setLayouts((prev) => ({ ...prev, [side]: { ...prev[side], [index]: layout } }));
+    });
   };
 
   const measureAllTiles = () => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    step.left.forEach((_, idx) => {
-      measureTile(leftTileRefs.current[idx], container, (layout) => {
-        setLeftLayouts((prev) => ({ ...prev, [idx]: layout }));
-      });
-    });
-
-    step.right.forEach((_, idx) => {
-      measureTile(rightTileRefs.current[idx], container, (layout) => {
-        setRightLayouts((prev) => ({ ...prev, [idx]: layout }));
-      });
-    });
+    step.left.forEach((_, index) => measure('left', index));
+    step.right.forEach((_, index) => measure('right', index));
   };
 
-  const allPaired = pairs.length > 0 && pairs.every((p) => p !== null);
-
-  const notifyChange = (newPairs: (number | null)[]) => {
-    if (onAnswerChange) {
-      const isComplete = newPairs.length > 0 && newPairs.every((p) => p !== null);
-      onAnswerChange(isComplete ? { pairs: newPairs as number[] } : null);
-    }
+  const handleLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setContainerSize({ width, height });
+    measureAllTiles();
   };
 
-  const handleTapLeft = (leftIndex: number) => {
+  const allPaired = isComplete(pairs);
+
+  /** The left index of the pair a tile belongs to, or null. A pair takes its number and colour from its left tile. */
+  const pairOf = (side: Side, index: number): number | null => {
+    if (side === 'left') return pairs[index] === null ? null : index;
+    const leftIndex = pairs.indexOf(index);
+    return leftIndex === -1 ? null : leftIndex;
+  };
+
+  const setPair = (leftIndex: number, rightIndex: number | null) => {
+    const next = [...pairs];
+    next[leftIndex] = rightIndex;
+    setPairs(next);
+    onAnswerChange?.(isComplete(next) ? { pairs: next } : null);
+    setSelected(null);
+  };
+
+  const handleTap = (side: Side, index: number) => {
     if (isLocked) return;
 
-    // Tapping a paired item unpairs it (breaks the pair)
-    if (pairs[leftIndex] !== null) {
+    const pairedLeft = pairOf(side, index);
+    if (pairedLeft !== null) {
       haptic('light');
-      setPairs((prev) => {
-        const next = [...prev];
-        next[leftIndex] = null;
-        notifyChange(next);
-        return next;
-      });
-      setSelectedLeft(null);
-      setSelectedRight(null);
+      setPair(pairedLeft, null);
       return;
     }
 
-    // If a right item was already selected, make pair!
-    if (selectedRight !== null) {
+    if (selected && selected.side !== side) {
       haptic('success');
-      setPairs((prev) => {
-        const next = [...prev];
-        next[leftIndex] = selectedRight;
-        notifyChange(next);
-        return next;
-      });
-      setSelectedLeft(null);
-      setSelectedRight(null);
-      // Re-measure after pair layout updates
-      setTimeout(measureAllTiles, 50);
+      if (side === 'left') setPair(index, selected.index);
+      else setPair(selected.index, index);
+      clearTimeout(remeasureTimer.current);
+      remeasureTimer.current = setTimeout(measureAllTiles, REMEASURE_DELAY_MS);
       return;
     }
 
-    // Toggle selection
     haptic('light');
-    setSelectedLeft((prev) => (prev === leftIndex ? null : leftIndex));
-  };
-
-  const handleTapRight = (rightIndex: number) => {
-    if (isLocked) return;
-
-    // Check if right item is already paired
-    const existingLeftIdx = pairs.indexOf(rightIndex);
-    if (existingLeftIdx !== -1) {
-      // Tapping a paired item breaks the pair
-      haptic('light');
-      setPairs((prev) => {
-        const next = [...prev];
-        next[existingLeftIdx] = null;
-        notifyChange(next);
-        return next;
-      });
-      setSelectedLeft(null);
-      setSelectedRight(null);
-      return;
-    }
-
-    // If a left item was already selected, make pair!
-    if (selectedLeft !== null) {
-      haptic('success');
-      setPairs((prev) => {
-        const next = [...prev];
-        next[selectedLeft] = rightIndex;
-        notifyChange(next);
-        return next;
-      });
-      setSelectedLeft(null);
-      setSelectedRight(null);
-      // Re-measure after pair layout updates
-      setTimeout(measureAllTiles, 50);
-      return;
-    }
-
-    // Toggle selection
-    haptic('light');
-    setSelectedRight((prev) => (prev === rightIndex ? null : rightIndex));
+    setSelected((prev) => (prev?.side === side && prev.index === index ? null : { side, index }));
   };
 
   const handleSubmit = () => {
-    if (!allPaired || isLocked) return;
-    onSubmit({ pairs: pairs as number[] });
+    if (isLocked || !isComplete(pairs)) return;
+    onSubmit({ pairs });
   };
 
-  // Determine pair index (0..N-1) for colours
-  const getPairIndexForLeft = (leftIndex: number): number | null => {
-    if (pairs[leftIndex] === null) return null;
-    return leftIndex;
-  };
-
-  const getPairIndexForRight = (rightIndex: number): number | null => {
-    const leftIndex = pairs.indexOf(rightIndex);
-    if (leftIndex === -1) return null;
-    return leftIndex;
+  const renderTile = (side: Side, text: string, index: number) => {
+    const pairIndex = pairOf(side, index);
+    return (
+      <View
+        key={index}
+        ref={(node) => {
+          tileRefs.current[side][index] = node;
+        }}
+        onLayout={() => measure(side, index)}
+      >
+        <MatchTile
+          text={text}
+          isSelected={selected?.side === side && selected.index === index}
+          pair={pairIndex === null ? null : { index: pairIndex, ...PAIR_COLORS[pairIndex % PAIR_COLORS.length] }}
+          isLocked={isLocked}
+          onPress={() => handleTap(side, index)}
+          testID={`match-${side}-${index}`}
+          reducedMotion={reducedMotion}
+        />
+      </View>
+    );
   };
 
   return (
-    <View
-      style={styles.container}
-      testID="duel-match"
-      onLayout={(e) => {
-        setContainerSize({
-          width: e.nativeEvent.layout.width,
-          height: e.nativeEvent.layout.height,
-        });
-        measureAllTiles();
-      }}
-    >
-      {step.prompt && <Text style={styles.prompt}>{step.prompt}</Text>}
+    <View style={questionStyles.container} testID="duel-match" onLayout={handleLayout}>
+      {step.prompt ? <Text style={questionStyles.prompt}>{step.prompt}</Text> : null}
 
-      <View
-        ref={containerRef}
-        style={styles.contentWrap}
-        onLayout={(e) => {
-          setContainerSize({
-            width: e.nativeEvent.layout.width,
-            height: e.nativeEvent.layout.height,
-          });
-          measureAllTiles();
-        }}
-      >
+      <View ref={containerRef} style={styles.contentWrap} onLayout={handleLayout}>
         <View style={styles.columns}>
-          {/* Left column: terms */}
           <View style={styles.column}>
             <Text style={styles.colHeader}>Terms</Text>
-            {step.left.map((term, leftIdx) => {
-              const isSelected = selectedLeft === leftIdx;
-              const pairIdx = getPairIndexForLeft(leftIdx);
-              const isPaired = pairIdx !== null;
-              const pairStyle = isPaired
-                ? PAIR_COLORS[pairIdx % PAIR_COLORS.length]
-                : null;
-
-              return (
-                <View
-                  key={leftIdx}
-                  ref={(r) => {
-                    leftTileRefs.current[leftIdx] = r;
-                  }}
-                  onLayout={() => {
-                    measureTile(
-                      leftTileRefs.current[leftIdx],
-                      containerRef.current,
-                      (layout) => {
-                        setLeftLayouts((prev) => ({ ...prev, [leftIdx]: layout }));
-                      },
-                    );
-                  }}
-                >
-                  <Tile
-                    text={term}
-                    isSelected={isSelected}
-                    isPaired={isPaired}
-                    pairIndex={pairIdx}
-                    pairColor={pairStyle?.border}
-                    pairBg={pairStyle?.bg}
-                    isLocked={isLocked}
-                    onPress={() => handleTapLeft(leftIdx)}
-                    testID={`match-left-${leftIdx}`}
-                    reducedMotion={reducedMotion}
-                  />
-                </View>
-              );
-            })}
+            {step.left.map((term, index) => renderTile('left', term, index))}
           </View>
-
-          {/* Right column: definitions */}
           <View style={styles.column}>
             <Text style={styles.colHeader}>Definitions</Text>
-            {step.right.map((def, rightIdx) => {
-              const isSelected = selectedRight === rightIdx;
-              const pairIdx = getPairIndexForRight(rightIdx);
-              const isPaired = pairIdx !== null;
-              const pairStyle = isPaired
-                ? PAIR_COLORS[pairIdx % PAIR_COLORS.length]
-                : null;
-
-              return (
-                <View
-                  key={rightIdx}
-                  ref={(r) => {
-                    rightTileRefs.current[rightIdx] = r;
-                  }}
-                  onLayout={() => {
-                    measureTile(
-                      rightTileRefs.current[rightIdx],
-                      containerRef.current,
-                      (layout) => {
-                        setRightLayouts((prev) => ({ ...prev, [rightIdx]: layout }));
-                      },
-                    );
-                  }}
-                >
-                  <Tile
-                    text={def}
-                    isSelected={isSelected}
-                    isPaired={isPaired}
-                    pairIndex={pairIdx}
-                    pairColor={pairStyle?.border}
-                    pairBg={pairStyle?.bg}
-                    isLocked={isLocked}
-                    onPress={() => handleTapRight(rightIdx)}
-                    testID={`match-right-${rightIdx}`}
-                    reducedMotion={reducedMotion}
-                  />
-                </View>
-              );
-            })}
+            {step.right.map((definition, index) => renderTile('right', definition, index))}
           </View>
         </View>
 
-        {/* SVG connecting lines drawn ABOVE the tiles (z-index / pointerEvents none) */}
+        {/* Lines are drawn above the tiles and let taps through. */}
         {containerSize.width > 0 && containerSize.height > 0 && (
           <Svg
             width={containerSize.width}
             height={containerSize.height}
             viewBox={`0 0 ${containerSize.width} ${containerSize.height}`}
-            style={[
-              StyleSheet.absoluteFill,
-              styles.svgOverlay,
-              { width: containerSize.width, height: containerSize.height },
-            ]}
+            style={[StyleSheet.absoluteFill, styles.svgOverlay, containerSize]}
             pointerEvents="none"
             testID="match-svg-lines"
           >
             {pairs.map((rightIndex, leftIndex) => {
               if (rightIndex === null) return null;
-              const l = leftLayouts[leftIndex];
-              const r = rightLayouts[rightIndex];
-              // Only draw a line when both ends are properly measured
-              if (!l || !r) return null;
-
-              // Line starts at RIGHT edge centre of left tile, ends at LEFT edge centre of right tile
-              const { x1, y1, x2, y2 } = computeLineEndpoints(l, r);
-              const pairColor = PAIR_COLORS[leftIndex % PAIR_COLORS.length].border;
-
+              const from = layouts.left[leftIndex];
+              const to = layouts.right[rightIndex];
+              // A line needs both of its ends measured.
+              if (!from || !to) return null;
               return (
-                <SvgPairLine
+                <MatchPairLine
                   key={`line-${leftIndex}-${rightIndex}`}
-                  x1={x1}
-                  y1={y1}
-                  x2={x2}
-                  y2={y2}
-                  color={pairColor}
+                  {...computeLineEndpoints(from, to)}
+                  color={PAIR_COLORS[leftIndex % PAIR_COLORS.length].border}
                   reducedMotion={reducedMotion}
                 />
               );
@@ -393,7 +195,6 @@ export function DuelMatchView({ step, onSubmit, onAnswerChange, isLocked, hideSu
         </Text>
       )}
 
-      {/* Submit button when embedded */}
       {!hideSubmitButton && (
         <View style={styles.footerWrap}>
           <Button
@@ -409,166 +210,12 @@ export function DuelMatchView({ step, onSubmit, onAnswerChange, isLocked, hideSu
   );
 }
 
-function SvgPairLine({
-  x1,
-  y1,
-  x2,
-  y2,
-  color,
-  reducedMotion,
-}: {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  color: string;
-  reducedMotion: boolean;
-}) {
-  const [progress, setProgress] = useState(reducedMotion ? 1 : 0);
-
-  useEffect(() => {
-    if (reducedMotion) {
-      return;
-    }
-    let frame = 0;
-    const startTime = Date.now();
-    const duration = 200;
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const p = Math.min(1, elapsed / duration);
-      setProgress(p);
-      if (p < 1) {
-        frame = requestAnimationFrame(animate);
-      }
-    };
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
-  }, [reducedMotion]);
-
-  const curX2 = x1 + (x2 - x1) * progress;
-  const curY2 = y1 + (y2 - y1) * progress;
-
-  return (
-    <>
-      <Line
-        x1={x1}
-        y1={y1}
-        x2={curX2}
-        y2={curY2}
-        stroke={color}
-        strokeWidth={3}
-        strokeLinecap="round"
-      />
-      <Circle cx={x1} cy={y1} r={3.5} fill={color} />
-      <Circle cx={curX2} cy={curY2} r={3.5} fill={color} />
-    </>
-  );
-}
-
-function Tile({
-  text,
-  isSelected,
-  isPaired,
-  pairIndex,
-  pairColor,
-  pairBg,
-  isLocked,
-  onPress,
-  testID,
-  reducedMotion,
-}: {
-  text: string;
-  isSelected: boolean;
-  isPaired: boolean;
-  pairIndex: number | null;
-  pairColor?: string;
-  pairBg?: string;
-  isLocked: boolean;
-  onPress: () => void;
-  testID: string;
-  reducedMotion: boolean;
-}) {
-  const scale = useSharedValue(1);
-
-  useEffect(() => {
-    if (reducedMotion) {
-      scale.value = 1;
-      return;
-    }
-    if (isSelected) {
-      scale.value = withRepeat(
-        withSequence(
-          withTiming(1.03, { duration: 300 }),
-          withTiming(1.0, { duration: 300 }),
-        ),
-        -1,
-        true,
-      );
-    } else {
-      scale.value = withSpring(1);
-    }
-  }, [isSelected, reducedMotion, scale]);
-
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <Animated.View style={animStyle}>
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityState={{ selected: isSelected }}
-        accessibilityLabel={`${text}${isPaired && pairIndex !== null ? `, pair ${pairIndex + 1}` : ''}`}
-        disabled={isLocked}
-        testID={testID}
-        style={({ pressed }) => [
-          styles.tile,
-          isSelected && styles.tileSelected,
-          isPaired && { borderColor: pairColor, backgroundColor: pairBg },
-          pressed && !isLocked && styles.pressed,
-        ]}
-      >
-        <View style={styles.tileInner}>
-          {isPaired && pairIndex !== null && (
-            <View style={[styles.pairDotBadge, { backgroundColor: pairColor }]}>
-              <Text style={styles.pairDotText}>{pairIndex + 1}</Text>
-            </View>
-          )}
-          <Text
-            style={[
-              styles.tileText,
-              isSelected && styles.tileTextSelected,
-              isPaired && { color: colors.textPrimary, fontWeight: '700' },
-            ]}
-          >
-            {text}
-          </Text>
-        </View>
-      </Pressable>
-    </Animated.View>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: {
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  prompt: {
-    ...type.titleSection,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
   contentWrap: {
     position: 'relative',
     overflow: 'visible',
   },
   svgOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
     overflow: 'visible',
     zIndex: 10,
     elevation: 10,
@@ -589,57 +236,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     fontSize: 11,
-  },
-  tile: {
-    backgroundColor: colors.bgSurface,
-    borderWidth: 2,
-    borderColor: colors.borderDefault,
-    borderRadius: radii.card,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.md,
-    minHeight: 56,
-    justifyContent: 'center',
-  },
-  tileSelected: {
-    borderColor: colors.brandAccent,
-    backgroundColor: colors.brandAccentSoft,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  pressed: {
-    opacity: 0.8,
-  },
-  tileInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  pairDotBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pairDotText: {
-    ...type.labelDefault,
-    color: colors.textOnBrand,
-    fontWeight: '800',
-    fontSize: 10,
-    lineHeight: 12,
-  },
-  tileText: {
-    ...type.bodyDefault,
-    color: colors.textPrimary,
-    flexShrink: 1,
-    fontSize: 13,
-  },
-  tileTextSelected: {
-    fontWeight: '700',
-    color: colors.brandPrimary,
   },
   allPairedBanner: {
     backgroundColor: colors.brandPrimarySoft,

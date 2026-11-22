@@ -7,10 +7,11 @@ import { AsyncContent } from '@/components/AsyncContent';
 import { IconButton } from '@/components/bank/IconButton';
 import { Section } from '@/components/bank/Section';
 import { MatchRow } from '@/components/duel/MatchRow';
-import { colors, radii, spacing, type } from '@/constants/theme';
+import { colors, radii, spacing, tints, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
+import { clearStoredActiveMatch } from '@/lib/duel/activeMatch';
 import { summarizeMatches } from '@/lib/duel/history';
-import { clearStoredActiveMatch } from '@/lib/duel/useDuelMatch';
+import { backToLobby } from '@/lib/duel/navigation';
 import { useCurrentUser } from '@/lib/user';
 import type { MatchSummary } from '@/types/duel';
 
@@ -21,17 +22,16 @@ function openMatch(match: MatchSummary) {
   router.push({ pathname: '/duel/match', params: { matchId: String(match.matchId), mode: match.mode } });
 }
 
-function goBack() {
-  if (router.canGoBack()) router.back();
-  else router.replace('/duel');
-}
+type StatTone = 'win' | 'loss' | 'draw';
 
-function Stat({ label, tone, testID }: { label: string; tone: 'win' | 'loss' | 'draw'; testID: string }) {
-  const palette = {
-    win: { bg: colors.feedbackSuccessSoft, fg: colors.feedbackSuccess },
-    loss: { bg: colors.feedbackDangerSoft, fg: colors.feedbackDanger },
-    draw: { bg: colors.storySlateSoft, fg: colors.textMuted },
-  }[tone];
+const STAT_PALETTE: Record<StatTone, { bg: string; fg: string }> = {
+  win: { bg: colors.feedbackSuccessSoft, fg: colors.feedbackSuccess },
+  loss: { bg: colors.feedbackDangerSoft, fg: colors.feedbackDanger },
+  draw: { bg: tints.slateSoft, fg: colors.textMuted },
+};
+
+function Stat({ label, tone, testID }: { label: string; tone: StatTone; testID: string }) {
+  const palette = STAT_PALETTE[tone];
   return (
     <View style={[styles.stat, { backgroundColor: palette.bg }]} testID={testID}>
       <Text style={[styles.statText, { color: palette.fg }]}>{label}</Text>
@@ -51,7 +51,7 @@ export default function DuelHistoryScreen() {
     <SafeAreaView style={styles.safe} testID="screen-duel-history">
       <StatusBar style="light" />
       <View style={styles.header}>
-        <IconButton icon="chevron-left" onPress={goBack} label="Back" testID="history-back" />
+        <IconButton icon="chevron-left" onPress={backToLobby} label="Back" testID="history-back" />
         <Text style={styles.title} accessibilityRole="header">
           History
         </Text>
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.xl, gap: spacing.lg, paddingBottom: spacing.xxxl },
   stats: { flexDirection: 'row', gap: spacing.sm },
   stat: { borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 2 },
-  statText: { ...type.labelStrong },
+  statText: type.labelStrong,
   list: { gap: spacing.sm },
   empty: { padding: spacing.xl, alignItems: 'center', backgroundColor: colors.bgSurface, borderRadius: radii.card, borderWidth: 1, borderColor: colors.borderDefault },
   emptyText: { ...type.bodyDefault, color: colors.textMuted },

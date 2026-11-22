@@ -6,7 +6,7 @@ import { colors, radii, spacing, type } from '@/constants/theme';
 
 type Point = { x: number; y: number };
 
-export type ChartSeries = { points: Point[]; tone: 'primary' | 'muted' };
+type ChartSeries = { points: Point[]; tone: 'primary' | 'muted' };
 
 type Props = {
   series: ChartSeries[];

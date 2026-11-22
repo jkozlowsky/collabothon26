@@ -11,7 +11,7 @@ export type CategoryMeta = {
 };
 
 /** The five duel categories are the learning-path areas (v4). */
-export const STORY_CATEGORIES: Record<string, CategoryMeta> = {
+const STORY_CATEGORIES: Record<string, CategoryMeta> = {
   'money-basics': {
     story: 'money-basics',
     name: 'Money basics',
@@ -71,19 +71,6 @@ export function isDuelMode(value: string | undefined): value is DuelMode {
   return value === 'HUMAN' || value === 'SOLO';
 }
 
-export function formatNumber(n: number): string {
-  const abs = Math.abs(Math.round(n));
-  const formatted = String(abs).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return n < 0 ? `−${formatted}` : formatted;
-}
-
-export function formatSigned(n: number): string {
-  const rounded = Math.round(n);
-  if (rounded > 0) return `+${formatNumber(rounded)}`;
-  if (rounded < 0) return formatNumber(rounded);
-  return '0';
-}
-
 export function formatClock(totalSec: number): string {
   const clamped = Math.max(0, Math.ceil(totalSec));
   const mins = Math.floor(clamped / 60);
@@ -91,13 +78,8 @@ export function formatClock(totalSec: number): string {
   return `${mins}:${String(secs).padStart(2, '0')}`;
 }
 
-/** ISO week number and time remaining until Monday 00:00 (Europe/Warsaw). */
-export function getWeeklyLeagueClock(now: Date = new Date()): {
-  week: number;
-  days: number;
-  hours: number;
-  shortLabel: string;
-} {
+/** ISO week number and whole days remaining until Monday 00:00 (Europe/Warsaw). */
+export function getWeeklyLeagueClock(now: Date = new Date()): { week: number; days: number } {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/Warsaw',
     year: 'numeric',
@@ -123,7 +105,6 @@ export function getWeeklyLeagueClock(now: Date = new Date()): {
   const elapsedMinutes = (isoDay - 1) * 24 * 60 + hour * 60 + minute;
   const remainingMinutes = Math.max(0, totalWeekMinutes - elapsedMinutes);
   const days = Math.floor(remainingMinutes / (24 * 60));
-  const hours = Math.floor((remainingMinutes % (24 * 60)) / 60);
 
   const utcDate = new Date(Date.UTC(year, month - 1, day));
   const dayNum = utcDate.getUTCDay() || 7;
@@ -131,8 +112,7 @@ export function getWeeklyLeagueClock(now: Date = new Date()): {
   const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
   const week = Math.ceil(((utcDate.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
 
-  const shortLabel = days > 0 ? `${days}d ${hours}h left` : `${Math.max(1, hours)}h left`;
-  return { week, days, hours, shortLabel };
+  return { week, days };
 }
 
 /**

@@ -4,7 +4,7 @@ import Animated, { Easing, type SharedValue, useAnimatedReaction, useAnimatedSty
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { CANVAS, POP } from '@/components/video/kit/canvas';
-import { colors, radii, scenePalette, spacing, type } from '@/constants/theme';
+import { colors, motion, radii, scenePalette, spacing, type } from '@/constants/theme';
 import { formatAmount, layerProgress } from '@/lib/sceneClock';
 
 type Props = {
@@ -25,7 +25,7 @@ type Props = {
 
 /** Counter steps over the roll: the number re-renders this often, not every frame. */
 const STEPS = 24;
-const easeOut = Easing.bezierFn(0.23, 1, 0.32, 1);
+const easeOut = Easing.bezierFn(...motion.easeOut);
 
 /** A big number with its label that counts from `from` to `to` over `len` seconds; green rising, red falling. */
 export const Amount = memo(function Amount({ from, to, currency, label, at = 0, len = 0, until, length, align = 'center', t }: Props) {

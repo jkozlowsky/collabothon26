@@ -3,10 +3,8 @@
  * backend `account` row; this registry holds only what the frontend needs per account: the mock bank seed and the
  * onboarding answer hints. Alex (`demo-user`) is frozen: his entry points at the unchanged `seedAccount`.
  *
- * CONTRACT (written by the coordinator):
- * - `PersonaId`, `Persona`, `OnboardingHints`, `PERSONAS`, `PERSONA_IDS`, `personaFor` keep these names and shapes.
- * - The persona-data worker replaces the two TODO seeds with `seedDaniel()` / `seedElena()` and fills the hints.
- * - Everyone else only reads from this file.
+ * Contract: `PersonaId`, `Persona`, `OnboardingHints`, `PERSONAS`, `PERSONA_IDS`, `personaFor` keep these names and
+ * shapes; everything else only reads from this file.
  */
 import { seedDaniel } from '@/lib/bank/seed-daniel';
 import { seedElena } from '@/lib/bank/seed-elena';

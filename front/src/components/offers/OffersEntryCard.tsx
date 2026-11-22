@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
   locked: { opacity: 0.6 },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   tile: { width: 44, height: 44, borderRadius: radii.tile, backgroundColor: colors.brandPrimarySoft, alignItems: 'center', justifyContent: 'center' },
-  text: { flex: 1, gap: 2 },
+  text: { flex: 1, gap: spacing.xxs },
   overline: { ...type.overline, color: colors.brandPrimary },
   title: type.titleCard,
   meta: { ...type.labelDefault, color: colors.textMuted },

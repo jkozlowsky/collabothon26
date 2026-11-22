@@ -44,6 +44,14 @@ type Run = {
   calls: number;
 };
 
+/** A step with no answer, or one that neither ends the test nor names a question of the pool, has failed. */
+function outcomeOf(result: StepResponse | null, pool: CheckQuestion[]): Outcome {
+  if (!result) return 'failed';
+  if (result.done) return 'done';
+  const next = pool.find((q) => q.id === result.nextQuestionId);
+  return next ? { next: next.id } : 'failed';
+}
+
 const INITIAL: Run = { stage: 'idle', pool: [], history: [], mastery: {}, currentId: null, outcome: null, useRules: false, fellBack: false, calls: 0 };
 const RUNNING: Stage[] = ['answered', 'waiting'];
 
@@ -130,8 +138,7 @@ export function useQuickCheck({ consent, facts, profile, onFinish, onSkip }: Pro
       }
     }
     if (stale(history)) return;
-    const next = latest.current.pool.find((q) => q.id === result?.nextQuestionId);
-    const outcome: Outcome = !result || (!result.done && !next) ? 'failed' : result.done ? 'done' : { next: next!.id };
+    const outcome = outcomeOf(result, latest.current.pool);
     if (outcome === 'failed' && first) {
       update({ stage: 'idle' });
       return onSkip();
@@ -169,7 +176,7 @@ export function useQuickCheck({ consent, facts, profile, onFinish, onSkip }: Pro
   const answered = stage === 'answered';
   const question = stage === 'question' || answered ? (pool.find((q) => q.id === currentId) ?? null) : null;
   const before = answered ? history.slice(0, -1) : history;
-  const picked = answered ? history.at(-1)!.optionIndex : null;
+  const picked = answered ? (history.at(-1)?.optionIndex ?? null) : null;
   const seenAreaBefore = !!question && before.some((h) => pool.find((q) => q.id === h.questionId)?.area === question.area);
 
   const view: QuestionView | null = question && {

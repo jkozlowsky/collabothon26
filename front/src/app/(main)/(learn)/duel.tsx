@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AsyncContent } from '@/components/AsyncContent';
@@ -9,10 +9,11 @@ import { CategoryChip } from '@/components/duel/CategoryChip';
 import { LobbyHeader } from '@/components/duel/LobbyHeader';
 import { LobbyTile } from '@/components/duel/LobbyTile';
 import { ModeTile } from '@/components/duel/ModeTile';
+import { DEFAULT_AVATAR } from '@/components/profile/Avatar';
 import { colors, nav, radii, spacing, type } from '@/constants/theme';
 import { useAccount } from '@/hooks/useAccount';
 import { useApi } from '@/hooks/useApi';
-import { clearStoredActiveMatch } from '@/lib/duel/useDuelMatch';
+import { clearStoredActiveMatch } from '@/lib/duel/activeMatch';
 import { useCurrentUser } from '@/lib/user';
 import type { DuelCategory, DuelMode, Rankings } from '@/types/duel';
 
@@ -31,21 +32,18 @@ function getCtaText(count: number, mode: DuelMode): string {
 export default function DuelLobbyScreen() {
   const { userId } = useCurrentUser();
   const [mode, setMode] = useState<DuelMode>('HUMAN');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const initializedSelection = useRef(false);
+  // null until the first loaded categories seed the default; after that only the user changes it.
+  const [selection, setSelection] = useState<string[] | null>(null);
 
   const { account } = useAccount();
-  const avatar = account?.avatar ?? 'm1';
+  const avatar = account?.avatar ?? DEFAULT_AVATAR;
   const { data: categories, loading: catLoading, error: catError, reload: reloadCategories } = useApi<DuelCategory[]>(categoriesPath(userId));
   const { data: weekly, reload: reloadWeekly } = useApi<Rankings>(weeklyPath(userId));
 
-  // Default selection: the first categories, up to the match limit, when first loaded
-  useEffect(() => {
-    if (categories && categories.length > 0 && !initializedSelection.current) {
-      initializedSelection.current = true;
-      setSelectedCategories(categories.slice(0, MAX_CATEGORIES).map((c) => c.story));
-    }
-  }, [categories]);
+  if (selection === null && categories && categories.length > 0) {
+    setSelection(categories.slice(0, MAX_CATEGORIES).map((c) => c.story));
+  }
+  const selectedCategories = selection ?? [];
 
   // Refresh on screen focus
   const firstFocusRef = useRef(true);
@@ -61,9 +59,11 @@ export default function DuelLobbyScreen() {
   );
 
   function toggleCategory(story: string) {
-    setSelectedCategories((prev) =>
-      prev.includes(story) ? prev.filter((s) => s !== story) : prev.length < MAX_CATEGORIES ? [...prev, story] : prev,
-    );
+    setSelection((prev) => {
+      const current = prev ?? [];
+      if (current.includes(story)) return current.filter((s) => s !== story);
+      return current.length < MAX_CATEGORIES ? [...current, story] : current;
+    });
   }
 
   function startMatch() {

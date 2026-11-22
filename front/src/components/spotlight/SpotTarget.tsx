@@ -28,14 +28,17 @@ export function SpotTarget({ id, children, style }: Props) {
 
   useEffect(() => {
     if (!active || !setRect) return;
+    // measureInWindow answers later, so its callback can arrive after cleanup; then it must not start a timer or report a box.
+    let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     const measure = (then: (y: number, h: number) => void) =>
       ref.current?.measureInWindow((x, y, width, h) => {
-        if (width && h) then(y, h);
+        if (!cancelled && width && h) then(y, h);
       });
     // A smooth scroll can take longer than any fixed wait, so report the box once it stops moving.
     const settle = (last: string | null, tries: number) => {
       ref.current?.measureInWindow((x, y, width, h) => {
+        if (cancelled) return;
         const box = `${x},${y},${width},${h}`;
         if (box === last || tries >= MAX_TRIES) setRect({ x, y, width, height: h });
         else timer = setTimeout(() => settle(box, tries + 1), POLL_MS);
@@ -48,7 +51,10 @@ export function SpotTarget({ id, children, style }: Props) {
         timer = setTimeout(() => settle(null, 0), POLL_MS);
       });
     }, SETTLE_MS);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [active, setRect, scroll, height]);
 
   // Leaving the tab ends the spotlight: the hole would point at nothing.

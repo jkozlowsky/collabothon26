@@ -1,14 +1,16 @@
-import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ConsentCard } from '@/components/onboarding/ConsentCard';
-import { AtlasHero, DuelIllustration, LessonGlobeIllustration, QuickCheckHero } from '@/components/onboarding/Illustrations';
+import { DuelSlide } from '@/components/onboarding/DuelSlide';
+import { BackButton, CloseButton } from '@/components/onboarding/HeaderButtons';
 import { InterestsStep } from '@/components/onboarding/InterestsStep';
+import { MapSlide } from '@/components/onboarding/MapSlide';
 import { Page } from '@/components/onboarding/Page';
-import { BackButton, BigButton, CloseButton, Rise, type } from '@/components/onboarding/ui';
-import { colors, spacing, type as text } from '@/constants/theme';
+import { QuickCheckSlide } from '@/components/onboarding/QuickCheckSlide';
+import { BigButton } from '@/components/onboarding/ui';
+import { WelcomeSlide } from '@/components/onboarding/WelcomeSlide';
 import { useBank } from '@/hooks/useBank';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { leaveOnboardingForCheck } from '@/hooks/useOpenLearn';
@@ -18,15 +20,7 @@ import { useCurrentUser } from '@/lib/user';
 import type { Intake } from '@/types/onboarding';
 import type { ProfileRanges } from '@/types/quickCheck';
 
-type Step =
-  | 'welcome'
-  | 'intro'
-  | 'challenge'
-  | 'consent'
-  | 'interests'
-  | 'check-intro';
-
-const STEPS: Step[] = ['welcome', 'intro', 'challenge', 'consent', 'interests', 'check-intro'];
+const STEPS = ['welcome', 'intro', 'challenge', 'consent', 'interests', 'check-intro'] as const;
 
 export default function OnboardingScreen() {
   const { userId } = useCurrentUser();
@@ -71,23 +65,7 @@ export default function OnboardingScreen() {
         }
         footer={<BigButton label="Get started" onPress={next} testID="onboarding-start" />}
       >
-        <View style={styles.grow} />
-        <AtlasHero />
-        <View style={{ height: spacing.xl }} />
-        <Rise delay={250}>
-          <Text style={styles.welcomeOverline}>WELCOME TO</Text>
-        </Rise>
-        <Rise delay={350}>
-          <Text style={styles.wordmark} accessibilityRole="header">
-            Atlas<Text style={styles.wordmarkDot}>.</Text>
-          </Text>
-        </Rise>
-        <Rise delay={420}>
-          <Text style={styles.motto} testID="atlas-motto">
-            Atlas lets your financial decisions land safely.
-          </Text>
-        </Rise>
-        <View style={styles.grow} />
+        <WelcomeSlide />
       </Page>
     );
   }
@@ -104,16 +82,7 @@ export default function OnboardingScreen() {
         }
         footer={<BigButton label="Next" onPress={next} testID="onboarding-next" />}
       >
-        <View style={styles.grow} />
-        <LessonGlobeIllustration />
-        <View style={{ height: spacing.xl }} />
-        <Rise delay={300}>
-          <Text style={styles.welcomeOverline}>LEARN · THE MAP</Text>
-        </Rise>
-        <Rise delay={400}>
-          <Text style={[type.display, { color: colors.textOnBrand }]}>Every pin is a field of finance</Text>
-        </Rise>
-        <View style={styles.grow} />
+        <MapSlide />
       </Page>
     );
   }
@@ -130,16 +99,7 @@ export default function OnboardingScreen() {
         }
         footer={<BigButton label="Next" onPress={next} testID="onboarding-challenge-next" />}
       >
-        <View style={styles.grow} />
-        <DuelIllustration />
-        <View style={{ height: spacing.xl }} />
-        <Rise delay={300}>
-          <Text style={[type.overline, { color: colors.brandAccent }]}>CHALLENGE · DUELS</Text>
-        </Rise>
-        <Rise delay={400}>
-          <Text style={[type.display, { color: colors.textOnBrand }]}>Put what you know to the test</Text>
-        </Rise>
-        <View style={styles.grow} />
+        <DuelSlide />
       </Page>
     );
   }
@@ -176,18 +136,7 @@ export default function OnboardingScreen() {
         }
         footer={<BigButton label="Start the quick check" onPress={startCheck} testID="check-start" />}
       >
-        <View style={styles.grow} />
-        <QuickCheckHero />
-        <View style={styles.gap} />
-        <Text style={type.overline}>QUICK CHECK · 3–6 QUESTIONS</Text>
-        <Text style={type.display} accessibilityRole="header">
-          Let&apos;s see what you already know
-        </Text>
-        <View style={styles.meta}>
-          <Feather name="clock" size={14} color={colors.textMuted} />
-          <Text style={type.label}>About 2 minutes</Text>
-        </View>
-        <View style={styles.growDouble} />
+        <QuickCheckSlide />
       </Page>
     );
   }
@@ -205,14 +154,5 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  grow: { flexGrow: 1 },
-  growDouble: { flexGrow: 2 },
-  gap: { height: spacing.xxxl },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm - 2 },
-  welcomeOverline: { ...text.overline, color: colors.brandAccent, letterSpacing: 3 },
-  wordmark: { ...text.displayHero, color: colors.textOnBrand },
-  wordmarkDot: { color: colors.brandAccent },
-  motto: { ...text.titleSection, color: colors.brandAccent, marginTop: -spacing.xs },
-  answers: { gap: spacing.smPlus, marginTop: spacing.lg },
 });

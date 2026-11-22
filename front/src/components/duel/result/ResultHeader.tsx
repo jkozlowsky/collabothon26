@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   crownSlot: { height: 30, marginBottom: -8, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   crown: { alignItems: 'center', justifyContent: 'center' },
   pulse: { position: 'absolute', backgroundColor: colors.brandAccent },
-  name: { fontFamily: fonts.semiBold, fontSize: 15, lineHeight: 20, color: colors.textOnBrand, textAlign: 'center' },
+  name: { ...type.titleCard, color: colors.textOnBrand, textAlign: 'center' },
   role: { ...type.labelDefault, color: colors.onBrandMuted },
   scoreBlock: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 56 },
   scoreSolo: { paddingBottom: 0, flex: 0, alignSelf: 'stretch' },
@@ -307,6 +307,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   xpPillText: { ...type.labelStrong, color: colors.textOnAccent },
-  shine: { position: 'absolute', top: -4, bottom: -4, width: 18, backgroundColor: '#FFFFFF' },
+  shine: { position: 'absolute', top: -4, bottom: -4, width: 18, backgroundColor: colors.bgSurface },
   rewardText: { ...type.labelDefault, color: colors.onBrandMuted },
 });

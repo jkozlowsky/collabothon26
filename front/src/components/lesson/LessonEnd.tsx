@@ -67,17 +67,7 @@ export function LessonEnd({ title, xp, concepts, onConcept, onNext, onOffers, on
         </Animated.View>
 
         <Animated.View entering={enter(300)}>
-          {xp === null ? (
-            <ActivityIndicator color={colors.brandPrimary} />
-          ) : xp === 'error' ? (
-            <Text style={styles.meta}>Couldn&apos;t save your progress. Check the connection.</Text>
-          ) : xp > 0 ? (
-            <XpCounter xp={xp} />
-          ) : (
-            <Text style={[styles.meta, styles.xpRepeat]} testID="lesson-xp">
-              Already completed · no new XP
-            </Text>
-          )}
+          <XpResult xp={xp} />
         </Animated.View>
 
         {(streakBump || stats) && (
@@ -140,6 +130,18 @@ export function LessonEnd({ title, xp, concepts, onConcept, onNext, onOffers, on
       </ScrollView>
       <Confetti />
     </View>
+  );
+}
+
+/** Saving, failed, XP earned, or a repeat that earns none. */
+function XpResult({ xp }: Pick<Props, 'xp'>) {
+  if (xp === null) return <ActivityIndicator color={colors.brandPrimary} />;
+  if (xp === 'error') return <Text style={styles.meta}>Couldn&apos;t save your progress. Check the connection.</Text>;
+  if (xp > 0) return <XpCounter xp={xp} />;
+  return (
+    <Text style={[styles.meta, styles.xpRepeat]} testID="lesson-xp">
+      Already completed · no new XP
+    </Text>
   );
 }
 

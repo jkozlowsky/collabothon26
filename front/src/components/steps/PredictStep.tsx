@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
+import { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Button } from '@/components/Button';
 import { Slider } from '@/components/bank/Slider';
@@ -13,6 +13,9 @@ import type { PredictStep as PredictStepData, StepOutcome } from '@/types/lesson
 
 type Props = { step: PredictStepData; onDone: (outcome: StepOutcome) => void };
 
+/** The answer marker's trip from the guess to the answer. */
+const TRAVEL_MS = 600;
+
 /** Guess first, then see the real value next to your guess. No wrong answer: the surprise is the lesson. */
 export function PredictStep({ step, onDone }: Props) {
   const reduceMotion = useReducedMotion();
@@ -21,27 +24,18 @@ export function PredictStep({ step, onDone }: Props) {
   const [revealed, setRevealed] = useState(false);
   const at = (v: number) => (v - min) / (max - min);
 
-  // The answer marker travels from the guess to the answer. `left` can't use the native driver.
-  const [answerPos] = useState(() => new Animated.Value(0));
-  useEffect(() => {
-    if (!revealed) return;
-    answerPos.setValue((guess - min) / (max - min));
-    Animated.timing(answerPos, {
-      toValue: (step.answer - min) / (max - min),
-      duration: reduceMotion ? 0 : 600,
-      useNativeDriver: false,
-    }).start();
-    // Runs once, when the guess is locked in.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [revealed]);
+  const answerPos = useSharedValue(0);
+  const answerStyle = useAnimatedStyle(() => ({ left: `${answerPos.get() * 100}%` }));
 
   function check() {
     setRevealed(true);
+    // The answer marker travels from the guess to the answer.
+    answerPos.set(at(guess));
+    answerPos.set(withTiming(at(step.answer), { duration: reduceMotion ? 0 : TRAVEL_MS, easing: Easing.inOut(Easing.ease) }));
     haptic('success');
   }
 
   const show = (v: number) => formatValue(v, unit, { signed: min < 0 });
-  const left = answerPos.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
 
   return (
     <StepLayout
@@ -73,7 +67,7 @@ export function PredictStep({ step, onDone }: Props) {
           <View style={styles.scale} accessible accessibilityLabel={`You guessed ${show(guess)}. The answer is ${show(step.answer)}.`}>
             <View style={styles.track} />
             <View style={[styles.pin, styles.guessPin, { left: `${at(guess) * 100}%` }]} />
-            <Animated.View style={[styles.pin, styles.answerPin, { left }]} />
+            <Animated.View style={[styles.pin, styles.answerPin, answerStyle]} />
             <Text style={[styles.end, styles.endLeft]}>{show(min)}</Text>
             <Text style={[styles.end, styles.endRight]}>{show(max)}</Text>
           </View>

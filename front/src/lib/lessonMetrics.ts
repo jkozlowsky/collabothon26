@@ -130,7 +130,7 @@ export function fillMetrics(text: string, state: BankState, money: Money): strin
 }
 
 /** Fills {metric} in `text`, using the fallback words for metrics without data. Unknown names stay as they are. */
-export function fillMetricsOrFallback(text: string, state: BankState, money: Money): string {
+function fillMetricsOrFallback(text: string, state: BankState, money: Money): string {
   return text.replace(METRIC, (whole, name: string) => METRICS[name]?.(state, money) ?? FALLBACK[name] ?? whole);
 }
 

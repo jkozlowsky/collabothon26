@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Sheet } from '@/components/bank/Sheet';
 import { Button } from '@/components/Button';
 import { Tappable } from '@/components/onboarding/ui';
-import { Avatar } from '@/components/profile/Avatar';
+import { Avatar, DEFAULT_AVATAR } from '@/components/profile/Avatar';
 import { colors, spacing, type } from '@/constants/theme';
 import { useAccount } from '@/hooks/useAccount';
 import { useBank } from '@/hooks/useBank';
@@ -17,9 +17,8 @@ export function ProfileButton() {
   const { logOut } = useCurrentUser();
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const fullName = account
-    ? `${account.firstName} ${account.lastName}`
-    : state.owner.name;
+  const fullName = account ? `${account.firstName} ${account.lastName}` : state.owner.name;
+  const avatar = account?.avatar ?? DEFAULT_AVATAR;
 
   const handleLogout = async () => {
     setSheetOpen(false);
@@ -36,13 +35,13 @@ export function ProfileButton() {
         hitSlop={6}
         testID="bank-avatar"
       >
-        <Avatar id={account?.avatar ?? 'm1'} size={40} />
+        <Avatar id={avatar} size={40} />
       </Tappable>
 
       <Sheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
         <View style={styles.sheetContent}>
           <View style={styles.ownerRow}>
-            <Avatar id={account?.avatar ?? 'm1'} size={56} />
+            <Avatar id={avatar} size={56} />
             <View style={styles.ownerInfo}>
               <Text style={styles.userName} testID="bank-sheet-name" numberOfLines={1}>
                 {fullName}
@@ -67,7 +66,7 @@ export function ProfileButton() {
 
 const styles = StyleSheet.create({
   sheetContent: {
-    gap: 16,
+    gap: spacing.lg,
     paddingTop: 6,
     paddingBottom: spacing.lg,
     alignItems: 'center',
@@ -76,12 +75,12 @@ const styles = StyleSheet.create({
   ownerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: spacing.mdPlus,
     alignSelf: 'stretch',
   },
   ownerInfo: {
     flex: 1,
-    gap: 2,
+    gap: spacing.xxs,
   },
   userName: {
     ...type.titleSection,

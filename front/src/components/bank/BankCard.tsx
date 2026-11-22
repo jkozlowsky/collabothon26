@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CommerzbankLogo } from '@/components/bank/CommerzbankLogo';
-import { HeroBackground } from '@/components/bank/HeroCard';
+import { HeroBackground } from '@/components/bank/HeroBackground';
 import { Tappable } from '@/components/onboarding/ui';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import type { PaymentCard } from '@/types/bank';
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
   card: { height: 184, borderRadius: radii.card, padding: 18, overflow: 'hidden', justifyContent: 'space-between', ...elevation.mid },
   accent: { backgroundColor: colors.brandAccent },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  logoTile: { backgroundColor: colors.brandPrimary, borderRadius: 8, padding: 4 },
+  logoTile: { backgroundColor: colors.brandPrimary, borderRadius: 8, padding: spacing.xs },
   kind: type.overline,
   chip: { width: 36, height: 26, borderRadius: 6, backgroundColor: colors.cardChipGold },
   chipOnAccent: { backgroundColor: colors.cardChipOnAccent },

@@ -4,20 +4,20 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Feedback } from '@/components/lesson/Feedback';
 import { StepLayout } from '@/components/lesson/StepLayout';
 import { haptic, Tappable } from '@/components/onboarding/ui';
+import { answerCue } from '@/components/steps/answerCue';
 import { colors, radii, spacing, type } from '@/constants/theme';
-import { playSfx } from '@/lib/sfx';
 import { shuffle } from '@/lib/lessonPlayer';
 import type { MatchStep as MatchStepData, StepOutcome } from '@/types/lessons';
 
-type Props = {
-  step: MatchStepData;
-  onDone?: (outcome: StepOutcome) => void;
-};
+type Props = { step: MatchStepData; onDone: (outcome: StepOutcome) => void };
 
 type Side = 'left' | 'right';
 type TileState = 'idle' | 'selected' | 'matched' | 'wrong';
 
 const WRONG_FLASH_MS = 600;
+
+/** Told by a mark too, not only by colour. */
+const MARK: Record<TileState, string> = { idle: '', selected: '', matched: '✓ ', wrong: '✗ ' };
 
 /**
  * Tap a term, then its meaning (or the other way round). Right pairs lock green; a wrong pair flashes red.
@@ -31,6 +31,7 @@ export function MatchStep({ step, onDone }: Props) {
   const [wrong, setWrong] = useState<{ left: number; right: number } | null>(null);
   const [mistakes, setMistakes] = useState(0);
   const done = matched.length === n;
+  const clean = mistakes === 0;
 
   useEffect(() => {
     if (!wrong) return;
@@ -48,17 +49,14 @@ export function MatchStep({ step, onDone }: Props) {
     const left = side === 'left' ? index : selected.index;
     const right = side === 'right' ? index : selected.index;
     setSelected(null);
-    if (left === right) {
-      const nextMatched = [...matched, left];
-      setMatched(nextMatched);
-      haptic('success');
-      playSfx('correct');
+    const paired = left === right;
+    if (paired) {
+      setMatched([...matched, left]);
     } else {
       setWrong({ left, right });
       setMistakes((m) => m + 1);
-      haptic('light');
-      playSfx('wrong');
     }
+    answerCue(paired);
   }
 
   function stateOf(side: Side, index: number): TileState {
@@ -83,7 +81,7 @@ export function MatchStep({ step, onDone }: Props) {
             style={[styles.tile, styles[state]]}
           >
             <Text style={[side === 'left' ? styles.term : styles.meaning, state === 'matched' && styles.matchedText]}>
-              {state === 'matched' ? '✓ ' : state === 'wrong' ? '✗ ' : ''}
+              {MARK[state]}
               {step.pairs[index][side === 'left' ? 0 : 1]}
             </Text>
           </Tappable>
@@ -98,9 +96,9 @@ export function MatchStep({ step, onDone }: Props) {
       footer={
         done ? (
           <Feedback
-            correct={mistakes === 0}
-            explanation={mistakes === 0 ? 'All pairs right on the first try.' : `All matched, with ${mistakes} wrong ${mistakes === 1 ? 'pair' : 'pairs'} on the way.`}
-            onContinue={() => onDone?.({ correct: mistakes === 0 })}
+            correct={clean}
+            explanation={clean ? 'All pairs right on the first try.' : `All matched, with ${mistakes} wrong ${mistakes === 1 ? 'pair' : 'pairs'} on the way.`}
+            onContinue={() => onDone({ correct: clean })}
           />
         ) : undefined
       }

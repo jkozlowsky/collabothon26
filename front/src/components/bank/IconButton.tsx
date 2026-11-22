@@ -14,11 +14,14 @@ type Props = {
   testID?: string;
 };
 
+/** Brings the 40 px button up to a 44 px touch target. */
+const HIT_SLOP = 2;
+
 /** Round white header button (search, scan, bell, calendar). */
 export function IconButton({ icon, label, onPress, tone = 'default', testID }: Props) {
   const onBrand = tone === 'onBrand';
   return (
-    <Tappable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} testID={testID} pressedScale={0.92} style={[styles.button, onBrand && styles.onBrand]}>
+    <Tappable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} testID={testID} hitSlop={HIT_SLOP} pressedScale={0.92} style={[styles.button, onBrand && styles.onBrand]}>
       <Icon name={icon} size={20} color={onBrand ? colors.textOnBrand : colors.brandPrimary} />
     </Tappable>
   );

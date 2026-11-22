@@ -7,7 +7,6 @@ import type { TextStyle, ViewStyle } from 'react-native';
 
 export const colors = {
   brandPrimary: '#002E3C',
-  brandPrimaryPressed: '#001F29',
   brandPrimarySoft: '#E6EEF0',
   brandAccent: '#FFCC00',
   brandAccentSoft: '#FFF4CC',
@@ -34,23 +33,27 @@ export const colors = {
   // Duel v3 review answer pills: feedback colours at 10%.
   feedbackSuccessTint: 'rgba(30, 138, 94, 0.1)',
   feedbackDangerTint: 'rgba(214, 69, 69, 0.1)',
-  // 14% tints of the story colours: icon tiles of glossary categories (same recipe as the story tiles).
-  storyTealSoft: 'rgba(30, 154, 168, 0.14)',
-  storyVioletSoft: 'rgba(110, 90, 214, 0.14)',
-  storyOrangeSoft: 'rgba(232, 131, 58, 0.14)',
-  storyRoseSoft: 'rgba(217, 87, 122, 0.14)',
-  storySlateSoft: 'rgba(154, 165, 171, 0.14)',
 
   globeOceanLight: '#1B6F82',
   globeOceanDeep: '#002E3C',
   globeLand: '#CFE5DD',
-  globeLandEdge: '#9CC3B6',
 
   storyRose: '#D9577A',
   storyViolet: '#6E5AD6',
   storyOrange: '#E8833A',
   storyTeal: '#1E9AA8',
   storySlate: '#9AA5AB',
+
+  // The drawn globe (components/onboarding/Globe.tsx: onboarding and the Atlas orb). Not Figma variables;
+  // the pin colours are near-misses of the story colours and stay as drawn.
+  sphereOceanLight: '#3C8C99',
+  sphereOceanMid: '#0E4A59',
+  sphereLand: '#D7EAE3',
+  onboardingPinSlate: '#9AA6AB',
+  onboardingPinViolet: '#7A5AF8',
+  onboardingPinTeal: '#1F9AA0',
+  /** The soft blob under the onboarding globe. */
+  groundShadow: 'rgba(0, 0, 0, 0.25)',
 
   // Figma effect style "Glass/Nav": white 62% fill, white 95% 1px border, 24 background blur.
   glassFill: 'rgba(255, 255, 255, 0.62)',
@@ -68,11 +71,17 @@ export const colors = {
   onBrandChip: 'rgba(255, 255, 255, 0.14)',
   onBrandHairline: 'rgba(255, 255, 255, 0.16)',
   onBrandDashed: 'rgba(255, 255, 255, 0.35)',
+  /** Label of the ghost `BigButton` on the dark (petrol) onboarding screens: white at 80%. */
+  onBrandGhost: 'rgba(255, 255, 255, 0.8)',
   cardChipGold: '#E9D49A',
   cardChipOnAccent: 'rgba(0, 46, 60, 0.18)',
   scrim: 'rgba(0, 31, 41, 0.4)',
   /** Darker dim behind a spotlight, so the one lit feature stands out. */
   spotlightScrim: 'rgba(0, 31, 41, 0.72)',
+  /** Fill of the dashed drop zone in an empty bucket of the duel sort question: black at 1%, clear to the eye. */
+  dropZoneFill: 'rgba(0, 0, 0, 0.01)',
+  /** `shadowColor` of the selected duel match tile, the one place still on the iOS shadow props; everything else uses `elevation`. */
+  legacyShadow: '#000',
 
   // Medal tokens (Figma Duel v3 Kit 166:5407)
   medalGold: '#B8860B',
@@ -89,9 +98,20 @@ export const tints = {
   violet: 'rgba(110, 90, 214, 0.14)',
   teal: 'rgba(30, 154, 168, 0.14)',
   orange: 'rgba(232, 131, 58, 0.14)',
+  // Slate has two strengths that render differently: 20% (story tiles, avatars) and the 14% recipe.
   slate: 'rgba(154, 165, 171, 0.2)',
+  slateSoft: 'rgba(154, 165, 171, 0.14)',
   xp: 'rgba(181, 139, 0, 0.14)',
   accent: 'rgba(255, 204, 0, 0.16)',
+} as const;
+
+/** Story and success colours at 12%: bucket and pair backgrounds in the duel sort and match questions. */
+export const duelTints = {
+  teal: 'rgba(30, 154, 168, 0.12)',
+  violet: 'rgba(110, 90, 214, 0.12)',
+  orange: 'rgba(232, 131, 58, 0.12)',
+  rose: 'rgba(217, 87, 122, 0.12)',
+  success: 'rgba(30, 138, 94, 0.12)',
 } as const;
 
 /** `story/*` colours by key, as stories name them in their data (`color: 'rose'`). */
@@ -169,6 +189,33 @@ export const elevation = {
   pin: { boxShadow: `0 4px 8px rgba(${SHADOW_RGB}, 0.30)` },
   glass: { boxShadow: `0 8px 24px rgba(${SHADOW_RGB}, 0.16)` },
 } as const satisfies Record<string, ViewStyle>;
+
+/** Shadows of the drawn onboarding illustrations. Not Figma effect styles: UI uses `elevation`. */
+export const illustrationShadow = {
+  pin: { boxShadow: '0 3px 8px rgba(0, 0, 0, 0.3)' },
+  globe: { boxShadow: '0 18px 40px rgba(0, 0, 0, 0.45)' },
+  bubble: { boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)' },
+  vsGlow: { boxShadow: '0 0 0 8px rgba(255, 204, 0, 0.16), 0 0 32px rgba(255, 204, 0, 0.45)' },
+  card: { boxShadow: '0 6px 20px rgba(0, 46, 60, 0.08)' },
+  cardRaised: { boxShadow: '0 8px 24px rgba(0, 46, 60, 0.16)' },
+} as const satisfies Record<string, ViewStyle>;
+
+/**
+ * Easing curves as cubic-bezier control points. Tuples, because the call sites feed three easing APIs:
+ * `cubicBezier(...motion.easeOut)` (Reanimated CSS), `Easing.bezierFn(...)` (Reanimated worklets),
+ * `Easing.bezier(...)` (React Native core).
+ */
+export const motion = {
+  /** Strong ease-out: UI answering the user (press, enter, pop, expand). */
+  easeOut: [0.23, 1, 0.32, 1],
+  /** Ease-in-out: something already on screen that moves or resizes. */
+  easeInOut: [0.77, 0, 0.175, 1],
+  /** iOS-style drawer: quick start, long soft landing (bottom sheet, Atlas popup). */
+  drawer: [0.32, 0.72, 0, 1],
+} as const;
+
+/** Pressed state of a button-like Pressable: `pressed && pressFeedback`. */
+export const pressFeedback: ViewStyle = { transform: [{ scale: 0.98 }], opacity: 0.9 };
 
 /** Floating nav geometry (Figma "Floating Nav"): orb 64, pill padding 6, items 66 × 52, 8 gap. */
 export const nav = {

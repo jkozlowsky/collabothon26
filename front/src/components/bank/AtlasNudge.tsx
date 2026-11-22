@@ -1,5 +1,5 @@
 import { useIsFocused } from 'expo-router';
-import { useEffect, useRef, useState, type ComponentRef } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, type ComponentRef } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import { useReducedMotion } from 'react-native-reanimated';
@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/bank/Icon';
 import { GlobeSphere } from '@/components/onboarding/Globe';
 import { haptic, Tappable } from '@/components/onboarding/ui';
-import { colors, elevation, radii, spacing, type } from '@/constants/theme';
+import { colors, elevation, motion, radii, spacing, type } from '@/constants/theme';
 import { measureOrb, setAtlasDot } from '@/lib/atlasOrb';
 import type { FqTeaser } from '@/types/bank';
 
@@ -26,10 +26,20 @@ const MEASURE_TIMEOUT_MS = 150;
 /** Swipe up past this distance (px) or speed (px/s) dismisses; anything less springs back. */
 const DISMISS_DISTANCE = 40;
 const DISMISS_VELOCITY = 600;
-const NATIVE = Platform.OS !== 'web';
-const EASE = Easing.bezier(0.32, 0.72, 0, 1);
+/** A downward drag moves the popup by only this share of the finger's travel (rubber band). */
+const RUBBER_BAND = 0.15;
+/** The JS driver on web (no native animated module there). */
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
+const EASE = Easing.bezier(...motion.drawer);
 /** The fly-in: a slow start, then it drops into the button. */
 const FLY_EASE = Easing.bezier(0.55, 0, 0.75, 0.35);
+/** The flying card starts to fade at this share of FLY_MS. */
+const FLY_FADE_START = 0.6;
+/** Smallest scale of the flying card, however small the button measures. */
+const MIN_FLY_SCALE = 0.08;
+const GLOBE_SIZE = 40;
+/** Phone width on web, so the popup over the centered phone frame is not as wide as the desktop. */
+const MAX_WIDTH = 430;
 
 /**
  * Popups already shown in this app session, by placement and lesson. A tab shows its popup once,
@@ -55,7 +65,7 @@ type Props = {
 };
 
 const timing = (value: Animated.Value, toValue: number, duration: number, easing = EASE) =>
-  Animated.timing(value, { toValue, duration, easing, useNativeDriver: NATIVE });
+  Animated.timing(value, { toValue, duration, easing, useNativeDriver: USE_NATIVE_DRIVER });
 
 /**
  * Atlas as an in-app notification: slides down from the top of a bank tab a moment after it opens.
@@ -73,7 +83,7 @@ export function AtlasNudge({ placement, teaser, ready, streak = 0, onOpen, testI
     scale: new Animated.Value(1),
     opacity: new Animated.Value(1),
     /** 1 → 0 while the popup counts down. */
-    left: new Animated.Value(1),
+    timeLeft: new Animated.Value(1),
   }));
   const [shown, setShown] = useState<FqTeaser | null>(null);
   const slot = useRef<ComponentRef<typeof View>>(null);
@@ -82,7 +92,7 @@ export function AtlasNudge({ placement, teaser, ready, streak = 0, onOpen, testI
   const leaving = useRef(false);
   const key = `${placement}:${teaser.personal ? 'new' : 'learner'}:${teaser.lessonId ?? teaser.storyId}`;
 
-  const stopCountdown = () => anim.left.stopAnimation((v) => (remaining.current = v));
+  const stopCountdown = () => anim.timeLeft.stopAnimation((v) => (remaining.current = v));
 
   const finish = () => {
     leaving.current = false;
@@ -122,12 +132,12 @@ export function AtlasNudge({ placement, teaser, ready, streak = 0, onOpen, testI
         const dx = orb.x + orb.width / 2 - (sx + sw / 2);
         const dy = orb.y + orb.height / 2 - (sy + sh / 2);
         // Scale to the button's size, so the card seems to go into it.
-        const to = Math.max(orb.width / sw, 0.08);
+        const to = Math.max(orb.width / sw, MIN_FLY_SCALE);
         Animated.parallel([
           timing(anim.x, dx, FLY_MS, FLY_EASE),
           timing(anim.y, dy, FLY_MS, FLY_EASE),
           timing(anim.scale, to, FLY_MS, FLY_EASE),
-          Animated.sequence([Animated.delay(FLY_MS * 0.6), timing(anim.opacity, 0, FLY_MS * 0.4)]),
+          Animated.sequence([Animated.delay(FLY_MS * FLY_FADE_START), timing(anim.opacity, 0, FLY_MS * (1 - FLY_FADE_START))]),
         ]).start(land);
       });
     });
@@ -136,42 +146,47 @@ export function AtlasNudge({ placement, teaser, ready, streak = 0, onOpen, testI
   /** Runs the bar down from where it stopped; when it reaches the end the popup flies away. */
   const countdown = () => {
     if (leaving.current) return;
-    timing(anim.left, 0, remaining.current * VISIBLE_MS, Easing.linear).start(({ finished }) => finished && flyToOrb());
+    timing(anim.timeLeft, 0, remaining.current * VISIBLE_MS, Easing.linear).start(({ finished }) => finished && flyToOrb());
   };
+
+  // Effect Events, so only focus, readiness or a new key restart the effect; `teaser` is read when the timer fires.
+  const show = useEffectEvent(() => {
+    seen.add(key);
+    leaving.current = false;
+    remaining.current = 1;
+    anim.x.setValue(0);
+    anim.scale.setValue(1);
+    anim.opacity.setValue(1);
+    anim.timeLeft.setValue(1);
+    setShown(teaser);
+    haptic('light');
+    timing(anim.y, 0, reduced ? 0 : OPEN_MS).start();
+    countdown();
+  });
+  const hideOnBlur = useEffectEvent(() => {
+    if (shown) hide();
+  });
 
   // Show once the tab is focused and the data is in; leave when the user switches tabs.
   useEffect(() => {
     if (!focused) {
-      if (shown) hide();
+      hideOnBlur();
       return;
     }
     if (!ready || seen.has(key)) return;
-    const timer = setTimeout(() => {
-      seen.add(key);
-      leaving.current = false;
-      remaining.current = 1;
-      anim.x.setValue(0);
-      anim.scale.setValue(1);
-      anim.opacity.setValue(1);
-      anim.left.setValue(1);
-      setShown(teaser);
-      haptic('light');
-      timing(anim.y, 0, reduced ? 0 : OPEN_MS).start();
-      countdown();
-    }, DELAY_MS);
+    const timer = setTimeout(() => show(), DELAY_MS);
     return () => clearTimeout(timer);
-    // `teaser` is read when the timer fires; `key` covers the part of it that matters.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focused, ready, key]);
 
-  useEffect(() => () => anim.left.stopAnimation(), [anim]);
+  // A countdown still running at unmount must not fly a popup that is gone.
+  useEffect(() => () => anim.timeLeft.stopAnimation(), [anim]);
 
   const pan = usePanGesture({
     runOnJS: true,
     activeOffsetY: [-8, 8],
     failOffsetX: [-20, 20],
     onBegin: stopCountdown,
-    onUpdate: (e) => anim.y.setValue(e.translationY < 0 ? e.translationY : e.translationY * 0.15),
+    onUpdate: (e) => anim.y.setValue(e.translationY < 0 ? e.translationY : e.translationY * RUBBER_BAND),
     onDeactivate: (e) => {
       if (-e.translationY > DISMISS_DISTANCE || -e.velocityY > DISMISS_VELOCITY) return hide();
       timing(anim.y, 0, reduced ? 0 : CLOSE_MS).start();
@@ -205,7 +220,7 @@ export function AtlasNudge({ placement, teaser, ready, streak = 0, onOpen, testI
             style={styles.card}
           >
             <View style={styles.globe}>
-              <GlobeSphere size={40} />
+              <GlobeSphere size={GLOBE_SIZE} />
             </View>
             <View style={styles.body}>
               <Text style={styles.overline}>{shown.personal ? 'Atlas · from your numbers' : 'Atlas · now'}</Text>
@@ -222,7 +237,7 @@ export function AtlasNudge({ placement, teaser, ready, streak = 0, onOpen, testI
               )}
             </View>
             {/* Time left before the popup goes into the Atlas button. Pauses while touched. */}
-            <Animated.View pointerEvents="none" testID={testID && `${testID}-timer`} style={[styles.timer, { transform: [{ scaleX: anim.left }] }]} />
+            <Animated.View pointerEvents="none" testID={testID && `${testID}-timer`} style={[styles.timer, { transform: [{ scaleX: anim.timeLeft }] }]} />
           </Tappable>
           <Pressable onPress={flyToOrb} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close" testID={testID && `${testID}-dismiss`} style={styles.close}>
             <Icon name="close" size={16} color={colors.textMuted} />
@@ -235,7 +250,7 @@ export function AtlasNudge({ placement, teaser, ready, streak = 0, onOpen, testI
 
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center', paddingHorizontal: spacing.md },
-  slot: { width: '100%', maxWidth: 430 - spacing.md * 2 },
+  slot: { width: '100%', maxWidth: MAX_WIDTH - spacing.md * 2 },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -251,8 +266,8 @@ const styles = StyleSheet.create({
     paddingRight: 40,
     ...elevation.high,
   },
-  globe: { width: 40, height: 40 },
-  body: { flex: 1, gap: 2 },
+  globe: { width: GLOBE_SIZE, height: GLOBE_SIZE },
+  body: { flex: 1, gap: spacing.xxs },
   overline: { ...type.overline, color: colors.brandPrimary },
   title: type.titleCard,
   meta: { ...type.labelDefault, color: colors.textMuted },

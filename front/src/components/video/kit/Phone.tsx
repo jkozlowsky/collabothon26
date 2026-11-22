@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { type SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 
-import { CANVAS, POP } from '@/components/video/kit/canvas';
+import { CANVAS, PHONE_X, POP } from '@/components/video/kit/canvas';
 import { colors, radii, scenePalette, spacing, type } from '@/constants/theme';
 import { layerProgress } from '@/lib/sceneClock';
 import type { ChatMessage } from '@/types/lessons';
@@ -22,7 +22,7 @@ const HEIGHT = 176;
 const BUZZ = 0.35;
 
 /** A small phone with chat bubbles in the ChatStep look. Bubbles pop in at their `at`; the phone buzzes. Not narrated. */
-export const Phone = memo(function Phone({ messages, x = 0.72, t, reducedMotion }: Props) {
+export const Phone = memo(function Phone({ messages, x = PHONE_X, t, reducedMotion }: Props) {
   const times = messages.map((m) => m.at);
   const buzz = useAnimatedStyle(() => {
     if (reducedMotion) return {};

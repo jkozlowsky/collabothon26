@@ -39,7 +39,7 @@ export function PinCallout({ story, state, onOpen, startHere }: Props) {
   return (
     <View style={styles.card} testID="pin-callout">
       {startHere && <StartHereBadge testID="callout-start-here" />}
-      <Text style={styles.city}>{story.city}</Text>
+      <Text style={styles.overline}>{story.city}</Text>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.meta}>{meta}</Text>
       {startHere && (
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgSurface,
     ...elevation.mid,
   },
-  city: { ...type.overline, color: colors.brandPrimary },
+  overline: { ...type.overline, color: colors.brandPrimary },
   title: type.titleCard,
   why: { ...type.labelDefault, color: colors.textPrimary },
   meta: { ...type.labelDefault, color: colors.textMuted },
@@ -84,10 +84,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingVertical: spacing.sm,
-    paddingLeft: 14,
+    paddingLeft: spacing.mdPlus,
     paddingRight: spacing.md,
     borderRadius: radii.button,
     backgroundColor: colors.brandAccent,
   },
   buttonLabel: { ...type.labelStrong, color: colors.textOnAccent },
 });
+
+/** The arena's callout is the same card with fixed texts. */
+export { styles as calloutStyles };

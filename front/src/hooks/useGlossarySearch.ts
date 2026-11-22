@@ -25,9 +25,13 @@ export function useGlossarySearch(query: string) {
   useEffect(() => {
     if (!debounced) return;
     let cancelled = false;
+    // A slow answer to an older query is dropped, so it can never replace a newer one.
+    const show = (result: Result) => {
+      if (!cancelled) setResult(result);
+    };
     api<SearchResponse>(`/api/glossary/search?q=${encodeURIComponent(debounced)}`).then(
-      (data) => !cancelled && setResult({ q: debounced, data }),
-      (error: Error) => !cancelled && setResult({ q: debounced, error }),
+      (data) => show({ q: debounced, data }),
+      (error: Error) => show({ q: debounced, error }),
     );
     return () => {
       cancelled = true;

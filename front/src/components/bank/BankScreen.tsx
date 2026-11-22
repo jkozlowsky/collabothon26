@@ -27,25 +27,25 @@ export function BankScreen({ title, actions, overlay, children, testID }: Props)
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']} testID={testID}>
       <BankScrollContext.Provider value={scroll}>
-      <ScrollView
-        ref={scrollRef}
-        onScroll={(e) => {
-          offset.current = e.nativeEvent.contentOffset.y;
-        }}
-        scrollEventThrottle={32}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {title && (
-          <View style={styles.header}>
-            <Text style={styles.title} accessibilityRole="header">
-              {title}
-            </Text>
-            {actions}
-          </View>
-        )}
-        {children}
-      </ScrollView>
+        <ScrollView
+          ref={scrollRef}
+          onScroll={(e) => {
+            offset.current = e.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={32}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {title && (
+            <View style={styles.header}>
+              <Text style={styles.title} accessibilityRole="header">
+                {title}
+              </Text>
+              {actions}
+            </View>
+          )}
+          {children}
+        </ScrollView>
       </BankScrollContext.Provider>
       {overlay}
     </SafeAreaView>

@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ColosseumIcon } from '@/components/globe/ColosseumIcon';
-import { PIN_BOX } from '@/components/globe/GlobePin';
+import { PIN_BOX, pinHead } from '@/components/globe/GlobePin';
 import { Tappable } from '@/components/onboarding/ui';
 import { colors, elevation, radii, type } from '@/constants/theme';
 
@@ -11,9 +11,7 @@ type Props = {
 };
 
 export function ArenaPin({ active = false, onPress }: Props) {
-  const size = active ? 44 : 36;
-  const headTop = PIN_BOX.height - size * Math.SQRT1_2 - size / 2;
-  const head = { width: size, height: size, left: (PIN_BOX.width - size) / 2, top: headTop };
+  const head = pinHead(active);
 
   return (
     <Tappable
@@ -25,23 +23,11 @@ export function ArenaPin({ active = false, onPress }: Props) {
       testID="globe-pin-arena"
       style={styles.box}
     >
-      <View
-        style={[
-          styles.head,
-          head,
-          {
-            borderTopLeftRadius: size / 2,
-            borderTopRightRadius: size / 2,
-            borderBottomLeftRadius: size / 2,
-            backgroundColor: colors.brandPrimary,
-            borderColor: active ? colors.brandAccent : colors.bgSurface,
-          },
-        ]}
-      />
-      <View style={[styles.icon, head]}>
-        <ColosseumIcon size={active ? 20 : 16} color={colors.textOnBrand} />
+      <View style={[styles.head, head.box, head.corners, { borderColor: active ? colors.brandAccent : colors.bgSurface }]} />
+      <View style={[styles.icon, head.box]}>
+        <ColosseumIcon size={head.iconSize} color={colors.textOnBrand} />
       </View>
-      <View style={[styles.chip, { top: headTop - 8 }]}>
+      <View style={[styles.chip, { top: head.box.top - 8 }]}>
         <Text style={styles.chipText}>Arena</Text>
       </View>
     </Tappable>
@@ -53,14 +39,11 @@ const styles = StyleSheet.create({
   head: {
     position: 'absolute',
     borderWidth: 3,
+    backgroundColor: colors.brandPrimary,
     transform: [{ rotate: '45deg' }],
     ...elevation.pin,
   },
-  icon: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  icon: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   chip: {
     position: 'absolute',
     alignSelf: 'center',

@@ -1,7 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing, type } from '@/constants/theme';
+import { colors, pressFeedback, radii, spacing, type } from '@/constants/theme';
 import type { TermRef } from '@/types/glossary';
 
 type Props = {
@@ -27,7 +27,7 @@ export function RelatedTerms({ terms, onOpenTerm }: Props) {
             testID={`related-${term.slug}`}
             accessibilityRole="button"
             onPress={() => onOpenTerm(term.slug)}
-            style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.chip, pressed && pressFeedback]}
           >
             <Feather name="book-open" size={16} color={colors.textPrimary} />
             <Text style={type.labelStrong}>{term.name}</Text>
@@ -54,5 +54,4 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderDefault,
   },
-  pressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
 });

@@ -318,7 +318,7 @@ export function today() {
  * Clips 01–05: the everyday bank, Learn, onboarding, the Quick check, "How we see you", then the globe to Berlin
  * and its first lesson (the one the summary starts with). Ends with berlin-1 opening.
  */
-export async function onboardToFirstLesson(page: Page, rec: ClipRecorder, { realJev }: { realJev: boolean }) {
+export async function onboardToFirstLesson(page: Page, rec: ClipRecorder) {
   // 1. The everyday bank, then Learn.
   await page.goto('/');
   await tap(page, 'account-demo-user', 800);
@@ -362,21 +362,10 @@ export async function onboardToFirstLesson(page: Page, rec: ClipRecorder, { real
     await beat(page, 3000); // the right answer and why
     await tap(page, 'quick-check-continue', 300);
   };
-  if (!realJev) {
-    // Real return: Alex mixes it up. Emergency fund: right. A share that fell by half: not sure.
-    await answer(`quick-check-option-${correct(ORDER[0]) + 1}`);
-    await answer(`quick-check-option-${correct(ORDER[1])}`);
-    await answer('quick-check-unsure');
-  } else {
-    // Jev picks the lessons, so answer whatever comes until the summary shows.
-    const summary = page.getByTestId('learning-path');
-    const option = page.getByTestId('quick-check-option-0');
-    while (!(await summary.isVisible())) {
-      // An answered question keeps its options on screen, disabled, until "Continue".
-      if ((await option.isVisible()) && (await option.getAttribute('aria-disabled')) !== 'true') await answer('quick-check-option-0');
-      await page.waitForTimeout(300);
-    }
-  }
+  // Real return: Alex mixes it up. Emergency fund: right. A share that fell by half: not sure.
+  await answer(`quick-check-option-${correct(ORDER[0]) + 1}`);
+  await answer(`quick-check-option-${correct(ORDER[1])}`);
+  await answer('quick-check-unsure');
 
   // 4. "How we see you" and the first lesson.
   await rec.start('04-summary');

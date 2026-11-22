@@ -548,7 +548,7 @@ async function toSummary(post: Categorization, survey?: Survey) {
   await summary();
 }
 
-test('the summary: a gap card, the level and its basis, the first lesson, the disclaimer', async () => {
+test('the summary: the level and its basis, the first lesson, a gap note under its area, the disclaimer', async () => {
   const gap = {
     area: 'saving' as const,
     direction: 'habit-ahead' as const,
@@ -557,10 +557,9 @@ test('the summary: a gap card, the level and its basis, the first lesson, the di
   await toSummary(ran({ gaps: [gap], startLesson: { lessonId: 'berlin-3', title: 'Emergency fund', area: 'saving', storyId: 'berlin', storyCity: 'Berlin' } }));
 
   expect(get('summary-gap-saving')).toHaveTextContent('Your habits are ahead of the theory', { exact: false });
-  expect(get('summary-gap-saving')).toHaveTextContent(gap.because, { exact: false });
   expect(get('summary-role')).toHaveTextContent("You're an intermediate learner", { exact: false });
   expect(get('summary-based-on')).toHaveTextContent('Based on 3 answers and what your account shows.', { exact: false });
-  expect(get('summary-first-lesson')).toHaveTextContent(/your first stop · saving/i);
+  expect(get('summary-first-lesson')).toHaveTextContent(/your first stop/i);
   expect(get('summary-first-lesson')).toHaveTextContent('Emergency fund', { exact: false });
   expect(get('summary-first-lesson')).toHaveTextContent('Berlin · stop 3 of 4', { exact: false });
   expect(get('summary-disclaimer')).toHaveTextContent('This picks lessons for you. It is not investment advice.', { exact: false });
@@ -576,10 +575,9 @@ test('a knowledge-ahead gap says "You know more than your account shows"', async
   };
   await toSummary(ran({ gaps: [gap] }));
   expect(get('summary-gap-investing')).toHaveTextContent('You know more than your account shows', { exact: false });
-  expect(get('summary-gap-investing')).toHaveTextContent(gap.because, { exact: false });
 });
 
-test('with no gap the summary has no gap card, and the map has no confidence marker or legend', async () => {
+test('with no gap the summary has no gap note, and the map has no confidence marker or legend', async () => {
   await toSummary(ran());
   expect(screen.queryByTestId(/^summary-gap-/)).toBeNull();
   expect(get('summary-map')).toBeOnTheScreen();

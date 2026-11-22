@@ -1,6 +1,6 @@
 import type { Horizon, ProfileRanges } from '@/types/quickCheck';
 
-/** The personalisation answers on the profile. A fresh onboarding saves the goals; the rest comes from "Edit answers". */
+/** The personalisation answers on the profile. A fresh onboarding saves the goals; the rest comes from "Personalise your lessons". */
 /** Broad stage of life, used to pick examples that feel familiar. */
 export type LifeStage = 'starting-out' | 'building' | 'settled' | 'later-life';
 /** How the user handles their money today, from not saving yet to planning ahead. */

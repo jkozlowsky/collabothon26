@@ -78,7 +78,7 @@ function RootContent() {
 
 /**
  * The app opens on the bank (host app shell). Atlas onboarding is opened from the Learn
- * button (useOpenLearn), never forced at launch, and closed by useResumeLearnAfterOnboarding.
+ * button (useOpenLearn), never forced at launch, and closed by leaveOnboardingForCheck.
  */
 function RootStack() {
   const { done, loaded } = useOnboarding();
@@ -93,7 +93,7 @@ function RootStack() {
       <Stack.Screen name="onboarding" options={{ animation: 'slide_from_bottom' }} />
       {/* Until the profile has loaded, a reload of /learning-path must not bounce to the bank. */}
       <Stack.Protected guard={done || !loaded}>
-        {/* A fresh onboarding continues here; useResumeLearnAfterOnboarding opens it. */}
+        {/* A fresh onboarding continues here; leaveOnboardingForCheck opens it. */}
         <Stack.Screen name="categorizing" options={{ animation: 'fade' }} />
         <Stack.Screen name="learning-path" options={{ animation: 'fade' }} />
         <Stack.Screen

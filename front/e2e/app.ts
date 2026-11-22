@@ -48,9 +48,17 @@ export const emptyQuestionBank = (page: Page) =>
 export async function gotoBank(page: Page) {
   const profile = page.waitForResponse((res) => res.url().endsWith(PROFILE_URL));
   await page.goto('/');
-  // The app opens on the account picker; Alex is the demo user the specs run as.
-  await page.getByTestId('account-demo-user').click();
+  await pickAlex(page);
   await profile;
+}
+
+/**
+ * Every app start, a reload included, opens on the account picker; Alex is the demo user the specs run as.
+ * After a reload this device already holds Alex's lock, so his card is still tappable and the app opens on the
+ * reloaded URL.
+ */
+export async function pickAlex(page: Page) {
+  await page.getByTestId('account-demo-user').click();
 }
 
 /** The app opens on the bank; Atlas (and its onboarding, the first time) starts from Learn. */

@@ -9,7 +9,7 @@ type Props = {
   icon: BankIconName;
   title: string;
   /** A string, or custom content (e.g. a level label with a progress bar). */
-  meta: ReactNode;
+  meta?: ReactNode;
   value?: string;
   /** Second line under the value ("remaining", "Next: 1 Dec"). */
   valueNote?: string;

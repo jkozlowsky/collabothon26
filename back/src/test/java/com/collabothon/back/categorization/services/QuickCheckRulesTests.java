@@ -149,6 +149,19 @@ class QuickCheckRulesTests {
 		return plan(completed, null, answers);
 	}
 
+	private static List<String> firstChoices(List<Story> interests, Set<String> completed, Answer... answers) {
+		return firstChoices(interests, completed, mastery(answers), answers);
+	}
+
+	private static List<String> firstChoices(List<Story> interests, Set<String> completed,
+			Map<FocusArea, Double> mastery, Answer... answers) {
+		List<Answer> list = List.of(answers);
+		List<CheckLesson> gaps = QuickCheckRules
+			.pool(QuickCheckRules.candidates(LESSONS, STORIES, ORDER, mastery, list, completed), list);
+		return ids(QuickCheckRules.firstLessonChoices(gaps,
+				QuickCheckRules.interestLessons(interests, LESSONS, mastery, list, completed), list, completed));
+	}
+
 	private static Map<FocusArea, GapDirection> ruleGaps(FactsDto facts, Answer... answers) {
 		Map<FocusArea, GapDirection> gaps = new LinkedHashMap<>();
 		for (FocusArea area : ORDER) {
@@ -553,9 +566,9 @@ class QuickCheckRulesTests {
 
 		// Saving: the lesson answered wrong, then one of each story. Investing: one of each story.
 		assertEquals(List.of("s1-2", "s1-1", "s2-1", "s4-1"),
-				ids(QuickCheckRules.firstLessonChoices(pool, List.of(answers), Set.of())));
+				ids(QuickCheckRules.firstLessonChoices(pool, List.of(), List.of(answers), Set.of())));
 		assertEquals(List.of("s1-2", "s3-1", "s2-1", "s4-1"),
-				ids(QuickCheckRules.firstLessonChoices(pool, List.of(answers), Set.of("s1-1"))));
+				ids(QuickCheckRules.firstLessonChoices(pool, List.of(), List.of(answers), Set.of("s1-1"))));
 	}
 
 	@Test
@@ -564,7 +577,69 @@ class QuickCheckRulesTests {
 		Set<String> completed = Set.of("s1-1", "s1-2");
 		List<CheckLesson> pool = QuickCheckRules.pool(candidates(completed, answers), List.of(answers));
 
-		assertEquals(List.of(), QuickCheckRules.firstLessonChoices(pool, List.of(answers), completed));
+		assertEquals(List.of(), QuickCheckRules.firstLessonChoices(pool, List.of(), List.of(answers), completed));
+	}
+
+	@Test
+	void eachPickedPathAddsItsStartLessonToTheGapLessonsOnce() {
+		assertEquals(List.of("s1-2", "s1-1", "s4-1"),
+				firstChoices(List.of(story("s1"), story("s4")), Set.of(), wrong(S12)));
+		// The limit of two per area is for the gap lessons; every picked path may add one.
+		assertEquals(List.of("s1-2", "s1-1", "s2-1", "s4-1", "s3-1"), firstChoices(
+				List.of(story("s1"), story("s2"), story("s3"), story("s4")), Set.of(), wrong(S12), right(I21_A)));
+		// One gap lesson and one interest lesson are enough to ask.
+		assertEquals(List.of("s3-1", "s2-1"), firstChoices(List.of(story("s2")), done("s1"), wrong(S31)));
+	}
+
+	@Test
+	void aPathsStartLessonIsItsFirstQuizLessonNotCompleted() {
+		assertEquals(List.of("s1-2", "s1-1", "s2-2"), firstChoices(List.of(story("s2")), Set.of("s2-1"), wrong(S12)));
+		// s3-2 is left but has no quiz.
+		assertEquals(List.of("s1-2", "s1-1"), firstChoices(List.of(story("s3")), Set.of("s3-1"), wrong(S12)));
+	}
+
+	@Test
+	void aSolidPickedPathOffersItsFirstLessonNotAnsweredRight() {
+		assertEquals(List.of("s2-1", "s4-1", "s1-2"),
+				firstChoices(List.of(story("s1")), Set.of(), right(S11_A), right(S31), wrong(I21_A)));
+		// A lesson not asked about does not count as answered right.
+		assertEquals(List.of("s2-1", "s4-1", "s1-1"),
+				firstChoices(List.of(story("s1")), Set.of(), right(S12), right(S31), wrong(I21_A)));
+		// Nor does a lesson with one of its answers wrong; Jev's mastery can still make its area Solid.
+		assertEquals(List.of("s2-1", "s4-1", "s1-1"), firstChoices(List.of(story("s1")), Set.of(),
+				Map.of(SAVING, 0.9, INVESTING, 0.25), right(S11_A), wrong(S11_B), wrong(I21_A)));
+	}
+
+	@Test
+	void aSolidPickedPathWithNoSuchLessonLeftDropsOutOfThePool() {
+		assertEquals(List.of("s2-1", "s4-1"),
+				firstChoices(List.of(story("s1")), Set.of(), right(S11_A), right(S12), wrong(I21_A)));
+		assertEquals(List.of(), firstChoices(List.of(story("s3"), story("s4")), Set.of(), right(S11_A), right(S31),
+				right(I21_A), right(I41)));
+	}
+
+	@Test
+	void withEveryAreaSolidThePoolIsTheInterestLessonsWhenThereAreTwo() {
+		Answer[] allSure = { right(S11_A), right(S31), right(I21_A), right(I41) };
+
+		assertEquals(List.of("s1-2", "s2-2"), firstChoices(List.of(story("s1"), story("s2")), Set.of(), allSure));
+		assertEquals(List.of(), firstChoices(List.of(story("s1")), Set.of(), allSure));
+	}
+
+	@Test
+	void aPickIsHonouredWithoutGapCandidatesAndReadyForNextKeepsItsMeaning() {
+		StoryPlan allSolid = planWithInterests(List.of(story("s2")), Set.of(), lesson("s2-2"), right(S11_A), right(S31),
+				right(I21_A), right(I41));
+		assertEquals("s2", allSolid.start().id());
+		assertEquals(INVESTING, allSolid.area());
+		assertTrue(allSolid.readyForNext());
+		assertEquals(List.of("s2"), allSolid.pathStoryIds());
+
+		// Investing is not Solid, but all its stories are done.
+		StoryPlan notReady = planWithInterests(List.of(story("s1")), done("s2", "s4"), lesson("s1-2"), right(S11_A),
+				right(S31), notSure(I21_A));
+		assertEquals("s1", notReady.start().id());
+		assertFalse(notReady.readyForNext());
 	}
 
 	@Test

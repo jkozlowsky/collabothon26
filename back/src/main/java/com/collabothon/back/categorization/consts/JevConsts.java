@@ -34,4 +34,9 @@ public final class JevConsts {
 
 	public static final int MIN_CHOICE_LABELS = 2;
 
+	public static final String INTEREST_NOTE = "The person picked this path as new to them.";
+
+	public static final String SOLID_INTEREST_NOTE = "The person picked this path as new to them; the test showed they"
+			+ " already know the basics.";
+
 }

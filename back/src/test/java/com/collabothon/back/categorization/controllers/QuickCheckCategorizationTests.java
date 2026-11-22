@@ -107,6 +107,11 @@ class QuickCheckCategorizationTests {
 				right("sao-paulo-3/q2"), right("seoul-1/q2"), right("tokyo-1/q1")) + "]")
 		.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": 0.9, \"debt\": 0.9, \"investing\": 0.9}");
 
+	private static final String PICKED = " The person picked this path as new to them.";
+
+	private static final String PICKED_AND_SOLID = " The person picked this path as new to them; the test showed they"
+			+ " already know the basics.";
+
 	private static final String F1_ANSWERS = """
 			"role": {"type": "choice", "choice": "intermediate", "confidence": 0.8,
 			         "probabilities": {"novice": 0.1, "intermediate": 0.8, "advanced": 0.1}},
@@ -258,7 +263,8 @@ class QuickCheckCategorizationTests {
 		ObjectNode firstLesson = (ObjectNode) block.get("first_lesson").deepCopy();
 		ObjectNode criteria = firstLesson.putObject("criteria");
 		for (String lessonId : CHOICES) {
-			criteria.put(label(lessonId), TestPool.criterion(lessonId));
+			// berlin-1 is the picked path's start lesson; berlin-2 is there as a gap lesson.
+			criteria.put(label(lessonId), TestPool.criterion(lessonId) + (lessonId.equals("berlin-1") ? PICKED : ""));
 		}
 		expected.set("first_lesson", firstLesson);
 		assertEquals(expected, sent.get().get("questions"));
@@ -548,6 +554,7 @@ class QuickCheckCategorizationTests {
 				.doesNotExist())
 			.andRespond(withSuccess(jevFinal(""), MediaType.APPLICATION_JSON));
 
+		onboardWithInterests();
 		// Of the investing lessons only seoul-5 is left to do.
 		completeStory("tokyo");
 		completeStory("mumbai");
@@ -558,6 +565,47 @@ class QuickCheckCategorizationTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.source").value("jev"))
 			.andExpect(jsonPath("$.startLesson.lessonId").value("seoul-5"));
+	}
+
+	@Test
+	void aSolidPickedPathOffersItsLaterLessonAndOnlyInterestLessonsSayWhy() throws Exception {
+		onboardWithInterests("berlin", "sao-paulo");
+		AtomicReference<JsonNode> sent = new AtomicReference<>();
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(request -> sent.set(json.readTree(((MockClientHttpRequest) request).getBodyAsString())))
+			.andRespond(withSuccess(jevFinal(firstLesson("berlin-3", "seoul-1", "tokyo-1", "berlin-3", "sao-paulo-1")),
+					MediaType.APPLICATION_JSON));
+
+		// Saving is Solid through berlin-1 and berlin-2, investing has the gap, debt was not asked about.
+		// Jev weighs berlin-3, yet the app still opens Berlin at its first lesson not done.
+		categorize(QUICK_CHECK
+			.replace(HISTORY, "[" + history(right("berlin-1/q1"), right("berlin-2/q1"), wrong("seoul-1/q2")) + "]")
+			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": 0.9, \"investing\": 0.25}"))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"source": "jev", "readyForNext": false,
+					 "startLesson": {"lessonId": "berlin-1", "area": "saving", "storyId": "berlin"},
+					 "pathStoryIds": ["berlin", "seoul", "tokyo", "mumbai", "sao-paulo"]}""", JsonCompareMode.LENIENT));
+
+		ObjectNode criteria = json.createObjectNode()
+			.put(label("seoul-1"), TestPool.criterion("seoul-1"))
+			.put(label("tokyo-1"), TestPool.criterion("tokyo-1"))
+			.put(label("berlin-3"), TestPool.criterion("berlin-3") + PICKED_AND_SOLID)
+			.put(label("sao-paulo-1"), TestPool.criterion("sao-paulo-1") + PICKED);
+		assertEquals(criteria, sent.get().at("/questions/first_lesson/criteria"));
+	}
+
+	@Test
+	void withEveryAreaSolidJevsPickAmongTheInterestsIsHonoured() throws Exception {
+		onboardWithInterests("berlin", "tokyo");
+		jev.expect(requestTo(JEV_URL))
+			.andRespond(withSuccess(jevFinal(firstLesson("tokyo-2", "berlin-3", "tokyo-2")), MediaType.APPLICATION_JSON));
+
+		categorize(ALL_SOLID).andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"source": "jev", "readyForNext": true,
+					 "startLesson": {"lessonId": "tokyo-1", "area": "investing", "storyId": "tokyo"},
+					 "pathStoryIds": ["tokyo"]}""", JsonCompareMode.LENIENT));
 	}
 
 	@Test

@@ -1,6 +1,7 @@
 package com.collabothon.back.categorization.services;
 
 import java.util.List;
+import java.util.Map;
 
 import com.collabothon.back.categorization.dto.JevAnswerDto;
 import com.collabothon.back.categorization.dto.ProfileRangesDto;
@@ -11,5 +12,6 @@ record JevQuickCheck(
 		ProfileRangesDto profile,
 		List<JevAnswerDto> answers,
 		List<FocusArea> gapAreas,
-		List<CheckLesson> lessons
+		List<CheckLesson> lessons,
+		Map<String, String> interestNotes
 ) {}

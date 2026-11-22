@@ -119,12 +119,15 @@ public class CategorizationService {
 		}
 		Set<String> completed = new HashSet<>(completions.findLessonIdsByUserId(userId));
 		List<CheckLesson> lessons = QuickCheckRules.lessons(pool, lessonMapper::toLesson);
-		List<CheckLesson> choices = QuickCheckRules.firstLessonChoices(QuickCheckRules.pool(
-				QuickCheckRules.candidates(lessons, stories, order, mastery, history, completed), history), history,
+		List<CheckLesson> interestLessons = QuickCheckRules.interestLessons(interests, lessons, mastery, history,
 				completed);
+		List<CheckLesson> choices = QuickCheckRules.firstLessonChoices(QuickCheckRules.pool(
+				QuickCheckRules.candidates(lessons, stories, order, mastery, history, completed), history),
+				interestLessons, history, completed);
 		List<FocusArea> gapAreas = QuickCheckRules.gapAreas(order, history, facts);
 		JevQuickCheck quickCheck = ran ? new JevQuickCheck(profile,
-				history.stream().map(jevAnswerMapper::toJev).toList(), gapAreas, choices) : null;
+				history.stream().map(jevAnswerMapper::toJev).toList(), gapAreas, choices,
+				QuickCheckRules.interestNotes(interestLessons, mastery, history)) : null;
 		JevResult fromJev = request.useRules() ? JevResult.SKIPPED : jev.ask(jevOnboardingAnswersMapper.toJev(answers),
 				jevInterestMapper.toJev(interests), facts, quickCheck);
 

@@ -2,44 +2,44 @@
 import { readFileSync } from 'fs';
 import path from 'path';
 
-import { expect, type Page } from '@playwright/test';
-
-import type { ClipRecorder } from './clips';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 import { categorization } from '../src/test-utils/categorization';
 import { POOL } from '../src/test-utils/checkPool';
-import { loadDuelBank, normalise } from './duelAnswers';
+import { findQuestion, loadDuelQuestions, normalise, type DuelQuestion } from './duelAnswers';
 
 /**
- * Steps shared by the demo recordings (*.rec.ts): taps a viewer can follow, the stubbed Jev, the berlin-1 lesson
- * and the Berlin duel.
+ * Steps of the demo recording (berlin-first-step.rec.ts): taps and scrolls a viewer can follow, the stubbed Jev,
+ * the berlin-1 lesson and the duel.
  */
 
-/** Multiplies every pause; PACE=0.5 for a quick dry run, PACE=1.5 for a slower take. */
-export const PACE = Number(process.env.PACE ?? 1);
+/**
+ * Multiplies every pause. The default keeps all clips together under 5 minutes; PACE=0.3 for a quick dry run,
+ * PACE=1 for a slower take. Scrolling keeps its own slow speed whatever the PACE.
+ */
+export const PACE = Number(process.env.PACE ?? 0.5);
 /** The clip size: the Pixel 7 viewport (412×839) at the 3× the config renders at. */
 export const CLIP_SIZE = { width: 1236, height: 2516 };
 
-/** The lesson Alex plays, read from the backend content: its title and the right quiz options. */
-export const LESSON = (() => {
+/** The lesson Alex plays, read from the backend content: the right quiz options and the bucket of each statement. */
+const LESSON = (() => {
   const raw = JSON.parse(readFileSync(path.resolve('../back/src/main/resources/content/lessons/berlin-1.json'), 'utf8')) as {
-    title: string;
     steps: { type: string; options?: string[]; correctIndex?: number; items?: { text: string; bucket: 0 | 1 }[] }[];
   };
   const correct = new Set(raw.steps.filter((st) => st.type === 'quiz').map((st) => normalise(st.options![st.correctIndex!])));
-  // Myth or fact: the bucket of each statement, by its text.
   const bucket = new Map(raw.steps.flatMap((st) => st.items ?? []).map((it) => [normalise(it.text), it.bucket] as const));
-  return { title: raw.title, correct, bucket };
+  return { correct, bucket };
 })();
 
 const CATEGORIZATION_URL = '**/api/users/demo-user/categorization';
-/** The Quick check asks these one by one; three answers are enough to place Alex. */
-const ORDER = ['berlin-1/q2', 'berlin-2/q1', 'seoul-1/q2'];
+/** The stubbed Quick check asks these one by one; three answers are enough to place Alex. */
+export const ORDER = ['berlin-1/q2', 'berlin-2/q1', 'seoul-1/q2'];
 const MASTERY = { saving: 0.55, investing: 0.25 };
-const correct = (id: string) => POOL.find((q) => q.id === id)!.correctIndex;
+export const correctOption = (id: string) => POOL.find((q) => q.id === id)!.correctIndex;
+const START = { lessonId: 'berlin-1', title: 'Safe money that shrinks', area: 'saving' as const, storyId: 'berlin', storyCity: 'Berlin' };
 
-/** What Jev "concludes" about Alex: saves regularly, invests timidly, mixes up real interest. */
-export const ALEX = categorization({
+/** What the stubbed Jev "concludes" about Alex: saves regularly, invests timidly, mixes up real interest. */
+const ALEX = categorization({
   role: 'novice',
   focusAreas: ['saving', 'investing'],
   gaps: [
@@ -56,8 +56,8 @@ export const ALEX = categorization({
   profile: { ageBand: null, savingsCover: null, horizon: null },
   mastery: MASTERY,
   answerCount: 3,
-  startLesson: { lessonId: 'berlin-1', title: LESSON.title, area: 'saving', storyId: 'berlin', storyCity: 'Berlin' },
-  startHere: { lessonId: 'berlin-1', title: LESSON.title, area: 'saving', storyId: 'berlin', storyCity: 'Berlin' },
+  startLesson: START,
+  startHere: START,
   pathStoryIds: ['berlin'],
 });
 
@@ -68,11 +68,59 @@ export const beat = (page: Page, ms = 1200) => page.waitForTimeout(ms * PACE);
 const ACTION_DELAY = 1000;
 export const act = (page: Page) => beat(page, ACTION_DELAY);
 
-/** Taps like a person: a short look at the target, then the tap. */
+/** A new screen stays still this long before anything scrolls. */
+const SETTLE_MS = 1000;
+/** Scrolling speed in CSS pixels per second: slow enough to read along. */
+const SCROLL_PX_PER_S = 220;
+const MIN_SCROLL_MS = 600;
+
+/**
+ * Scrolls the nearest scrolling ancestor of `target` slowly (eased), after a short look at the screen.
+ * `center` brings the target to the middle of the view, `end` scrolls that container to its bottom.
+ */
+export async function glide(page: Page, target: Locator, align: 'center' | 'end' = 'center') {
+  await page.waitForTimeout(SETTLE_MS);
+  await target.evaluate(
+    (el, { align, pxPerS, minMs }) =>
+      new Promise<void>((resolve) => {
+        const scrolls = (e: HTMLElement) => e.scrollHeight > e.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(e).overflowY);
+        let box: HTMLElement | null = align === 'end' && scrolls(el as HTMLElement) ? (el as HTMLElement) : el.parentElement;
+        while (box && !scrolls(box)) box = box.parentElement;
+        const scroller = box ?? (document.scrollingElement as HTMLElement);
+        const view = box ? box.getBoundingClientRect() : { top: 0, height: window.innerHeight };
+        const max = scroller.scrollHeight - scroller.clientHeight;
+        const from = scroller.scrollTop;
+        const r = el.getBoundingClientRect();
+        const wanted = align === 'end' ? max : from + r.top + r.height / 2 - (view.top + view.height / 2);
+        const to = Math.max(0, Math.min(max, wanted));
+        if (Math.abs(to - from) < 2) return resolve();
+        const ms = Math.max(minMs, (Math.abs(to - from) / pxPerS) * 1000);
+        const start = performance.now();
+        const frame = (now: number) => {
+          const t = Math.min(1, (now - start) / ms);
+          const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+          scroller.scrollTop = from + (to - from) * eased;
+          if (t < 1) requestAnimationFrame(frame);
+          else resolve();
+        };
+        requestAnimationFrame(frame);
+      }),
+    { align, pxPerS: SCROLL_PX_PER_S, minMs: MIN_SCROLL_MS },
+  );
+}
+
+/** Whether the whole element is on screen. */
+const onScreen = (target: Locator) =>
+  target.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return r.height > 0 && r.top >= 0 && r.bottom <= window.innerHeight;
+  });
+
+/** Taps like a person: scrolls slowly to the target if it is off screen, a short look, then the tap. */
 export async function tap(page: Page, testId: string, before = 500) {
-  const target = page.getByTestId(testId);
+  const target = page.getByTestId(testId).filter({ visible: true }).first();
   await expect(target).toBeVisible({ timeout: 20_000 });
-  await target.scrollIntoViewIfNeeded();
+  if (!(await onScreen(target))) await glide(page, target);
   await beat(page, before);
   await act(page);
   await target.click();
@@ -117,7 +165,7 @@ export const TOUCH_RINGS = () => {
   );
 };
 
-/** Stubs Jev the way e2e/quick-check.spec.ts does, so the take is the same every time. */
+/** Stubs Jev the way e2e/quick-check.spec.ts does, so the take places Alex in Berlin every time. */
 export async function stubJev(page: Page) {
   let stored = false;
   await page.route('**/api/check-questions', (route) => route.fulfill({ json: POOL }));
@@ -147,9 +195,11 @@ export async function stubJev(page: Page) {
   });
 }
 
-/** Drags a lesson slider (components/bank/Slider) to `value`, slowly enough to be seen. */
+/** Drags a slider (components/bank/Slider) from `from` to `to`, slowly enough to be seen. */
 export async function drag(page: Page, testId: string, from: number, to: number, min: number, max: number) {
-  const box = await page.getByTestId(testId).boundingBox();
+  const slider = page.getByTestId(testId).filter({ visible: true }).first();
+  if (!(await onScreen(slider))) await glide(page, slider);
+  const box = await slider.boundingBox();
   if (!box) throw new Error(`${testId} has no box`);
   const THUMB = 24; // Slider.tsx
   const x = (v: number) => box.x + THUMB / 2 + ((v - min) / (max - min)) * (box.width - THUMB);
@@ -162,20 +212,34 @@ export async function drag(page: Page, testId: string, from: number, to: number,
   await page.mouse.up();
 }
 
-export const visible = (page: Page, testId: string) => page.getByTestId(testId).filter({ visible: true });
+const visible = (page: Page, testId: string) => page.getByTestId(testId).filter({ visible: true });
+
+/** The first video scene of berlin-1 lasts 13 s; the transcript opens halfway through it. Real time, not PACE. */
+const HALF_FIRST_SCENE_MS = 6500;
+/** The whole lesson at the slowest PACE fits well within this. */
+const LESSON_TIMEOUT_MS = 8 * 60_000;
 
 /**
- * Plays berlin-1 in video mode (content: back/src/main/resources/content/lessons/berlin-1.json): the scene plays,
- * then each beat's step. Steps are recognised by their testIDs, quiz answers come from the lesson file, so the
- * order of the beats can change. Alex finds the rate that keeps the basket full, sorts the myths from the facts, picks a
- * fixed-term deposit for his flat money, gets the checkpoint right, then tries a lower price rise on his own savings.
+ * Plays berlin-1 in video mode (content: back/src/main/resources/content/lessons/berlin-1.json). Halfway through
+ * the first scene the transcript opens for a moment, then the video goes on. Steps are recognised by their testIDs and
+ * quiz answers come from the lesson file, so the order of the beats can change. In Myth or fact, once every card is
+ * sorted, `glossary` (a word underlined in the explanation) opens in the glossary for a second.
+ * Returns whether the glossary word was opened.
  */
-/** Returns whether the glossary word was opened. */
-export async function playLesson(page: Page, { glossary }: { glossary?: string } = {}): Promise<boolean> {
+export async function playLesson(page: Page, { glossary }: { glossary: string }): Promise<boolean> {
   await expect(page.getByTestId('video-lesson')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId('scene-caption')).toBeVisible({ timeout: 20_000 });
+  await page.waitForTimeout(HALF_FIRST_SCENE_MS);
+  await tap(page, 'lesson-transcript', 0);
+  await expect(page.getByTestId('lesson-watch')).toBeVisible();
+  await beat(page, 4000); // the same scene as text
+  await tap(page, 'lesson-watch', 600);
+  await expect(page.getByTestId('video-lesson')).toBeVisible();
+
   const end = page.getByTestId('lesson-end');
   const step = (id: string) => visible(page, id);
-  const done = new Set<string>();
+  let sorted = false;
+  let glossaryOpened = false;
   const next = async (before: number) => {
     await expect(step('continue')).toBeEnabled({ timeout: 20_000 });
     await beat(page, before);
@@ -183,29 +247,41 @@ export async function playLesson(page: Page, { glossary }: { glossary?: string }
     await step('continue').click();
   };
 
-  for (let guard = 0; guard < 40 && !(await end.isVisible()); guard++) {
-    if (await step('predict-slider').isVisible()) {
-      await beat(page, 3000); // reading the question
-      await drag(page, 'predict-slider', 0, -10, -50, 0); // Alex guesses −10 %; the answer is −22 %
-      await tap(page, 'predict-check', 900);
-      await expect(page.getByTestId('predict-reveal')).toBeVisible();
-      await next(4500);
-    } else if ((await step('slider-interest').isVisible()) && !done.has('s1')) {
-      done.add('s1');
+  const deadline = Date.now() + LESSON_TIMEOUT_MS;
+  while (!(await end.isVisible())) {
+    if (Date.now() > deadline) throw new Error('berlin-1 did not reach its end screen');
+    if ((await step('slider-interest').isVisible()) && !(await step('goal-reached').isVisible())) {
       await beat(page, 3000);
       await drag(page, 'slider-interest', 0.5, 3, 0, 5); // up to the 3 % price rise
       await expect(page.getByTestId('goal-reached')).toBeVisible();
       await next(2500);
     } else if (await step('slider-inflation').isVisible()) {
-      // The personal chart (his own savings rate from the bank): what if prices rose 2 % instead of 3 %.
+      // The personal chart (his own savings rate from the bank): what if prices rose 4 % instead of 2 %.
       await beat(page, 3500);
-      await drag(page, 'slider-inflation', 3, 2, 0, 8);
+      await drag(page, 'slider-inflation', 2, 4, 0, 8);
       await next(3000);
-    } else if (await step('sort-card').isVisible()) {
-      // Myth or fact: Alex reads each statement and sorts it right. The top card is the last one in the stack.
-      const text = normalise((await page.getByTestId('sort-card').last().innerText()).split('\n').pop() ?? '');
+    } else if (await step('sort-left').isVisible()) {
+      // Myth or fact: Alex reads each statement and sorts it right. The card's label starts with its statement.
+      sorted = true;
+      const card = page.getByTestId('sort-card');
+      const label = normalise((await card.getAttribute('aria-label')) ?? '');
+      const bucket = [...LESSON.bucket.entries()].find(([text]) => label.startsWith(text))?.[1];
+      expect(bucket, `the bucket of "${label}"`).toBeDefined();
       await beat(page, 2200);
-      await tap(page, LESSON.bucket.get(text.replace(/^["“]|["”]$/g, '')) === 1 ? 'sort-right' : 'sort-left', 300);
+      await tap(page, bucket === 1 ? 'sort-right' : 'sort-left', 300);
+      // The card flies out before the next one replaces it; read the next one only once it is there.
+      await expect
+        .poll(async () => ((await card.count()) ? normalise((await card.getAttribute('aria-label')) ?? '') : null))
+        .not.toBe(label);
+    } else if (sorted && !glossaryOpened && (await step('feedback').isVisible())) {
+      // Myth or fact done: the explanation underlines a glossary word. Open it, a second to read, close it.
+      glossaryOpened = true;
+      await tap(page, `concept-${glossary}`, 1500);
+      await expect(page.getByTestId('sheet-close')).toBeVisible();
+      await beat(page, 1000);
+      await tap(page, 'sheet-close', 300);
+      await expect(page.getByTestId('sheet-close')).toBeHidden();
+      await next(1500);
     } else if (await step('choice-0').isVisible()) {
       // The decision: the money is for a flat in 3 years, so Alex tries the fixed-term deposit.
       await beat(page, 4000);
@@ -220,15 +296,6 @@ export async function playLesson(page: Page, { glossary }: { glossary?: string }
       await act(page);
       await options.nth(right).click();
       await expect(step('feedback')).toBeVisible();
-      // A word from the glossary in the explanation: open its definition, read it, close it.
-      if (glossary && !done.has('glossary') && (await step(`concept-${glossary}`).isVisible())) {
-        done.add('glossary');
-        await tap(page, `concept-${glossary}`, 2000);
-        await expect(page.getByTestId('sheet-close')).toBeVisible();
-        await beat(page, 4500);
-        await tap(page, 'sheet-close', 600);
-        await expect(page.getByTestId('sheet-close')).toBeHidden();
-      }
       await next(3000);
     } else if (await step('continue').isVisible()) {
       await next(4000); // a text step
@@ -236,75 +303,75 @@ export async function playLesson(page: Page, { glossary }: { glossary?: string }
       await page.waitForTimeout(500); // the scene is playing
     }
   }
-  return done.has('glossary');
+  return glossaryOpened;
 }
 
+/** The duel's stories: Berlin, finished by then, and Seoul, where only the first lesson is open. */
+export const DUEL_STORIES = ['berlin', 'seoul'];
+
 /**
- * Plays the six Berlin duel questions (back/src/main/resources/content/duel/berlin.json), whatever their order.
- * After the lesson Alex gets everything about inflation right (both value questions and the inflation quiz) and the
- * matching; he misses compound interest (a later lesson) and files a child's starter fund under the emergency fund.
+ * Plays a duel's questions, whatever their order (content: back/src/main/resources/content/duel/). Alex gets
+ * everything right except two on purpose, so the review shows both kinds of link: the first Berlin question (its
+ * lesson is done, so it opens) and the first Seoul question past seoul-1 (its lesson is still locked). A match draws
+ * 3 questions per story and Seoul has only 2 on seoul-1, so that question always comes up.
  */
-export async function playDuel(page: Page) {
-  const bank = loadDuelBank();
+export async function playDuel(page: Page): Promise<{ open: number; locked: number }> {
+  const questions = loadDuelQuestions(DUEL_STORIES);
+  /** The 0-based numbers of the questions missed on purpose; -1 until it happens. */
+  const missed = { open: -1, locked: -1 };
   const question = page.getByTestId('duel-question');
-  for (let q = 0; q < 6; q++) {
-    await expect(question).toBeVisible({ timeout: 60_000 });
-    const quiz = page.getByTestId('duel-quiz');
-    const predict = page.getByTestId('duel-predict');
-    const chart = page.getByTestId('duel-chart');
-    const sort = page.getByTestId('duel-sort');
-    const match = page.getByTestId('duel-match');
-    await expect(quiz.or(predict).or(chart).or(sort).or(match).first()).toBeVisible({ timeout: 20_000 });
+  const feedback = page.getByTestId('duel-feedback');
+  const result = page.getByTestId('duel-result');
+
+  for (let n = 0; !(await result.isVisible()); n++) {
+    await expect(question.or(result).first()).toBeVisible({ timeout: 120_000 });
+    if (await result.isVisible()) break;
+    const kinds = ['duel-quiz', 'duel-predict', 'duel-chart', 'duel-sort'].map((id) => page.getByTestId(id));
+    await expect(kinds.reduce((a, b) => a.or(b)).first()).toBeVisible({ timeout: 20_000 });
+    const q = findQuestion(questions, await question.innerText());
     await beat(page, 2500); // reading the question
 
-    if (await quiz.isVisible()) {
-      const texts = (await page.locator('[data-testid^="duel-option-"]').allInnerTexts()).map(normalise);
-      const keyed = texts.map((t) => [...bank.quizOption.entries()].find(([o]) => t.includes(o))?.[1]);
-      const quizId = keyed.find(Boolean)?.quiz;
-      const right = keyed.findIndex((k) => k?.correct);
-      if (right < 0) console.warn(`No answer key for quiz options: ${texts.join(' | ')}`);
-      const knows = quizId !== 'd3'; // d3: why compound interest grows late (lesson berlin-2)
-      const pick = knows ? Math.max(right, 0) : (Math.max(right, 0) + 1) % texts.length;
-      await tap(page, `duel-option-${pick}`, 300);
-    } else if (await predict.isVisible()) {
-      const { min, max, answer } = bank.predict;
-      await drag(page, 'duel-predict-slider', min, answer, min, max);
-      await tap(page, 'duel-predict-submit', 1200);
-    } else if (await chart.isVisible()) {
-      const { min, max, answer } = bank.chart;
-      await drag(page, 'duel-chart-slider', min, answer, min, max);
-      await tap(page, 'duel-chart-submit', 1500);
-    } else if (await sort.isVisible()) {
-      const ids = await page
-        .locator('[data-testid^="duel-sort-item-"]')
-        .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.replace('duel-sort-item-', '')));
-      for (const i of ids) {
-        const text = normalise(await page.getByTestId(`duel-sort-item-${i}`).innerText());
-        let bucket = [...bank.sort.entries()].find(([t]) => text.includes(t))?.[1] ?? 0;
-        if (/starter fund/i.test(text)) bucket = 0; // Alex's mistake: a child's starter fund is long-term money
-        await tap(page, bucket === 0 ? `duel-sort-left-${i}` : `duel-sort-right-${i}`, 600);
-      }
-      await tap(page, 'duel-sort-submit', 900);
-    } else if (await match.isVisible()) {
-      const rights = page.locator('[data-testid^="match-right-"]');
-      const rightTexts = (await rights.allInnerTexts()).map(normalise);
-      const rightIds = await rights.evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!));
-      const leftIds = await page.locator('[data-testid^="match-left-"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!));
-      for (const leftId of leftIds) {
-        const term = normalise(await page.getByTestId(leftId).innerText());
-        const definition = [...bank.match.entries()].find(([t]) => term.includes(t))?.[1];
-        const j = definition ? rightTexts.findIndex((r) => r.includes(definition)) : -1;
-        if (j < 0) console.warn(`No match for term: ${term}`);
-        await tap(page, leftId, 500);
-        await tap(page, rightIds[Math.max(j, 0)], 500);
-      }
-      await tap(page, 'duel-match-submit', 900);
-    }
+    const missOpen = q.story === 'berlin' && missed.open < 0;
+    const missLocked = q.story === 'seoul' && q.lessonId !== 'seoul-1' && missed.locked < 0;
+    if (missOpen) missed.open = n;
+    if (missLocked) missed.locked = n;
+    await answer(page, q, missOpen || missLocked);
 
     // The app shows the feedback and moves on by itself after 3 s (FEEDBACK_AUTO_ADVANCE_MS in useDuelMatch.ts).
-    const feedback = page.getByTestId('duel-feedback');
     await expect(feedback).toBeVisible({ timeout: 20_000 });
     await expect(feedback).toBeHidden({ timeout: 20_000 });
+  }
+  expect(Math.min(missed.open, missed.locked), 'the duel had no question for one of the planned mistakes').toBeGreaterThanOrEqual(0);
+  return missed;
+}
+
+async function answer(page: Page, { step }: DuelQuestion, miss: boolean) {
+  if (step.type === 'quiz') {
+    const texts = (await page.locator('[data-testid^="duel-option-"]').allInnerTexts()).map(normalise);
+    const right = texts.findIndex((t) => t.includes(normalise(step.options[step.correctIndex])));
+    expect(right, `the right option of ${step.id}`).toBeGreaterThanOrEqual(0);
+    await tap(page, `duel-option-${miss ? (right + 1) % texts.length : right}`, 300);
+  } else if (step.type === 'predict' || step.type === 'chart') {
+    const { min, max } = step.input;
+    // The slider starts at min; for a miss it goes to the far end, nowhere near the tolerance.
+    const far = step.answer - min > max - step.answer ? min : max;
+    await drag(page, `duel-${step.type}-slider`, min, miss ? far : step.answer, min, max);
+    await tap(page, `duel-${step.type}-submit`, 1200);
+  } else {
+    const { items } = step;
+    const item = page.locator('[data-testid^="duel-sort-item-"]').filter({ visible: true }).first();
+    let first = true;
+    while (await item.isVisible()) {
+      const index = (await item.getAttribute('data-testid'))!.replace('duel-sort-item-', '');
+      const text = normalise(await item.innerText());
+      const key = items.find((it) => text.includes(normalise(it.text)));
+      expect(key, `the bucket of "${text}"`).toBeDefined();
+      const bucket = miss && first ? 1 - key!.bucket : key!.bucket;
+      first = false;
+      await tap(page, bucket === 0 ? `duel-sort-left-${index}` : `duel-sort-right-${index}`, 600);
+      await expect(page.getByTestId(`duel-sort-item-${index}`)).toBeHidden();
+    }
+    await tap(page, 'duel-sort-submit', 900);
   }
 }
 
@@ -312,82 +379,6 @@ export async function playDuel(page: Page) {
 export function today() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-/**
- * Clips 01–05: the everyday bank, Learn, onboarding, the Quick check, "How we see you", then the globe to Berlin
- * and its first lesson (the one the summary starts with). Ends with berlin-1 opening.
- */
-export async function onboardToFirstLesson(page: Page, rec: ClipRecorder) {
-  // 1. The everyday bank, then Learn.
-  await page.goto('/');
-  await tap(page, 'account-demo-user', 800);
-  await expect(page.getByTestId('screen-overview')).toBeVisible({ timeout: 120_000 });
-  // The bank renders at 412 CSS px; a wider value means the 3× rendering broke the mobile layout.
-  expect(await page.evaluate(() => window.innerWidth)).toBe(412);
-  await rec.start('01-bank-to-learn');
-  await beat(page, 2500);
-  await tap(page, 'nav-learn', 800);
-  await beat(page, 600);
-
-  // 2. Onboarding: welcome, the map and duel slides, consent to the bank data, two questions.
-  await rec.start('02-onboarding');
-  await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
-  await beat(page, 1800);
-  await tap(page, 'onboarding-start');
-  await beat(page, 2000);
-  await tap(page, 'onboarding-next');
-  // The duel slide (Atlas intro): learn, then challenge your ideas with others.
-  await expect(page.getByTestId('onboarding-challenge')).toBeVisible();
-  await beat(page, 2000);
-  await tap(page, 'onboarding-challenge-next');
-  await expect(page.getByTestId('onboarding-consent')).toBeVisible();
-  await beat(page, 2500);
-  await tap(page, 'consent-accept');
-  // What to learn first: the Berlin take starts from inflation and savings.
-  await tap(page, 'interest-berlin', 1000);
-  await tap(page, 'onboarding-continue');
-  await beat(page, 600);
-
-  // 3. The Quick check: after each answer the right one shows with the lesson's explanation.
-  await rec.start('03-quick-check');
-  await expect(page.getByTestId('onboarding-check-intro')).toBeVisible({ timeout: 20_000 });
-  await beat(page, 2000);
-  await tap(page, 'check-start');
-  const answer = async (testId: string) => {
-    await beat(page, 2500); // reading the question
-    await tap(page, testId);
-    await beat(page, 3000); // the right answer and why
-    await tap(page, 'quick-check-continue', 300);
-  };
-  // Real return: Alex mixes it up. Emergency fund: right. A share that fell by half: not sure.
-  await answer(`quick-check-option-${correct(ORDER[0]) + 1}`);
-  await answer(`quick-check-option-${correct(ORDER[1])}`);
-  await answer('quick-check-unsure');
-
-  // 4. "How we see you" and the first lesson.
-  await rec.start('04-summary');
-  await expect(page.getByTestId('learning-path')).toBeVisible({ timeout: 20_000 });
-  await beat(page, 4000);
-  await page.getByTestId('summary-first-lesson').scrollIntoViewIfNeeded();
-  await beat(page, 2500);
-  await tap(page, 'summary-start');
-  await beat(page, 600);
-  await rec.stop();
-
-  // 5. The globe: pick Berlin, open its lessons, start the first one. Filmed only once the globe is drawn:
-  // the first WebGL frame takes a few seconds, which would show as an empty circle.
-  await waitForGlobe(page);
-  await rec.start('05-globe');
-  await beat(page, 3000);
-  await tap(page, 'story-card-berlin', 800);
-  await beat(page, 2500); // the globe flies to Berlin
-  await tap(page, 'pin-callout-open', 1200);
-  await expect(page.getByTestId('screen-story')).toBeVisible();
-  await beat(page, 2000);
-  await tap(page, 'lesson-berlin-1', 1500);
-  await beat(page, 600);
-
 }
 
 /** Waits until the Learn screen's globe has drawn its first frame (Globe.tsx shows `globe-ready`). */

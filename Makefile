@@ -48,5 +48,5 @@ test: check
 e2e: ## End-to-end tests in Chromium (reuses a running backend/app). Resets demo-user's onboarding
 	cd front && npx playwright install chromium && npx playwright test
 
-record: ## Demo take "Berlin, from first lesson to first step" (onboarding → lesson with glossary → bank offers → duel), clips + one film in front/recordings/out/berlin/. Reuses a running make dev; resets demo-user's onboarding and lesson progress
+record: ## Demo take "Berlin, from first lesson to first step" (bank notification → onboarding → lesson → bank offers → duel → review → ranking), clips + one film in front/recordings/out/berlin/. Reuses a running make dev; resets demo-user's onboarding and lesson progress
 	cd front && npx playwright install chromium && npx playwright test -c playwright.record.config.ts berlin-first-step

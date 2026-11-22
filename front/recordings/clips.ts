@@ -33,7 +33,8 @@ export class ClipRecorder {
     private readonly outDir: string,
     private readonly size: { width: number; height: number },
   ) {
-    rmSync(path.join(outDir, '.frames'), { recursive: true, force: true });
+    // A take replaces the previous one, so no clip of an older, differently cut take is left behind.
+    rmSync(outDir, { recursive: true, force: true });
     mkdirSync(outDir, { recursive: true });
   }
 
@@ -61,6 +62,15 @@ export class ClipRecorder {
     await this.page.screencast.stop();
     clip.endedAt = Date.now();
     this.clips.push(clip);
+  }
+
+  /** Drops the clip being recorded, frames and all, so a step can be filmed again under the same name. */
+  async discard() {
+    const clip = this.current;
+    if (!clip) return;
+    this.current = undefined;
+    await this.page.screencast.stop();
+    rmSync(clip.dir, { recursive: true, force: true });
   }
 
   /** Encodes every recorded clip; returns the written files. */

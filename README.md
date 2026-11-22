@@ -1,175 +1,105 @@
-# collabothon26
+## Project Card
 
-- `front/`: Expo (SDK 58) / React Native app with Expo Router. Runs on Android, iOS and web from one codebase.
-- `back/`: Spring Boot 4 backend (Java 25, Maven, JPA, Flyway)
-- `docker-compose.yml`: Postgres 17
-- `Makefile`: shortcuts for everything below (`make help`)
+### Project Name
 
-## Prerequisites
+**Atlas**
 
-- Node 22+ and npm
-- Java 25 (e.g. via sdkman)
-- Docker (Postgres, and the backend tests via Testcontainers)
-- `make` and bash. On Windows, work inside WSL.
-- On your phone: the latest **Expo Go** (SDK 58)
-- Optional: Android SDK with an emulator
+### One-Line Summary
 
-## Quick start
+Atlas turns the bank app into a learning journey: short, gamified lessons on a 3D globe, built from the customer's own numbers, so self-directed investors gain the confidence to act.
 
-```bash
-make setup     # one-time: creates .env from .env.example, runs npm install in front/
-               # .env gets mock dev passwords from .env.example; change them if you want (keep both equal)
-make dev       # Postgres + backend + app with phone QR (Expo tunnel) and browser at localhost:8081
-make phone     # same as make dev
-make phone-usb # Postgres + backend + Android phone over a USB cable (no network at all)
-make web       # app in the browser only (loopback only, no tunnel)
-```
+### Technology Stack
 
-`make dev` (and `make phone`) do three things:
-1. Starts Postgres in Docker (`127.0.0.1:5433`).
-2. Starts the backend in the background (`127.0.0.1:8080`). If one is already running on `:8080`, it uses that one. Logs go to `logs/backend.log` (`tail -f logs/backend.log`).
-3. Starts the app once the backend answers (`127.0.0.1:8081`) with an Expo ngrok tunnel QR for phones while still serving the browser.
+- **Mobile / web app:** TypeScript, React 19, React Native 0.88, Expo SDK 58, Expo Router (one codebase for Android, iOS and web)
+- **Graphics and motion:** three.js + `@react-three/fiber` on `expo-gl` (3D globe), `react-native-svg`, `react-native-reanimated`, `react-native-gesture-handler`, `expo-audio`, `expo-haptics`
+- **Backend:** Java 25, Spring Boot 4.2 (Web MVC, Data JPA, Validation, WebSocket, Actuator, AspectJ), MapStruct, Lombok, Maven
+- **Database:** PostgreSQL 17, schema managed only by Flyway migrations (Hibernate `ddl-auto=validate`)
+- **Content and media:** lessons as structured JSON, narration recorded with ElevenLabs, Natural Earth map data for the globe texture
+- **Testing:** Jest + React Native Testing Library, Playwright (web E2E), JUnit + Testcontainers (Postgres)
+- **Infrastructure:** Docker Compose, GitHub Actions (test → build → deploy), Oracle Cloud (OCI ARM, Oracle Linux 9), Caddy reverse proxy, Expo Go + ngrok tunnel for phones
 
-Open the app in:
-- **Browser (`make dev` or `make web`):** http://localhost:8081
-- **Phone (`make dev` or `make phone`):** scan the printed tunnel QR code with Expo Go (Android) or the camera (iOS).
-- **Phone via USB cable (`make phone-usb`):** over USB cable via adb reverse (Android).
+### Project Overview
 
-Ctrl+C stops the backend and the app. Postgres keeps running until `make db-stop`.
+#### The problem
 
-If you want the Spring logs in their own terminal, run `make back` and `make web` (or `make phone`) separately instead.
+People don't lack financial information. They lack the confidence to act on it. Self-directed investors, and people who would like to become one, meet the same topics again and again (inflation, compound growth, diversification, debt, risk) as generic articles and videos that have nothing to do with their own money. So they read, nod and change nothing: savings sit without a purpose, a small ETF plan runs "without really knowing why", and decisions get postponed.
 
-### Network security & phone access
+This hits every generation differently. A student, a young family and someone ten years from retirement need the same concepts, but with other examples, horizons and depth. A bank sees that its customers hold idle money and make uninformed choices, yet its learning content is the least visited part of the app. Solving this matters because confident customers make better decisions for themselves, and education is something a bank can offer without crossing into regulated advice (MiFID II).
 
-- **Loopback-only by default:** Postgres (`127.0.0.1:5433`), the Spring backend (`127.0.0.1:8080`), and Metro (`127.0.0.1:8081`) bind only to `127.0.0.1`, so nothing is advertised or reachable on shared Wi-Fi / LAN.
-- **Phone via tunnel QR:** `make phone` opens an Expo ngrok tunnel (`--tunnel ngrok`, no account needed) on every OS (Linux, macOS, WSL) and prints a QR pointing to a random `*.exp.direct` URL. That tunnel URL is the **only** way into the app from another device — your phone does not need to be on the same Wi-Fi, and Metro (`front/metro.config.js`) proxies both `/api/*` and `/ws/*` to `127.0.0.1:8080` through that same tunnel.
-- **Phone via USB cable (Android, no network at all):** `make phone-usb` runs `adb reverse tcp:<port> tcp:<port>` and starts Metro on `--localhost`, so the phone's `127.0.0.1:<port>` goes through the cable to the laptop's loopback. Needs `adb` (Fedora: `sudo dnf install android-tools`; Ubuntu: `sudo apt install adb`; macOS: `brew install android-platform-tools`) and **USB debugging** enabled on the phone (Settings → About phone → tap *Build number* 7× → Developer options → USB debugging; accept the "Allow USB debugging?" prompt). In Expo Go tap **Enter URL manually** and type the `exp://127.0.0.1:<port>` URL the script prints (usually `exp://127.0.0.1:8081`). Use this when the Wi-Fi blocks `*.exp.direct` or the tunnel keeps dropping.
-- **Wait for the bundle before scanning:** both phone modes build the Android bundle once over loopback and print `✔ Android bundle built and cached` when done. Scan or open the app after that line. If `make dev` already holds 8081, the phone modes pick the next free port (8082, …) on their own.
-- **Never expose without the tunnel:** User IDs are not authenticated in this prototype, so never expose the backend, Postgres, or Metro directly on LAN / `0.0.0.0` (especially on shared hackathon Wi-Fi).
-- **Database password & git worktrees:** `.env.example` ships a mock dev password (`collabothon-dev`). `make setup` and `make dev` run `scripts/sync-env.sh`, which creates `.env`, adds missing keys and replaces empty or `CHANGE_ME` values with the defaults, so a new worktree works without copying `.env`. `docker-compose.yml` pins `name: collabothon26`, so every checkout shares the `collabothon-postgres` container; `make dev` recreates its volume on every run, so the password always matches. If you set your own password, keep `POSTGRES_PASSWORD` and `DB_PASSWORD` identical.
+#### Your solution
 
-If Expo Go shows **"Failed to download remote update"**, it could not fetch the manifest or the JS bundle:
-- The `make phone` terminal printed `Tunnel connection has been closed`: wait for `Tunnel connected.`, then reopen the project in Expo Go. The usual trigger is a slow, memory-hungry cold bundle build. `front/metro.config.js` caps Metro at 4 workers to prevent it (override with `METRO_MAX_WORKERS=<n>`).
-- The network blocks `*.exp.direct` (some event or corporate Wi-Fi does): switch the phone to mobile data, or use `make phone-usb`.
+**Atlas** is a learning module that lives inside the bank app, behind a **Learn** button. It works like a language-learning app for finance: short lessons (3–5 minutes), streaks, XP and levels. What makes it different:
 
-If the phone shows "Something went wrong":
-- Shake the phone (or long-press the screen) and tap **Reload**.
-- Make sure Expo Go is up to date.
-- Check the `make phone` terminal. Errors from the phone show up there too.
+1. **Personal from the first minute.** With the customer's consent, **Jev**, the profiling engine, reads what the bank already knows (regular saving, safety net, small investments) and Atlas only asks what the data can't tell: life stage, goal and how the person handles money. A one-minute quick check finds the knowledge gaps and the confidence level, and builds a learning path from them.
+2. **A journey, not a syllabus.** Each learning area is a city on a 3D globe: Saving in Berlin, Investing in Tokyo, Borrowing in São Paulo, Risk in Seoul, Retirement in Cape Town. A plane flies between the pins as the user progresses.
+3. **Lessons about *your* money.** Every mission follows the same arc: a real hook number, a plain explanation, an interactive slider to explore the effect, myths vs facts, a decision scenario, a three-question checkpoint, and finally the lesson's lens on the user's own accounts ("your €12,500 at 2.25% against inflation").
+4. **Watch or read.** Each lesson can be played as a narrated, animated "video" rendered live from the lesson data (so it can show the user's own numbers and follow their choices), or read as a transcript. The user can switch at any moment without losing progress.
+5. **Actionable, never advice.** At the end of a path Atlas recaps what the user learned and shows the trade-offs with their numbers. It names product types as facts but never recommends one; the user decides and is taken straight to the right screen of their bank.
+6. **Duels in the Arena.** 1v1 knowledge duels (live against another player or solo) keep what was learned fresh. They are ranked by knowledge (Elo), never by money, and a review after each match explains every mistake.
 
-## Day-to-day development
+#### The working prototype
 
-- **Frontend:** saving a file reloads the app instantly (Fast Refresh).
-- **Backend:** devtools restarts the app after recompiling. In IntelliJ that's Build → Build Project (`Ctrl+F9`).
-- **Database:** the schema lives only in Flyway migrations (`back/src/main/resources/db/migration/V<n>__description.sql`). Hibernate only validates against it. A new table means a new migration file. Never edit a migration that has already been pushed; add a new one instead. `make db-reset` wipes the local database. If the backend fails to start with a Flyway checksum or version mismatch after a merge (main rewrote V3, V4 is now `account_and_progress` and categorisation moved to V5), run `make db-reset` once.
-- **API:** put new endpoints under `/api/**`. The app calls them with `api('/api/...')` from `front/src/lib/api.ts`. The backend URL is resolved automatically on web, emulator and phone. Override it with `EXPO_PUBLIC_API_URL` in `front/.env` (see `front/.env.example`).
+Everything below is implemented and runs end to end on Android (Expo Go), iOS and the web. A live deployment runs on our own server.
 
-### Example in the repo: lessons with a quiz
+- **Mock bank app (frontend, seeded data):** Overview, Payments, Credits and Invest tabs with accounts, transactions, a loan and an ETF plan. Three demo customers (Alex, Daniel, Elena) with different life stages; the device locks the chosen account.
+- **Onboarding and profiling:** intro screens, optional personalisation questions, a data-consent card, the quick check (knowledge questions + confidence), animated categorising steps, and a learning-path summary (gap, level, focus areas, first lesson). Profile and mastery are stored in the backend.
+- **Globe home (Map):** a 3D globe you can spin with inertia, story pins with done / active / coming-soon states, plane flights along great-circle arcs, a pin callout, and a draggable "Your stories" sheet. A static fallback is used when WebGL is not available.
+- **Lessons:** 23 lessons across 8 cities (5 complete paths of 5 lessons for Saving, Investing, Borrowing and Risk, plus first lessons in Buenos Aires, Nairobi and Mumbai; Retirement is "coming soon"). The flagship mission **Berlin 1 "Safe money that shrinks"** runs the full arc: hook, explanation, slider with a "basket" visual, myth or fact, decision scenario, checkpoint quiz, "your situation" facts from the bank, the slider started at the user's real numbers, and an end screen with XP, streak and a path stamp.
+- **Video mode:** animated SVG scenes with captions and ElevenLabs narration (the Berlin path has recorded audio), a split layout with the hands-on steps under the player, skip scene, mute, and a watch / transcript switch that is remembered per user.
+- **Path end and bank offers:** a recap per story and the bank's matching products as neutral facts, with a spotlight that guides the user to the product in the bank tabs.
+- **Duels:** lobby with categories and league, live 1v1 matches over WebSocket (queue with a simulated rival as fallback, so one presenter can still demo it), solo mode, Elo rankings, mistake review, and sound effects.
+- **Glossary:** searchable terms, linked from inside lessons.
+- **Profile:** XP, level, streak and progress, built from the bank's own UI components.
 
-This is the pattern to copy. The **Map** tab (Learn side) lists lessons from the database. Tapping one opens a quiz with feedback, an explanation for each question and a result screen.
+What is mocked: the bank data (accounts, transactions, products) is seeded on the frontend, there is no real login (demo accounts only), and the globe's story list is still partly served from a local file.
 
-| Layer | File |
-|---|---|
-| DB table + sample data | `back/src/main/resources/db/migration/V2__lessons.sql` |
-| Entities, repository, REST | `back/src/main/java/com/collabothon/back/lesson/` (`GET /api/lessons`, `GET /api/lessons/{id}`) |
-| API test | `back/src/test/java/com/collabothon/back/lesson/LessonControllerTests.java` |
-| API types | `front/src/types/lessons.ts` |
-| Data fetching | `front/src/hooks/useApi.ts` |
-| Screens | `front/src/app/(main)/(learn)/map.tsx` (list), `front/src/app/lesson/[id].tsx` (quiz) |
-| Screen flow test | `front/src/__tests__/lessons.test.tsx` |
+#### Behind the build
 
-## Frontend structure
+**Architecture.** An Expo / React Native app talks to a Spring Boot REST API (`/api/**`) and a raw WebSocket (`/ws/duel`), backed by Postgres. The mock bank lives only in the frontend (`front/src/lib/bank/`), and lessons read the user's numbers through `useBank()` and pure selectors. This keeps a clear seam: in a real bank the selectors would read the core banking API instead of the seed.
 
-Uses [Expo Router](https://docs.expo.dev/router/introduction/): every file in `src/app/` is a route.
+**Lessons are data, not code.** Each lesson is a JSON file (`back/src/main/resources/content/lessons/`) made of typed steps (`text`, `stat`, `facts`, `slider-chart`, `sort`, `scenario`, `quiz`, `action`) and an optional video track of scenes with captions, timings and audio. Placeholders like `{metric}` are filled from the bank on the device. One lesson player renders both the classic and the video form from the same step ids, so XP, results and mastery are identical in both modes. The backend validates the content at startup and refuses to start if a referenced audio file is missing.
 
-```
-front/src/
-├── app/                  # routes only (file = screen)
-│   ├── _layout.tsx       # root Stack + providers (onboarding, mock bank, toast, transfer sheet)
-│   ├── onboarding.tsx    # intro + optional personalisation questions; opened by the first Learn tap
-│   ├── categorizing.tsx  # after a fresh onboarding: account-data consent card, Quick check questions, loading steps
-│   ├── learning-path.tsx # the summary after categorising: gap, level, focus areas, first lesson
-│   ├── (main)/           # bank + Finance Quest, one floating nav (components/bank/FloatingNav) that morphs between them
-│   │   ├── _layout.tsx
-│   │   ├── (bank)/       # mock banking app, the first screen: index (/) · payments · credits · invest
-│   │   └── (learn)/      # Finance Quest: map (/map, lesson list) · glossary · duel (lobby) · profile
-│   ├── lesson/[id].tsx   # /lesson/1, pushed over the tabs
-│   └── duel/             # match.tsx · rankings.tsx: full-screen duel flow, pushed over the tabs
-├── components/           # reusable UI (Screen, Button, AsyncContent)
-│   └── categorizing/     # consent card, Quick check page, path steps and summary of /categorizing and /learning-path
-├── hooks/                # custom hooks (useXxx.ts)
-├── lib/                  # non-UI code: api.ts (backend client), bank/ (seeded mock bank data, pure logic), utils
-├── constants/            # theme.ts (colors, spacing), config
-├── types/                # shared TS types / API DTOs
-└── __tests__/            # Jest tests (never inside app/, every file there is a route)
-```
+**Profiling (Jev).** In the prototype, Jev is a transparent, rule-based engine (`CategorizationRules`, `QuickCheckRules`): bank facts (buffer in months, saving regularity, investments) plus quick-check answers give a level and focus areas per learning area. We chose explainable rules over a black-box model for a bank context; the interface is ready for an ML model later.
 
-- Import with the `@/` alias: `import { Screen } from '@/components/Screen'`.
-- Don't add `index.ts` barrel files. Import directly from the file.
-- Give interactive elements a `testID` (it becomes `data-testid` on web for Playwright).
+**Globe.** three.js through `@react-three/fiber` on `expo-gl`, so the same globe runs on Android and the web. We rotate the sphere (a quaternion), not the camera. Pins and the plane are React Native views placed over the canvas from a per-frame 3D projection, driven by Reanimated shared values so the globe never re-renders React. The land texture is generated once from Natural Earth data by a script in the repo.
 
-## Manual testing
+**Duels.** Answers are always graded and persisted through REST; the WebSocket only handles matchmaking and pushes the opponent's progress. A rival strategy switches between the simulated rival and the real opponent's answers, so live and bot matches share one code path. The queue and session registry stay in memory (single instance).
 
-1. **Browser (fastest):** open http://localhost:8081. Turn on the DevTools device toolbar (`Ctrl+Shift+M`) for a phone-sized view. The Network tab shows the API calls. Native-only modules (camera, notifications, haptics) may not work on web, so always check on a phone before a demo.
-2. **Phone (Expo Go):** scan the QR from `make phone`. See [Network security & phone access](#network-security--phone-access).
-3. **Android emulator:** boot the emulator (`emulator -list-avds`, then `emulator -avd <NAME> &`), then run `make android`.
-4. **Backend only:**
-   ```bash
-   curl localhost:8080/api/lessons
-   curl localhost:8080/actuator/health
-   ```
+**Backend structure.** Feature packages (lesson, categorization, profile, xp, duel, glossary), each with controllers, services, repositories and MapStruct mappers, a shared error-code model and a global exception handler. The schema changes only through Flyway migrations (25 so far) and Hibernate only validates it, which kept six people from breaking each other's databases.
 
-## Automated tests
+**Delivery.** GitHub Actions run the backend tests, frontend typecheck, lint and Jest on every push to `main`, export the web build, and deploy to an OCI host over a restricted SSH key. The release swap is atomic, with a health check and automatic rollback. For phones we use an Expo ngrok tunnel and keep every local service bound to `127.0.0.1`, which matters on shared hackathon Wi-Fi.
 
-```bash
-make check     # front: tsc + expo lint + jest; back: JUnit (Testcontainers, needs Docker)
-```
+**Tools we built on:** Expo, React Native, three.js, Reanimated, Spring Boot, PostgreSQL, Flyway, Testcontainers, Playwright, Figma, ElevenLabs, Natural Earth, Caddy, GitHub Actions. We also used Claude Code as an AI pair programmer for specs, implementation and reviews.
 
-To run one side only: `cd front && npm test` or `cd back && ./mvnw test`.
+#### Challenges and discoveries
 
-- **Unit / component tests:** Jest + React Native Testing Library. For routing flows use `renderRouter` from `expo-router/testing-library`. In RNTL 14, `render` and `fireEvent` are async, so `await` them.
-- **E2E on web:** Playwright in `front/e2e/` (a smoke test plus the onboarding flow), using `page.getByTestId('foo')`. `make e2e` (or `cd front && npx playwright install chromium && npm run e2e`) reuses a running backend and web app, or starts the backend on Testcontainers and the web app itself, so Docker must be running. CI runs it in `.github/workflows/e2e.yml`.
-  - The tests act as `demo-user` and **reset its onboarding** (answers and the completed flag) before and after each test.
-  - To leave your own `make dev` session alone, use another port: `cd front && E2E_PORT=8082 npm run e2e`.
-  - After a failure, `npx playwright show-trace front/test-results/<test>/trace.zip` replays it step by step.
-- **Backend on a throwaway DB:** `cd back && ./mvnw spring-boot:test-run` starts the backend on a fresh Testcontainers Postgres.
+- **Education vs advice.** A bank jury checks the line between explaining and recommending. We turned it into explicit content rules that every lesson follows: the "your situation" step states facts and never grades, offers list product facts, and the user always makes the choice.
+- **Less story, more of the user.** Early lessons used invented characters and "guess the number" puzzles. Reviewing them, we found they pulled attention away from the user's own situation and felt like a test rather than teaching. We removed the characters and the guessing: the user moves a slider and *sees* the consequence, and the lesson ends on their own numbers. We also dropped a separate "plain language" variant because the video / transcript switch served that need better.
+- **Video without video files.** Real videos could not follow the user's choices or show their numbers, and would not fit 48 hours. Rendering scenes live from lesson JSON with SVG and Reanimated gave us branching endings and personal numbers for free. Making the narration audio the master clock kept captions in sync.
+- **A 3D globe on Android and the web.** Gestures, inertia, pins that fade at the horizon and a plane flight had to run smoothly on a phone. Moving all per-frame work into Reanimated shared values solved it, and a static fallback covers devices without WebGL.
+- **Six people, three streams, one schema.** Parallel branches collided on Flyway version numbers. Agreeing on shared contracts (lesson JSON, profile shape, API) early and treating migrations as append-only let the streams merge.
+- **Demoing live duels alone.** A live match needs two people. A short queue with a fallback to the simulated rival lets one presenter demo it and two devices play for real.
+- **Hackathon networking.** Event Wi-Fi blocked tunnels and device-to-device traffic. We added a USB mode (`adb reverse`) that needs no network at all.
 
-## Production deployment & CI/CD
+#### Results and next steps
 
-Production runs on an Oracle Linux 9 (OCI ARM) host behind Caddy at `https://listening-together.duckdns.org`. Caddy serves the web export from `/srv/financequest/web` (a symlink to the active release) and reverse-proxies `/api/*` and `/ws/*` to the Spring Boot backend on `127.0.0.1:8080` (`financequest.service`).
+**Achieved.** One complete mission end to end (bank → Learn → onboarding and profiling → globe → lesson in video or text → decision on the user's own numbers → back to the bank), plus 23 lessons on 5 paths, live duels, a glossary and a profile, deployed to production.
 
-### Workflow (`.github/workflows/deploy.yml`)
+**How we validated it.** Automated tests on every layer: 38 Jest test files (components and routing flows), 41 JUnit test classes on a real Postgres via Testcontainers, and 6 Playwright E2E specs (smoke, intro, onboarding, quick check, start here, duel). CI runs them before every deploy, and the deploy rolls back on a failed health check. We also walked through the demo flow by hand on Android phones (Expo Go) and in the browser.
 
-1. **Trigger:** every push to `main`, or a manual run (`workflow_dispatch`). The deploy job only runs for `refs/heads/main`; one deploy runs at a time.
-2. **Test and build:** backend `./mvnw test` + `./mvnw package`; frontend typecheck, lint, `expo install --check`, `npm test`, then `npx expo export --platform web` (no `EXPO_PUBLIC_API_URL`, so the web app calls the API on its own origin).
-3. **Upload:** SSH as `deploy` (host key pinned from `PROD_SSH_KNOWN_HOSTS`, `StrictHostKeyChecking=yes`), copy `back.jar` and `web/` to `/home/deploy/staging-<sha>-<run>`.
-4. **Swap:** `sudo /usr/local/sbin/financequest-deploy --staging <dir>` (source: [`scripts/deploy-remote.sh`](scripts/deploy-remote.sh)) copies the payload into new root-owned releases under `/opt/financequest/releases` and `/srv/financequest/releases`, keeps the current release as the previous one, swaps `back.jar` and the `web` symlink atomically, labels web files `httpd_sys_content_t` for SELinux, and restarts `financequest.service`. It keeps the last 5 releases.
-5. **Health check:** the script polls `http://127.0.0.1:8080/api/lessons` for 60 s. If it never returns 200, the script puts the previous release back, restarts, and the job fails. The runner then checks `https://<domain>/api/lessons` and fails the job on anything but 200.
+**What we are most proud of.** The moment a lesson about inflation turns into the user's own savings, and the user decides what to do with that knowledge, inside the same bank app, in about five minutes.
 
-### Required GitHub secrets
+**Current limitations.**
+- Bank data is seeded, and there is no authentication (demo accounts only).
+- Jev is rule-based; no machine learning yet.
+- Recommendations come from the profile and the quick check; collaborative filtering ("people like you also learned…") is not built.
+- Narration is recorded for the Berlin path only; other paths play silent captions.
+- The Retirement path is "coming soon", and some story data is still a local file.
+- The duel queue is in memory, so it works on a single backend instance.
 
-Set in **Settings → Secrets and variables → Actions**:
-
-| Secret | What |
-|---|---|
-| `PROD_SSH_HOST` | Production host address |
-| `PROD_SSH_USER` | `deploy` |
-| `PROD_SSH_KEY` | Private half of the dedicated CI deploy key (ed25519, used nowhere else) |
-| `PROD_SSH_KNOWN_HOSTS` | Host key line(s) for the host, e.g. `ssh-keyscan -H <host>`, checked against the fingerprint the host itself shows (`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`) |
-
-Optional repository variable `PROD_DOMAIN` overrides the domain used by the final check.
-
-> [!NOTE]
-> `deploy` is a system user with a locked password whose only key is the CI key, marked `restrict` in `authorized_keys` (no port/agent/X11 forwarding, no PTY). `/etc/sudoers.d/financequest-deploy` (0440) lets it run only `/usr/local/sbin/financequest-deploy` (root-owned, validates its arguments and payload) and `systemctl restart|status financequest.service`. Server secrets stay in `/etc/financequest/env` on the host; CI never sees them.
-
-When `scripts/deploy-remote.sh` changes, an admin must install it on the host by hand: `sudo install -m 0755 -o root -g root deploy-remote.sh /usr/local/sbin/financequest-deploy`. CI never updates the script it runs as root.
-
-### How to roll back
-
-On the host (as `opc` or `deploy`):
-
-```bash
-sudo /usr/local/sbin/financequest-deploy --rollback
-```
-
-This swaps the current and previous release (backend jar and web) and restarts the backend. Running it again undoes the rollback. Older releases stay in `/opt/financequest/releases` and `/srv/financequest/releases`. Another option is to revert the bad commit on `main`, which deploys again.
+**Next steps.**
+- Connect to real (sandboxed) banking APIs and the bank's login.
+- Event-based nudges ("lots of idle cash → inflation lesson", "market dropped → investor-emotion lesson").
+- An ML profiling model and collaborative filtering on learning events.
+- The Retirement path, more languages and narration for every lesson.
+- Accessibility pass (font scaling, contrast) and usability tests with real users from each generation.

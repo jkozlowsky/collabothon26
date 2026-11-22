@@ -13,7 +13,7 @@ import { act, beat, CLIP_SIZE, onboardToFirstLesson, playDuel, playLesson, stubJ
  * Demo recording "Berlin, from first lesson to first step": Learn and onboarding, the first recommended lesson
  * (berlin-1) with a glossary word opened on the way, then the rest of Berlin is finished off camera, the end of the
  * story (recap and the bank's products, one of them lit in the bank), and a duel won with mistakes that link back
- * to their lesson. Not a test: run it with `make record-berlin`.
+ * to their lesson. Not a test: run it with `make record`.
  *
  * Output in recordings/out/berlin/: one clip per step (01-…mp4 to 08-duel.mp4) and all of them in one
  * berlin-first-step.mp4.
@@ -73,7 +73,7 @@ test('Berlin: onboarding, a lesson with the glossary, the first step in the bank
   await stubJev(page);
 
   // 01–05: bank → Learn → onboarding → "How we see you" → the globe → berlin-1, the first lesson recommended.
-  await onboardToFirstLesson(page, rec, { realJev: false });
+  await onboardToFirstLesson(page, rec);
 
   // 06: the whole first lesson; after the first quiz, a word from its explanation opens in the glossary.
   await rec.start('06-lesson');

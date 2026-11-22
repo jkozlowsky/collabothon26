@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { api } from '@/lib/api';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type { Account, AvatarId, Stats } from '@/types/account';
 
 type AccountState = {
@@ -19,8 +19,6 @@ type AccountState = {
 
 const AccountContext = createContext<AccountState | null>(null);
 
-const userPath = `/api/users/${encodeURIComponent(USER_ID)}`;
-
 /** The user's local date as YYYY-MM-DD: streak days follow the phone's calendar, not the server's. */
 export function localDate(d = new Date()) {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -33,6 +31,8 @@ const isStats = (s: unknown): s is Stats => typeof (s as Stats | null)?.currentS
 
 /** Bank account (name, avatar) and learning progress (streak, XP) of the signed-in user. */
 export function AccountProvider({ children }: { children: ReactNode }) {
+  const { userId } = useCurrentUser();
+  const userPath = `/api/users/${encodeURIComponent(userId)}`;
   const [account, setAccount] = useState<Account | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [streakBump, setStreakBump] = useState<AccountState['streakBump']>(null);
@@ -48,15 +48,18 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [userPath]);
 
-  const setAvatar = useCallback((avatar: AvatarId) => {
-    // Optimistic: the picker closes at once; a failed save only logs.
-    setAccount((a) => a && { ...a, avatar });
-    api(`${userPath}/account`, { method: 'PATCH', body: JSON.stringify({ avatar }) }).catch((e: unknown) =>
-      console.warn('Could not save avatar', e),
-    );
-  }, []);
+  const setAvatar = useCallback(
+    (avatar: AvatarId) => {
+      // Optimistic: the picker closes at once; a failed save only logs.
+      setAccount((a) => a && { ...a, avatar });
+      api(`${userPath}/account`, { method: 'PATCH', body: JSON.stringify({ avatar }) }).catch((e: unknown) =>
+        console.warn('Could not save avatar', e),
+      );
+    },
+    [userPath],
+  );
 
   const refreshStats = useCallback(() => {
     api<unknown>(`${userPath}/stats?today=${localDate()}`)
@@ -67,14 +70,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         if (updated.currentStreak > before) setStreakBump({ from: before, to: updated.currentStreak });
       })
       .catch((e: unknown) => console.warn('Could not refresh stats', e));
-  }, [stats]);
+  }, [stats, userPath]);
 
   const resetProgress = useCallback(() => {
     setStreakBump(null);
     api<unknown>(`${userPath}/progress/reset?today=${localDate()}`, { method: 'POST' })
       .then((s) => isStats(s) && setStats(s))
       .catch((e: unknown) => console.warn('Could not reset progress', e));
-  }, []);
+  }, [userPath]);
 
   const clearStreakBump = useCallback(() => setStreakBump(null), []);
 

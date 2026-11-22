@@ -32,14 +32,15 @@ import { colors, fonts, radii, spacing, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import { haptic, playSound } from '@/lib/duel/feedback';
 import { getWeeklyLeagueClock } from '@/lib/duel/meta';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type { RankingRow, Rankings } from '@/types/duel';
 
-const RANKINGS_PATH = `/api/duel/rankings?userId=${encodeURIComponent(USER_ID)}`;
+const rankingsPath = (userId: string) => `/api/duel/rankings?userId=${encodeURIComponent(userId)}`;
 
 /** Weekly overall rankings (Figma frames 04–06, nodes 166:5622 / 166:6337 / 166:7025). */
 export default function DuelRankingsScreen() {
-  const { data, loading, error, reload } = useApi<Rankings>(RANKINGS_PATH);
+  const { userId } = useCurrentUser();
+  const { data, loading, error, reload } = useApi<Rankings>(rankingsPath(userId));
   const clock = getWeeklyLeagueClock();
   const weekInfo = `Week ${clock.week} · ends in ${clock.days} ${clock.days === 1 ? 'day' : 'days'}`;
 
@@ -71,6 +72,7 @@ export default function DuelRankingsScreen() {
           <RankingsContent
             top={data?.top ?? []}
             me={data?.me ?? null}
+            currentUserId={userId}
           />
         )}
       </AsyncContent>
@@ -78,7 +80,15 @@ export default function DuelRankingsScreen() {
   );
 }
 
-function RankingsContent({ top, me }: { top: RankingRow[]; me: RankingRow | null }) {
+function RankingsContent({
+  top,
+  me,
+  currentUserId,
+}: {
+  top: RankingRow[];
+  me: RankingRow | null;
+  currentUserId: string;
+}) {
   const reducedMotion = useReducedMotion();
 
   // Sticky row tracking
@@ -93,7 +103,7 @@ function RankingsContent({ top, me }: { top: RankingRow[]; me: RankingRow | null
   const [climbDone, setClimbDone] = useState(false);
   const climbProgress = useSharedValue(1);
 
-  const meUserId = me?.userId ?? USER_ID;
+  const meUserId = me?.userId ?? currentUserId;
   const isMeInTop3 = me ? me.rank <= 3 || top.slice(0, 3).some((r) => r.userId === meUserId) : false;
 
   const previousRank = me?.previousRank;

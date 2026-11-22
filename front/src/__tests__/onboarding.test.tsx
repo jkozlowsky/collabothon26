@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 
 import { seedAccount } from '@/lib/bank/seed';
@@ -77,7 +76,7 @@ test('app opens on the bank; the first Learn tap runs onboarding, and Close goes
 
   await press('nav-learn');
   expect(await screen.findByTestId('onboarding-welcome')).toBeOnTheScreen();
-  expect(screen.getByText('Learn how money works. Challenge your ideas with others.')).toBeOnTheScreen();
+  expect(screen.getByText('Atlas lets your financial decisions land safely.')).toBeOnTheScreen();
   await press('onboarding-close');
   expect(await screen.findByTestId('screen-overview')).toBeOnTheScreen();
   expect(savedOnboarding()).toBeUndefined();
@@ -123,7 +122,7 @@ test('Learn does nothing until the profile has loaded, so an onboarded user neve
   expect(categorized()).toHaveLength(0);
 });
 
-test('the consent screen lists what the account shows, what is still asked and the notice', async () => {
+test('the consent screen lists what the account shows and the notice', async () => {
   await openLearn();
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
   await press('onboarding-next');
@@ -135,7 +134,6 @@ test('the consent screen lists what the account shows, what is still asked and t
   // The icons are glyphs, not words.
   const lines = (id: string) => within(get(id)).getAllByText(/\w/).map((line) => line.props.children);
   expect(lines('consent-facts')).toEqual(['Your account already shows', ...factLabels(factsFrom(seedAccount())), 'Age 26–40']);
-  expect(lines('consent-asks')).toEqual(['We will still ask', 'What your savings are for', 'When you need the money', 'What you already know']);
   expect(screen.getByText('Only these summaries are shared, never your transactions.')).toBeOnTheScreen();
   expect(get('consent-notice')).toHaveTextContent(/the ranges you pick and ranges from your accounts are checked/);
   expect(get('consent-notice')).toHaveTextContent(/Your choices are checked by an AI service\./);
@@ -180,31 +178,6 @@ test('two questions follow the consent, then the quick check intro; the purpose 
   expect(savedOnboarding()).toEqual({ goals: ['start-saving', 'inflation'], skipped: false });
   expect(categorized()).toEqual([{ consent: true, facts: factsFrom(seedAccount()) }]);
   expect(calls('/api/check-questions')).toHaveLength(1);
-});
-
-test('"Edit answers" keeps its three steps with the goals grid and saves them', async () => {
-  stubBackend({ onboardingCompleted: true });
-  await renderRouter(routes, { initialUrl: '/' });
-  await screen.findByTestId('screen-overview');
-  await act(async () => {});
-  await act(async () => router.push('/onboarding?edit=1'));
-
-  expect(await screen.findByTestId('onboarding-life-stage')).toBeOnTheScreen();
-  expect(screen.getByText('Step 1 of 3')).toBeOnTheScreen();
-  await press('option-building');
-  await press('onboarding-continue');
-
-  expect(get('onboarding-goals')).toBeOnTheScreen();
-  expect(screen.getByText('1 selected')).toBeOnTheScreen();
-  await press('goal-scams');
-  expect(screen.getByText('2 selected')).toBeOnTheScreen();
-  await press('onboarding-continue');
-
-  await press('option-not-saving');
-  await fireEvent.press(screen.getByText('Finish'));
-  expect(await screen.findByTestId('screen-overview')).toBeOnTheScreen();
-  expect(savedOnboarding()).toEqual({ lifeStage: 'building', goals: ['budget', 'scams'], experience: 'not-saving', skipped: false });
-  expect(categorized()).toHaveLength(0);
 });
 
 // Last: it leaves the onboarding open, with Learn still waiting behind it.

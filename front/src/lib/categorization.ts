@@ -1,12 +1,13 @@
 import { profileWritesSettled } from '@/hooks/useOnboarding';
 import { api, ApiError } from '@/lib/api';
 import { positionCount } from '@/lib/bank/selectors';
-import { USER_ID } from '@/lib/user';
 import type { BankState } from '@/types/bank';
 import type { Categorization, Facts } from '@/types/categorization';
 import type { AgeBand, QuickResult } from '@/types/quickCheck';
 
-export const CATEGORIZATION_PATH = `/api/users/${encodeURIComponent(USER_ID)}/categorization`;
+export function categorizationPath(userId: string = 'demo-user'): string {
+  return `/api/users/${encodeURIComponent(userId)}/categorization`;
+}
 
 export const TIMEOUT_MS = 10_000;
 /** A 404 that arrives after the profile write has settled can still be transient on the backend, so it is retried. */
@@ -46,16 +47,16 @@ function profileSaved(signal: AbortSignal) {
  * Proves the backend answers once the profile is saved. A stored categorisation changes nothing: every onboarding
  * recategorises (spec Q20). A failed check throws, and the caller may retry or skip.
  */
-export async function checkBackend(signal: AbortSignal): Promise<void> {
+export async function checkBackend(signal: AbortSignal, userId: string = 'demo-user'): Promise<void> {
   await profileSaved(signal);
-  await api<Categorization>(CATEGORIZATION_PATH, { signal }).catch(nullOn404);
+  await api<Categorization>(categorizationPath(userId), { signal }).catch(nullOn404);
 }
 
 /** POSTs `body`, retrying a transient 404 until the profile write has landed on the backend. */
-async function postCategorization(body: object, signal: AbortSignal): Promise<Categorization> {
+async function postCategorization(body: object, signal: AbortSignal, userId: string = 'demo-user'): Promise<Categorization> {
   for (let attempt = 1; ; attempt++) {
     try {
-      return await api<Categorization>(CATEGORIZATION_PATH, { method: 'POST', body: JSON.stringify(body), signal });
+      return await api<Categorization>(categorizationPath(userId), { method: 'POST', body: JSON.stringify(body), signal });
     } catch (e) {
       if (!isStatus(e, 404) || attempt > PROFILE_RETRIES) throw e;
       await new Promise((r) => setTimeout(r, PROFILE_BACKOFF_MS * attempt));
@@ -72,6 +73,7 @@ export async function categorize(
   facts: Facts | null,
   signal: AbortSignal,
   quick?: Partial<QuickResult>,
+  userId: string = 'demo-user',
 ): Promise<Categorization> {
   const consent = facts !== null;
   const { useRules, stepCallsMade } = quick ?? {};
@@ -84,10 +86,10 @@ export async function categorize(
   };
   await profileSaved(signal);
   try {
-    return await postCategorization({ ...base, ...quick }, signal);
+    return await postCategorization({ ...base, ...quick }, signal, userId);
   } catch (e) {
     if (!isStatus(e, 400) || !quick?.profile) throw e;
-    return postCategorization(base, signal);
+    return postCategorization(base, signal, userId);
   }
 }
 

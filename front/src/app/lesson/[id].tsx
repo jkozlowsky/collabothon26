@@ -13,12 +13,12 @@ import { useLessonSession } from '@/hooks/useLessonSession';
 import { api } from '@/lib/api';
 import { offersFor } from '@/lib/offers';
 import { preloadSfx } from '@/lib/sfx';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type { Lesson, LessonMode, LessonResultRequest, LessonResultResponse } from '@/types/lessons';
 
-const user = encodeURIComponent(USER_ID);
-
 export default function LessonScreen() {
+  const { userId } = useCurrentUser();
+  const user = encodeURIComponent(userId);
   useEffect(preloadSfx, []);
   const { id } = useLocalSearchParams<{ id: string }>();
   // Loaded once: both orders (classic steps, video beats) come in one response, so switching needs no reload.
@@ -38,6 +38,8 @@ export default function LessonScreen() {
 
 /** One run of a lesson, in the mode it opened in or the one the user switched to. */
 function LessonRun({ lesson }: { lesson: Lesson }) {
+  const { userId } = useCurrentUser();
+  const user = encodeURIComponent(userId);
   const { refreshStats } = useAccount();
   const saveResult = useCallback(
     async (result: LessonResultRequest) => {
@@ -48,12 +50,12 @@ function LessonRun({ lesson }: { lesson: Lesson }) {
       refreshStats();
       return saved;
     },
-    [lesson.id, refreshStats],
+    [lesson.id, refreshStats, user],
   );
   // Fire and forget: if it fails, the lesson keeps the local mode.
   const rememberMode = useCallback((mode: LessonMode) => {
     api(`/api/users/${user}/lesson-mode`, { method: 'PUT', body: JSON.stringify({ mode }) }).catch(() => {});
-  }, []);
+  }, [user]);
   const session = useLessonSession(lesson, { saveResult, rememberMode });
 
   // The last lesson of a city, finished for the first time: the map plays the "city done" flight.

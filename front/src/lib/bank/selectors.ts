@@ -30,7 +30,9 @@ export function allocation(s: BankState): { assetClass: AssetClass; share: numbe
 /** Biggest single position as a share of the depot (0–1), with its name. */
 export function largestPosition(s: BankState): { name: string; share: number } {
   const total = depotTotal(s);
-  const top = s.holdings.filter((h) => h.assetClass !== 'cash').reduce((a, b) => (b.value > a.value ? b : a));
+  const nonCash = s.holdings.filter((h) => h.assetClass !== 'cash');
+  if (nonCash.length === 0) return { name: '', share: 0 };
+  const top = nonCash.reduce((a, b) => (b.value > a.value ? b : a));
   return { name: top.name, share: total ? top.value / total : 0 };
 }
 
@@ -50,7 +52,8 @@ export function totalCreditOutstanding(s: BankState): number {
 /** Chart points for a range, rescaled so the last point is today's depot value (it moves after orders). */
 export function depotChart(s: BankState, range: ChartRange): { points: number[]; change: number } {
   const { points, change } = s.depotSeries[range];
-  const scale = depotTotal(s) / points[points.length - 1];
+  const last = points[points.length - 1];
+  const scale = last ? depotTotal(s) / last : 0;
   return { points: points.map((p) => p * scale), change };
 }
 

@@ -133,3 +133,43 @@ To run one side only: `cd front && npm test` or `cd back && ./mvnw test`.
   - To leave your own `make dev` session alone, use another port: `cd front && E2E_PORT=8082 npm run e2e`.
   - After a failure, `npx playwright show-trace front/test-results/<test>/trace.zip` replays it step by step.
 - **Backend on a throwaway DB:** `cd back && ./mvnw spring-boot:test-run` starts the backend on a fresh Testcontainers Postgres.
+
+## Production deployment & CI/CD
+
+Production runs on an Oracle Linux 9 (OCI ARM) host behind Caddy at `https://listening-together.duckdns.org`. Caddy serves the web export from `/srv/financequest/web` (a symlink to the active release) and reverse-proxies `/api/*` and `/ws/*` to the Spring Boot backend on `127.0.0.1:8080` (`financequest.service`).
+
+### Workflow (`.github/workflows/deploy.yml`)
+
+1. **Trigger:** every push to `main`, or a manual run (`workflow_dispatch`). The deploy job only runs for `refs/heads/main`; one deploy runs at a time.
+2. **Test and build:** backend `./mvnw test` + `./mvnw package`; frontend typecheck, lint, `expo install --check`, `npm test`, then `npx expo export --platform web` (no `EXPO_PUBLIC_API_URL`, so the web app calls the API on its own origin).
+3. **Upload:** SSH as `deploy` (host key pinned from `PROD_SSH_KNOWN_HOSTS`, `StrictHostKeyChecking=yes`), copy `back.jar` and `web/` to `/home/deploy/staging-<sha>-<run>`.
+4. **Swap:** `sudo /usr/local/sbin/financequest-deploy --staging <dir>` (source: [`scripts/deploy-remote.sh`](scripts/deploy-remote.sh)) copies the payload into new root-owned releases under `/opt/financequest/releases` and `/srv/financequest/releases`, keeps the current release as the previous one, swaps `back.jar` and the `web` symlink atomically, labels web files `httpd_sys_content_t` for SELinux, and restarts `financequest.service`. It keeps the last 5 releases.
+5. **Health check:** the script polls `http://127.0.0.1:8080/api/lessons` for 60 s. If it never returns 200, the script puts the previous release back, restarts, and the job fails. The runner then checks `https://<domain>/api/lessons` and fails the job on anything but 200.
+
+### Required GitHub secrets
+
+Set in **Settings → Secrets and variables → Actions**:
+
+| Secret | What |
+|---|---|
+| `PROD_SSH_HOST` | Production host address |
+| `PROD_SSH_USER` | `deploy` |
+| `PROD_SSH_KEY` | Private half of the dedicated CI deploy key (ed25519, used nowhere else) |
+| `PROD_SSH_KNOWN_HOSTS` | Host key line(s) for the host, e.g. `ssh-keyscan -H <host>`, checked against the fingerprint the host itself shows (`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`) |
+
+Optional repository variable `PROD_DOMAIN` overrides the domain used by the final check.
+
+> [!NOTE]
+> `deploy` is a system user with a locked password whose only key is the CI key, marked `restrict` in `authorized_keys` (no port/agent/X11 forwarding, no PTY). `/etc/sudoers.d/financequest-deploy` (0440) lets it run only `/usr/local/sbin/financequest-deploy` (root-owned, validates its arguments and payload) and `systemctl restart|status financequest.service`. Server secrets stay in `/etc/financequest/env` on the host; CI never sees them.
+
+When `scripts/deploy-remote.sh` changes, an admin must install it on the host by hand: `sudo install -m 0755 -o root -g root deploy-remote.sh /usr/local/sbin/financequest-deploy`. CI never updates the script it runs as root.
+
+### How to roll back
+
+On the host (as `opc` or `deploy`):
+
+```bash
+sudo /usr/local/sbin/financequest-deploy --rollback
+```
+
+This swaps the current and previous release (backend jar and web) and restarts the backend. Running it again undoes the rollback. Older releases stay in `/opt/financequest/releases` and `/srv/financequest/releases`. Another option is to revert the bad commit on `main`, which deploys again.

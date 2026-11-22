@@ -27,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
  * dated relative to the current week. Alex ({@code demo-user}) keeps the fixed original rows (rank 6, 125 weekly XP,
  * 120 past XP across berlin, seoul, sao-paulo, tokyo).
  * One demo account ({@code demo-kasia}) is 3 weekly XP above demo-user (128 XP vs 125 XP), so one won match moves Alex up.
- * Runs once per week: it skips when this week's rows exist.
+ * Runs once per week: skips each player individually if they already have XP this week.
  */
 @Component
 @ConditionalOnProperty(name = "app.duel.seed-demo-xp", havingValue = "true")
@@ -35,9 +35,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DuelDemoSeeder implements ApplicationRunner {
 
-	private static final String MARKER_USER = "demo-tomasz";
-
 	private static final List<DemoPlayer> PLAYERS = List.of(
+			// Existing players (unchanged)
 			new DemoPlayer("demo-tomasz", 310, 300),
 			new DemoPlayer("demo-ola", 265, 250),
 			new DemoPlayer("demo-marta", 220, 200),
@@ -49,7 +48,48 @@ public class DuelDemoSeeder implements ApplicationRunner {
 			new DemoPlayer("demo-marek", 40, 50),
 			new DemoPlayer("demo-lukas", 30, 40),
 			new DemoPlayer("demo-nina", 20, 30),
-			new DemoPlayer("demo-ewa", 10, 20));
+			new DemoPlayer("demo-ewa", 10, 20),
+
+			// 38 new players (Daniel, Elena, and 36 mock players; all weeklyXp < 125)
+			new DemoPlayer("demo-liam", 118, 113),
+			new DemoPlayer("demo-chloe", 114, 109),
+			new DemoPlayer("demo-matteo", 110, 105),
+			new DemoPlayer("demo-yuki", 106, 101),
+			new DemoPlayer("demo-carlos", 102, 97),
+			new DemoPlayer("demo-amelie", 88, 83),
+			new DemoPlayer("demo-daniel", 85, 80),
+			new DemoPlayer("demo-lars", 82, 77),
+			new DemoPlayer("demo-fatima", 79, 74),
+			new DemoPlayer("demo-kwame", 76, 71),
+			new DemoPlayer("demo-sora", 73, 68),
+			new DemoPlayer("demo-hugo", 70, 65),
+			new DemoPlayer("demo-elena", 67, 70),
+			new DemoPlayer("demo-astrid", 64, 59),
+			new DemoPlayer("demo-tariq", 62, 57),
+			new DemoPlayer("demo-freja", 58, 53),
+			new DemoPlayer("demo-diego", 55, 50),
+			new DemoPlayer("demo-ananya", 52, 47),
+			new DemoPlayer("demo-lucas", 49, 59),
+			new DemoPlayer("demo-camila", 46, 56),
+			new DemoPlayer("demo-finn", 43, 53),
+			new DemoPlayer("demo-ines", 38, 48),
+			new DemoPlayer("demo-noah", 36, 46),
+			new DemoPlayer("demo-zeynep", 34, 44),
+			new DemoPlayer("demo-mateo", 32, 42),
+			new DemoPlayer("demo-chiara", 28, 38),
+			new DemoPlayer("demo-artur", 26, 36),
+			new DemoPlayer("demo-leila", 24, 34),
+			new DemoPlayer("demo-soren", 22, 32),
+			new DemoPlayer("demo-elise", 18, 28),
+			new DemoPlayer("demo-kenji", 16, 26),
+			new DemoPlayer("demo-mariam", 14, 24),
+			new DemoPlayer("demo-felix", 12, 22),
+			new DemoPlayer("demo-nadia", 8, 18),
+			new DemoPlayer("demo-gabriel", 7, 17),
+			new DemoPlayer("demo-alina", 6, 16),
+			new DemoPlayer("demo-omar", 5, 15),
+			new DemoPlayer("demo-maya", 4, 14)
+	);
 
 	private final XpService xpService;
 
@@ -63,10 +103,6 @@ public class DuelDemoSeeder implements ApplicationRunner {
 	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
 	public void run(ApplicationArguments args) {
 		WeekWindow week = weekCalculator.currentWeek();
-		if (xpService.hasXpBetween(MARKER_USER, week.start(), week.end())) {
-			log.info("Demo XP rows for current week already exist; skipping seeding.");
-			return;
-		}
 
 		List<String> categories = stories.findAll().stream()
 			.map(Story::id)
@@ -82,18 +118,22 @@ public class DuelDemoSeeder implements ApplicationRunner {
 		SeedDates dates = new SeedDates(weekStart.plus(Duration.ofHours(12)), weekStart.plus(Duration.ofHours(36)),
 				weekStart.minus(Duration.ofDays(7)), weekStart.minus(Duration.ofDays(16)));
 
+		int seededCount = 0;
 		for (DemoPlayer player : PLAYERS) {
-			if ("demo-user".equals(player.userId())) {
-				record("demo-user", "berlin", "w1", 62, dates.thisWeek1());
-				record("demo-user", "seoul", "w2", 63, dates.thisWeek2());
-				record("demo-user", "sao-paulo", "p1", 60, dates.pastWeek1());
-				record("demo-user", "tokyo", "p2", 60, dates.pastWeek2());
-			}
-			else {
-				seedPlayer(player, categories, dates);
+			if (!xpService.hasXpBetween(player.userId(), week.start(), week.end())) {
+				if ("demo-user".equals(player.userId())) {
+					record("demo-user", "berlin", "w1", 62, dates.thisWeek1());
+					record("demo-user", "seoul", "w2", 63, dates.thisWeek2());
+					record("demo-user", "sao-paulo", "p1", 60, dates.pastWeek1());
+					record("demo-user", "tokyo", "p2", 60, dates.pastWeek2());
+				}
+				else {
+					seedPlayer(player, categories, dates);
+				}
+				seededCount++;
 			}
 		}
-		log.info("Demo XP seeding completed for {} categories.", categories.size());
+		log.info("Demo XP seeding completed (seeded {} of {} players across {} categories).", seededCount, PLAYERS.size(), categories.size());
 	}
 
 	private void seedPlayer(DemoPlayer player, List<String> categories, SeedDates dates) {

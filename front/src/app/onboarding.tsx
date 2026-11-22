@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { router } from 'expo-router';
+import { useEffect, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AnswerTile } from '@/components/categorizing/AnswerTile';
@@ -10,20 +10,22 @@ import { Page } from '@/components/onboarding/Page';
 import {
   BackButton,
   BigButton,
-  ChoiceChip,
   CloseButton,
   OptionCard,
   Rise,
   StepHeader,
   type,
 } from '@/components/onboarding/ui';
-import { EXPERIENCE, GOAL_GROUPS, LIFE_STAGES, PURPOSES, type Option } from '@/constants/onboarding';
+import { PURPOSES, type Option } from '@/constants/onboarding';
 import { PROFILE_QUESTIONS } from '@/constants/quickCheck';
-import { colors, radii, spacing, type as text } from '@/constants/theme';
+import { colors, spacing, type as text } from '@/constants/theme';
 import { useBank } from '@/hooks/useBank';
 import { useOnboarding } from '@/hooks/useOnboarding';
+import { leaveOnboardingForCheck } from '@/hooks/useOpenLearn';
 import { ageBandOf, ageLabel, factLabels, factsFrom } from '@/lib/categorization';
-import type { Goal, Intake, OnboardingAnswers, Purpose } from '@/types/onboarding';
+import { personaFor } from '@/lib/personas';
+import { useCurrentUser } from '@/lib/user';
+import type { Intake, OnboardingAnswers, Purpose } from '@/types/onboarding';
 import type { Horizon, ProfileRanges } from '@/types/quickCheck';
 
 type Step =
@@ -31,40 +33,33 @@ type Step =
   | 'intro'
   | 'challenge'
   | 'consent'
-  | 'life-stage'
-  | 'experience'
-  | 'goals'
   | 'purpose'
   | 'horizon'
   | 'check-intro';
 
-const OPENING: Step[] = ['welcome', 'intro', 'challenge', 'consent'];
-const FRESH: Step[] = [...OPENING, 'purpose', 'horizon', 'check-intro'];
-/** Profile → "Edit answers". */
-const EDITING: Step[] = ['life-stage', 'goals', 'experience'];
-const NOT_QUESTIONS: Step[] = [...OPENING, 'check-intro'];
+const STEPS: Step[] = ['welcome', 'intro', 'challenge', 'consent', 'purpose', 'horizon', 'check-intro'];
+const QUESTIONS: Step[] = ['purpose', 'horizon'];
 
-/** Everything the survey collects; the profile keeps the life stage, the goals and the experience. */
+/** Everything the survey collects; the profile keeps the goals the purpose stands for. */
 type Survey = OnboardingAnswers & {
   purpose?: Purpose;
   horizon?: Horizon;
 };
 
 export default function OnboardingScreen() {
-  const { complete, answers: saved } = useOnboarding();
+  const { userId } = useCurrentUser();
+  const hints = personaFor(userId).hints;
+  const { complete, done } = useOnboarding();
   const { state: bank } = useBank();
-  // Profile → "Edit answers": straight to the questions, prefilled, and back to the profile when done.
-  const editing = useLocalSearchParams<{ edit?: string }>().edit === '1';
   const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState<Survey>(editing ? saved : { goals: [] });
+  // A demo persona starts with its answers preselected.
+  const [answers, setAnswers] = useState<Survey>({ goals: [], purpose: hints?.purpose, horizon: hints?.horizon });
 
-  const steps = editing ? EDITING : FRESH;
-  const questions = steps.filter((s) => !NOT_QUESTIONS.includes(s));
-  const step = steps[index];
+  const step = STEPS[index];
   const purpose = PURPOSES.find((p) => p.value === answers.purpose);
 
-  const next = () => setIndex((i) => Math.min(i + 1, steps.length - 1));
-  const back = () => (editing && index === 0 ? router.back() : setIndex((i) => Math.max(i - 1, 0)));
+  const next = () => setIndex((i) => Math.min(i + 1, STEPS.length - 1));
+  const back = () => setIndex((i) => Math.max(i - 1, 0));
   const set = <K extends keyof Survey>(key: K, value: Survey[K]) => setAnswers((a) => ({ ...a, [key]: value }));
 
   const intake = (): Intake => {
@@ -77,12 +72,17 @@ export default function OnboardingScreen() {
     };
   };
 
-  const finishEditing = () => {
-    complete({ lifeStage: answers.lifeStage, goals: answers.goals, experience: answers.experience });
-    router.back();
-  };
   // The purpose goes on the profile as its goals.
-  const startCheck = () => complete({ goals: purpose?.goals ?? [] }, intake());
+  const [checkStarted, setCheckStarted] = useState(false);
+  const startCheck = () => {
+    complete({ goals: purpose?.goals ?? [] }, intake());
+    setCheckStarted(true);
+  };
+  // Leave only once `done` is true in this render: /categorizing is behind the onboarding guard.
+  // Works when the profile was already done too (onboarding reopened after a reload).
+  useEffect(() => {
+    if (checkStarted && done) leaveOnboardingForCheck();
+  }, [checkStarted, done]);
   // Close and "Not now": nothing is saved, back to the bank; the next Learn tap shows onboarding again.
   const exit = () => (router.canGoBack() ? router.back() : router.navigate('/'));
 
@@ -114,29 +114,6 @@ export default function OnboardingScreen() {
             Atlas lets your financial decisions land safely.
           </Text>
         </Rise>
-        <Rise delay={480}>
-          <Text style={styles.welcomeTitle}>Learn how money works. Challenge your ideas with others.</Text>
-        </Rise>
-        <Rise delay={600}>
-          <Text style={styles.welcomeBody}>
-            Short lessons built around your own money, and duels to see whose thinking holds up. A few minutes a day
-            is enough.
-          </Text>
-        </Rise>
-        <Rise delay={720} style={styles.pillars}>
-          {(
-            [
-              ['book-open', 'Learn'],
-              ['zap', 'Challenge'],
-              ['trending-up', 'Grow'],
-            ] as const
-          ).map(([icon, label]) => (
-            <View key={label} style={styles.pillar}>
-              <Feather name={icon} size={14} color={colors.brandAccent} />
-              <Text style={styles.pillarText}>{label}</Text>
-            </View>
-          ))}
-        </Rise>
         <View style={styles.grow} />
       </Page>
     );
@@ -154,6 +131,7 @@ export default function OnboardingScreen() {
         }
         footer={<BigButton label="Next" onPress={next} testID="onboarding-next" />}
       >
+        <View style={styles.grow} />
         <LessonGlobeIllustration />
         <View style={{ height: spacing.xl }} />
         <Rise delay={300}>
@@ -162,26 +140,7 @@ export default function OnboardingScreen() {
         <Rise delay={400}>
           <Text style={[type.display, { color: colors.textOnBrand }]}>Every pin is a field of finance</Text>
         </Rise>
-        <Rise delay={500}>
-          <Text style={styles.welcomeBody}>
-            Tap a pin to open its path: a few 2–5 minute lessons on one topic, set in a real place — from tulip mania
-            in Amsterdam to saving on the go in Nairobi.
-          </Text>
-        </Rise>
-        <Rise delay={620} style={styles.pillars}>
-          {(
-            [
-              ['check-circle', 'Done'],
-              ['map-pin', 'Up next'],
-              ['lock', 'Locked'],
-            ] as const
-          ).map(([icon, label]) => (
-            <View key={label} style={styles.pillar}>
-              <Feather name={icon} size={14} color={colors.brandAccent} />
-              <Text style={styles.pillarText}>{label}</Text>
-            </View>
-          ))}
-        </Rise>
+        <View style={styles.grow} />
       </Page>
     );
   }
@@ -198,6 +157,7 @@ export default function OnboardingScreen() {
         }
         footer={<BigButton label="Next" onPress={next} testID="onboarding-challenge-next" />}
       >
+        <View style={styles.grow} />
         <DuelIllustration />
         <View style={{ height: spacing.xl }} />
         <Rise delay={300}>
@@ -206,25 +166,7 @@ export default function OnboardingScreen() {
         <Rise delay={400}>
           <Text style={[type.display, { color: colors.textOnBrand }]}>Put what you know to the test</Text>
         </Rise>
-        <Rise delay={500}>
-          <Text style={styles.welcomeBody}>
-            Same questions, same clock. See whose ideas hold up.
-          </Text>
-        </Rise>
-        <Rise delay={620} style={styles.pillars}>
-          {(
-            [
-              ['clock', '7 quick rounds'],
-              ['users', 'Friends or random'],
-              ['award', 'Weekly league'],
-            ] as const
-          ).map(([icon, label]) => (
-            <View key={label} style={styles.pillar}>
-              <Feather name={icon} size={14} color={colors.brandAccent} />
-              <Text style={styles.pillarText}>{label}</Text>
-            </View>
-          ))}
-        </Rise>
+        <View style={styles.grow} />
       </Page>
     );
   }
@@ -268,7 +210,6 @@ export default function OnboardingScreen() {
         <Text style={type.display} accessibilityRole="header">
           Let&apos;s see what you already know
         </Text>
-        <Text style={type.body}>Pick an answer and you see the right one straight away. Nothing here can be failed.</Text>
         <View style={styles.meta}>
           <Feather name="clock" size={14} color={colors.textMuted} />
           <Text style={type.label}>About 2 minutes</Text>
@@ -278,12 +219,8 @@ export default function OnboardingScreen() {
     );
   }
 
-  const qIndex = questions.indexOf(step);
-  const lastEdit = editing && qIndex === questions.length - 1;
+  const qIndex = QUESTIONS.indexOf(step);
   const answered: Partial<Record<Step, boolean>> = {
-    'life-stage': !!answers.lifeStage,
-    goals: answers.goals.length > 0,
-    experience: !!answers.experience,
     purpose: !!answers.purpose,
     horizon: !!answers.horizon,
   };
@@ -294,42 +231,26 @@ export default function OnboardingScreen() {
       header={
         <StepHeader
           left={<BackButton onPress={back} />}
-          label={`Step ${qIndex + 1} of ${questions.length}`}
-          progress={(qIndex + 1) / questions.length}
-          onSkip={editing ? finishEditing : undefined}
+          label={`Step ${qIndex + 1} of ${QUESTIONS.length}`}
+          progress={(qIndex + 1) / QUESTIONS.length}
         />
       }
       footer={
         <BigButton
-          label={lastEdit ? 'Finish' : 'Continue'}
-          onPress={lastEdit ? finishEditing : next}
+          label="Continue"
+          onPress={next}
           disabled={!answered[step]}
           testID="onboarding-continue"
         />
       }
     >
-      {step === 'life-stage' && (
-        <Question title="Where are you in life?" subtitle="We use this to pick examples that feel familiar. Change it any time.">
-          <SingleChoice options={LIFE_STAGES} value={answers.lifeStage} onChange={(v) => set('lifeStage', v)} />
-        </Question>
-      )}
-      {step === 'goals' && (
-        <Question title="What do you want to get better at?" subtitle="Pick as many as you like. We'll build your path around them.">
-          <GoalPicker value={answers.goals} onChange={(v) => set('goals', v)} />
-        </Question>
-      )}
-      {step === 'experience' && (
-        <Question title="How do you manage your money today?" subtitle="No wrong answers — this just sets your starting level.">
-          <SingleChoice options={EXPERIENCE} value={answers.experience} onChange={(v) => set('experience', v)} />
-        </Question>
-      )}
       {step === 'purpose' && (
-        <Question title="What are you saving for?" subtitle="Pick the one that fits best. It shapes your first lessons.">
+        <Question title="What are you saving for?">
           <SingleChoice options={PURPOSES} value={answers.purpose} onChange={(v) => set('purpose', v)} />
         </Question>
       )}
       {step === 'horizon' && (
-        <Question title={PROFILE_QUESTIONS.horizon.prompt} subtitle={`${PROFILE_QUESTIONS.horizon.why}.`}>
+        <Question title={PROFILE_QUESTIONS.horizon.prompt}>
           <RangeChoice options={PROFILE_QUESTIONS.horizon.options} value={answers.horizon} onChange={(v) => set('horizon', v)} />
         </Question>
       )}
@@ -337,11 +258,10 @@ export default function OnboardingScreen() {
   );
 }
 
-function Question({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+function Question({ title, children }: { title: string; children: ReactNode }) {
   return (
     <>
       <Text style={type.display}>{title}</Text>
-      {subtitle && <Text style={type.body}>{subtitle}</Text>}
       <View style={styles.answers}>{children}</View>
     </>
   );
@@ -367,38 +287,6 @@ function SingleChoice<T extends string>({
       onPress={() => onChange(o.value)}
     />
   ));
-}
-
-function GoalPicker({ value, onChange }: { value: Goal[]; onChange: (v: Goal[]) => void }) {
-  const toggle = (g: Goal) => onChange(value.includes(g) ? value.filter((x) => x !== g) : [...value, g]);
-  return (
-    <>
-      {GOAL_GROUPS.map((group) => (
-        <View key={group.title} style={styles.goalGroup}>
-          <Text style={styles.goalGroupTitle} accessibilityRole="header">
-            {group.title}
-          </Text>
-          <View style={styles.goalRow}>
-            {group.goals.map((g) => (
-              <ChoiceChip
-                key={g.value}
-                testID={`goal-${g.value}`}
-                label={g.label}
-                selected={value.includes(g.value)}
-                onPress={() => toggle(g.value)}
-              />
-            ))}
-          </View>
-        </View>
-      ))}
-      <View style={styles.selected}>
-        <Feather name="check" size={16} color={value.length ? colors.feedbackSuccess : colors.textMuted} />
-        <Text style={[type.strong, { color: value.length ? colors.feedbackSuccess : colors.textMuted }]}>
-          {value.length} selected
-        </Text>
-      </View>
-    </>
-  );
 }
 
 /** The range questions: `OptionCard`s without an icon. */
@@ -433,24 +321,5 @@ const styles = StyleSheet.create({
   wordmark: { ...text.displayHero, color: colors.textOnBrand },
   wordmarkDot: { color: colors.brandAccent },
   motto: { ...text.titleSection, color: colors.brandAccent, marginTop: -spacing.xs },
-  welcomeTitle: { ...text.displayLarge, color: colors.textOnBrand },
-  welcomeBody: { ...type.body, color: colors.onBrandMuted },
-  pillars: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
-  pillar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 7,
-    borderRadius: radii.pill,
-    backgroundColor: colors.onBrandTile,
-    borderWidth: 1,
-    borderColor: colors.onBrandHairline,
-  },
-  pillarText: { ...text.labelStrong, color: colors.textOnBrand },
   answers: { gap: spacing.smPlus, marginTop: spacing.lg },
-  goalGroup: { gap: spacing.xs + spacing.xxs },
-  goalGroupTitle: { ...type.overline, color: colors.textMuted, textTransform: 'uppercase' },
-  goalRow: { flexDirection: 'row', gap: spacing.sm },
-  selected: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
 });

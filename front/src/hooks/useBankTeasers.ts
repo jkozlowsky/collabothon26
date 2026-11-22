@@ -7,7 +7,7 @@ import { useOnboarding } from '@/hooks/useOnboarding';
 import { useOpenLearn } from '@/hooks/useOpenLearn';
 import { NEWCOMER_HOME_STORY, newcomerTeaser, pickHomeStory, TEASER_STORY, teaserFor } from '@/lib/bank/teasers';
 import { STORIES, withLessons } from '@/lib/stories';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type { FqTeaser, FqTeaserPlacement } from '@/types/bank';
 import type { LessonSummary } from '@/types/lessons';
 
@@ -17,7 +17,8 @@ import type { LessonSummary } from '@/types/lessons';
  * Before onboarding the popups start from the user's own bank numbers instead (newcomerTeaser).
  */
 export function useBankTeasers(): { teasers: Record<FqTeaserPlacement, FqTeaser>; ready: boolean } {
-  const { data: lessons, loading, reload } = useApi<LessonSummary[]>(`/api/lessons?userId=${encodeURIComponent(USER_ID)}`);
+  const { userId } = useCurrentUser();
+  const { data: lessons, loading, reload } = useApi<LessonSummary[]>(`/api/lessons?userId=${encodeURIComponent(userId)}`);
   useFocusEffect(reload);
   const { loaded: profileLoaded, done: onboarded } = useOnboarding();
   const { state, money } = useBank();

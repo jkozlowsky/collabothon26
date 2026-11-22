@@ -12,14 +12,12 @@ import { Section } from '@/components/bank/Section';
 import { BigButton, motion, Tappable } from '@/components/onboarding/ui';
 import { Avatar } from '@/components/profile/Avatar';
 import { AvatarPickerSheet } from '@/components/profile/AvatarPickerSheet';
-import { GOAL_GROUPS } from '@/constants/onboarding';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import { useAccount } from '@/hooks/useAccount';
 import { useBank } from '@/hooks/useBank';
 import { useOnboarding } from '@/hooks/useOnboarding';
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const GOAL_LABEL = Object.fromEntries(GOAL_GROUPS.flatMap((g) => g.goals.map((goal) => [goal.value, goal.label])));
 /** Pause before the streak number flips, so the user sees the old value first. */
 const BUMP_DELAY_MS = 450;
 
@@ -30,7 +28,7 @@ const todayIndex = () => (new Date().getDay() + 6) % 7;
 
 export default function ProfileScreen() {
   const { account, stats, streakBump, clearStreakBump, setAvatar, resetProgress } = useAccount();
-  const { answers, reset } = useOnboarding();
+  const { reset } = useOnboarding();
   const { state } = useBank();
   const [picking, setPicking] = useState(false);
   // While a bump is pending the old value shows; on focus it flips to the new one with a pop.
@@ -122,34 +120,12 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      <Section title="Your goals">
-        {answers.goals.length > 0 ? (
-          <View style={styles.chips}>
-            {answers.goals.map((g) => (
-              <View key={g} style={styles.chip}>
-                <Text style={styles.chipText}>{GOAL_LABEL[g] ?? g}</Text>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <Text style={styles.muted}>No goals picked yet. Add some under “Edit answers”.</Text>
-        )}
-      </Section>
-
       <Section title="Settings">
         <ListCard>
-          <ListRow
-            icon="edit"
-            title="Edit answers"
-            meta="Stage of life, goals, how you manage money"
-            onPress={() => router.push({ pathname: '/onboarding', params: { edit: '1' } })}
-            testID="edit-answers"
-          />
           {/* Demo helper: onboarding shows again on the next Learn tap, and progress goes back to the seed. */}
           <ListRow
             icon="refresh"
             title="Restart onboarding"
-            meta="Demo: start over with the sample progress"
             onPress={() => {
               reset();
               resetProgress();
@@ -210,15 +186,4 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   nudgeText: type.titleCard,
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    backgroundColor: colors.bgSurface,
-    borderColor: colors.borderDefault,
-    borderWidth: 1,
-    borderRadius: radii.pill,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  chipText: { ...type.labelStrong, color: colors.brandPrimary },
-  muted: { ...type.bodyDefault, color: colors.textMuted },
 });

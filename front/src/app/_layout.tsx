@@ -10,6 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { AccountPicker } from '@/components/accounts/AccountPicker';
 import { colors, elevation, fonts } from '@/constants/theme';
 import { AccountProvider } from '@/hooks/useAccount';
 import { BankProvider } from '@/hooks/useBank';
@@ -17,6 +18,8 @@ import { OnboardingProvider, useOnboarding } from '@/hooks/useOnboarding';
 import { SpotlightProvider } from '@/hooks/useSpotlight';
 import { ToastProvider } from '@/hooks/useToast';
 import { TransferSheetProvider } from '@/hooks/useTransferSheet';
+import { personaFor } from '@/lib/personas';
+import { CurrentUserProvider, useCurrentUser } from '@/lib/user';
 
 /** Widest "phone" on web; on a wide desktop window the app is centered at this width. */
 const WEB_PHONE_WIDTH = 430;
@@ -36,28 +39,46 @@ export default function RootLayout() {
     // Gesture Handler needs a root view for the globe and story sheet gestures.
     <GestureHandlerRootView style={styles.page}>
       <View style={styles.phone}>
-        <OnboardingProvider>
-          <AccountProvider>
-          <BankProvider>
-            <ToastProvider>
-              <TransferSheetProvider>
-                <SpotlightProvider>
-                  <RootStack />
-                </SpotlightProvider>
-              </TransferSheetProvider>
-            </ToastProvider>
-          </BankProvider>
-          </AccountProvider>
-        </OnboardingProvider>
+        <CurrentUserProvider>
+          <RootContent />
+        </CurrentUserProvider>
       </View>
       <StatusBar style="dark" />
     </GestureHandlerRootView>
   );
 }
 
+function RootContent() {
+  const { userId, isLoggedIn, isReady } = useCurrentUser();
+
+  if (!isReady) return null;
+
+  if (!isLoggedIn || !userId) {
+    return <AccountPicker />;
+  }
+
+  const persona = personaFor(userId);
+
+  return (
+    <OnboardingProvider key={userId}>
+      <AccountProvider key={userId}>
+        <BankProvider key={userId} seed={persona.bankSeed}>
+          <ToastProvider key={userId}>
+            <TransferSheetProvider key={userId}>
+              <SpotlightProvider key={userId}>
+                <RootStack />
+              </SpotlightProvider>
+            </TransferSheetProvider>
+          </ToastProvider>
+        </BankProvider>
+      </AccountProvider>
+    </OnboardingProvider>
+  );
+}
+
 /**
  * The app opens on the bank (host app shell). Atlas onboarding is opened from the Learn
- * button (useOpenLearn), never forced at launch, and closed by useResumeLearnAfterOnboarding.
+ * button (useOpenLearn), never forced at launch, and closed by leaveOnboardingForCheck.
  */
 function RootStack() {
   const { done, loaded } = useOnboarding();
@@ -72,7 +93,7 @@ function RootStack() {
       <Stack.Screen name="onboarding" options={{ animation: 'slide_from_bottom' }} />
       {/* Until the profile has loaded, a reload of /learning-path must not bounce to the bank. */}
       <Stack.Protected guard={done || !loaded}>
-        {/* A fresh onboarding continues here; useResumeLearnAfterOnboarding opens it. */}
+        {/* A fresh onboarding continues here; leaveOnboardingForCheck opens it. */}
         <Stack.Screen name="categorizing" options={{ animation: 'fade' }} />
         <Stack.Screen name="learning-path" options={{ animation: 'fade' }} />
         <Stack.Screen

@@ -5,7 +5,6 @@ import { Platform, Pressable, StyleSheet, Text, View, type PressableProps, type 
 import Animated, { cubicBezier, useReducedMotion, type CSSStyle } from 'react-native-reanimated';
 
 import type { IconName } from '@/constants/onboarding';
-import * as theme from '@/constants/theme';
 import { colors, fonts, radii, spacing } from '@/constants/theme';
 
 /** Strong ease-out for UI; ease-in-out for things moving across the screen. */
@@ -179,37 +178,6 @@ export function OptionCard({ title, subtitle, icon, selected, onPress, testID }:
   );
 }
 
-type ChipProps = { label: string; selected: boolean; disabled?: boolean; onPress: () => void; testID?: string };
-
-export function ChoiceChip({ label, selected, disabled, onPress, testID }: ChipProps) {
-  return (
-    <Tappable
-      testID={testID}
-      accessibilityRole="checkbox"
-      aria-checked={selected}
-      aria-disabled={disabled}
-      disabled={disabled}
-      onPress={onPress}
-      haptic="selection"
-      pressedScale={0.95}
-      hitSlop={{ top: 2, bottom: 2 }}
-      // Equal-width tiles, three to a row, so a whole group sits on one line.
-      containerStyle={styles.chipSlot}
-      style={[styles.chip, selected && styles.chipSelected, disabled && styles.chipDisabled, motion.colors]}
-    >
-      <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
-        {label}
-      </Text>
-      {/* A corner badge marks the choice without changing the tile's width. */}
-      {selected && (
-        <Animated.View style={[styles.chipCheck, motion.pop]}>
-          <Feather name="check" size={10} color={colors.textOnAccent} />
-        </Animated.View>
-      )}
-    </Tappable>
-  );
-}
-
 type StepHeaderProps = {
   /** The control on the left: `BackButton` in the survey; the quick check has none. */
   left?: ReactNode;
@@ -217,17 +185,15 @@ type StepHeaderProps = {
   label: string;
   /** How much of the track is filled, 0–1. */
   progress: number;
-  /** Only Profile → "Edit answers" can be skipped. */
-  onSkip?: () => void;
 };
 
-export function StepHeader({ left, label, progress, onSkip }: StepHeaderProps) {
+export function StepHeader({ left, label, progress }: StepHeaderProps) {
   return (
     <View style={styles.stepHeader}>
       <View style={styles.stepRow}>
         {left ?? <View style={styles.stepSpacer} />}
         <Text style={styles.stepText}>{label}</Text>
-        {onSkip ? <SkipLink onPress={onSkip} /> : <View style={styles.stepSpacer} />}
+        <View style={styles.stepSpacer} />
       </View>
       <View style={styles.track}>
         <Animated.View style={[styles.trackFill, motion.size, { width: `${Math.min(1, progress) * 100}%` }]} />
@@ -248,14 +214,6 @@ export function BackButton({ onPress, onDark }: { onPress: () => void; onDark?: 
       style={[styles.back, onDark && styles.closeOnDark]}
     >
       <Feather name="chevron-left" size={20} color={onDark ? colors.textOnBrand : colors.brandPrimary} />
-    </Tappable>
-  );
-}
-
-function SkipLink({ onPress }: { onPress: () => void }) {
-  return (
-    <Tappable testID="onboarding-skip" accessibilityRole="button" onPress={onPress} hitSlop={12} pressedScale={0.92}>
-      <Text style={styles.skip}>Skip</Text>
     </Tappable>
   );
 }
@@ -374,34 +332,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioSelected: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
-  chipSlot: { flex: 1 },
-  chip: {
-    height: 40,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.button,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    backgroundColor: colors.bgSurface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipSelected: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
-  chipDisabled: { opacity: 0.45 },
-  chipLabel: { ...theme.type.labelStrong, color: colors.textPrimary },
-  chipLabelSelected: { color: colors.textOnBrand },
-  chipCheck: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 18,
-    height: 18,
-    borderRadius: radii.pill,
-    backgroundColor: colors.brandAccent,
-    borderWidth: 2,
-    borderColor: colors.bgCanvas,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   stepHeader: { gap: spacing.lg },
   stepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   back: {
@@ -417,7 +347,6 @@ const styles = StyleSheet.create({
   stepText: { fontFamily: fonts.semiBold, fontSize: 12, color: colors.textMuted },
   // As big as the back button: the label stays centred and the row keeps its height with no control beside it.
   stepSpacer: { width: 36, height: 36 },
-  skip: { fontFamily: fonts.semiBold, fontSize: 13, color: colors.brandPrimary },
   closeOnDark: { backgroundColor: colors.onBrandTile, borderColor: colors.onBrandTile },
   track: { height: 6, borderRadius: 3, backgroundColor: colors.borderDefault, overflow: 'hidden' },
   trackFill: { height: '100%', borderRadius: 3, backgroundColor: colors.brandAccent },

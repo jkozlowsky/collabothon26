@@ -16,7 +16,7 @@ import { colors, radii, spacing, storyColors, tints, type } from '@/constants/th
 import { useApi } from '@/hooks/useApi';
 import { animateScroll } from '@/lib/animateScroll';
 import { offersFor } from '@/lib/offers';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type { StoryPage } from '@/types/stories';
 
 /** Building heights for the hero skyline, derived from the city name so every city gets its own, stable outline. */
@@ -30,7 +30,8 @@ function skyline(city: string) {
 
 export default function StoryScreen() {
   const { id, lesson: targetLessonId } = useLocalSearchParams<{ id: string; lesson?: string }>();
-  const { data, loading, error, reload } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(USER_ID)}`);
+  const { userId } = useCurrentUser();
+  const { data, loading, error, reload } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(userId)}`);
   useFocusEffect(reload);
   const story = data?.find((item) => item.id === id);
   const insets = useSafeAreaInsets();

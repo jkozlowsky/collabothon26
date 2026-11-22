@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { AREA_LABEL, DONE_MS, MAX_QUESTIONS, STEP_TIMEOUT_MS, type Feedback } from '@/constants/quickCheck';
 import { feedbackFor, postStep } from '@/lib/quickCheck';
+import { useCurrentUser } from '@/lib/user';
 import type { Facts, FocusArea } from '@/types/categorization';
 import type {
   CheckQuestion,
@@ -67,6 +68,7 @@ type Props = {
  * (docs/specs/F1b-quick-check.md, "Front flow and errors"). The raw history lives only here until the final POST.
  */
 export function useQuickCheck({ consent, facts, profile, onFinish, onSkip }: Props) {
+  const { userId } = useCurrentUser();
   const [run, setRun] = useState(INITIAL);
   // Async steps read the latest run here: a response is applied only while the history it was sent with is still current.
   const latest = useRef(INITIAL);
@@ -91,7 +93,7 @@ export function useQuickCheck({ consent, facts, profile, onFinish, onSkip }: Pro
     request.current = ctrl;
     const timer = setTimeout(() => ctrl.abort(), STEP_TIMEOUT_MS);
     try {
-      return await postStep({ consent, ...(consent && { facts }), profile, history, useRules, stepFellBack }, ctrl.signal);
+      return await postStep({ consent, ...(consent && { facts }), profile, history, useRules, stepFellBack }, ctrl.signal, userId);
     } finally {
       clearTimeout(timer);
     }

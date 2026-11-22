@@ -1,8 +1,8 @@
-import { AREAS, FEEDBACK, JUST_STARTING_BELOW, PROFILE_QUESTIONS, SOLID_ABOVE, SOLID_MIN_ANSWERS, type Feedback } from '@/constants/quickCheck';
+import { AREAS, FEEDBACK, JUST_STARTING_BELOW, SOLID_ABOVE, SOLID_MIN_ANSWERS, type Feedback } from '@/constants/quickCheck';
 import { api } from '@/lib/api';
 import { parseDefinition } from '@/lib/glossaryMarkup';
 import type { Facts, FocusArea } from '@/types/categorization';
-import type { CheckQuestion, HistoryEntry, Horizon, Mastery, ProfileRanges, StepResponse } from '@/types/quickCheck';
+import type { CheckQuestion, HistoryEntry, Mastery, ProfileRanges, StepResponse } from '@/types/quickCheck';
 
 const MIN_OPTIONS = 2;
 
@@ -67,13 +67,6 @@ export const plainText = (marked: string) =>
 export function feedbackFor(picked: number | null, question: CheckQuestion): Feedback {
   const tone = picked === null ? FEEDBACK.unsure : picked === question.correctIndex ? FEEDBACK.right : FEEDBACK.wrong;
   return { ...tone, body: plainText(question.explanation) };
-}
-
-/** The summary's "Saving for" line; a horizon of "Not sure" (or none) leaves only the purpose. */
-export function savingForLine(purpose: string | null, horizon: Horizon | null) {
-  if (!purpose) return undefined;
-  const when = horizon && horizon !== 'not-sure' && PROFILE_QUESTIONS.horizon.options.find((o) => o.value === horizon)?.label;
-  return `Saving for: ${purpose}${when ? ` · needed ${horizon === 'within-1y' ? '' : 'in '}${when.toLowerCase()}` : ''}`;
 }
 
 export type Level = 'none' | 'starting' | 'building' | 'solid';

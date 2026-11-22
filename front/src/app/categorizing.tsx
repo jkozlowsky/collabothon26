@@ -20,7 +20,7 @@ import { isE2E } from '@/lib/e2e';
 import { categorize, checkBackend, factLabels, factsFrom, isRetryable, withTimeout } from '@/lib/categorization';
 import { setSummary } from '@/lib/learningPath';
 import { useCurrentUser } from '@/lib/user';
-import { answerCounts, fetchCheckQuestions, savingForLine } from '@/lib/quickCheck';
+import { answerCounts, fetchCheckQuestions } from '@/lib/quickCheck';
 import type { CheckQuestion, ProfileRanges, QuickResult } from '@/types/quickCheck';
 
 const STEP_MS = 800;
@@ -95,7 +95,6 @@ export default function CategorizingScreen() {
       setSummary({
         categorization: result.value,
         counts: history && answerCounts(history, pool.current),
-        savingFor: savingForLine(intake?.purpose ?? null, intake?.horizon ?? null),
       });
       return router.replace('/learning-path');
     }

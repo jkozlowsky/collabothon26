@@ -68,7 +68,7 @@ beforeEach(() => {
   globalThis.fetch = jest.fn((url: string, init?: RequestInit) => {
     if (init?.method === 'POST') posted = { url, body: JSON.parse(String(init.body)) };
     const body = url.endsWith('/profile')
-      ? { userId: 'demo-user', goals: [], onboardingCompleted: true }
+      ? { userId: 'demo-user', interests: [], onboardingCompleted: true }
       : url.includes('/result')
         ? { xpAwarded: 50, firstCompletion: true, totalXp: 50, next: 'seoul-2' }
         : url.includes('/api/lessons?')

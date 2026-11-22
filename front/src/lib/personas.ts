@@ -12,22 +12,20 @@ import { seedDaniel } from '@/lib/bank/seed-daniel';
 import { seedElena } from '@/lib/bank/seed-elena';
 import { DEFAULT_SEED, seedAccount } from '@/lib/bank/seed';
 import type { BankState } from '@/types/bank';
-import type { Experience, Goal, LifeStage, Purpose } from '@/types/onboarding';
-import type { Horizon } from '@/types/quickCheck';
+import type { Experience, LifeStage } from '@/types/onboarding';
 
 export type PersonaId = 'demo-user' | 'demo-daniel' | 'demo-elena';
 
 /**
  * Preselected answers for the onboarding's profiling questions only (never the Quick check's knowledge questions).
- * `purpose` and `horizon` are asked in a fresh onboarding; `lifeStage`, `goals` and `experience` only in Profile →
- * "Edit answers", where they fill in what the profile does not hold yet. The age band is not a question: it comes
- * from the bank's `owner.age`. Every field optional; an absent field means "no hint", and any hint can be changed.
+ * `interests` (story ids) is asked in a fresh onboarding and preselects those tiles; `lifeStage` and `experience`
+ * only in Profile → "Edit answers", where they fill in what the profile does not hold yet. The age band is not a
+ * question: it comes from the bank's `owner.age`. Every field optional; an absent field means "no hint", and any
+ * hint can be changed.
  */
 export type OnboardingHints = {
-  purpose?: Purpose;
-  horizon?: Horizon;
+  interests?: string[];
   lifeStage?: LifeStage;
-  goals?: Goal[];
   experience?: Experience;
 };
 
@@ -47,10 +45,8 @@ export const PERSONAS: Record<PersonaId, Persona> = {
     userId: 'demo-daniel',
     bankSeed: () => seedDaniel(),
     hints: {
-      purpose: 'growing',
-      horizon: '5y+',
+      interests: ['seoul', 'mumbai'],
       lifeStage: 'settled',
-      goals: ['stocks-etfs', 'retirement'],
       experience: 'investing',
     },
   },
@@ -58,10 +54,8 @@ export const PERSONAS: Record<PersonaId, Persona> = {
     userId: 'demo-elena',
     bankSeed: () => seedElena(),
     hints: {
-      purpose: 'safety-net',
-      horizon: '1-5y',
+      interests: ['berlin', 'buenos-aires'],
       lifeStage: 'later-life',
-      goals: ['inflation', 'scams'],
       experience: 'regular',
     },
   },

@@ -71,7 +71,7 @@ function backend({ pool = () => ok(POOL), step = stepper(), post = () => ok(cate
       return stored ? ok(stored) : fail(404);
     }
     if (/\/profile(\/onboarding)?$/.test(url)) {
-      return init?.method ? ok({}) : ok({ userId: 'demo-user', goals: [], onboardingCompleted: onboarded });
+      return init?.method ? ok({}) : ok({ userId: 'demo-user', interests: [], onboardingCompleted: onboarded });
     }
     if (url.includes('/api/stories?')) return ok([BERLIN]);
     if (/\/api\/lessons\/[\w-]+/.test(url)) return ok({ id: 'berlin-2', title: 'Compound interest', steps: [], concepts: [], glossary: {}, next: null });
@@ -95,16 +95,15 @@ async function openAt(path: '/learning-path') {
   await settle();
   await act(async () => router.push(path));
 }
-type Survey = Parameters<typeof walkSurvey>[0];
 /** A fresh onboarding up to "Start the quick check". */
-async function startCheck(survey?: Survey) {
+async function startCheck() {
   await renderRouter(routes, { initialUrl: '/' });
   await fireEvent.press(await screen.findByTestId('nav-learn'));
-  await walkSurvey(survey);
+  await walkSurvey();
   await press('check-start');
 }
-async function toFirstQuestion(survey?: Survey) {
-  await startCheck(survey);
+async function toFirstQuestion() {
+  await startCheck();
   await screen.findByTestId('quick-check-unsure');
 }
 const tile = (option: number | 'unsure') => (option === 'unsure' ? 'quick-check-unsure' : `quick-check-option-${option}`);
@@ -152,7 +151,7 @@ test('the test starts on a knowledge question; the first step carries the facts,
     {
       consent: true,
       facts: factsFrom(seedAccount()),
-      profile: { ageBand: '26-40', savingsCover: null, horizon: '1-5y' },
+      profile: { ageBand: '26-40', savingsCover: null, horizon: null },
       history: [],
       useRules: false,
       stepFellBack: false,
@@ -279,7 +278,7 @@ test('the step that says done ends the test only after "Continue": "All set", th
     {
       consent: true,
       facts: factsFrom(seedAccount()),
-      profile: { ageBand: '26-40', savingsCover: null, horizon: '1-5y' },
+      profile: { ageBand: '26-40', savingsCover: null, horizon: null },
       history: [
         { questionId: ORDER[0], optionIndex: 1 },
         { questionId: ORDER[1], optionIndex: null },
@@ -457,8 +456,7 @@ test('a fresh onboarding cannot be skipped: no Skip on any step, and no Close in
     ['intro', 'onboarding-next'],
     ['challenge', 'onboarding-challenge-next'],
     ['consent', 'consent-accept'],
-    ['purpose', 'option-home', 'onboarding-continue'],
-    ['horizon', 'option-1-5y', 'onboarding-continue'],
+    ['interests', 'interest-not-sure', 'onboarding-continue'],
     ['check-intro', 'check-start'],
   ];
   for (const [step, ...taps] of STEPS) {
@@ -540,9 +538,9 @@ const ran = (patch: object = {}) =>
     ...patch,
   });
 
-async function toSummary(post: Categorization, survey?: Survey) {
+async function toSummary(post: Categorization) {
   backend({ step: stepper(1), post: () => ok(post) });
-  await toFirstQuestion(survey);
+  await toFirstQuestion();
   await answer(0);
   await finish();
   await summary();
@@ -563,7 +561,6 @@ test('the summary: the level and its basis, the first lesson, a gap note under i
   expect(get('summary-first-lesson')).toHaveTextContent('Emergency fund', { exact: false });
   expect(get('summary-first-lesson')).toHaveTextContent('Berlin · stop 3 of 4', { exact: false });
   expect(get('summary-disclaimer')).toHaveTextContent('This picks lessons for you. It is not investment advice.', { exact: false });
-  expect(get('summary-saving-for')).toHaveTextContent('Saving for: A home of my own · needed in 1–5 years');
   expect(screen.queryByTestId('summary-simple')).toBeNull();
 });
 
@@ -583,15 +580,6 @@ test('with no gap the summary has no gap note, and the map has no confidence mar
   expect(get('summary-map')).toBeOnTheScreen();
   expect(screen.queryByTestId(/^area-diamond-/, { includeHiddenElements: true })).toBeNull();
   expect(screen.queryByText(/confiden/i)).toBeNull();
-});
-
-test.each([
-  { name: 'a purpose with no time frame', survey: { purpose: 'growing', horizon: 'not-sure' }, line: 'Saving for: Growing it long term' },
-  { name: '"No plan yet"', survey: { purpose: 'none', horizon: 'within-1y' }, line: null },
-] as const)('the summary after $name', async ({ survey, line }) => {
-  await toSummary(ran(), survey);
-  if (line) expect(get('summary-saving-for')).toHaveTextContent(line);
-  else expect(screen.queryByTestId('summary-saving-for')).toBeNull();
 });
 
 test('a start lesson with no area is just "your first stop"', async () => {
@@ -622,7 +610,7 @@ test('"Show my path" is the one button and opens the map, not the first lesson',
 
 test('the simpler-check line shows only when the model was asked and then failed', async () => {
   await toSummary(
-    ran({ source: 'fallback', sharedWithModel: { facts: null, answers: { lifeStage: null, goals: [], experience: null, skipped: true }, profile: null, answerCount: 1, stepCallsMade: 1 } }),
+    ran({ source: 'fallback', sharedWithModel: { facts: null, answers: { lifeStage: null, interests: [], experience: null, skipped: true }, profile: null, answerCount: 1, stepCallsMade: 1 } }),
   );
   expect(get('summary-simple')).toHaveTextContent('We used a simpler check this time', { exact: false });
 });
@@ -638,7 +626,6 @@ test('a reload of /learning-path rebuilds the summary from the stored row', asyn
 
   expect(await screen.findByTestId('summary-first-lesson')).toHaveTextContent('Emergency fund', { exact: false });
   expect(get('summary-based-on')).toHaveTextContent('3 answers', { exact: false });
-  expect(screen.queryByTestId('summary-saving-for')).toBeNull();
 });
 
 test('hardware back on the summary leaves for the map like Show my path', async () => {

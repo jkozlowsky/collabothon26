@@ -1,23 +1,13 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { AnswerTile } from '@/components/categorizing/AnswerTile';
 import { ConsentCard } from '@/components/onboarding/ConsentCard';
 import { AtlasHero, DuelIllustration, LessonGlobeIllustration, QuickCheckHero } from '@/components/onboarding/Illustrations';
+import { InterestsStep } from '@/components/onboarding/InterestsStep';
 import { Page } from '@/components/onboarding/Page';
-import {
-  BackButton,
-  BigButton,
-  CloseButton,
-  OptionCard,
-  Rise,
-  StepHeader,
-  type,
-} from '@/components/onboarding/ui';
-import { PURPOSES, type Option } from '@/constants/onboarding';
-import { PROFILE_QUESTIONS } from '@/constants/quickCheck';
+import { BackButton, BigButton, CloseButton, Rise, type } from '@/components/onboarding/ui';
 import { colors, spacing, type as text } from '@/constants/theme';
 import { useBank } from '@/hooks/useBank';
 import { useOnboarding } from '@/hooks/useOnboarding';
@@ -25,26 +15,18 @@ import { leaveOnboardingForCheck } from '@/hooks/useOpenLearn';
 import { ageBandOf, ageLabel, factLabels, factsFrom } from '@/lib/categorization';
 import { personaFor } from '@/lib/personas';
 import { useCurrentUser } from '@/lib/user';
-import type { Intake, OnboardingAnswers, Purpose } from '@/types/onboarding';
-import type { Horizon, ProfileRanges } from '@/types/quickCheck';
+import type { Intake } from '@/types/onboarding';
+import type { ProfileRanges } from '@/types/quickCheck';
 
 type Step =
   | 'welcome'
   | 'intro'
   | 'challenge'
   | 'consent'
-  | 'purpose'
-  | 'horizon'
+  | 'interests'
   | 'check-intro';
 
-const STEPS: Step[] = ['welcome', 'intro', 'challenge', 'consent', 'purpose', 'horizon', 'check-intro'];
-const QUESTIONS: Step[] = ['purpose', 'horizon'];
-
-/** Everything the survey collects; the profile keeps the goals the purpose stands for. */
-type Survey = OnboardingAnswers & {
-  purpose?: Purpose;
-  horizon?: Horizon;
-};
+const STEPS: Step[] = ['welcome', 'intro', 'challenge', 'consent', 'interests', 'check-intro'];
 
 export default function OnboardingScreen() {
   const { userId } = useCurrentUser();
@@ -52,30 +34,21 @@ export default function OnboardingScreen() {
   const { complete, done } = useOnboarding();
   const { state: bank } = useBank();
   const [index, setIndex] = useState(0);
-  // A demo persona starts with its answers preselected.
-  const [answers, setAnswers] = useState<Survey>({ goals: [], purpose: hints?.purpose, horizon: hints?.horizon });
+  const [interests, setInterests] = useState<string[]>();
 
   const step = STEPS[index];
-  const purpose = PURPOSES.find((p) => p.value === answers.purpose);
 
   const next = () => setIndex((i) => Math.min(i + 1, STEPS.length - 1));
   const back = () => setIndex((i) => Math.max(i - 1, 0));
-  const set = <K extends keyof Survey>(key: K, value: Survey[K]) => setAnswers((a) => ({ ...a, [key]: value }));
 
   const intake = (): Intake => {
-    const horizon = answers.horizon ?? null;
-    const profile: ProfileRanges = { ageBand: ageBandOf(bank.owner.age), savingsCover: null, horizon };
-    return {
-      purpose: purpose && purpose.value !== 'none' ? purpose.title : null,
-      horizon,
-      check: { profile },
-    };
+    const profile: ProfileRanges = { ageBand: ageBandOf(bank.owner.age), savingsCover: null, horizon: null };
+    return { check: { profile } };
   };
 
-  // The purpose goes on the profile as its goals.
   const [checkStarted, setCheckStarted] = useState(false);
   const startCheck = () => {
-    complete({ goals: purpose?.goals ?? [] }, intake());
+    complete({ interests: interests ?? [] }, intake());
     setCheckStarted(true);
   };
   // Leave only once `done` is true in this render: /categorizing is behind the onboarding guard.
@@ -219,96 +192,16 @@ export default function OnboardingScreen() {
     );
   }
 
-  const qIndex = QUESTIONS.indexOf(step);
-  const answered: Partial<Record<Step, boolean>> = {
-    purpose: !!answers.purpose,
-    horizon: !!answers.horizon,
-  };
-
   return (
-    <Page
-      testID={`onboarding-${step}`}
-      header={
-        <StepHeader
-          left={<BackButton onPress={back} />}
-          label={`Step ${qIndex + 1} of ${QUESTIONS.length}`}
-          progress={(qIndex + 1) / QUESTIONS.length}
-        />
-      }
-      footer={
-        <BigButton
-          label="Continue"
-          onPress={next}
-          disabled={!answered[step]}
-          testID="onboarding-continue"
-        />
-      }
-    >
-      {step === 'purpose' && (
-        <Question title="What are you saving for?">
-          <SingleChoice options={PURPOSES} value={answers.purpose} onChange={(v) => set('purpose', v)} />
-        </Question>
-      )}
-      {step === 'horizon' && (
-        <Question title={PROFILE_QUESTIONS.horizon.prompt}>
-          <RangeChoice options={PROFILE_QUESTIONS.horizon.options} value={answers.horizon} onChange={(v) => set('horizon', v)} />
-        </Question>
-      )}
-    </Page>
-  );
-}
-
-function Question({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <>
-      <Text style={type.display}>{title}</Text>
-      <View style={styles.answers}>{children}</View>
-    </>
-  );
-}
-
-function SingleChoice<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: Option<T>[];
-  value?: T;
-  onChange: (v: T) => void;
-}) {
-  return options.map((o) => (
-    <OptionCard
-      key={o.value}
-      testID={`option-${o.value}`}
-      title={o.title}
-      subtitle={o.subtitle}
-      icon={o.icon}
-      selected={value === o.value}
-      onPress={() => onChange(o.value)}
+    <InterestsStep
+      initial={interests ?? hints?.interests}
+      onBack={back}
+      onDone={(ids) => {
+        setInterests(ids);
+        next();
+      }}
     />
-  ));
-}
-
-/** The range questions: `OptionCard`s without an icon. */
-function RangeChoice<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { label: string; value: T }[];
-  value?: T;
-  onChange: (v: T) => void;
-}) {
-  return options.map((o) => (
-    <AnswerTile
-      key={o.value}
-      testID={`option-${o.value}`}
-      title={o.label}
-      state={value === o.value ? 'selected' : 'default'}
-      checked={value === o.value}
-      onPress={() => onChange(o.value)}
-    />
-  ));
+  );
 }
 
 const styles = StyleSheet.create({

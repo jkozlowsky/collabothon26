@@ -22,7 +22,7 @@ describe('Onboarding and Quick check hints', () => {
       json: async () => ({
         userId: 'demo-user',
         lifeStage: null,
-        goals: [],
+        interests: [],
         experience: null,
         onboardingCompleted: false,
       }),
@@ -62,14 +62,21 @@ describe('Onboarding and Quick check hints', () => {
     expect(screen.getByTestId('onboarding-welcome')).toBeTruthy();
   });
 
-  test('Persona with hints has purpose and horizon preselected in onboarding', async () => {
+  test('Persona with hints has its interests preselected; an id with no tile is ignored', async () => {
     const mockPersona: personasModule.Persona = {
       userId: 'demo-daniel',
       bankSeed: personasModule.PERSONAS['demo-daniel'].bankSeed,
-      hints: { purpose: 'growing', horizon: '5y+' },
+      hints: { interests: ['seoul', 'mumbai', 'gone'] },
     };
 
     jest.spyOn(personasModule, 'personaFor').mockReturnValue(mockPersona);
+    const profile = await fetchMock();
+    const story = (id: string) => ({ id, category: id, topic: id, icon: 'shield', status: 'available' });
+    fetchMock.mockImplementation((url: string) =>
+      url.includes('/api/stories')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => ['seoul', 'berlin', 'mumbai'].map(story) })
+        : Promise.resolve(profile),
+    );
 
     await render(
       <SafeAreaProvider initialMetrics={metrics}>
@@ -97,10 +104,10 @@ describe('Onboarding and Quick check hints', () => {
     for (const id of ['onboarding-start', 'onboarding-next', 'onboarding-challenge-next', 'consent-accept']) {
       await fireEvent.press(await screen.findByTestId(id));
     }
-    expect(await screen.findByTestId('option-growing')).toBeChecked();
-    expect(screen.getByTestId('option-home')).not.toBeChecked();
-
-    await fireEvent.press(screen.getByTestId('onboarding-continue'));
-    expect(await screen.findByTestId('option-5y+')).toBeChecked();
+    expect(await screen.findByTestId('interest-seoul')).toBeChecked();
+    expect(screen.getByTestId('interest-mumbai')).toBeChecked();
+    expect(screen.getByTestId('interest-berlin')).not.toBeChecked();
+    expect(screen.queryByTestId('interest-gone')).toBeNull();
+    expect(screen.getByTestId('onboarding-continue')).toBeEnabled();
   });
 });

@@ -149,13 +149,15 @@ type OptionCardProps = {
   selected: boolean;
   onPress: () => void;
   testID?: string;
+  /** `checkbox` for multi-select lists. */
+  role?: 'radio' | 'checkbox';
 };
 
-export function OptionCard({ title, subtitle, icon, selected, onPress, testID }: OptionCardProps) {
+export function OptionCard({ title, subtitle, icon, selected, onPress, testID, role = 'radio' }: OptionCardProps) {
   return (
     <Tappable
       testID={testID}
-      accessibilityRole="radio"
+      accessibilityRole={role}
       aria-checked={selected}
       onPress={onPress}
       haptic="selection"

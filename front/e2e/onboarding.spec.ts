@@ -37,8 +37,10 @@ test('the welcome screen introduces Atlas, and the map and duel slides lead to t
   await expect(page.getByText('Learn needs them to work.')).toBeVisible();
   await expect(page.getByTestId('consent-facts')).toContainText('Your account already shows');
   await expect(page.getByTestId('consent-facts')).toContainText('Age 26–40');
-  await expect(page.getByText('Only these summaries are shared, never your transactions.')).toBeVisible();
-  await expect(page.getByTestId('consent-notice')).toContainText('Your choices are checked by an AI service.');
+  await expect(page.getByText('Only these summaries')).toHaveCount(0);
+  await expect(page.getByTestId('consent-notice')).toHaveText(
+    'Your answers, the topics you pick and ranges from your accounts are checked by an external AI provider to pick your first lesson. Exact account numbers never leave this phone. We keep the result, your topics and the ranges. Your choices are checked by an AI service.',
+  );
   await expect(page.getByTestId('consent-accept')).toHaveText('Use my account data');
   await expect(page.getByTestId('consent-not-now')).toHaveText('Not now');
   await expect(page.getByTestId('consent-decline')).toHaveCount(0);

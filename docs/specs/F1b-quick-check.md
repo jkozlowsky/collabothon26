@@ -213,7 +213,7 @@ startHere: {lessonId, title, area, storyId, storyCity} | null   // not stored: t
 sharedWithModel: {facts | null, answers | null, goals, profile | null, answerCount, stepCallsMade} | null   // categories sent to Jev in steps or the final call, built when stepCallsMade > 0 or the final call was sent, whether or not the Quick check ran; answers (onboarding) only when the final call was sent; goals always (steps and the final call both send them); null = nothing was sent
 v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / false.
 ```
-- The per-answer history is not stored (Q20: "We keep the result and the ranges"); the request history is used for the call and dropped.
+- The per-answer history is not stored (Q20: "We keep the result, your topics and the ranges"); the request history is used for the call and dropped.
 - `startHere` and the completion filter read completions through `com.collabothon.back.lesson.LessonProgress.completed(userId)` and lessons and stories through `LessonContent` (`stories()`, `lessonIdsOf`, `lesson`), public and read-only for F1b (v2.1).
 - The summary decides the D2 line from the stored row alone: `source == "fallback"` and `sharedWithModel != null`.
 
@@ -341,7 +341,7 @@ v5: only the area order is left; the question swap below went with the bank.
 ### Copy, verbatim (Q19, Q20 and the cards)
 - Why this question (Q19): knowledge, first question in the area: "Picked to learn more about {Area}"; area already asked: "Picked to look at {Area} from another angle". Profile: age band "So examples fit your stage of life"; savings cover "So examples fit your savings"; time frame "So examples match your time frame".
 - Why here (map): one line, "Based on your onboarding answers" (Jan, 21.11).
-- Consent notice (Q20, GDPR art. 13(1)(e)): "Your answers, how sure you felt and the ranges you pick (and, if you allow it, ranges from your accounts) are checked by an external AI provider to pick your first lesson. Exact account numbers never leave this phone. We keep the result and the ranges."
+- Consent notice (Q20, GDPR art. 13(1)(e); Jan, 22.11): "Your answers, the topics you pick and ranges from your accounts are checked by an external AI provider to pick your first lesson. Exact account numbers never leave this phone. We keep the result, your topics and the ranges. Your choices are checked by an AI service."
 - Profile questions (Q10 order): "Which age band are you in?" 18–25 / 26–40 / 41–59 / 60+; "How many months of spending could your savings cover?" Less than 1 month / 1–3 months / 3–6 months / 6 months or more; "When might you need the money you save or invest?" Within a year / 1–5 years / 5+ years / Not sure.
 - Gap cards: under, title "You know more than you think", because "On {Area} you said “{chip}”, yet your answers show you already understand how it works."; over, title "There is more to explore here", because with `startLesson` in this area "On {Area} you said “{chip}”. Your answers leave a few things open, which is where your first lesson starts.", otherwise "On {Area} you said “{chip}”. Your answers leave a few things open to explore."; aligned, title "How sure you felt matches your answers", text "On the areas we checked, your confidence and your answers line up." The backend builds `because`; the front adds the titles.
 - D2 line: "We used a simpler check this time".

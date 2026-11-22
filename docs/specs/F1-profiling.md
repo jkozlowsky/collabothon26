@@ -145,7 +145,7 @@ Experience labels are main's titles: `not-saving` "I don't save yet", `occasiona
 
 ### Consent card and loading screen (`/categorizing`; look: `docs/design/mockups/consent-c.html`)
 - Reached right after a fresh onboarding (finished or skipped); a returning user goes straight to Learn as today.
-- Consent card first: computes `factsFrom(useBank().state)` and lists the facts in plain words ("Your accounts cover more than 6 months of spending", …) under the line "Only these summaries are shared, never your transactions." Buttons "Use my account data" (`consent: true`, sends exactly the previewed facts) and "Continue without" (`consent: false`, no facts).
+- Consent card first: computes `factsFrom(useBank().state)` and lists the facts in plain words ("Your accounts cover more than 6 months of spending", …), followed by the consent notice (wording in F1b, "Copy, verbatim"). Buttons "Use my account data" (`consent: true`, sends exactly the previewed facts) and "Continue without" (`consent: false`, no facts).
 - Then the loading steps: every 800 ms ("Looking at your accounts" is skipped without consent); the last step holds with a subtle progress indicator until the response; at least ~2.4 s in total; then `router.replace` to Learn.
 - `POST /api/users/{USER_ID}/categorization` once per visit (a `useRef` guard), 10 s client timeout (`AbortController`), aborted on unmount; no navigation after unmount.
 - Errors: network, 5xx, 404 (after the retries), 408 and 429 → "Your path stopped halfway" (mockup C) + Retry + "Skip for now" (to Learn without a categorisation); other 4xx → message + "Skip for now". Reuse `ApiError` from `front/src/lib/api.ts`.

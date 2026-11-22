@@ -177,11 +177,12 @@ The build follows the option marked "chosen".
   the two-per-area limit of the gap lessons, as §5 words it. (b) note every lesson of a picked path.
 - **C17 Extra copy on the screen.** (a) **chosen:** the helper "Pick every topic that is new to you. We'll build your
   path around them." and the "N selected" counter. Chips need no subtitle, "Not sure yet" included. (b) title only.
-- **C18 Consent notice (high; settle before merging to main).** F1b Q20's wording still says "the ranges you pick"
-  and "We keep the result and the ranges". Nothing asks for ranges now; picked topics are sent and kept. (a) keep it:
-  the notice is inaccurate. (b) **recommended, not built, needs Jan:** "Your answers, the topics you pick and ranges
+- **C18 Consent notice (high; closed by Jan, 22.11).** F1b Q20's wording said "the ranges you pick" and "We keep the
+  result and the ranges". Nothing asks for ranges now; picked topics are sent and kept. (a) keep it:
+  the notice is inaccurate. (b) **chosen:** "Your answers, the topics you pick and ranges
   from your accounts are checked by an external AI provider to pick your first lesson. Exact account numbers never
   leave this phone. We keep the result, your topics and the ranges." followed by the existing last sentence.
+  The lock line "Only these summaries are shared, never your transactions." is deleted: it was no longer true.
 - **C19 Jev wording.** (a) **chosen:** as §4 words it. (b) explain `interests` in the F1 and `first_lesson` questions
   and drop the horizon clause when it is null: verbatim spec blocks, and needs a live probe.
 - **C20 Every area solid, no Jev pick.** Smoke: picking Inflation & savings and passing everything starts in Seoul,
@@ -214,7 +215,7 @@ The build follows the option marked "chosen".
 
 | # | finding | file:line | severity | fix/defer/reject | reason or commit |
 |---|---|---|---|---|---|
-| A1 | consent notice says "the ranges you pick"; interests are sent and kept | `ConsentCard.tsx:45` | high | defer | real; the notice is Jan's Q20 wording: C18 |
+| A1 | consent notice says "the ranges you pick"; interests are sent and kept | `ConsentCard.tsx:45` | high | fix | C18 (b), approved by Jan 22.11 |
 | A2 | disclosure keeps ids and omits the per-lesson notes | `CategorizationService.java:155` | medium | defer | ids follow C3; the notes derive from disclosed picks and answers; follow-up |
 | A3 | pre-V27 categorisation rows read with null interests and old lines | `V27__interests.sql:3` | medium | defer | by reading: no caller dereferences it; the next onboarding rewrites the row |
 | A4 | front type lacks sharedWithModel.interests, answers not nullable | `types/categorization.ts:63` | low | defer | already wrong on main, no reader |

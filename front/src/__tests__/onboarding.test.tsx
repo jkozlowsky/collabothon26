@@ -134,9 +134,10 @@ test('the consent screen lists what the account shows and the notice', async () 
   // The icons are glyphs, not words.
   const lines = (id: string) => within(get(id)).getAllByText(/\w/).map((line) => line.props.children);
   expect(lines('consent-facts')).toEqual(['Your account already shows', ...factLabels(factsFrom(seedAccount())), 'Age 26–40']);
-  expect(screen.getByText('Only these summaries are shared, never your transactions.')).toBeOnTheScreen();
-  expect(get('consent-notice')).toHaveTextContent(/the ranges you pick and ranges from your accounts are checked/);
-  expect(get('consent-notice')).toHaveTextContent(/Your choices are checked by an AI service\./);
+  expect(screen.queryByText(/Only these summaries/)).toBeNull();
+  expect(get('consent-notice')).toHaveTextContent(
+    'Your answers, the topics you pick and ranges from your accounts are checked by an external AI provider to pick your first lesson. Exact account numbers never leave this phone. We keep the result, your topics and the ranges. Your choices are checked by an AI service.',
+  );
 });
 
 test('the consent screen offers only "Use my account data" and "Not now"; "Not now" leaves and saves nothing', async () => {

@@ -63,6 +63,10 @@ class CategorizationControllerTests {
 			{"lifeStage": "building", "goals": ["start-saving", "stocks-etfs"], "experience": "occasional",
 			 "skipped": false}""";
 
+	/** The same answers as Jev gets them: only those with a value. */
+	private static final String SENT_ANSWERS = """
+			{"lifeStage": "building", "goals": ["start-saving", "stocks-etfs"], "experience": "occasional"}""";
+
 	/** What the app computes from the front seed customer (spec: `factsFrom` on the seed). */
 	private static final String FACTS = """
 			{"incomeBand": "2-3.5k", "cashBufferMonths": "6+", "savingsRate": "20%+", "savesRegularly": true,
@@ -143,7 +147,7 @@ class CategorizationControllerTests {
 			.andExpect(header("Authorization", "Bearer test-key"))
 			.andExpect(content().json("""
 					{"model": "jev-latest", "state": {"answers": %s, "facts": %s}, "questions": %s}"""
-				.formatted(ANSWERS, FACTS, SpecBlocks.read(json, SpecBlocks.F1, "jev-questions")), JsonCompareMode.STRICT))
+				.formatted(SENT_ANSWERS, FACTS, SpecBlocks.read(json, SpecBlocks.F1, "jev-questions")), JsonCompareMode.STRICT))
 			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 
 		String expected = """
@@ -291,6 +295,30 @@ class CategorizationControllerTests {
 			.andExpect(MockMvcResultMatchers.content().json("""
 					{"role": "novice", "lifeStage": null, "gaps": [],
 					 "lessonVariant": {"persona": null, "level": "beginner", "lang": "plain"}}"""));
+	}
+
+	@Test
+	void onlyAnAnswerWithAValueReachesJev() throws Exception {
+		// What today's onboarding saves: goals, no life stage and no experience.
+		onboard("alex", "{\"goals\": [\"start-saving\"], \"skipped\": false}");
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(content().json("""
+					{"model": "jev-latest", "state": {"answers": {"goals": ["start-saving"]}}, "questions": %s}"""
+				.formatted(SpecBlocks.read(json, SpecBlocks.F1, "jev-questions")), JsonCompareMode.STRICT))
+			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
+
+		categorize("alex", "{\"consent\": false}").andExpect(status().isOk());
+	}
+
+	@Test
+	void withNoAnswerLeftThereIsNoAnswersKey() throws Exception {
+		onboard("alex", "{\"goals\": [], \"skipped\": false}");
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(jsonPath("$.state.answers").doesNotExist())
+			.andExpect(jsonPath("$.state.facts.hasLoan").value(true))
+			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
+
+		categorize("alex", WITH_FACTS).andExpect(status().isOk());
 	}
 
 	@Test

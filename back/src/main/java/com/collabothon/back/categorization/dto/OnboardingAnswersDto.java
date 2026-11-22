@@ -2,7 +2,7 @@ package com.collabothon.back.categorization.dto;
 
 import java.util.List;
 
-// Serialised verbatim to Jev, so a new component here is sent out too (pinned by a test).
+// What the app is told was shared with Jev; JevClient sends only the components that have a value.
 public record OnboardingAnswersDto(
 		String lifeStage,
 		List<String> goals,

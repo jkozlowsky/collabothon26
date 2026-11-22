@@ -31,6 +31,7 @@ import org.springframework.core.NestedExceptionUtils;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -67,16 +68,16 @@ public class JevClient {
 	private static final String QUESTIONS = """
 			{
 			  "role": {"type": "choice",
-			    "instructions": "Based on how this person describes their money habits (from not saving yet to planning ahead) and, when given, facts about their accounts, which learner level fits best?",
+			    "instructions": "Which learner level fits this person best, judging by the facts about their accounts in `facts` and their knowledge answers in `checkAnswers`, when present?",
 			    "criteria": {
-			      "novice": "Does not save yet or saves only now and then, and shows few healthy money habits such as regular saving or a cash buffer.",
-			      "intermediate": "Saves regularly or has a safety net, but does not invest yet or does not act on it consistently.",
-			      "advanced": "Saves and invests, or plans their finances ahead; habits such as regular saving support this."}},
-			  "focus_saving":     {"type": "noul", "instructions": "Would this person benefit most from learning about building an emergency fund and saving right now?"},
-			  "focus_debt":       {"type": "noul", "instructions": "Would this person benefit most from learning about avoiding overdrafts and expensive debt right now?"},
-			  "focus_investing":  {"type": "noul", "instructions": "Would this person benefit most from learning how investing works, for example funds and ETFs, right now?"},
-			  "focus_risk":       {"type": "noul", "instructions": "Would this person benefit most from learning about risk, diversification and protection right now?"},
-			  "focus_retirement": {"type": "noul", "instructions": "Would this person benefit most from learning about planning for retirement and the family's future right now?"}
+			      "novice": "Is starting out: has no habit of regular saving and no investments, and any knowledge answers show that basic money ideas are still new to them.",
+			      "intermediate": "Has some of the basics: saves regularly or invests but not both, or their knowledge answers are mixed or ahead of these habits.",
+			      "advanced": "Is past the basics: saves regularly and invests, and any knowledge answers show that they understand the ideas they were asked about."}},
+			  "focus_saving":     {"type": "noul", "instructions": "Would learning how to build an emergency fund help this person now?"},
+			  "focus_debt":       {"type": "noul", "instructions": "Would learning how to avoid expensive debt help this person now?"},
+			  "focus_investing":  {"type": "noul", "instructions": "Would learning how investing works help this person now?"},
+			  "focus_risk":       {"type": "noul", "instructions": "Would learning how to spread financial risk help this person now?"},
+			  "focus_retirement": {"type": "noul", "instructions": "Would learning how to plan for retirement help this person now?"}
 			}
 			""";
 
@@ -140,15 +141,11 @@ public class JevClient {
 			List<JevAnswerDto> answers, List<FocusArea> answeredAreas, List<CheckLesson> lessons) {
 		Map<String, Object> state = new LinkedHashMap<>();
 		state.put("profile", profile);
-		state.put("goals", goals);
-		if (facts != null) {
-			state.put("facts", facts);
-		}
-		// Before the first answer there is nothing to rate, and an empty list would read as a signal.
+		putIfGiven(state, "goals", goals);
+		putIfGiven(state, "facts", facts);
+		putIfGiven(state, "answers", answers);
+		// Before the first answer there is nothing to rate.
 		boolean first = answers.isEmpty();
-		if (!first) {
-			state.put("answers", answers);
-		}
 		ObjectNode asked = stepQuestions.objectNode();
 		answeredAreas.stream()
 			.map(area -> "mastery_" + area.wire())
@@ -234,14 +231,12 @@ public class JevClient {
 			return JevResult.SKIPPED;
 		}
 		Map<String, Object> state = new LinkedHashMap<>();
-		state.put("answers", answers);
-		if (facts != null) {
-			state.put("facts", facts);
-		}
+		putIfGiven(state, "answers", givenAnswers(answers));
+		putIfGiven(state, "facts", facts);
 		ObjectNode asked = questions;
 		if (quickCheck != null) {
 			state.put("profile", quickCheck.profile());
-			state.put("goals", quickCheck.goals());
+			putIfGiven(state, "goals", quickCheck.goals());
 			// F1 already names the onboarding answers `answers`, so the knowledge answers get their own key.
 			state.put("checkAnswers", quickCheck.answers());
 			asked = questions.deepCopy();
@@ -273,6 +268,24 @@ public class JevClient {
 	private static boolean connectionFailed(Throwable e) {
 		return Stream.iterate(e, Objects::nonNull, Throwable::getCause)
 			.anyMatch(cause -> NOT_SENT.stream().anyMatch(type -> type.isInstance(cause)));
+	}
+
+	private static Map<String, Object> givenAnswers(OnboardingAnswersDto answers) {
+		Map<String, Object> given = new LinkedHashMap<>();
+		putIfGiven(given, "lifeStage", answers.lifeStage());
+		putIfGiven(given, "goals", answers.goals());
+		putIfGiven(given, "experience", answers.experience());
+		if (answers.skipped()) {
+			given.put("skipped", true);
+		}
+		return given;
+	}
+
+	// The model can read a null or empty field as a signal, so such a field is not sent.
+	private static void putIfGiven(Map<String, Object> state, String key, Object value) {
+		if (!ObjectUtils.isEmpty(value)) {
+			state.put(key, value);
+		}
 	}
 
 	/** A choice among lessons: each option is named by the lesson's topic and described by what the lesson covers. */

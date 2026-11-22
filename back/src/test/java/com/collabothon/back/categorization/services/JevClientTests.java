@@ -47,7 +47,7 @@ class JevClientTests {
 		return new JevClient(builder, JSON, properties(baseUrl, apiKey)).ask(ANSWERS, null, null);
 	}
 
-	// Both records go to an external model verbatim; a new component must be a deliberate change here.
+	// Both records describe what goes to an external model; a new component must be a deliberate change here.
 	@Test
 	void onlyKnownFieldsAreSentToJev() {
 		assertEquals(List.of("lifeStage", "goals", "experience", "skipped"),

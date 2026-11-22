@@ -227,7 +227,7 @@ class QuickCheckCategorizationTests {
 
 		assertEquals(json.readTree("""
 				{"answers": %s, "facts": %s, "profile": %s, "goals": ["start-saving"], "checkAnswers": [%s]}"""
-			.formatted(ONBOARDING, FACTS, PROFILE_WITH_CONSENT, String.join(", ",
+			.formatted(ONBOARDING.replace(", \"skipped\": false", ""), FACTS, PROFILE_WITH_CONSENT, String.join(", ",
 					jevAnswer("saving", "berlin-1", "correct"), jevAnswer("saving", "berlin-2", "wrong"),
 					jevAnswer("investing", "seoul-1", "correct"), jevAnswer("investing", "tokyo-1", "not-sure")))),
 				sent.get().get("state"));
@@ -315,6 +315,18 @@ class QuickCheckCategorizationTests {
 			.andExpect(jsonPath("$.gaps[1].area").value("investing"))
 			.andExpect(jsonPath("$.startLesson.lessonId").value("berlin-1"))
 			.andExpect(jsonPath("$.sharedWithModel.stepCallsMade").value(3));
+	}
+
+	@Test
+	void withoutGoalsTheFinalCallSendsNeitherGoalsNorEmptyAnswers() throws Exception {
+		onboard("{\"goals\": [], \"skipped\": false}");
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(MockRestRequestMatchers.jsonPath("$.state.answers").doesNotExist())
+			.andExpect(MockRestRequestMatchers.jsonPath("$.state.goals").doesNotExist())
+			.andExpect(MockRestRequestMatchers.jsonPath("$.state.checkAnswers").exists())
+			.andRespond(withSuccess(jevFinal(firstLesson("berlin-2", CHOICES)), MediaType.APPLICATION_JSON));
+
+		categorize(QUICK_CHECK).andExpect(status().isOk()).andExpect(jsonPath("$.source").value("jev"));
 	}
 
 	@Test

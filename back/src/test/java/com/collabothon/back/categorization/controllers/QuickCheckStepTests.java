@@ -417,6 +417,18 @@ class QuickCheckStepTests {
 		step(body("1-5y", "", false)).andExpect(status().isOk()).andExpect(nextIs("sao-paulo-2/q1"));
 	}
 
+	@Test
+	void withoutGoalsTheStepSendsNoGoalsKey() throws Exception {
+		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"goals\": [], \"skipped\": false}")).andExpect(status().isOk());
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(jsonPath("$.state.goals").doesNotExist())
+			.andExpect(jsonPath("$.state.profile.horizon").value("1-5y"))
+			.andRespond(jevReplies(jevFirst("sao-paulo-2", CHOICES)));
+
+		step(body("1-5y", "", false)).andExpect(status().isOk()).andExpect(nextIs("sao-paulo-2/q1"));
+	}
+
 	static Stream<Arguments> brokenFirstSteps() {
 		List<String> withBerlin3 = List.of("berlin-1", "berlin-3", "sao-paulo-1", "sao-paulo-2", "seoul-1", "tokyo-1");
 		return Stream.of(

@@ -230,7 +230,7 @@ v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / f
   ]
 }
 ```
-`result` is `correct` | `wrong` | `not-sure`; `lessonId`, `topic` and `concepts` are those of the lesson the question came from. Questions, verbatim (`mastery_<area>` only for areas with at least one answer; `next` only with 2+ lessons to choose from). `next.criteria` is built per request (v5): one option per candidate lesson, named by the lesson's topic in snake case and described by "<topic>. Covers: <concepts, hyphens as spaces>."; the candidates are at most `LESSON_CHOICES_PER_AREA` (2) lessons per area in the area order, lessons with a question left, each story's first such lesson before any story's second. The backend test compares each sent question with its entry below, the criteria filled from the lessons, and finds no extra keys.
+`goals` is left out when empty, `facts` without consent and `answers` before the first answer. `result` is `correct` | `wrong` | `not-sure`; `lessonId`, `topic` and `concepts` are those of the lesson the question came from. Questions, verbatim (`mastery_<area>` only for areas with at least one answer; `next` only with 2+ lessons to choose from). `next.criteria` is built per request (v5): one option per candidate lesson, named by the lesson's topic in snake case and described by "<topic>. Covers: <concepts, hyphens as spaces>."; the candidates are at most `LESSON_CHOICES_PER_AREA` (2) lessons per area in the area order, lessons with a question left, each story's first such lesson before any story's second. The backend test compares each sent question with its entry below, the criteria filled from the lessons, and finds no extra keys.
 
 <!-- jev-step-questions: the backend test compares the Jev request with this block -->
 ```json
@@ -255,7 +255,7 @@ Step outcome, in this order:
 5. Removed in v5 (the D8 question swap went with the bank); `within-1y` still moves saving before investing in the area order.
 
 ### Jev final call
-F1's request (role and `focus_*` verbatim from F1's `jev-questions` block) plus `state.profile`, `state.goals` and `state.checkAnswers` (the step call's `answers`; F1's `state.answers` already holds the onboarding answers), plus this question (`first_lesson` only with 2+ lessons to choose from, its criteria built per request as in the step call: per area of the candidate pool at most 2 lessons not completed, those with an answer that was not correct first, then one per story, v5). No `mastery_*` (D4). Same per-key comparison as the step block.
+F1's request (role and `focus_*` verbatim from F1's `jev-questions` block) plus `state.profile`, `state.goals` (left out when empty) and `state.checkAnswers` (the step call's `answers`; F1's `state.answers` already holds the onboarding answers), plus this question (`first_lesson` only with 2+ lessons to choose from, its criteria built per request as in the step call: per area of the candidate pool at most 2 lessons not completed, those with an answer that was not correct first, then one per story, v5). No `mastery_*` (D4). Same per-key comparison as the step block.
 
 <!-- jev-final-questions: the backend test compares the Jev request with this block -->
 ```json

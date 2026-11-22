@@ -30,10 +30,12 @@ type Frame = { file: string; at: number };
 type Clip = { name: string; dir: string; frames: Frame[]; startedAt: number; endedAt: number };
 
 export class ClipRecorder {
-  /** One per finished clip, in filming order: the file it is being encoded into. */
-  private readonly encoding: Promise<string>[] = [];
+  /** By clip name, in the order the names were first filmed: the file the clip is being encoded into. */
+  private readonly encoding = new Map<string, Promise<string>>();
   private encoder?: Encoder;
   private current?: Clip;
+  /** Numbers the frame folders, so a clip filmed again never shares one with a take still being encoded. */
+  private filmed = 0;
 
   constructor(
     private readonly page: Page,
@@ -45,10 +47,11 @@ export class ClipRecorder {
     mkdirSync(outDir, { recursive: true });
   }
 
-  /** Starts a clip; `name` becomes the file name, e.g. "01-bank" → 01-bank.mp4. */
+  /** Starts a clip; `name` becomes the file name, e.g. "01-bank" → 01-bank.mp4. A name filmed again replaces it. */
   async start(name: string) {
     if (this.current) await this.stop();
-    const clip: Clip = { name, dir: path.join(this.outDir, '.frames', name), frames: [], startedAt: Date.now(), endedAt: 0 };
+    const dir = path.join(this.outDir, '.frames', `${String(++this.filmed).padStart(2, '0')}-${name}`);
+    const clip: Clip = { name, dir, frames: [], startedAt: Date.now(), endedAt: 0 };
     mkdirSync(clip.dir, { recursive: true });
     this.current = clip;
     await this.page.screencast.start({
@@ -68,14 +71,16 @@ export class ClipRecorder {
     this.current = undefined;
     await this.page.screencast.stop();
     clip.endedAt = Date.now();
-    if (clip.frames.length) this.encoding.push(this.encodeInBackground(clip));
+    if (clip.frames.length) this.encoding.set(clip.name, this.encodeInBackground(clip, this.encoding.get(clip.name)));
   }
 
-  private encodeInBackground(clip: Clip): Promise<string> {
-    this.encoder ??= findEncoder();
-    const out = path.join(this.outDir, `${clip.name}.${this.encoder.ext}`);
+  /** `earlier`: an older take of the same clip, still encoding into the same file; this one writes after it. */
+  private encodeInBackground(clip: Clip, earlier?: Promise<string>): Promise<string> {
+    const encoder = (this.encoder ??= findEncoder());
+    const out = path.join(this.outDir, `${clip.name}.${encoder.ext}`);
     console.log(`Encoding ${out} (${Math.round((clip.endedAt - clip.startedAt) / 1000)} s)…`);
-    const job = encodeClip(clip, this.encoder, out).then(() => {
+    const after = earlier ? earlier.then(() => undefined, () => undefined) : Promise.resolve();
+    const job = after.then(() => encodeClip(clip, encoder, out)).then(() => {
       rmSync(clip.dir, { recursive: true, force: true });
       return out;
     });
@@ -84,7 +89,7 @@ export class ClipRecorder {
     return job;
   }
 
-  /** Drops the clip being recorded, frames and all, so a step can be filmed again under the same name. */
+  /** Drops the clip being filmed, frames and all. */
   async discard() {
     const clip = this.current;
     if (!clip) return;
@@ -96,7 +101,7 @@ export class ClipRecorder {
   /** Stops the clip being filmed and waits until every clip is encoded; returns the written files. */
   async encode(): Promise<string[]> {
     await this.stop();
-    const written = await Promise.all(this.encoding);
+    const written = await Promise.all(this.encoding.values());
     rmSync(path.join(this.outDir, '.frames'), { recursive: true, force: true });
     return written;
   }

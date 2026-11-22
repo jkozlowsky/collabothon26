@@ -148,6 +148,7 @@
     "lessonIds": [
       "buenos-aires-1"
     ],
+    "duelFallback": "berlin",
     "personal": true
   },
   {
@@ -175,6 +176,7 @@
     "lessonIds": [
       "nairobi-1"
     ],
+    "duelFallback": "berlin",
     "personal": true
   },
   {
@@ -202,6 +204,7 @@
     "lessonIds": [
       "mumbai-1"
     ],
+    "duelFallback": "tokyo",
     "personal": true
   }
 ]

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.collabothon.back.entities.xp.XpEvent;
 import com.collabothon.back.xp.repositories.UserXpProjection;
 import com.collabothon.back.xp.repositories.XpEventRepository;
 
@@ -40,7 +41,35 @@ public class XpLeaderboardService {
 			return Optional.empty();
 		}
 		long above = xpEvents.countUsersRankedAbove(userId, weeklyXp, week.start(), week.end());
-		return Optional.of(new WeeklyStanding(Math.toIntExact(above + 1), Math.toIntExact(weeklyXp)));
+		int rank = Math.toIntExact(above + 1);
+
+		var latestEventOpt = xpEvents
+			.findTopByUserIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByIdDesc(userId, week.start(), week.end());
+
+		Integer previousRank = null;
+		Long lastXpEventId = null;
+
+		if (latestEventOpt.isPresent()) {
+			var latestEvent = latestEventOpt.get();
+			List<XpEvent> groupEvents = xpEvents.findByUserIdAndSourceAndSourceRefOrderByIdDesc(userId,
+					latestEvent.getSource(), latestEvent.getSourceRef());
+			lastXpEventId = groupEvents.stream()
+				.mapToLong(XpEvent::getId)
+				.max()
+				.orElse(latestEvent.getId());
+			long groupXp = groupEvents.stream()
+				.filter(e -> !e.getCreatedAt().isBefore(week.start()) && e.getCreatedAt().isBefore(week.end()))
+				.mapToLong(XpEvent::getXp)
+				.sum();
+			long previousXp = Math.max(0, weeklyXp - groupXp);
+			long prevAbove = xpEvents.countUsersRankedAbove(userId, previousXp, week.start(), week.end());
+			int prevRank = Math.toIntExact(prevAbove + 1);
+			if (prevRank != rank) {
+				previousRank = prevRank;
+			}
+		}
+
+		return Optional.of(new WeeklyStanding(rank, Math.toIntExact(weeklyXp), previousRank, lastXpEventId));
 	}
 
 }

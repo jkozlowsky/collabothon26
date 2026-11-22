@@ -1,4 +1,5 @@
 import Feather from '@expo/vector-icons/Feather';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -22,7 +23,7 @@ type Props = {
   onExit: () => void;
 };
 
-/** Question and feedback view (Figma 157:4008 / 157:4130 / 157:4245). */
+/** Question and feedback view (Figma 157:4008 / 157:4130 / 157:4245 / v3 166:4997, 166:5181, 166:5311). */
 export function QuestionView({
   state,
   youAvatar,
@@ -40,7 +41,54 @@ export function QuestionView({
   const activeIndex = isFeedback ? null : index;
   const currentCategory = question?.category ?? state.categories[0] ?? 'berlin';
 
+  const step = question?.step;
+  const stepType = step?.type;
+
+  // Initial draft answer: sliders start at min and are active immediately
+  const getInitialDraftAnswer = (s: typeof step): DuelAnswer | null => {
+    if (!s) return null;
+    if (s.type === 'predict' || s.type === 'chart') {
+      return { value: s.input.min };
+    }
+    return null;
+  };
+
+  const [prevQuestionIndex, setPrevQuestionIndex] = useState(question?.index);
+  const [draftAnswer, setDraftAnswer] = useState<DuelAnswer | null>(() => getInitialDraftAnswer(step));
+
+  // Reset draftAnswer when question index transitions during render
+  if (question?.index !== prevQuestionIndex) {
+    setPrevQuestionIndex(question?.index);
+    setDraftAnswer(getInitialDraftAnswer(step));
+  }
+
+  const handleFooterSubmit = () => {
+    if (draftAnswer !== null && !isFeedback) {
+      onSubmitAnswer(draftAnswer);
+    }
+  };
+
   const nextLabel = index + 1 >= total ? 'See results' : 'Next';
+
+  const submitTestID =
+    stepType === 'predict'
+      ? 'duel-predict-submit'
+      : stepType === 'chart'
+        ? 'duel-chart-submit'
+        : stepType === 'sort'
+          ? 'duel-sort-submit'
+          : stepType === 'match'
+            ? 'duel-match-submit'
+            : 'duel-submit';
+
+  const hintText =
+    draftAnswer === null && !isFeedback
+      ? stepType === 'sort'
+        ? 'Sort every card to submit'
+        : stepType === 'match'
+          ? 'Match every pair to submit'
+          : null
+      : null;
 
   return (
     <DuelPage
@@ -70,10 +118,27 @@ export function QuestionView({
             />
             <Button label={nextLabel} onPress={onNextQuestion} testID="duel-next-question" />
           </View>
-        ) : (
+        ) : stepType === 'quiz' ? (
           <View style={styles.footerTip}>
             <Feather name="info" size={14} color={colors.textMuted} />
             <Text style={styles.tipText}>Time doesn&apos;t affect points — accuracy counts</Text>
+          </View>
+        ) : (
+          <View style={styles.questionFooter}>
+            <View style={styles.footerTip}>
+              <Feather name="info" size={14} color={colors.textMuted} />
+              <Text style={styles.tipText}>Time doesn&apos;t affect points — accuracy counts</Text>
+            </View>
+            <Button
+              label="Submit"
+              variant="primary"
+              disabled={draftAnswer === null || isFeedback}
+              onPress={handleFooterSubmit}
+              testID={submitTestID}
+            />
+            {hintText && (
+              <Text style={styles.hintText}>{hintText}</Text>
+            )}
           </View>
         )
       }
@@ -99,7 +164,9 @@ export function QuestionView({
           key={question.index}
           question={question}
           onSubmit={onSubmitAnswer}
+          onAnswerChange={setDraftAnswer}
           disabled={isFeedback}
+          hideSubmitButton={stepType !== 'quiz'}
         />
       )}
     </DuelPage>
@@ -124,6 +191,9 @@ const styles = StyleSheet.create({
   feedbackFooter: {
     gap: spacing.md,
   },
+  questionFooter: {
+    gap: spacing.sm,
+  },
   footerTip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -134,5 +204,11 @@ const styles = StyleSheet.create({
   tipText: {
     ...type.labelTab,
     color: colors.textMuted,
+  },
+  hintText: {
+    ...type.labelTab,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.xxs,
   },
 });

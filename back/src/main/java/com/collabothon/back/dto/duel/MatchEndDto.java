@@ -9,7 +9,7 @@ import com.collabothon.back.entities.duel.MatchOutcome;
 public record MatchEndDto(
 		long matchId,
 		DuelMode mode,
-		List<String> categories,
+		List<CategoryMatchEndDto> categories,
 		MatchOutcome outcome,
 		int score,
 		Integer rivalScore,

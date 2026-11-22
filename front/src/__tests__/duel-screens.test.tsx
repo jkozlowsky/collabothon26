@@ -277,7 +277,10 @@ test('match flow: answers question, sees feedback banner, waiting view, and resu
 
   // Review shows mistake first
   expect(screen.getByTestId('review-mistake-0')).toBeOnTheScreen();
-  expect(screen.getByTestId('review-repeat-lesson-0')).toHaveTextContent(/Review lesson: Inflation & savings/);
+  // Collapsed by default: tapping the card opens the lesson button (label follows lesson status; unknown here).
+  expect(screen.queryByTestId('review-repeat-lesson-0')).toBeNull();
+  await fireEvent.press(screen.getByTestId('review-mistake-0'));
+  expect(screen.getByTestId('review-repeat-lesson-0')).toHaveTextContent(/Go to lesson: Inflation & savings/);
 
   // Correct answer toggle
   expect(screen.getByTestId('toggle-correct-review')).toBeOnTheScreen();

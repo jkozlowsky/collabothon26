@@ -1,0 +1,270 @@
+{
+  "story": "sao-paulo",
+  "questions": [
+    {
+      "id": "sao-paulo-d01",
+      "lessonId": "sao-paulo-1",
+      "sourceStepId": "s1",
+      "concepts": [
+        "hidden-interest"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d01",
+        "prompt": "A laptop costs €1,200 in 12 payments of €100 'without interest', or €1,080 upfront (10% discount). What yearly interest is hidden?",
+        "input": {
+          "kind": "slider",
+          "min": 0,
+          "max": 50,
+          "step": 1,
+          "unit": "%"
+        },
+        "answer": 22,
+        "tolerance": 3,
+        "reveal": "About 22% a year. Foregoing a 10% cash discount across 12 monthly installments hides an annual rate of ~21.8%.",
+        "explanation": "Forfeiting a 10% discount across 12 monthly installments corresponds to an effective annual rate of ~21.8%."
+      }
+    },
+    {
+      "id": "sao-paulo-d02",
+      "lessonId": "sao-paulo-1",
+      "sourceStepId": "q1",
+      "concepts": [
+        "installments"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d02",
+        "prompt": "When is an installment plan advertised as '0% interest' genuinely free of financing costs?",
+        "options": [
+          "Only when paying upfront in cash receives no discount whatsoever",
+          "Whenever monthly payments divide the retail sticker price evenly",
+          "Whenever the financing is provided by an authorized major retailer",
+          "When the total repayment term is shorter than twelve months"
+        ],
+        "correctIndex": 0,
+        "explanation": "If an upfront cash payment offers any discount, choosing installments means forfeiting that discount, which is hidden interest."
+      }
+    },
+    {
+      "id": "sao-paulo-d03",
+      "lessonId": "sao-paulo-2",
+      "sourceStepId": "t1",
+      "concepts": [
+        "committed-income"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d03",
+        "prompt": "Carlos earns €2,500 net per month. His active installment plans total €750 every month. What percentage of his income is committed?",
+        "input": {
+          "kind": "slider",
+          "min": 0,
+          "max": 60,
+          "step": 1,
+          "unit": "%"
+        },
+        "answer": 30,
+        "tolerance": 2,
+        "reveal": "30%. €750 out of €2,500 is pledged before any discretionary spending can occur.",
+        "explanation": "Committed income ratio = €750 / €2,500 = 30%."
+      }
+    },
+    {
+      "id": "sao-paulo-d04",
+      "lessonId": "sao-paulo-2",
+      "sourceStepId": "so1",
+      "concepts": [
+        "committed-income"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "sort",
+        "id": "d04",
+        "prompt": "Sort each monthly expense into Committed debt obligation or Flexible spending:",
+        "buckets": [
+          "Committed obligation",
+          "Flexible spending"
+        ],
+        "items": [
+          {
+            "text": "Washing machine installment 5 of 12",
+            "bucket": 0
+          },
+          {
+            "text": "Dinner at an Italian bistro on Friday",
+            "bucket": 1
+          },
+          {
+            "text": "Smartphone financing payment 8 of 24",
+            "bucket": 0
+          },
+          {
+            "text": "Weekend movie tickets with friends",
+            "bucket": 1
+          },
+          {
+            "text": "Laptop purchase installment 3 of 10",
+            "bucket": 0
+          },
+          {
+            "text": "New casual sports jacket bought on impulse",
+            "bucket": 1
+          }
+        ],
+        "explanation": "Installment payments are fixed contractual commitments; dining out and entertainment are discretionary spending."
+      }
+    },
+    {
+      "id": "sao-paulo-d05",
+      "lessonId": "sao-paulo-3",
+      "sourceStepId": "q1",
+      "concepts": [
+        "revolving-credit"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d05",
+        "prompt": "When someone pays only the minimum amount on a credit card statement, why does the balance barely decrease?",
+        "options": [
+          "High monthly interest charges consume most of the minimum payment",
+          "The minimum payment is placed into an escrow reserve by the bank",
+          "The minimum payment is purely an administrative fee with no principal",
+          "Banking rules freeze principal repayments during the first year"
+        ],
+        "correctIndex": 0,
+        "explanation": "Because revolving credit interest rates are steep, almost the entire minimum payment goes toward interest rather than principal."
+      }
+    },
+    {
+      "id": "sao-paulo-d06",
+      "lessonId": "sao-paulo-3",
+      "sourceStepId": "q2",
+      "concepts": [
+        "compound-interest",
+        "revolving-credit"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d06",
+        "prompt": "Which borrowing situation works like compound interest in reverse, rapidly multiplying debt against you?",
+        "options": [
+          "Revolving credit card debt rolling over with unpaid monthly interest",
+          "A fixed one-time mortgage processing application fee",
+          "A fixed monthly public transportation commuter pass subscription",
+          "A debit card overdraft fee charged once per calendar year"
+        ],
+        "correctIndex": 0,
+        "explanation": "When credit card debt rolls over, unpaid interest is added to the principal, compounding debt charges exponentially."
+      }
+    },
+    {
+      "id": "sao-paulo-d07",
+      "lessonId": "sao-paulo-4",
+      "sourceStepId": "q1",
+      "concepts": [
+        "total-cost-of-credit"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d07",
+        "prompt": "Elena borrows €5,000 for one year. Quoted interest is €250, but mandatory fees and insurance add €250. What is the real effective cost?",
+        "input": {
+          "kind": "slider",
+          "min": 2,
+          "max": 20,
+          "step": 0.5,
+          "unit": "%"
+        },
+        "answer": 10.0,
+        "tolerance": 1.0,
+        "reveal": "10%. Total extra charges are €500 on a €5,000 loan, doubling the effective annual rate.",
+        "explanation": "Total finance charges = €250 interest + €250 fees = €500. €500 / €5,000 = 10% total effective cost."
+      }
+    },
+    {
+      "id": "sao-paulo-d08",
+      "lessonId": "sao-paulo-4",
+      "sourceStepId": "m1",
+      "concepts": [
+        "total-cost-of-credit",
+        "hidden-interest"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "match",
+        "id": "d08",
+        "prompt": "Match each credit and borrowing term with its accurate definition:",
+        "pairs": [
+          [
+            "Nominal interest rate",
+            "The headline percentage charged strictly on borrowed balance"
+          ],
+          [
+            "Origination fee",
+            "An upfront administrative surcharge added to the loan"
+          ],
+          [
+            "Credit insurance",
+            "An added policy protecting the lender if borrower defaults"
+          ],
+          [
+            "Total effective cost (CET)",
+            "The all-inclusive percentage covering interest and all fees"
+          ]
+        ],
+        "explanation": "The total effective cost includes nominal interest plus all mandatory fees, insurance, and setup costs."
+      }
+    },
+    {
+      "id": "sao-paulo-d09",
+      "lessonId": "sao-paulo-5",
+      "sourceStepId": "q1",
+      "concepts": [
+        "committed-income"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d09",
+        "prompt": "Lucas wants to keep fixed debt manageable and decides that installments must never exceed 15% of his €2,200 monthly take-home pay. What is the highest total payment he can commit each month?",
+        "options": [
+          "€330 per month",
+          "€440 per month",
+          "€220 per month",
+          "€500 per month"
+        ],
+        "correctIndex": 0,
+        "explanation": "15% of €2,200 = 0.15 × €2,200 = €330 maximum committed per month."
+      }
+    },
+    {
+      "id": "sao-paulo-d10",
+      "lessonId": "sao-paulo-5",
+      "sourceStepId": "q2",
+      "concepts": [
+        "revolving-credit"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d10",
+        "prompt": "Why is the rule 'always pay credit card bills in full every month' essential in personal financial management?",
+        "options": [
+          "It prevents triggering exorbitant compounding revolving interest rates",
+          "Banks automatically cancel credit cards if any balance carries over",
+          "Credit card reward points expire immediately if a balance remains",
+          "Merchants decline cards that carry previous monthly balances"
+        ],
+        "correctIndex": 0,
+        "explanation": "Paying statement balances in full avoids revolving credit rates that often exceed 100-300% per year."
+      }
+    }
+  ]
+}

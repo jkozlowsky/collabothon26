@@ -20,10 +20,19 @@ type Props = {
   question: DuelQuestion;
   /** Called once, when the player commits; disable input afterwards. */
   onSubmit: (answer: DuelAnswer) => void;
+  /** Called whenever the player's draft answer changes (null if incomplete). */
+  onAnswerChange?: (answer: DuelAnswer | null) => void;
   disabled?: boolean; // after submit or when time is up
+  hideSubmitButton?: boolean;
 };
 
-export function DuelQuestionView({ question, onSubmit, disabled = false }: Props) {
+export function DuelQuestionView({
+  question,
+  onSubmit,
+  onAnswerChange,
+  disabled = false,
+  hideSubmitButton = false,
+}: Props) {
   const committedRef = useRef(false);
   const [submitted, setSubmitted] = useState(false);
   const isLocked = disabled || submitted;
@@ -41,13 +50,45 @@ export function DuelQuestionView({ question, onSubmit, disabled = false }: Props
     case 'quiz':
       return <DuelQuizView step={step} onSubmit={handleCommit} isLocked={isLocked} />;
     case 'predict':
-      return <DuelPredictView step={step} onSubmit={handleCommit} isLocked={isLocked} />;
+      return (
+        <DuelPredictView
+          step={step}
+          onSubmit={handleCommit}
+          onAnswerChange={onAnswerChange}
+          isLocked={isLocked}
+          hideSubmitButton={hideSubmitButton}
+        />
+      );
     case 'chart':
-      return <DuelChartView step={step} onSubmit={handleCommit} isLocked={isLocked} />;
+      return (
+        <DuelChartView
+          step={step}
+          onSubmit={handleCommit}
+          onAnswerChange={onAnswerChange}
+          isLocked={isLocked}
+          hideSubmitButton={hideSubmitButton}
+        />
+      );
     case 'sort':
-      return <DuelSortView step={step} onSubmit={handleCommit} isLocked={isLocked} />;
+      return (
+        <DuelSortView
+          step={step}
+          onSubmit={handleCommit}
+          onAnswerChange={onAnswerChange}
+          isLocked={isLocked}
+          hideSubmitButton={hideSubmitButton}
+        />
+      );
     case 'match':
-      return <DuelMatchView step={step} onSubmit={handleCommit} isLocked={isLocked} />;
+      return (
+        <DuelMatchView
+          step={step}
+          onSubmit={handleCommit}
+          onAnswerChange={onAnswerChange}
+          isLocked={isLocked}
+          hideSubmitButton={hideSubmitButton}
+        />
+      );
   }
 }
 
@@ -103,15 +144,24 @@ function DuelQuizView({
 function DuelPredictView({
   step,
   onSubmit,
+  onAnswerChange,
   isLocked,
+  hideSubmitButton = false,
 }: {
   step: DuelPredictStep;
   onSubmit: (ans: DuelAnswer) => void;
+  onAnswerChange?: (ans: DuelAnswer | null) => void;
   isLocked: boolean;
+  hideSubmitButton?: boolean;
 }) {
   const { min, max, step: inc, unit } = step.input;
   // Sliders start at input.min (Round 4 §8.3)
   const [guess, setGuess] = useState(min);
+
+  const handleSliderChange = (v: number) => {
+    setGuess(v);
+    onAnswerChange?.({ value: v });
+  };
 
   const show = (v: number) => formatValue(v, unit, { signed: min < 0 });
 
@@ -129,7 +179,7 @@ function DuelPredictView({
             min={min}
             max={max}
             step={inc}
-            onChange={setGuess}
+            onChange={handleSliderChange}
             accessibilityLabel={`Your answer: ${show(guess)}`}
             testID="duel-predict-slider"
           />
@@ -139,15 +189,17 @@ function DuelPredictView({
           <Text style={styles.scaleEnd}>{show(max)}</Text>
         </View>
       </View>
-      <View style={styles.footerButton}>
-        <Button
-          label="Submit"
-          variant="primary"
-          onPress={() => onSubmit({ value: guess })}
-          disabled={isLocked}
-          testID="duel-predict-submit"
-        />
-      </View>
+      {!hideSubmitButton && (
+        <View style={styles.footerButton}>
+          <Button
+            label="Submit"
+            variant="primary"
+            onPress={() => onSubmit({ value: guess })}
+            disabled={isLocked}
+            testID="duel-predict-submit"
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -155,15 +207,24 @@ function DuelPredictView({
 function DuelChartView({
   step,
   onSubmit,
+  onAnswerChange,
   isLocked,
+  hideSubmitButton = false,
 }: {
   step: DuelChartStep;
   onSubmit: (ans: DuelAnswer) => void;
+  onAnswerChange?: (ans: DuelAnswer | null) => void;
   isLocked: boolean;
+  hideSubmitButton?: boolean;
 }) {
   const { min, max, step: inc, unit } = step.input;
   // Sliders start at input.min (Round 4 §8.3)
   const [guess, setGuess] = useState(min);
+
+  const handleSliderChange = (v: number) => {
+    setGuess(v);
+    onAnswerChange?.({ value: v });
+  };
 
   const model = MODELS[step.model];
   const fixedValues = Object.fromEntries(Object.entries(step.params).map(([k, p]) => [k, p.value]));
@@ -205,7 +266,7 @@ function DuelChartView({
             min={min}
             max={max}
             step={inc}
-            onChange={setGuess}
+            onChange={handleSliderChange}
             accessibilityLabel={`Select: ${showGuess(guess)}`}
             testID="duel-chart-slider"
           />
@@ -215,15 +276,17 @@ function DuelChartView({
           <Text style={styles.scaleEnd}>{showGuess(max)}</Text>
         </View>
       </View>
-      <View style={styles.footerButton}>
-        <Button
-          label="Submit"
-          variant="primary"
-          onPress={() => onSubmit({ value: guess })}
-          disabled={isLocked}
-          testID="duel-chart-submit"
-        />
-      </View>
+      {!hideSubmitButton && (
+        <View style={styles.footerButton}>
+          <Button
+            label="Submit"
+            variant="primary"
+            onPress={() => onSubmit({ value: guess })}
+            disabled={isLocked}
+            testID="duel-chart-submit"
+          />
+        </View>
+      )}
     </View>
   );
 }

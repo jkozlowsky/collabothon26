@@ -22,7 +22,6 @@ import com.collabothon.back.dto.duel.MatchStateDto;
 import com.collabothon.back.dto.duel.StartMatchRequest;
 import com.collabothon.back.dto.lesson.Story;
 import com.collabothon.back.duel.repositories.DuelAnswerRepository;
-import com.collabothon.back.duel.repositories.DuelContentRepository;
 import com.collabothon.back.duel.repositories.DuelMatchRepository;
 import com.collabothon.back.entities.duel.AnswerOutcome;
 import com.collabothon.back.entities.duel.ChosenAnswer;
@@ -50,7 +49,7 @@ public class DuelMatchService {
 
 	private final DuelAnswerRepository answers;
 
-	private final DuelContentRepository content;
+	private final DuelSelectionService selectionService;
 
 	private final StoryRepository stories;
 
@@ -83,9 +82,10 @@ public class DuelMatchService {
 		}
 		DuelMatch match = matches.save(DuelMatch.start(request.mode(), request.categories(), request.userId(),
 				rivalUserId, clock.instant()));
+		List<DuelQuestion> questions = selectionService.selectQuestions(match);
 		DuelProgress progress = new DuelProgress(match, List.of(), questionCount());
 		return matchMapper.toStartDto(match, playerCards.card(match.getUserId()), playerCards.rivalCard(match),
-				questionCount(), question(progress, 0));
+				questionCount(), question(progress, 0, questions));
 	}
 
 	/** Records the answer to question {@code request.index()}. Repeating an already answered index returns its result. */
@@ -93,8 +93,9 @@ public class DuelMatchService {
 	public AnswerResultDto answer(long matchId, AnswerRequest request) {
 		DuelProgress progress = load(matchId, request.userId());
 		int index = request.index();
+		List<DuelQuestion> questions = selectionService.selectQuestions(progress.match());
 		if (index < progress.nextIndex()) {
-			return answerResult(progress, index);
+			return answerResult(progress, index, questions);
 		}
 		if (index != progress.nextIndex()) {
 			throw new BusinessException(DuelErrorCode.ANSWER_OUT_OF_ORDER,
@@ -103,20 +104,21 @@ public class DuelMatchService {
 		if (progress.isComplete()) {
 			throw new BusinessException(DuelErrorCode.ALL_QUESTIONS_ANSWERED);
 		}
-		progress.add(answers.save(gradeAnswer(progress, answerMapper.toChosenAnswer(request))));
+		progress.add(answers.save(gradeAnswer(progress, answerMapper.toChosenAnswer(request), questions)));
 		scoring.settle(progress);
-		return answerResult(progress, index);
+		return answerResult(progress, index, questions);
 	}
 
 	/** The match as the player sees it now; also writes timeouts for questions whose deadline has passed. */
 	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
 	public MatchStateDto state(long matchId, String userId) {
 		DuelProgress progress = load(matchId, userId);
-		recordTimeouts(progress);
+		List<DuelQuestion> questions = selectionService.selectQuestions(progress.match());
+		recordTimeouts(progress, questions);
 		scoring.settle(progress);
 		DuelMatch match = progress.match();
 		return matchMapper.toStateDto(match, playerCards.card(match.getUserId()), playerCards.rivalCard(match),
-				progress.questionCount(), progress.results(), currentQuestion(progress), rival.snapshot(progress),
+				progress.questionCount(), progress.results(), currentQuestion(progress, questions), rival.snapshot(progress),
 				scoring.yourFinal(progress));
 	}
 
@@ -139,9 +141,9 @@ public class DuelMatchService {
 	}
 
 	/** Grades the next question's answer; an answer after the deadline is a timeout and is not graded. */
-	private DuelAnswer gradeAnswer(DuelProgress progress, ChosenAnswer chosen) {
+	private DuelAnswer gradeAnswer(DuelProgress progress, ChosenAnswer chosen, List<DuelQuestion> questions) {
 		int index = progress.nextIndex();
-		DuelQuestion question = questions().get(index);
+		DuelQuestion question = questions.get(index);
 		Instant start = progress.questionStart(index);
 		long timeLimitMs = timer.timeLimitMs(question);
 		Instant deadline = start.plusMillis(timeLimitMs);
@@ -161,11 +163,11 @@ public class DuelMatchService {
 	}
 
 	/** Writes a timeout for every question whose deadline passed without an answer. */
-	private void recordTimeouts(DuelProgress progress) {
+	private void recordTimeouts(DuelProgress progress, List<DuelQuestion> questions) {
 		Instant now = clock.instant();
 		while (!progress.match().isFinished() && !progress.isComplete()) {
 			int index = progress.nextIndex();
-			DuelQuestion question = questions().get(index);
+			DuelQuestion question = questions.get(index);
 			Instant deadline = progress.questionStart(index).plusMillis(timer.timeLimitMs(question));
 			if (!now.isAfter(deadline)) {
 				return;
@@ -201,38 +203,29 @@ public class DuelMatchService {
 		answer.rivalCorrect(rivalAnswer.correct()).rivalAnswerAt(rivalAnswer.visibleAt());
 	}
 
-	private AnswerResultDto answerResult(DuelProgress progress, int index) {
+	private AnswerResultDto answerResult(DuelProgress progress, int index, List<DuelQuestion> questions) {
 		DuelAnswer answer = progress.answer(index);
 		DuelQuestionDto next = null;
 		if (index + 1 < progress.questionCount()) {
-			next = question(progress, index + 1);
+			next = question(progress, index + 1, questions);
 		}
 		return answerMapper.toResultDto(answer, next, rival.snapshot(progress), scoring.yourFinal(progress),
 				progress.match().isFinished());
 	}
 
 	/** The question the player has to answer now, or null once all are answered. */
-	private DuelQuestionDto currentQuestion(DuelProgress progress) {
+	private DuelQuestionDto currentQuestion(DuelProgress progress, List<DuelQuestion> questions) {
 		if (progress.isComplete()) {
 			return null;
 		}
-		return question(progress, progress.nextIndex());
+		return question(progress, progress.nextIndex(), questions);
 	}
 
-	private DuelQuestionDto question(DuelProgress progress, int index) {
-		DuelQuestion question = questions().get(index);
+	private DuelQuestionDto question(DuelProgress progress, int index, List<DuelQuestion> questions) {
+		DuelQuestion question = questions.get(index);
 		long timeLimitMs = timer.timeLimitMs(question);
 		long deadline = progress.questionStart(index).toEpochMilli() + timeLimitMs;
 		return questionConverter.toDto(progress.match().getId(), index, question, deadline, timeLimitMs);
-	}
-
-	private List<DuelQuestion> questions() {
-		List<DuelQuestion> questions = content.findMatchQuestions();
-		if (questions.size() < questionCount()) {
-			throw new IllegalStateException("Duel content has " + questions.size() + " questions, a match needs "
-					+ questionCount());
-		}
-		return questions;
 	}
 
 	private int questionCount() {

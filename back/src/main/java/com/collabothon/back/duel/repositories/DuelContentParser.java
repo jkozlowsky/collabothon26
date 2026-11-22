@@ -73,6 +73,10 @@ public final class DuelContentParser {
 		String prefix = "File " + fileName + ", question " + id;
 		String lessonId = node.path("lessonId").asString("");
 		validateLesson(prefix, story, lessonId);
+
+		String sourceStepId = node.hasNonNull("sourceStepId") ? node.path("sourceStepId").asString(null) : null;
+		List<String> concepts = parseConcepts(node.path("concepts"));
+
 		JsonNode stepNode = node.path("step");
 		if (!stepNode.isObject()) {
 			throw new IllegalStateException(prefix + ": missing step object");
@@ -87,7 +91,20 @@ public final class DuelContentParser {
 			throw new IllegalStateException(prefix + ": type '" + type + "' is not allowed in duels");
 		}
 		validateStep(prefix + " (" + type + "): ", type, step);
-		return new DuelQuestion(id, lessonId, timeLimitOverride(node), story, step);
+		return new DuelQuestion(id, lessonId, sourceStepId, concepts, timeLimitOverride(node), story, step);
+	}
+
+	private static List<String> parseConcepts(JsonNode conceptsNode) {
+		if (conceptsNode == null || !conceptsNode.isArray()) {
+			return List.of();
+		}
+		List<String> concepts = new ArrayList<>();
+		for (JsonNode c : conceptsNode) {
+			if (c != null && !c.isNull()) {
+				concepts.add(c.asString(""));
+			}
+		}
+		return List.copyOf(concepts);
 	}
 
 	private void validateLesson(String prefix, String story, String lessonId) {

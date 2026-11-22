@@ -1,5 +1,7 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
+import { computeLineEndpoints } from '@/components/duel/questions/DuelMatchView';
 import { DuelQuestionView } from '@/components/duel/questions/DuelQuestionView';
 import type {
   DuelChartStep,
@@ -387,6 +389,87 @@ describe('DuelQuestionView', () => {
       expect(getByTestId('match-left-0').props.accessibilityState?.selected).toBeFalsy();
 
       expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    it('computes line endpoints using tiles edge midpoints (right edge centre of left tile to left edge centre of right tile)', () => {
+      const leftLayout = { x: 16, y: 100, width: 160, height: 60 };
+      const rightLayout = { x: 200, y: 150, width: 160, height: 80 };
+
+      const endpoints = computeLineEndpoints(leftLayout, rightLayout);
+
+      // x1 = left.x + left.width = 16 + 160 = 176
+      expect(endpoints.x1).toBe(176);
+      // y1 = left.y + left.height / 2 = 100 + 30 = 130
+      expect(endpoints.y1).toBe(130);
+      // x2 = right.x = 200
+      expect(endpoints.x2).toBe(200);
+      // y2 = right.y + right.height / 2 = 150 + 40 = 190
+      expect(endpoints.y2).toBe(190);
+    });
+
+    it('computes exact end points when partner is 2nd or 4th card of right column and left tile is 3rd', () => {
+      // Mock layouts: left column at x=20, right column at x=217 (gap=46)
+      // Left 3rd card (index 2)
+      const leftTile3 = { x: 20, y: 260, width: 151, height: 64 };
+      // Right 2nd card (index 1)
+      const rightTile2 = { x: 217, y: 170, width: 151, height: 96 };
+      // Right 4th card (index 3)
+      const rightTile4 = { x: 217, y: 390, width: 151, height: 70 };
+
+      // Left 3rd -> Right 2nd card
+      const pairTo2nd = computeLineEndpoints(leftTile3, rightTile2);
+      expect(pairTo2nd).toEqual({
+        x1: 20 + 151, // 171 (right edge of 3rd left card)
+        y1: 260 + 64 / 2, // 292 (vertical midpoint of 3rd left card)
+        x2: 217, // left edge of 2nd right card
+        y2: 170 + 96 / 2, // 218 (vertical midpoint of 2nd right card)
+      });
+
+      // Left 3rd -> Right 4th card
+      const pairTo4th = computeLineEndpoints(leftTile3, rightTile4);
+      expect(pairTo4th).toEqual({
+        x1: 20 + 151, // 171 (right edge of 3rd left card)
+        y1: 260 + 64 / 2, // 292 (vertical midpoint of 3rd left card)
+        x2: 217, // left edge of 4th right card
+        y2: 390 + 70 / 2, // 425 (vertical midpoint of 4th right card)
+      });
+    });
+
+    it('sets overlay size to equal the container measured size with overflow visible', async () => {
+      const { findByTestId, getByTestId } = await render(
+        <DuelQuestionView question={question} onSubmit={jest.fn()} />,
+      );
+
+      await findByTestId('duel-match');
+
+      // Trigger onLayout on contentWrap container
+      const container = getByTestId('duel-match');
+      // Look for the inner views
+      // Pair 0 with 0
+      fireEvent.press(getByTestId('match-left-0'));
+      fireEvent.press(getByTestId('match-right-0'));
+
+      // Find the contentWrap by walking children or triggering its layout
+      // In DuelMatchView: contentWrap onLayout updates containerSize
+      // Let's trigger layout with { width: 350, height: 500 } on contentWrap
+      const contentWrap = container.children[1] as any;
+      if (contentWrap && contentWrap.props?.onLayout) {
+        contentWrap.props.onLayout({
+          nativeEvent: { layout: { x: 0, y: 0, width: 350, height: 500 } },
+        });
+      }
+
+      await waitFor(() => {
+        const svg = getByTestId('match-svg-lines');
+        expect(svg.props.width).toBe(350);
+        expect(svg.props.height).toBe(500);
+        expect(svg.props.vbWidth).toBe(350);
+        expect(svg.props.vbHeight).toBe(500);
+        const flattenedStyle = StyleSheet.flatten(svg.props.style);
+        expect(flattenedStyle.overflow).toBe('visible');
+        expect(flattenedStyle.width).toBe(350);
+        expect(flattenedStyle.height).toBe(500);
+      });
     });
   });
 });

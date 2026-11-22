@@ -1,0 +1,93 @@
+{
+  "metTypes": [
+    "predict",
+    "match",
+    "quiz"
+  ],
+  "match1Questions": [
+    {
+      "index": 0,
+      "id": "berlin-d01",
+      "type": "predict",
+      "prompt": "Maya keeps €30,000 in an account with 1% annual interest while inflation is 4%. What will these savings be worth in today's purchasing power after 10 years?"
+    },
+    {
+      "index": 1,
+      "id": "tokyo-d08",
+      "type": "match",
+      "prompt": "Match each global investing concept with its corresponding financial description:"
+    },
+    {
+      "index": 2,
+      "id": "tokyo-d04",
+      "type": "quiz",
+      "prompt": "Which statement accurately describes what broad global diversification achieves for an investor?"
+    },
+    {
+      "index": 3,
+      "id": "berlin-d03",
+      "type": "predict",
+      "prompt": "Daniel invests €12,000 into a fund with 6% annual compound return. If all earnings are reinvested, how much will he have after 15 years?"
+    },
+    {
+      "index": 4,
+      "id": "tokyo-d09",
+      "type": "quiz",
+      "prompt": "In a regular monthly investment plan, why does the portfolio growth curve become much steeper after 20 years?"
+    },
+    {
+      "index": 5,
+      "id": "berlin-d04",
+      "type": "quiz",
+      "prompt": "Why does compound growth generate dramatically larger monetary gains in later years than in initial years?"
+    }
+  ],
+  "match2Questions": [
+    {
+      "index": 0,
+      "id": "berlin-d08",
+      "type": "quiz",
+      "prompt": "Hannah experiences a 25% drawdown in her equity fund during a market downturn. What percentage gain does the fund require to recover to its starting value?"
+    },
+    {
+      "index": 1,
+      "id": "berlin-d05",
+      "type": "predict",
+      "prompt": "Felix calculates that his family needs €3,200 each month for rent, groceries, and bills. How much cash do they need for a 4-month emergency fund?"
+    },
+    {
+      "index": 2,
+      "id": "tokyo-d02",
+      "type": "quiz",
+      "prompt": "Why should money needed for immediate living costs (such as next month's rent) never be invested in stocks?"
+    },
+    {
+      "index": 3,
+      "id": "tokyo-d07",
+      "type": "predict",
+      "prompt": "Yuki converts €2,000 to $2,000 to buy shares of a US firm. With the share price unchanged at $2,000, the euro strengthens from $1.00 to $1.20. What is her return in euros?"
+    },
+    {
+      "index": 4,
+      "id": "tokyo-d10",
+      "type": "quiz",
+      "prompt": "Does investing via a regular monthly savings plan guarantee a profit in every market scenario?"
+    },
+    {
+      "index": 5,
+      "id": "berlin-d10",
+      "type": "quiz",
+      "prompt": "Over a 20-year period with 3% annual inflation, what happens to cash stored in a zero-interest safe?"
+    }
+  ],
+  "consoleLogs": [
+    "[warning] THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.",
+    "[warning] [.WebGL-0x20bc023e4a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x20bc023e4a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x20bc023e4a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x20bc023e4a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "[warning] THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.",
+    "[warning] THREE.Clock: This module has been deprecated. Please use THREE.Timer instead."
+  ],
+  "httpErrors": []
+}

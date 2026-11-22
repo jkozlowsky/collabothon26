@@ -1,113 +1,108 @@
-import { realValueChange } from '@/lib/models';
+import { MODELS, compoundGrowth, realValueChange } from '@/lib/models';
 
 const data = require('../../../back/src/main/resources/content/duel/berlin.json');
 
-describe('berlin.json duel content verification', () => {
+/**
+ * Duel v3: berlin.json is an unordered pool of lesson-based questions, drawn at random.
+ * Nothing here depends on position or order.
+ */
+const questions: any[] = data.questions;
+const byType = (type: string) => questions.filter((q) => q.step.type === type);
 
-  it('has story berlin and exactly 6 questions in fixed order', () => {
+/** Predict questions carry no model name, so each one needs an explicit recomputation (keyed by question id). */
+const PREDICT_RECOMPUTE: Record<string, () => number> = {
+  // €30,000 at 1% interest, 4% inflation, 10 years, in today's purchasing power
+  'berlin-d01': () => 30000 * (1 + realValueChange(10, 1, 4) / 100),
+  // €12,000 at 6% compound for 15 years
+  'berlin-d03': () => compoundGrowth(12000, 15, 6),
+  // 4 months of €3,200 expenses
+  'berlin-d05': () => 4 * 3200,
+};
+
+function expectSliderAnswer(step: any, expected: number) {
+  const { min, max, step: inc } = step.input;
+  expect(step.answer).toBeGreaterThanOrEqual(min);
+  expect(step.answer).toBeLessThanOrEqual(max);
+  expect((step.answer - min) % inc).toBe(0);
+  expect(Math.abs(step.answer - expected)).toBeLessThanOrEqual(step.tolerance);
+}
+
+describe('berlin.json duel question pool', () => {
+  it('is the berlin story with a pool of at least 8 questions', () => {
     expect(data.story).toBe('berlin');
-    expect(data.questions).toHaveLength(6);
-
-    const types = data.questions.map((q: any) => q.step.type);
-    expect(types).toEqual(['quiz', 'predict', 'quiz', 'chart', 'sort', 'match']);
+    expect(questions.length).toBeGreaterThanOrEqual(8);
+    expect(new Set(questions.map((q) => q.id)).size).toBe(questions.length);
   });
 
-  it('verifies all questions are in English with no Polish characters', () => {
-    const polishCharRegex = /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/;
-    for (const q of data.questions) {
-      expect(q.step.prompt).not.toMatch(polishCharRegex);
-      if (q.step.explanation) {
-        expect(q.step.explanation).not.toMatch(polishCharRegex);
-      }
-      if (q.step.options) {
-        for (const opt of q.step.options) {
-          expect(opt).not.toMatch(polishCharRegex);
-        }
-      }
-      if (q.step.buckets) {
-        for (const b of q.step.buckets) {
-          expect(b).not.toMatch(polishCharRegex);
-        }
-      }
-      if (q.step.pairs) {
-        for (const [term, def] of q.step.pairs) {
-          expect(term).not.toMatch(polishCharRegex);
-          expect(def).not.toMatch(polishCharRegex);
-        }
+  it('points every question at a berlin lesson step with concepts', () => {
+    for (const q of questions) {
+      expect(q.id).toEqual(expect.any(String));
+      expect(q.lessonId).toMatch(/^berlin-/);
+      expect(q.sourceStepId).toEqual(expect.any(String));
+      expect(q.sourceStepId.length).toBeGreaterThan(0);
+      expect(Array.isArray(q.concepts)).toBe(true);
+      expect(q.concepts.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('contains no Polish characters', () => {
+    const polish = /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/;
+    expect(JSON.stringify(questions)).not.toMatch(polish);
+  });
+
+  it('predict answers match a recomputation, the slider range, step and tolerance', () => {
+    const predicts = byType('predict');
+    expect(predicts.length).toBeGreaterThan(0);
+    for (const q of predicts) {
+      const recompute = PREDICT_RECOMPUTE[q.id];
+      if (!recompute) throw new Error(`predict question ${q.id} has no recomputation in this test; add one`);
+      expectSliderAnswer(q.step, recompute());
+    }
+  });
+
+  it('chart answers match the model, the slider range, step and tolerance', () => {
+    const charts = byType('chart');
+    expect(charts.length).toBeGreaterThan(0);
+    for (const q of charts) {
+      const model = MODELS[q.step.model as keyof typeof MODELS];
+      expect(model).toBeDefined();
+      const values: Record<string, number> = {};
+      for (const [key, param] of Object.entries<any>(q.step.params)) values[key] = param.value;
+      expectSliderAnswer(q.step, model.y(values));
+    }
+  });
+
+  it('quizzes have one in-range correctIndex and at least 3 options', () => {
+    const quizzes = byType('quiz');
+    expect(quizzes.length).toBeGreaterThan(0);
+    for (const q of quizzes) {
+      const { options, correctIndex } = q.step;
+      expect(options.length).toBeGreaterThanOrEqual(3);
+      expect(Number.isInteger(correctIndex)).toBe(true);
+      expect(correctIndex).toBeGreaterThanOrEqual(0);
+      expect(correctIndex).toBeLessThan(options.length);
+      expect(new Set(options).size).toBe(options.length);
+    }
+  });
+
+  it('sort items all point at an existing bucket', () => {
+    for (const q of byType('sort')) {
+      const { buckets, items } = q.step;
+      expect(items.length).toBeGreaterThanOrEqual(2);
+      for (const item of items) {
+        expect(Number.isInteger(item.bucket)).toBe(true);
+        expect(item.bucket).toBeGreaterThanOrEqual(0);
+        expect(item.bucket).toBeLessThan(buckets.length);
       }
     }
   });
 
-  it('verifies question 1 (quiz on real return)', () => {
-    const q1 = data.questions[0];
-    expect(q1.lessonId).toBe('berlin-1');
-    expect(q1.step.type).toBe('quiz');
-    expect(q1.step.options).toHaveLength(4);
-    expect(q1.step.correctIndex).toBe(0);
-    expect(q1.step.prompt).toContain('A savings account offers 2%');
-    expect(q1.step.explanation).toContain('2% − 5% = −3%');
-  });
-
-  it('verifies question 2 (predict real value) arithmetic with models.ts and slider rule', () => {
-    const q2 = data.questions[1];
-    expect(q2.lessonId).toBe('berlin-1');
-    expect(q2.step.type).toBe('predict');
-
-    // 25,000 at 0.5% interest, 3% inflation after 10 years
-    const changePct = realValueChange(10, 0.5, 3);
-    expect(changePct).toBeCloseTo(-21.8, 1);
-
-    const realValue = 25000 * (1 + changePct / 100);
-    expect(realValue).toBeCloseTo(19550, 0);
-
-    expect(q2.step.answer).toBe(19500);
-    expect(q2.step.tolerance).toBe(1500);
-    expect(Math.abs(q2.step.answer - realValue)).toBeLessThan(q2.step.tolerance);
-
-    // Slider rule: |answer - input.min| > tolerance
-    expect(Math.abs(q2.step.answer - q2.step.input.min)).toBeGreaterThan(q2.step.tolerance);
-  });
-
-  it('verifies question 3 (quiz on compound growth)', () => {
-    const q3 = data.questions[2];
-    expect(q3.lessonId).toBe('berlin-2');
-    expect(q3.step.type).toBe('quiz');
-    expect(q3.step.options).toHaveLength(4);
-    expect(q3.step.correctIndex).toBe(0);
-    expect(q3.step.prompt).toContain('Why does compound interest');
-  });
-
-  it('verifies question 4 (chart realValue reading) arithmetic with models.ts and slider rule', () => {
-    const q4 = data.questions[3];
-    expect(q4.lessonId).toBe('berlin-1');
-    expect(q4.step.type).toBe('chart');
-    expect(q4.step.model).toBe('realValue');
-
-    // Model at 10 years, 0% interest, 3% inflation
-    const changeAt10 = realValueChange(10, 0, 3);
-    // (1/1.03)^10 - 1 = -25.6% ≈ -25% (loss of 1/4)
-    expect(changeAt10).toBe(-25.6);
-    expect(q4.step.answer).toBe(10);
-    expect(q4.step.tolerance).toBe(1);
-
-    // Slider rule: |answer - input.min| > tolerance
-    expect(Math.abs(q4.step.answer - q4.step.input.min)).toBeGreaterThan(q4.step.tolerance);
-  });
-
-  it('verifies question 5 (sort emergency buffer)', () => {
-    const q5 = data.questions[4];
-    expect(q5.lessonId).toBe('berlin-3');
-    expect(q5.step.type).toBe('sort');
-    expect(q5.step.buckets).toHaveLength(2);
-    expect(q5.step.items.length).toBeGreaterThanOrEqual(2);
-    expect(q5.step.buckets).toEqual(['Emergency fund', 'Long-term investments']);
-  });
-
-  it('verifies question 6 (match concepts)', () => {
-    const q6 = data.questions[5];
-    expect(q6.lessonId).toBe('berlin-3');
-    expect(q6.step.type).toBe('match');
-    expect(q6.step.pairs.length).toBeGreaterThanOrEqual(2);
-    expect(q6.step.pairs[0][0]).toBe('Emergency fund');
+  it('match pairs have no duplicate sides', () => {
+    for (const q of byType('match')) {
+      const { pairs } = q.step;
+      expect(pairs.length).toBeGreaterThanOrEqual(2);
+      expect(new Set(pairs.map((p: string[]) => p[0])).size).toBe(pairs.length);
+      expect(new Set(pairs.map((p: string[]) => p[1])).size).toBe(pairs.length);
+    }
   });
 });

@@ -71,20 +71,20 @@ What is mocked: the bank data (accounts, transactions, products) is seeded on th
 
 **Delivery.** GitHub Actions run the backend tests, frontend typecheck, lint and Jest on every push to `main`, export the web build, and deploy to an OCI host. The CI user can run only one deploy script as root, and that script treats every input as untrusted. The release swap is atomic, with a health check and automatic rollback. For phones we use an Expo ngrok tunnel and keep every local service bound to `127.0.0.1`, which matters on shared hackathon Wi-Fi.
 
-**Tools we built on:** Expo, React Native, three.js, Reanimated, Spring Boot, PostgreSQL, Flyway, Testcontainers, Playwright, Figma, ElevenLabs, Natural Earth, Caddy, GitHub Actions. We also used Claude Code, Antigravity and Codex as an AI agents for implementation and reviews.
+**Tools we built on:** Expo, React Native, three.js, Reanimated, Spring Boot, PostgreSQL, Flyway, Testcontainers, Playwright, Figma, ElevenLabs, Natural Earth, Caddy, GitHub Actions. We also used Claude Code, Antigravity and Codex as AI agents for implementation and reviews.
 
 #### Challenges and discoveries
 
 - **Education vs advice.** We turned the line between explaining and recommending into content rules that every lesson follows: the "your situation" step states facts and never grades, offers list product facts, and the user always makes the choice.
-- **Less story, more of the user.** Early lessons used invented characters. Reviewing them, we found they pulled attention away from the user's own situation. We removed the characters: the user moves a slider and *sees* the consequence, and the lesson ends on their own numbers.
+- **Less story, more of the user.** Early lessons used invented characters. Reviewing them, we found they pulled attention away from the user's own situation and the learning process itself. We removed the characters: the user moves a slider and *sees* the consequence, and the lesson ends on their own numbers.
 - **Video without video files.** Real videos could not show the user's own numbers, and would not fit 48 hours. Rendering scenes live from lesson JSON with SVG and Reanimated gave us personal numbers for free. Making the narration audio the master clock kept captions in sync.
 - **A 3D globe on a phone.** Gestures, inertia, pins that fade at the horizon and a plane flight had to run smoothly on Android. Moving all per-frame work into Reanimated shared values solved it.
 
 #### Results and next steps
 
-**Achieved.** One complete mission end to end (bank → Learn → onboarding and profiling → globe → lesson in video or text → decision on the user's own numbers → back to the bank), plus 23 lessons (4 complete paths and 3 first lessons), live duels, a glossary and a profile, deployed to production.
+**Achieved.** One complete mission end to end (bank → Learn → onboarding and profiling → globe → lesson in video or text → the lesson applied to the user's own accounts), and a path that ends back in the bank: after its last lesson, the bank's offers lead to the right bank tab. Plus 23 lessons (4 complete paths and 3 first lessons), live duels, a glossary and a profile, deployed to production.
 
-**How we validated it.** Automated tests on every layer: 44 Jest test files (components and routing flows), 49 JUnit test classes (the integration tests run on a real Postgres via Testcontainers), and 6 Playwright E2E specs (smoke, intro, onboarding, quick check, start here, duel). CI runs the JUnit and Jest tests before every deploy and the Playwright specs on every push and pull request, and the deploy rolls back on a failed health check. We also walked through the demo flow by hand on Android phones (Expo Go) and in the browser.
+**How we validated it.** Automated tests on every layer: 46 Jest test files (components and routing flows), 49 JUnit test classes (the integration tests run on a real Postgres via Testcontainers), and 6 Playwright E2E specs (smoke, intro, onboarding, quick check, start here, duel). CI runs the JUnit and Jest tests before every deploy and the Playwright specs on every push and pull request, and the deploy rolls back on a failed health check. We also walked through the demo flow by hand on Android phones (Expo Go) and in the browser.
 
 **What we are most proud of.** The moment a lesson about inflation turns into the user's own savings, and the user decides what to do with that knowledge, inside the same bank app, in about five minutes.
 

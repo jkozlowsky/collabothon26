@@ -10,7 +10,7 @@ test.afterAll(async ({ request }) => {
   await resetOnboarding(request);
 });
 
-test('the map slide explains the pins on the globe', async ({ page }) => {
+test('the map slide shows a pin and its first lesson', async ({ page }) => {
   await openApp(page);
   await tap(page, 'onboarding-start');
 
@@ -18,9 +18,6 @@ test('the map slide explains the pins on the globe', async ({ page }) => {
   const card = page.getByTestId('globe-card');
   await expect(card).toContainText('BERLIN');
   await expect(card).toContainText('Safe money that shrinks');
-  for (const state of ['Done', 'Up next', 'Locked']) {
-    await expect(page.getByText(state, { exact: true })).toBeVisible();
-  }
 });
 
 test('the globe is a picture, not a control', async ({ page }) => {

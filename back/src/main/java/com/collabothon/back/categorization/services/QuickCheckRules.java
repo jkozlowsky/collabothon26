@@ -23,8 +23,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.function.ToDoubleFunction;
 import java.util.random.RandomGenerator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -62,14 +60,9 @@ final class QuickCheckRules {
 	}
 
 	static Map<FocusArea, Double> mastery(List<FocusArea> areas, List<Answer> answers) {
-		return meanPerArea(areas, answers, Answer::score);
-	}
-
-	private static Map<FocusArea, Double> meanPerArea(List<FocusArea> areas, List<Answer> answers,
-			ToDoubleFunction<Answer> value) {
 		Map<FocusArea, Double> means = new LinkedHashMap<>();
 		for (FocusArea area : areas) {
-			OptionalDouble mean = inArea(answers, area).stream().mapToDouble(value).average();
+			OptionalDouble mean = inArea(answers, area).stream().mapToDouble(Answer::score).average();
 			means.put(area, mean.isPresent() ? mean.getAsDouble() : null);
 		}
 		return means;
@@ -218,29 +211,17 @@ final class QuickCheckRules {
 		};
 	}
 
-	/** Answered areas the facts say something about: the only ones a gap can be about. None without facts. */
-	static List<FocusArea> gapAreas(List<FocusArea> order, List<Answer> answers, FactsDto facts) {
-		return order.stream()
-			.filter(area -> facts != null && habit(area, facts) != null && !inArea(answers, area).isEmpty())
-			.toList();
-	}
-
 	/** The habit with an answer not right is habit ahead; no habit with every answer right is knowledge ahead. */
 	static Optional<GapDirection> ruleGap(FocusArea area, List<Answer> inArea, FactsDto facts) {
-		if (gapAreas(List.of(area), inArea, facts).isEmpty()) {
+		Boolean habit = facts == null ? null : habit(area, facts);
+		if (habit == null || inArea.isEmpty()) {
 			return Optional.empty();
 		}
 		boolean allRight = inArea.stream().allMatch(a -> a.result() == AnswerResult.CORRECT);
-		if (habit(area, facts)) {
+		if (habit) {
 			return allRight ? Optional.empty() : Optional.of(GapDirection.HABIT_AHEAD);
 		}
 		return allRight ? Optional.of(GapDirection.KNOWLEDGE_AHEAD) : Optional.empty();
-	}
-
-	/** A Jev label counts only when the rule finds the same gap in the area; otherwise aligned. */
-	static Optional<GapDirection> checkedJevGap(GapDirection label, FocusArea area, List<Answer> inArea,
-			FactsDto facts) {
-		return ruleGap(area, inArea, facts).filter(label::equals);
 	}
 
 	/** The card about the start lesson's area first, then area order; at most MAX_GAP_CARDS cards. */
@@ -265,10 +246,8 @@ final class QuickCheckRules {
 	}
 
 	/** The questions' lessons, each once, in the questions' order. */
-	static List<CheckLesson> lessons(List<CheckQuestion> questions, Function<CheckQuestion, CheckLesson> toLesson) {
-		Map<String, CheckLesson> lessons = new LinkedHashMap<>();
-		questions.forEach(q -> lessons.computeIfAbsent(q.lessonId(), id -> toLesson.apply(q)));
-		return List.copyOf(lessons.values());
+	static List<CheckLesson> lessons(List<CheckQuestion> questions) {
+		return questions.stream().map(CheckQuestion::lesson).distinct().toList();
 	}
 
 	static Optional<Story> storyOf(String lessonId, List<Story> stories) {
@@ -299,11 +278,6 @@ final class QuickCheckRules {
 					&& storyOf(l.id(), stories).flatMap(s -> startLesson(s, completed)).isPresent())
 			.sorted(pathOrder)
 			.toList();
-	}
-
-	/** The candidates' stories, each once, in candidate order. */
-	static List<Story> stories(List<CheckLesson> candidates, List<Story> stories) {
-		return candidates.stream().flatMap(l -> storyOf(l.id(), stories).stream()).distinct().toList();
 	}
 
 	/** Jev and the rule pick from answered areas when any have a candidate. */
@@ -386,7 +360,8 @@ final class QuickCheckRules {
 				: ruleFirstLesson(pool(candidates, answers), order, mastery, answers);
 		Story start = storyOf(lesson.id(), stories).orElseThrow();
 		return new StoryPlan(start, lesson.area(), readyForNext,
-				path(start, stories(candidates, stories), interests, completed));
+				path(start,
+				candidates.stream().flatMap(l -> storyOf(l.id(), stories).stream()).toList(), interests, completed));
 	}
 
 	/** After a start outside the interests, the first picked path with a lesson left goes ahead of the others. */

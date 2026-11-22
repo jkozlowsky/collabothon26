@@ -16,8 +16,6 @@ import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
 import com.collabothon.back.categorization.dto.StepRequestDto;
 import com.collabothon.back.categorization.dto.StepResponseDto;
 import com.collabothon.back.categorization.enums.FocusArea;
-import com.collabothon.back.categorization.mappers.CheckLessonMapper;
-import com.collabothon.back.categorization.mappers.JevAnswerMapper;
 import com.collabothon.back.categorization.mappers.JevInterestMapper;
 import com.collabothon.back.lesson.repositories.LessonCompletionRepository;
 
@@ -36,11 +34,7 @@ public class QuickCheckService {
 
 	private final JevClient jev;
 
-	private final JevAnswerMapper jevAnswerMapper;
-
 	private final JevInterestMapper jevInterestMapper;
-
-	private final CheckLessonMapper lessonMapper;
 
 	private final LessonCompletionRepository completions;
 
@@ -61,8 +55,7 @@ public class QuickCheckService {
 		if (useRules || request.stepFellBack()) {
 			return byRule(order, pool, open, answers, ruleMastery, useRules, request.stepFellBack());
 		}
-		List<CheckLesson> choices = QuickCheckRules.nextLessonChoices(order,
-				QuickCheckRules.lessons(open, lessonMapper::toLesson));
+		List<CheckLesson> choices = QuickCheckRules.nextLessonChoices(order, QuickCheckRules.lessons(open));
 		// Before the first answer Jev only chooses the lesson, so without a choice there is nothing to ask it.
 		if (answers.isEmpty() && choices.size() < JevConsts.MIN_CHOICE_LABELS) {
 			return byRule(order, pool, open, answers, ruleMastery, false, false);
@@ -71,7 +64,7 @@ public class QuickCheckService {
 			.toList();
 		Optional<StepJudgement> fromJev = jev.step(request.profile(),
 				jevInterestMapper.toJev(Story.picked(onboarding.interests(), stories)), request.facts(),
-				answers.stream().map(jevAnswerMapper::toJev).toList(), answered, choices);
+				answers.stream().map(Answer::toJev).toList(), answered, choices);
 		if (fromJev.isEmpty()) {
 			return byRule(order, pool, open, answers, ruleMastery, false, true);
 		}

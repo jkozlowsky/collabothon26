@@ -31,12 +31,8 @@ import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.LifeStage;
 import com.collabothon.back.categorization.enums.Role;
-import com.collabothon.back.categorization.mappers.CheckLessonMapper;
-import com.collabothon.back.categorization.mappers.JevAnswerMapper;
 import com.collabothon.back.categorization.mappers.JevInterestMapper;
-import com.collabothon.back.categorization.mappers.JevOnboardingAnswersMapper;
 import com.collabothon.back.categorization.mappers.OnboardingAnswersMapper;
-import com.collabothon.back.categorization.mappers.StartLessonMapper;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
 import com.collabothon.back.categorization.repositories.ProfileAnswersRepository;
 import com.collabothon.back.exceptions.BusinessException;
@@ -66,15 +62,7 @@ public class CategorizationService {
 
 	private final CheckQuestionService checkQuestions;
 
-	private final StartLessonMapper startLessonMapper;
-
-	private final CheckLessonMapper lessonMapper;
-
-	private final JevAnswerMapper jevAnswerMapper;
-
 	private final JevInterestMapper jevInterestMapper;
-
-	private final JevOnboardingAnswersMapper jevOnboardingAnswersMapper;
 
 	private final LessonContentRepository content;
 
@@ -118,18 +106,16 @@ public class CategorizationService {
 			});
 		}
 		Set<String> completed = new HashSet<>(completions.findLessonIdsByUserId(userId));
-		List<CheckLesson> lessons = QuickCheckRules.lessons(pool, lessonMapper::toLesson);
+		List<CheckLesson> lessons = QuickCheckRules.lessons(pool);
 		List<CheckLesson> interestLessons = QuickCheckRules.interestLessons(interests, lessons, mastery, history,
 				completed);
 		List<CheckLesson> choices = QuickCheckRules.firstLessonChoices(QuickCheckRules.pool(
 				QuickCheckRules.candidates(lessons, stories, order, mastery, history, completed), history),
 				interestLessons, history, completed);
-		List<FocusArea> gapAreas = QuickCheckRules.gapAreas(order, history, facts);
-		JevQuickCheck quickCheck = ran ? new JevQuickCheck(profile,
-				history.stream().map(jevAnswerMapper::toJev).toList(), gapAreas, choices,
-				QuickCheckRules.interestNotes(interestLessons, mastery, history)) : null;
-		JevResult fromJev = request.useRules() ? JevResult.SKIPPED : jev.ask(jevOnboardingAnswersMapper.toJev(answers),
-				jevInterestMapper.toJev(interests), facts, quickCheck);
+		JevQuickCheck quickCheck = ran ? new JevQuickCheck(profile, history.stream().map(Answer::toJev).toList(),
+				choices, QuickCheckRules.interestNotes(interestLessons, mastery, history)) : null;
+		JevResult fromJev = request.useRules() ? JevResult.SKIPPED
+				: jev.ask(answers, jevInterestMapper.toJev(interests), facts, quickCheck);
 
 		LifeStage lifeStage = answers.lifeStage() == null && ran ? LifeStage.fromAgeBand(profile.ageBand())
 				: LifeStage.fromAnswer(answers.lifeStage());
@@ -150,7 +136,7 @@ public class CategorizationService {
 		StartLessonDto startLesson = plan.start() == null ? null : startLesson(plan.start(), plan.area(), completed);
 		FocusArea startArea = startLesson == null ? null : startLesson.area();
 		List<GapDto> gaps = ran
-				? QuickCheckRules.gapCards(gaps(order, history, facts, fromJev.judgement()), startArea)
+				? QuickCheckRules.gapCards(gaps(order, history, facts), startArea)
 				: CategorizationRules.saidGaps(answers, facts);
 		SharedWithModelDto shared = fromJev.sent() || request.stepCallsMade() > 0
 				? new SharedWithModelDto(facts, fromJev.sent() ? answers : null, answers.interests(),
@@ -178,17 +164,11 @@ public class CategorizationService {
 		return c.withStartHere(startHere(c, stories, lessons, completed));
 	}
 
-	/** Jev's labels where its call answered, each checked against the rule; the rule otherwise. In area order. */
-	private static Map<FocusArea, GapDirection> gaps(List<FocusArea> order, List<Answer> history, FactsDto facts,
-			Optional<Judgement> fromJev) {
+	private static Map<FocusArea, GapDirection> gaps(List<FocusArea> order, List<Answer> history, FactsDto facts) {
 		Map<FocusArea, GapDirection> gaps = new LinkedHashMap<>();
 		for (FocusArea area : order) {
-			List<Answer> inArea = QuickCheckRules.inArea(history, area);
-			Optional<GapDirection> gap = fromJev.isPresent()
-					? Optional.ofNullable(fromJev.get().gaps().get(area))
-						.flatMap(label -> QuickCheckRules.checkedJevGap(label, area, inArea, facts))
-					: QuickCheckRules.ruleGap(area, inArea, facts);
-			gap.ifPresent(direction -> gaps.put(area, direction));
+			QuickCheckRules.ruleGap(area, QuickCheckRules.inArea(history, area), facts)
+				.ifPresent(direction -> gaps.put(area, direction));
 		}
 		return gaps;
 	}
@@ -209,8 +189,8 @@ public class CategorizationService {
 	/** Call only for a story with a lesson left. */
 	private StartLessonDto startLesson(Story story, FocusArea area, Set<String> completed) {
 		String lessonId = QuickCheckRules.startLesson(story, completed).orElseThrow();
-		return startLessonMapper.toStartLesson(story, lessonId,
-				content.lesson(lessonId).orElseThrow().path("title").asString(), area);
+		return new StartLessonDto(lessonId, content.lesson(lessonId).orElseThrow().path("title").asString(), area,
+				story.id(), story.city());
 	}
 
 	List<Story> stories() {
@@ -230,7 +210,7 @@ public class CategorizationService {
 		return categorizations.findData(userId)
 			.flatMap(this::read)
 			.map(c -> c.withStartHere(startHere(c, stories(),
-					QuickCheckRules.lessons(checkQuestions.pool(), lessonMapper::toLesson),
+					QuickCheckRules.lessons(checkQuestions.pool()),
 					new HashSet<>(completions.findLessonIdsByUserId(userId)))));
 	}
 

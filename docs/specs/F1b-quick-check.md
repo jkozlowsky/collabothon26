@@ -222,7 +222,7 @@ v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / f
 ```json
 {
   "profile": {"ageBand": null, "savingsCover": null, "horizon": "within-1y"},
-  "goals": ["...F1 onboarding goals"],
+  "interests": [{"category": "<picked path category>", "topic": "<picked path topic>"}],
   "facts": {"...": "F1 facts, only with consent"},
   "answers": [
     {"area": "saving", "lessonId": "berlin-1", "topic": "Inflation and what your money can buy", "concepts": ["inflation", "real-return"], "result": "wrong"},
@@ -230,7 +230,7 @@ v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / f
   ]
 }
 ```
-`result` is `correct` | `wrong` | `not-sure`; `lessonId`, `topic` and `concepts` are those of the lesson the question came from. Questions, verbatim (`mastery_<area>` only for areas with at least one answer; `next` only with 2+ lessons to choose from). `next.criteria` is built per request (v5): one option per candidate lesson, named by the lesson's topic in snake case and described by "<topic>. Covers: <concepts, hyphens as spaces>."; the candidates are at most `LESSON_CHOICES_PER_AREA` (2) lessons per area in the area order, lessons with a question left, each story's first such lesson before any story's second. The backend test compares each sent question with its entry below, the criteria filled from the lessons, and finds no extra keys.
+`interests` is left out when empty, `facts` without consent and `answers` before the first answer. `result` is `correct` | `wrong` | `not-sure`; `lessonId`, `topic` and `concepts` are those of the lesson the question came from. Questions, verbatim (`mastery_<area>` only for areas with at least one answer; `next` only with 2+ lessons to choose from). `next.criteria` is built per request (v5): one option per candidate lesson, named by the lesson's topic in snake case and described by an object with the same fields on every option, `{"topic": <topic>, "concepts": [<concepts, hyphens as spaces>]}` (22.11; replaces the "<topic>. Covers: <concepts>." text of v5); the candidates are at most `LESSON_CHOICES_PER_AREA` (2) lessons per area in the area order, lessons with a question left, each story's first such lesson before any story's second. The backend test compares each sent question with its entry below, the criteria filled from the lessons, and finds no extra keys.
 
 <!-- jev-step-questions: the backend test compares the Jev request with this block -->
 ```json
@@ -240,10 +240,10 @@ v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / f
   "mastery_investing": {"type": "noul", "instructions": "Do this person's investing answers, the entries of `answers` whose `area` is investing, show that they understand ideas such as market falls, borrowing to invest and spreading risk?"},
   "next": {"type": "choice",
     "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers`, when they might need their money in `profile.horizon` and, when given, the topics they said are new to them in `interests`?",
-    "criteria": {"<lesson topic in snake case>": "<lesson topic>. Covers: <lesson concepts>."}},
+    "criteria": {"<lesson topic in snake case>": {"topic": "<lesson topic>", "concepts": ["<lesson concept>"]}}},
   "first": {"type": "choice",
     "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given when they might need their money in `profile.horizon` and, when given, the topics they said are new to them in `interests` and the facts about their accounts in `facts`?",
-    "criteria": {"<lesson topic in snake case>": "<lesson topic>. Covers: <lesson concepts>."}},
+    "criteria": {"<lesson topic in snake case>": {"topic": "<lesson topic>", "concepts": ["<lesson concept>"]}}},
   "enough": {"type": "noul", "instructions": "Do the answers so far show clearly enough what this person already understands and what they should learn first?"}
 }
 ```
@@ -255,29 +255,17 @@ Step outcome, in this order:
 5. Removed in v5 (the D8 question swap went with the bank); `within-1y` still moves saving before investing in the area order.
 
 ### Jev final call
-F1's request (role and `focus_*` verbatim from F1's `jev-questions` block) plus `state.profile`, `state.goals` and `state.checkAnswers` (the step call's `answers`; F1's `state.answers` already holds the onboarding answers), plus these questions (`gap_<area>` only when facts were sent, and only for areas with at least one answer and a habit in the facts: saving and investing; `first_lesson` only with 2+ lessons to choose from, its criteria built per request as in the step call: per area of the candidate pool at most 2 lessons not completed, those with an answer that was not correct first, then one per story, v5). No `mastery_*` (D4). Same per-key comparison as the step block.
+F1's request (role and `focus_*` verbatim from F1's `jev-questions` block) plus `state.profile` and `state.checkAnswers` (the step call's `answers`; F1's `state.answers` already holds the onboarding answers), plus this question (`first_lesson` only with 2+ lessons to choose from, its criteria built per request as in the step call: per area of the candidate pool at most 2 lessons not completed, those with an answer that was not correct first, then one per story, v5; then the interest lessons, whose options also have `personal_context`, one sentence saying that the person picked the path and, in a Solid area, that the test showed they already know the basics; no other option has that field). No `mastery_*` (D4). Same per-key comparison as the step block.
 
 <!-- jev-final-questions: the backend test compares the Jev request with this block -->
 ```json
 {
-  "gap_saving": {"type": "choice",
-    "instructions": "How does this person's saving habit in `facts.savesRegularly` (true when they move money to savings every month) compare with their knowledge answers about saving, the entries of `checkAnswers` whose `area` is saving?",
-    "criteria": {
-      "habit_ahead": "They move money to savings every month, and at least one of their saving answers is wrong or not sure.",
-      "knowledge_ahead": "Every one of their saving answers is correct, and they do not move money to savings every month.",
-      "aligned": "The habit and the answers match: they move money to savings every month and every saving answer is correct, or they do not and at least one saving answer is wrong or not sure."}},
-  "gap_investing": {"type": "choice",
-    "instructions": "How does this person's investing habit in `facts.holdsInvestments` (true when they hold investment products) compare with their knowledge answers about investing, the entries of `checkAnswers` whose `area` is investing?",
-    "criteria": {
-      "habit_ahead": "They hold investment products, and at least one of their investing answers is wrong or not sure.",
-      "knowledge_ahead": "Every one of their investing answers is correct, and they hold no investment products.",
-      "aligned": "The habit and the answers match: they hold investment products and every investing answer is correct, or they hold none and at least one investing answer is wrong or not sure."}},
   "first_lesson": {"type": "choice",
     "instructions": "Which of these lessons should this person start with, given which ideas their knowledge answers in `checkAnswers` show they have not mastered yet?",
-    "criteria": {"<lesson topic in snake case>": "<lesson topic>. Covers: <lesson concepts>."}}
+    "criteria": {"<lesson topic in snake case>": {"topic": "<lesson topic>", "concepts": ["<lesson concept>"]}}}
 }
 ```
-F1 validation applies to the whole response; any failure → the whole categorisation on rules (D6), 7 s read timeout. The decision stays in code: a valid `gap_<area>` label counts only when the v4 gap rule gives the same direction for that area from the facts and the history; otherwise the area is `aligned`. Jev's option names keep their underscores; the response's `direction` is `habit-ahead` / `knowledge-ahead`.
+F1 validation applies to the whole response; any failure → the whole categorisation on rules (D6), 7 s read timeout. Jev is not asked about gaps (22.11; replaces the `gap_<area>` choices of v4): the v4 gap rule gives them in code from the facts and the history, the same whether the call answered or fell back. The response's `direction` is `habit-ahead` / `knowledge-ahead`.
 
 ### Validation and errors
 `ProblemDetail` from the global handler; `detail` never echoes a rejected value. Both POSTs share these rules:

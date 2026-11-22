@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { AREA_LABEL, DONE_MS, MAX_QUESTIONS, STEP_TIMEOUT_MS, type Feedback } from '@/constants/quickCheck';
+import { AREA_LABEL, DONE_MS, STEP_TIMEOUT_MS, type Feedback } from '@/constants/quickCheck';
 import { feedbackFor, postStep } from '@/lib/quickCheck';
 import { useCurrentUser } from '@/lib/user';
-import type { Facts, FocusArea } from '@/types/categorization';
+import type { Facts } from '@/types/categorization';
 import type {
   CheckQuestion,
   HistoryEntry,
@@ -13,20 +13,16 @@ import type {
   StepResponse,
 } from '@/types/quickCheck';
 
-export type QuestionView = {
+export type QuestionView = Pick<CheckQuestion, 'area' | 'prompt' | 'options' | 'correctIndex'> & {
   /** Changes with every question, so the screen can start it fresh. */
   key: string;
-  area: FocusArea;
-  prompt: string;
-  options: string[];
   why: string;
-  correctIndex: number;
   /** Set once the answer is committed: the pick (null = "Not sure") and what to say about it. */
   result: { picked: number | null; feedback: Feedback } | null;
 };
 
-/** `first`: the first step runs. `answered`: the reveal is on screen. `waiting`: "Continue" came before the step's answer. */
-type Stage = 'idle' | 'first' | 'question' | 'answered' | 'waiting' | 'done';
+/** `answered`: the reveal is on screen. `waiting`: the first step runs, or "Continue" came before the step's answer. */
+type Stage = 'idle' | 'question' | 'answered' | 'waiting' | 'done';
 
 /** What a step decided: the next question, the end of the test, or a failure that ends it with the history so far. */
 type Outcome = { next: string } | 'done' | 'failed';
@@ -49,7 +45,7 @@ type Run = {
 };
 
 const INITIAL: Run = { stage: 'idle', pool: [], history: [], mastery: {}, currentId: null, outcome: null, useRules: false, fellBack: false, calls: 0 };
-const RUNNING: Stage[] = ['first', 'answered', 'waiting'];
+const RUNNING: Stage[] = ['answered', 'waiting'];
 
 type Props = {
   consent: boolean;
@@ -148,7 +144,7 @@ export function useQuickCheck({ consent, facts, profile, onFinish, onSkip }: Pro
 
   const begin = (pool: CheckQuestion[]) => {
     stop();
-    update({ ...INITIAL, pool, stage: 'first' });
+    update({ ...INITIAL, pool, stage: 'waiting' });
     void step([]);
   };
 
@@ -177,25 +173,20 @@ export function useQuickCheck({ consent, facts, profile, onFinish, onSkip }: Pro
   const seenAreaBefore = !!question && before.some((h) => pool.find((q) => q.id === h.questionId)?.area === question.area);
 
   const view: QuestionView | null = question && {
+    ...question,
     key: `${before.length}-${question.id}`,
-    area: question.area,
-    prompt: question.prompt,
-    options: question.options,
     why: seenAreaBefore
       ? `Picked to look at ${AREA_LABEL[question.area]} from another angle`
       : `Picked to learn more about ${AREA_LABEL[question.area]}`,
-    correctIndex: question.correctIndex,
     result: answered ? { picked, feedback: feedbackFor(picked, question) } : null,
   };
 
-  const status: 'waiting' | 'done' | null = stage === 'first' || stage === 'waiting' ? 'waiting' : stage === 'done' ? 'done' : null;
   return {
     view,
     /** The line shown in place of the question while a step decides or the test is done. */
-    status,
-    /** "Question {position} of up to {total}": the shown question, or the last answered one under a status line. */
+    status: stage === 'waiting' || stage === 'done' ? stage : null,
+    /** "Question {position} of up to MAX_QUESTIONS": the shown question, or the last answered one under a status line. */
     position: stage === 'question' ? history.length + 1 : Math.max(1, history.length),
-    total: MAX_QUESTIONS,
     begin,
     answer,
     proceed,

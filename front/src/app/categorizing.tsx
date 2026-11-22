@@ -173,7 +173,6 @@ export default function CategorizingScreen() {
         <QuickCheckPage
           view={quick.view}
           position={quick.position}
-          total={quick.total}
           status={quick.status}
           onAnswer={quick.answer}
           onContinue={quick.proceed}

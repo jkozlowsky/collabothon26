@@ -7,7 +7,8 @@ public final class JevConsts {
 
 	public static final String DEFAULT_BASE_URL = "https://api.typesafe.ai";
 
-	public static final String DEFAULT_MODEL = "jev-latest";
+	/** Pinned: the {@code jev-latest} alias can move to a model the questions were not written for. */
+	public static final String DEFAULT_MODEL = "jev-1.14.0";
 
 	public static final String SYSTEM_ONE_PATH = "/v1/systemone";
 

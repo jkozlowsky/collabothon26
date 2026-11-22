@@ -37,8 +37,10 @@ final class TestPool {
 		return topic(lessonId).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "_").replaceAll("^_|_$", "");
 	}
 
-	static String criterion(String lessonId) {
-		return "%s. Covers: %s.".formatted(topic(lessonId), String.join(", ", concepts(lessonId)).replace('-', ' '));
+	static ObjectNode criterion(String lessonId) {
+		ObjectNode criterion = JSON.createObjectNode().put("topic", topic(lessonId));
+		criterion.set("concepts", JSON.valueToTree(concepts(lessonId).stream().map(c -> c.replace('-', ' ')).toList()));
+		return criterion;
 	}
 
 	static String topic(String lessonId) {

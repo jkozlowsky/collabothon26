@@ -101,27 +101,27 @@ The seed customer gives `2-3.5k`, `6+`, `20%+`, true, false, true, true. Facts c
 Skipped experience → no gaps. `because` lines, observations only: "You said: {experience label}. Money goes to savings or investments every month." / "You said: {experience label}. Your accounts cover less than a month of spending." / "You said: {experience label}. Your accounts with us include investment products." / "You said: {experience label}. No investment products in your accounts with us."
 
 ### Jev call
-`POST {jev.base-url}/v1/systemone` with `model: {jev.model}`; header `Authorization: Bearer {jev.api-key}`, omitted when the key is blank. With a blank key and the default base URL the call is skipped (`sharedWithModel: null`, `source: fallback`). The client is built from the injected `RestClient.Builder`; timeouts on the request factory: connect 1 s, read 7 s (F1b: up to 4 extra check judgements; the front's 10 s also covers the profile wait). `state` = `{answers: OnboardingAnswers, facts (only with bank data)}`. Questions, verbatim:
+`POST {jev.base-url}/v1/systemone` with `model: {jev.model}`; header `Authorization: Bearer {jev.api-key}`, omitted when the key is blank. With a blank key and the default base URL the call is skipped (`sharedWithModel: null`, `source: fallback`). The client is built from the injected `RestClient.Builder`; timeouts on the request factory: connect 1 s, read 7 s (F1b: up to 4 extra check judgements; the front's 10 s also covers the profile wait). `state` = `{answers, interests, facts (only with bank data)}`. `interests` holds the `{category, topic}` of each picked path and is left out when empty. `answers` holds only the onboarding answers that have a value (no null, no interest ids, `skipped` only when true) and is left out when none has, because the model can read an empty field as a signal; `sharedWithModel.answers` still stores the whole object. Questions, verbatim:
 
 <!-- jev-questions: the backend test compares the Jev request with this block -->
 ```json
 {
   "role": {"type": "choice",
-    "instructions": "Based on how this person describes their money habits (from not saving yet to planning ahead) and, when given, facts about their accounts, which learner level fits best?",
+    "instructions": "Which learner level fits this person best, judging by the facts about their accounts in `facts` and their knowledge answers in `checkAnswers`, when present?",
     "criteria": {
-      "novice": "Does not save yet or saves only now and then, and shows few healthy money habits such as regular saving or a cash buffer.",
-      "intermediate": "Saves regularly or has a safety net, but does not invest yet or does not act on it consistently.",
-      "advanced": "Saves and invests, or plans their finances ahead; habits such as regular saving support this."}},
-  "focus_saving":     {"type": "noul", "instructions": "Would this person benefit most from learning about building an emergency fund and saving right now?"},
-  "focus_debt":       {"type": "noul", "instructions": "Would this person benefit most from learning about avoiding overdrafts and expensive debt right now?"},
-  "focus_investing":  {"type": "noul", "instructions": "Would this person benefit most from learning how investing works, for example funds and ETFs, right now?"},
-  "focus_risk":       {"type": "noul", "instructions": "Would this person benefit most from learning about risk, diversification and protection right now?"},
-  "focus_retirement": {"type": "noul", "instructions": "Would this person benefit most from learning about planning for retirement and the family's future right now?"}
+      "novice": "Is starting out: has no habit of regular saving and no investments, and any knowledge answers show that basic money ideas are still new to them.",
+      "intermediate": "Has some of the basics: saves regularly or invests but not both, or their knowledge answers are mixed or ahead of these habits.",
+      "advanced": "Is past the basics: saves regularly and invests, and any knowledge answers show that they understand the ideas they were asked about."}},
+  "focus_saving":     {"type": "noul", "instructions": "Would learning how to build an emergency fund help this person now?"},
+  "focus_debt":       {"type": "noul", "instructions": "Would learning how to avoid expensive debt help this person now?"},
+  "focus_investing":  {"type": "noul", "instructions": "Would learning how investing works help this person now?"},
+  "focus_risk":       {"type": "noul", "instructions": "Would learning how to spread financial risk help this person now?"},
+  "focus_retirement": {"type": "noul", "instructions": "Would learning how to plan for retirement help this person now?"}
 }
 ```
 Focus areas = `noul >= 0.5`, sorted by probability; none → the single highest. The response must have every asked question, labels inside their sets, a probability in [0, 1] for every label, and each `choice` equal to its most probable label; otherwise the whole categorisation falls back. Schemas: [API](https://docs.typesafe.ai/api), [choice](https://docs.typesafe.ai/primitives/choice.md), [noul](https://docs.typesafe.ai/primitives/noul.md), [errors](https://docs.typesafe.ai/api/errors.md).
 
-Config: `jev.base-url` (default `https://api.typesafe.ai`), `jev.api-key=${JEV_API_KEY:}`, `jev.model` (default `jev-latest`). Startup fails on a non-http(s) base URL, a port outside 1–65535, a key sent over plain http to anything other than localhost or loopback, and a key that is not printable ASCII without spaces. Redirects are not followed (`spring.http.clients.redirects=dont-follow`); a 3xx response falls back like any other error.
+Config: `jev.base-url` (default `https://api.typesafe.ai`), `jev.api-key=${JEV_API_KEY:}`, `jev.model` (default `jev-1.14.0`, pinned: the `jev-latest` alias can move to a model the questions were not written for). Startup fails on a non-http(s) base URL, a port outside 1–65535, a key sent over plain http to anything other than localhost or loopback, and a key that is not printable ASCII without spaces. Redirects are not followed (`spring.http.clients.redirects=dont-follow`); a 3xx response falls back like any other error.
 
 ### Goals → focus areas
 Main's goal groups (`front/src/constants/onboarding.ts`): Everyday money (`budget`, `money-habits`, `banking-basics`) and Saving (`start-saving`, `emergency-fund`, `inflation`) → `saving`; Borrowing (`pay-off-debt`, `credit-cards`, `loans-mortgages`) → `debt`; Investing (`start-investing`, `stocks-etfs`, `crypto`) → `investing`; `retirement` → `retirement`; `insurance`, `scams` → `risk`.

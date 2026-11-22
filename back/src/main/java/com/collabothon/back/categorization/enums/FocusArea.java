@@ -26,10 +26,6 @@ public enum FocusArea {
 		return WireNames.of(this);
 	}
 
-	public String jevQuestion() {
-		return "focus_" + wire();
-	}
-
 	/** The area a story teaches: the one place the {@code area} names of stories.json are read. */
 	public static FocusArea ofStoryArea(String storyArea) {
 		return switch (storyArea) {

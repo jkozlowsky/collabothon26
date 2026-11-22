@@ -68,7 +68,7 @@ final class CategorizationRules {
 			Role measured, List<Story> stories) {
 		Role role = measured != null ? measured : fallbackRole(a, f);
 		return new Judgement(role, Map.of(), fallbackFocus(a, f, role, lifeStage, savingsCover, stories), Map.of(), null,
-				Map.of(), null);
+				null);
 	}
 
 	/** The declaration decides; facts only lift someone who saves now and then but does so every month. */

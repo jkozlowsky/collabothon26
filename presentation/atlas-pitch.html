@@ -146,16 +146,18 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
 .footnote { margin: 0; font-size: var(--t-label); color: var(--ink-muted); }
 
 /* ---------- Phone with the app recording ---------- */
-/* The phone takes the full stage height, so the app recording is as readable as possible. */
+/* The phone takes the full stage height, so the app recording is as readable as possible. Its screen has the
+   recordings' own shape (412 × 839) and only slightly rounded corners, so no part of a recording is cut off. */
 .media { position: relative; display: flex; flex-direction: column; align-items: center; }
 .phone {
   --ph: calc(100vh - 2 * var(--pad-y)); --bezel: calc(var(--ph) * 0.012);
-  margin: 0; height: var(--ph); width: auto; aspect-ratio: 9 / 19.5; box-sizing: border-box;
-  border-radius: calc(var(--ph) * 0.06); padding: var(--bezel); background: #0A1418;
+  --radius: calc(var(--ph) * 0.035);
+  margin: 0; height: calc(var(--ph) - 2 * var(--bezel)); width: auto; aspect-ratio: 412 / 839; box-sizing: content-box;
+  border-radius: var(--radius); padding: var(--bezel); background: #0A1418;
   box-shadow: 0 0 0 1.5px rgba(245, 247, 247, 0.22), 0 24px 60px rgba(0, 10, 14, 0.55); cursor: pointer; position: relative;
 }
-.phone-screen { position: relative; width: 100%; height: 100%; border-radius: calc(var(--ph) * 0.06 - var(--bezel)); overflow: hidden; background: #E9EEF0; }
-.phone video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: #E9EEF0; }
+.phone-screen { position: relative; width: 100%; height: 100%; border-radius: calc(var(--radius) - var(--bezel)); overflow: hidden; background: #E9EEF0; }
+.phone video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; background: #E9EEF0; }
 .phone-empty {
   position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
   text-align: center; padding: 18px; background: repeating-linear-gradient(135deg, rgba(245,247,247,0.04) 0 12px, rgba(245,247,247,0.0) 12px 24px), #0F2F38;
@@ -173,6 +175,18 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
 .phone:hover + .media-hint { opacity: 1; }
 
 .phone:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+
+/* Shown once the stop's recording has ended: the presenter can move on. A click on it is the same as "next". */
+.next-cue {
+  position: fixed; right: clamp(12px, 2vw, 32px); top: 50%; z-index: 5; width: clamp(48px, 4.5vw, 72px); aspect-ratio: 1;
+  display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--yellow); color: var(--petrol); box-shadow: 0 10px 30px rgba(0, 10, 14, 0.45);
+  opacity: 0; pointer-events: none; transform: translate(12px, -50%); transition: opacity 300ms, transform 300ms;
+}
+.next-cue svg { width: 46%; height: 46%; }
+.next-cue.on { opacity: 1; pointer-events: auto; transform: translate(0, -50%); animation: cue-nudge 1.6s ease-in-out 300ms infinite; }
+@keyframes cue-nudge { 0%, 100% { transform: translate(0, -50%); } 50% { transform: translate(6px, -50%); } }
+@media (prefers-reduced-motion: reduce) { .next-cue.on { animation: none; } }
 
 /* ---------- Pin and callout ---------- */
 .pin-layer { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
@@ -473,6 +487,23 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
     const replay = (e) => { e.stopPropagation(); playClip(s.phone, true); };
     s.phone.addEventListener('click', replay);
     s.phone.addEventListener('keydown', (e) => { if (e.key === 'Enter') replay(e); });
+    const video = s.phone.querySelector('video');
+    video.addEventListener('ended', updateCue);
+    video.addEventListener('play', updateCue);
+  }
+
+  /* The arrow on the right: on once the recording the current step shows has played to its end. */
+  const cue = document.createElement('button');
+  cue.className = 'next-cue';
+  cue.setAttribute('aria-label', 'Next');
+  cue.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  cue.addEventListener('click', (e) => { e.stopPropagation(); next(); });
+  document.body.append(cue);
+
+  function updateCue() {
+    const phone = stops[stopIndex] && stops[stopIndex].phone;
+    const video = phone && phone.querySelector('video');
+    cue.classList.toggle('on', !!video && phone.dataset.ready === '1' && video.ended);
   }
 
   function setClip(phone, name, autoplay) {
@@ -720,6 +751,7 @@ body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var
       el.setAttribute('aria-hidden', pending ? 'true' : 'false');
     }
     if (stop.phone) setClip(stop.phone, clipFor(stop, stepIndex), autoplay);
+    updateCue();
   }
 
   function showStop(next, delayMs) {

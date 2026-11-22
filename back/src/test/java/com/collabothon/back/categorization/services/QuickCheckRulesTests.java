@@ -63,7 +63,8 @@ class QuickCheckRulesTests {
 	private static final List<Story> STORIES = List.of(story("s1"), story("s2"), story("s3"), story("s4"));
 
 	private static Story story(String id) {
-		return new Story(id, "City " + id, "Topic " + id, List.of(id + "-1", id + "-2"));
+		return new Story(id, "Category " + id, "City " + id, "Topic " + id,
+				id.equals("s1") || id.equals("s3") ? "Saving" : "Investing", List.of(id + "-1", id + "-2"));
 	}
 
 	private static Set<String> done(String... storyIds) {
@@ -166,12 +167,12 @@ class QuickCheckRulesTests {
 	}
 
 	@Test
-	void goalAreasComeFirstThenTheFixedOrderKeepingOnlyAreasWithQuestions() {
+	void interestAreasComeFirstThenTheFixedOrderKeepingOnlyAreasWithQuestions() {
 		assertEquals(List.of(SAVING, INVESTING), QuickCheckRules.areaOrder(List.of(), null, POOL));
-		assertEquals(List.of(INVESTING, SAVING), QuickCheckRules.areaOrder(List.of("stocks-etfs"), "5y+", POOL));
+		assertEquals(List.of(INVESTING, SAVING), QuickCheckRules.areaOrder(List.of(INVESTING), "5y+", POOL));
 		assertEquals(List.of(SAVING, INVESTING),
-				QuickCheckRules.areaOrder(List.of("stocks-etfs"), CategorizationConsts.HORIZON_WITHIN_1Y, POOL));
-		assertEquals(List.of(INVESTING), QuickCheckRules.areaOrder(List.of("retirement"), null, List.of(I21_A)));
+				QuickCheckRules.areaOrder(List.of(INVESTING), CategorizationConsts.HORIZON_WITHIN_1Y, POOL));
+		assertEquals(List.of(INVESTING), QuickCheckRules.areaOrder(List.of(FocusArea.RETIREMENT), null, List.of(I21_A)));
 	}
 
 	@Test

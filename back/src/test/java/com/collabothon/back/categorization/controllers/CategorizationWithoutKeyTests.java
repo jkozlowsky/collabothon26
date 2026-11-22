@@ -77,7 +77,7 @@ class CategorizationWithoutKeyTests {
 	@Test
 	void fallsBackWithoutCallingJev() throws Exception {
 		mvc.perform(put("/api/users/tom/profile/onboarding").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"goals\": [\"stocks-etfs\"], \"experience\": \"occasional\", \"skipped\": false}"))
+			.content("{\"interests\": [\"tokyo\"], \"experience\": \"occasional\", \"skipped\": false}"))
 			.andExpect(status().isOk());
 
 		mvc.perform(post("/api/users/tom/categorization").contentType(MediaType.APPLICATION_JSON)
@@ -102,7 +102,7 @@ class CategorizationWithoutKeyTests {
 	void aStepWithoutAKeyRunsOnTheRuleAndSaysSo() throws Exception {
 		String userId = "keyless-" + UUID.randomUUID();
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
-			.content("{\"goals\": [\"start-saving\"], \"experience\": \"occasional\", \"skipped\": false}"))
+			.content("{\"interests\": [\"berlin\"], \"experience\": \"occasional\", \"skipped\": false}"))
 			.andExpect(status().isOk());
 		jev.expect(ExpectedCount.never(), requestTo("https://api.typesafe.ai/v1/systemone"));
 
@@ -204,13 +204,13 @@ class CategorizationWithoutKeyTests {
 	}
 
 	/**
-	 * Plays the Quick check on the rule (saving goals, money needed in 1-5 years) until it is done,
+	 * Plays the Quick check on the rule (two saving paths picked, money needed in 1-5 years) until it is done,
 	 * answering question i right or wrong as {@code right[i]} says, then categorizes.
 	 */
 	private ResultActions play(String account, List<String> asked, boolean... right) throws Exception {
 		String userId = "run-" + UUID.randomUUID();
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
-			.content("{\"goals\": [\"start-saving\", \"inflation\"], \"skipped\": false}"))
+			.content("{\"interests\": [\"berlin\", \"buenos-aires\"], \"skipped\": false}"))
 			.andExpect(status().isOk());
 		String pool = mvc.perform(get("/api/check-questions")).andReturn().getResponse().getContentAsString();
 		List<String> history = new ArrayList<>();
@@ -252,7 +252,7 @@ class CategorizationWithoutKeyTests {
 	void aDoubleTapOnCategorizeKeepsOneResultAndFailsNothing() throws Exception {
 		String userId = "tap-" + UUID.randomUUID();
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
-			.content("{\"goals\": [\"stocks-etfs\"], \"experience\": \"occasional\", \"skipped\": false}"))
+			.content("{\"interests\": [\"tokyo\"], \"experience\": \"occasional\", \"skipped\": false}"))
 			.andExpect(status().isOk());
 
 		int second = Race.secondDuringFirst(tx, () -> categorize(userId), () -> categorize(userId));

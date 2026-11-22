@@ -60,8 +60,11 @@ class CategorizationControllerTests {
 	private static final String JEV_URL = "https://api.typesafe.ai/v1/systemone";
 
 	private static final String ANSWERS = """
-			{"lifeStage": "building", "goals": ["start-saving", "stocks-etfs"], "experience": "occasional",
+			{"lifeStage": "building", "interests": ["berlin", "tokyo"], "experience": "occasional",
 			 "skipped": false}""";
+
+	private static final String ANSWERS_FOR_JEV = """
+			{"lifeStage": "building", "experience": "occasional", "skipped": false}""";
 
 	/** What the app computes from the front seed customer (spec: `factsFrom` on the seed). */
 	private static final String FACTS = """
@@ -142,8 +145,9 @@ class CategorizationControllerTests {
 			.andExpect(method(HttpMethod.POST))
 			.andExpect(header("Authorization", "Bearer test-key"))
 			.andExpect(content().json("""
-					{"model": "jev-latest", "state": {"answers": %s, "facts": %s}, "questions": %s}"""
-				.formatted(ANSWERS, FACTS, SpecBlocks.read(json, SpecBlocks.F1, "jev-questions")), JsonCompareMode.STRICT))
+					{"model": "jev-latest", "state": {"answers": %s, "interests": [%s, %s], "facts": %s}, "questions": %s}"""
+				.formatted(ANSWERS_FOR_JEV, TestPool.interest("berlin"), TestPool.interest("tokyo"), FACTS,
+						SpecBlocks.read(json, SpecBlocks.F1, "jev-questions")), JsonCompareMode.STRICT))
 			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 
 		String expected = """
@@ -161,7 +165,7 @@ class CategorizationControllerTests {
 				                "Your accounts with us include investment products."]},
 				   {"output": "focusAreas",
 				    "probabilities": {"saving": 0.2, "debt": 0.7, "investing": 0.9, "risk": 0.6, "retirement": 0.1},
-				    "because": ["Your accounts cover more than 6 months of spending.", "You picked investing as a goal.",
+				    "because": ["Your accounts cover more than 6 months of spending.", "You said Diversification is new to you.",
 				                "You are paying off a loan with us.",
 				                "Your accounts with us include investment products."]}],
 				 "profile": null, "mastery": {}, "answerCount": 0,
@@ -171,7 +175,7 @@ class CategorizationControllerTests {
 				 "pathStoryIds": ["seoul", "tokyo", "mumbai", "sao-paulo", "berlin", "buenos-aires", "nairobi"],
 				 "startHere": {"lessonId": "seoul-1", "title": "%1$s", "area": "investing", "storyId": "seoul",
 				               "storyCity": "Seoul"},
-				 "sharedWithModel": {"facts": %2$s, "answers": %3$s, "goals": ["start-saving", "stocks-etfs"], "profile": null, "answerCount": 0, "stepCallsMade": 0},
+				 "sharedWithModel": {"facts": %2$s, "answers": %3$s, "interests": ["berlin", "tokyo"], "profile": null, "answerCount": 0, "stepCallsMade": 0},
 				 "source": "jev", "model": "jev-2026-05", "categorizedAt": "2026-06-15T10:00:00Z"}"""
 			.formatted(lessonContent.lesson("seoul-1").orElseThrow().path("title").asString(), FACTS, ANSWERS);
 
@@ -264,7 +268,7 @@ class CategorizationControllerTests {
 					{"consent": false, "bankData": false, "lifeStage": "family", "gaps": [],
 					 "explanation": [{"output": "role", "because": ["You said: I save now and then."]},
 					                 {"output": "focusAreas",
-					                  "because": ["You picked investing as a goal.", "It fits the answers you gave."]}],
+					                  "because": ["You said Diversification is new to you.", "It fits the answers you gave."]}],
 					 "sharedWithModel": {"facts": null}, "source": "jev"}""", JsonCompareMode.LENIENT));
 	}
 
@@ -282,9 +286,10 @@ class CategorizationControllerTests {
 
 	@Test
 	void skippedOnboardingGivesNoLifeStage() throws Exception {
-		onboard("alex", "{\"goals\": [], \"skipped\": true}");
+		onboard("alex", "{\"interests\": [], \"skipped\": true}");
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(jsonPath("$.state.answers.skipped").value(true))
+			.andExpect(jsonPath("$.state.interests").doesNotExist())
 			.andRespond(withServerError());
 
 		categorize("alex", WITH_FACTS).andExpect(status().isOk())
@@ -432,7 +437,7 @@ class CategorizationControllerTests {
 
 	@Test
 	void getBeforePostIs404() throws Exception {
-		onboard("fresh", "{\"goals\": [], \"skipped\": true}");
+		onboard("fresh", "{\"interests\": [], \"skipped\": true}");
 		mvc.perform(get("/api/users/fresh/categorization")).andExpect(status().isNotFound());
 	}
 
@@ -450,7 +455,7 @@ class CategorizationControllerTests {
 
 	@Test
 	void onboardingResetRemovesTheCategorisation() throws Exception {
-		onboard("lena", "{\"goals\": [], \"skipped\": true}");
+		onboard("lena", "{\"interests\": [], \"skipped\": true}");
 		jev.expect(requestTo(JEV_URL)).andRespond(withServerError());
 		categorize("lena", "{\"consent\": true}").andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.jsonPath("$.sharedWithModel.answers.skipped").value(true));

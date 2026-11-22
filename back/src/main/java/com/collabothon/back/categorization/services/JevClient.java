@@ -38,8 +38,9 @@ import com.collabothon.back.categorization.config.JevProperties;
 import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.FactsDto;
 import com.collabothon.back.categorization.dto.JevAnswerDto;
+import com.collabothon.back.categorization.dto.JevInterestDto;
+import com.collabothon.back.categorization.dto.JevOnboardingAnswersDto;
 import com.collabothon.back.categorization.dto.JevRequestDto;
-import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
 import com.collabothon.back.categorization.dto.ProfileRangesDto;
 import com.collabothon.back.categorization.enums.FocusArea;
 import com.collabothon.back.categorization.enums.GapDirection;
@@ -92,7 +93,7 @@ public class JevClient {
 			    "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers` and when they might need their money in `profile.horizon`?",
 			    "criteria": {}},
 			  "first": {"type": "choice",
-			    "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given their goals in `goals`, when they might need their money in `profile.horizon` and, when given, the facts about their accounts in `facts`?",
+			    "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given when they might need their money in `profile.horizon` and, when given, the topics they said are new to them in `interests` and the facts about their accounts in `facts`?",
 			    "criteria": {}},
 			  "enough": {"type": "noul", "instructions": "Do the answers so far show clearly enough what this person already understands and what they should learn first?"}
 			}
@@ -150,11 +151,13 @@ public class JevClient {
 		this.finalQuestions = (ObjectNode) json.readTree(FINAL_QUESTIONS);
 	}
 
-	public Optional<StepJudgement> step(ProfileRangesDto profile, List<String> goals, FactsDto facts,
+	public Optional<StepJudgement> step(ProfileRangesDto profile, List<JevInterestDto> interests, FactsDto facts,
 			List<JevAnswerDto> answers, List<FocusArea> answeredAreas, List<CheckLesson> lessons) {
 		Map<String, Object> state = new LinkedHashMap<>();
 		state.put("profile", profile);
-		state.put("goals", goals);
+		if (!interests.isEmpty()) {
+			state.put("interests", interests);
+		}
 		if (facts != null) {
 			state.put("facts", facts);
 		}
@@ -247,19 +250,22 @@ public class JevClient {
 	}
 
 	/** {@code quickCheck} null = the Quick check did not run, so the request is F1's exactly. */
-	public JevResult ask(OnboardingAnswersDto answers, FactsDto facts, JevQuickCheck quickCheck) {
+	public JevResult ask(JevOnboardingAnswersDto answers, List<JevInterestDto> interests, FactsDto facts,
+			JevQuickCheck quickCheck) {
 		if (!properties.callsJev()) {
 			return JevResult.SKIPPED;
 		}
 		Map<String, Object> state = new LinkedHashMap<>();
 		state.put("answers", answers);
+		if (!interests.isEmpty()) {
+			state.put("interests", interests);
+		}
 		if (facts != null) {
 			state.put("facts", facts);
 		}
 		ObjectNode asked = questions;
 		if (quickCheck != null) {
 			state.put("profile", quickCheck.profile());
-			state.put("goals", quickCheck.goals());
 			// F1 already names the onboarding answers `answers`, so the knowledge answers get their own key.
 			state.put("checkAnswers", quickCheck.answers());
 			asked = questions.deepCopy();

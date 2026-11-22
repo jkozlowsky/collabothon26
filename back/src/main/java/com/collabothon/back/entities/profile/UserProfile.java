@@ -29,8 +29,8 @@ public class UserProfile {
 	private String lifeStage;
 
 	@JdbcTypeCode(SqlTypes.ARRAY)
-	@Column(name = "goals", nullable = false)
-	private List<String> goals;
+	@Column(name = "interests", nullable = false)
+	private List<String> interests;
 
 	@Column(name = "experience", length = 32)
 	private String experience;
@@ -49,15 +49,15 @@ public class UserProfile {
 	private String preferredLessonMode = "video";
 
 	@Builder
-	public UserProfile(String userId, String lifeStage, List<String> goals, String experience,
+	public UserProfile(String userId, String lifeStage, List<String> interests, String experience,
 			boolean onboardingCompleted, boolean onboardingSkipped, Instant onboardingCompletedAt) {
 		this.userId = userId;
 		this.lifeStage = lifeStage;
-		if (goals != null) {
-			this.goals = List.copyOf(goals);
+		if (interests != null) {
+			this.interests = List.copyOf(interests);
 		}
 		else {
-			this.goals = List.of();
+			this.interests = List.of();
 		}
 		this.experience = experience;
 		this.onboardingCompleted = onboardingCompleted;
@@ -69,10 +69,10 @@ public class UserProfile {
 		this(userId, null, List.of(), null, false, false, null);
 	}
 
-	public void completeOnboarding(String lifeStage, List<String> goals, String experience, boolean skipped,
+	public void completeOnboarding(String lifeStage, List<String> interests, String experience, boolean skipped,
 			Instant completedAt) {
 		this.lifeStage = lifeStage;
-		this.goals = List.copyOf(goals);
+		this.interests = List.copyOf(interests);
 		this.experience = experience;
 		this.onboardingSkipped = skipped;
 		this.onboardingCompleted = true;
@@ -85,7 +85,7 @@ public class UserProfile {
 
 	public void resetOnboarding() {
 		this.lifeStage = null;
-		this.goals = List.of();
+		this.interests = List.of();
 		this.experience = null;
 		this.onboardingSkipped = false;
 		this.onboardingCompleted = false;

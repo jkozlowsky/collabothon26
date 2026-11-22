@@ -25,13 +25,14 @@ import org.springframework.web.client.RestClient;
 import com.collabothon.back.categorization.config.JevProperties;
 import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.FactsDto;
-import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
+import com.collabothon.back.categorization.dto.JevInterestDto;
+import com.collabothon.back.categorization.dto.JevOnboardingAnswersDto;
 
 import tools.jackson.databind.json.JsonMapper;
 
 class JevClientTests {
 
-	private static final OnboardingAnswersDto ANSWERS = new OnboardingAnswersDto(null, List.of(), "occasional", false);
+	private static final JevOnboardingAnswersDto ANSWERS = new JevOnboardingAnswersDto(null, "occasional", false);
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -44,14 +45,16 @@ class JevClientTests {
 	}
 
 	private static JevResult ask(RestClient.Builder builder, String baseUrl, String apiKey) {
-		return new JevClient(builder, JSON, properties(baseUrl, apiKey)).ask(ANSWERS, null, null);
+		return new JevClient(builder, JSON, properties(baseUrl, apiKey)).ask(ANSWERS, List.of(), null, null);
 	}
 
-	// Both records go to an external model verbatim; a new component must be a deliberate change here.
+	// These records go to an external model verbatim; a new component must be a deliberate change here.
 	@Test
 	void onlyKnownFieldsAreSentToJev() {
-		assertEquals(List.of("lifeStage", "goals", "experience", "skipped"),
-				Arrays.stream(OnboardingAnswersDto.class.getRecordComponents()).map(RecordComponent::getName).toList());
+		assertEquals(List.of("lifeStage", "experience", "skipped"),
+				Arrays.stream(JevOnboardingAnswersDto.class.getRecordComponents()).map(RecordComponent::getName).toList());
+		assertEquals(List.of("category", "topic"),
+				Arrays.stream(JevInterestDto.class.getRecordComponents()).map(RecordComponent::getName).toList());
 		assertEquals(List.of("incomeBand", "cashBufferMonths", "savingsRate", "savesRegularly", "inOverdraft",
 				"holdsInvestments", "hasLoan"),
 				Arrays.stream(FactsDto.class.getRecordComponents()).map(RecordComponent::getName).toList());

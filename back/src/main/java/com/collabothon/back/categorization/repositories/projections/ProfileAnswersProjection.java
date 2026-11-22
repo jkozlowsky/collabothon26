@@ -4,7 +4,7 @@ import java.util.List;
 
 public record ProfileAnswersProjection(
 		String lifeStage,
-		List<String> goals,
+		List<String> interests,
 		String experience,
 		boolean onboardingSkipped
 ) {}

@@ -62,8 +62,10 @@ public class DuelResultService {
 	public MatchEndDto result(long matchId, String userId) {
 		DuelMatch match = matches.findByIdAndUserId(matchId, userId)
 			.orElseThrow(() -> new BusinessException(DuelErrorCode.MATCH_NOT_FOUND, String.valueOf(matchId)));
+		List<DuelAnswer> opponentAnswers = match.isLive()
+				? answers.findByMatchIdOrderByPositionAsc(match.getOpponentMatchId()) : null;
 		DuelProgress progress = new DuelProgress(match, answers.findByMatchIdOrderByPositionAsc(matchId),
-				properties.questionsPerMatch());
+				properties.questionsPerMatch(), opponentAnswers);
 		scoring.settle(progress);
 		if (!match.isFinished()) {
 			throw new BusinessException(DuelErrorCode.MATCH_NOT_FINISHED, String.valueOf(matchId));

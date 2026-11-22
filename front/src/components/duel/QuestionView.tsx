@@ -156,6 +156,8 @@ export function QuestionView({
         rivalScore={rivalScore}
         activeIndex={activeIndex}
         questionCount={total}
+        live={state.live}
+        rivalLeft={state.rivalLeft}
       />
 
       {/* Question rendering */}

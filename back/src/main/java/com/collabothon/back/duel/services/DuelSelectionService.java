@@ -47,6 +47,11 @@ public class DuelSelectionService {
 	private final DuelProperties properties;
 
 	public List<DuelQuestion> selectQuestions(DuelMatch match) {
+		if (match.isLive()) {
+			// Both players of a live duel get the same questions in the same order: one shared seed, no per-player history.
+			long sharedSeed = Math.min(match.getId(), match.getOpponentMatchId());
+			return select(sharedSeed, match.getCategories(), Set.of(), properties.questionsPerMatch());
+		}
 		Set<String> seenQuestionIds = findSeenQuestionIds(match.getUserId(), match.getId());
 		return select(match.getId(), match.getCategories(), seenQuestionIds, properties.questionsPerMatch());
 	}

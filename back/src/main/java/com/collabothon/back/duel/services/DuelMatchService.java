@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,9 @@ import com.collabothon.back.entities.duel.DuelAnswer;
 import com.collabothon.back.entities.duel.DuelMatch;
 import com.collabothon.back.entities.duel.DuelMode;
 import com.collabothon.back.entities.duel.DuelQuestion;
+import com.collabothon.back.entities.duel.MatchStatus;
+import com.collabothon.back.dto.duel.PlayerCardDto;
+import com.collabothon.back.dto.duel.RivalSnapshotDto;
 import com.collabothon.back.exceptions.BusinessException;
 import com.collabothon.back.lesson.repositories.StoryRepository;
 
@@ -59,6 +63,12 @@ public class DuelMatchService {
 
 	private final DuelRivalSimulator rival;
 
+	private final List<RivalSnapshotProvider> snapshotProviders;
+
+	private final DuelProgressLoader progressLoader;
+
+	private final ApplicationEventPublisher events;
+
 	private final DuelScoring scoring;
 
 	private final DuelPlayerCardService playerCards;
@@ -88,6 +98,32 @@ public class DuelMatchService {
 				questionCount(), question(progress, 0, questions));
 	}
 
+	/**
+	 * Starts a live duel: one row per player, each with the other as rival, linked through {@code opponent_match_id}
+	 * and sharing one question list. Both rows are written in one transaction.
+	 */
+	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
+	public LiveMatch startLive(String userA, String userB, List<String> categories) {
+		validateCategories(categories);
+		Instant now = clock.instant();
+		DuelMatch matchA = matches.save(DuelMatch.start(DuelMode.HUMAN, categories, userA, userB, now));
+		DuelMatch matchB = matches.save(DuelMatch.start(DuelMode.HUMAN, categories, userB, userA, now));
+		matchA.linkOpponent(matchB.getId());
+		matchB.linkOpponent(matchA.getId());
+		return new LiveMatch(matchA.getId(), matchB.getId(), userA, userB, playerCards.card(userA),
+				playerCards.card(userB), categories);
+	}
+
+	/** The unfinished live duels of {@code userId} in which they still have questions to answer. */
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	public List<LiveRivalRef> unfinishedLiveMatches(String userId) {
+		return matches.findByUserIdAndStatusAndOpponentMatchIdIsNotNull(userId, MatchStatus.IN_PROGRESS)
+			.stream()
+			.filter(match -> answers.findByMatchIdOrderByPositionAsc(match.getId()).size() < questionCount())
+			.map(match -> new LiveRivalRef(match.getRivalUserId(), match.getOpponentMatchId()))
+			.toList();
+	}
+
 	/** Records the answer to question {@code request.index()}. Repeating an already answered index returns its result. */
 	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
 	public AnswerResultDto answer(long matchId, AnswerRequest request) {
@@ -106,19 +142,24 @@ public class DuelMatchService {
 		}
 		progress.add(answers.save(gradeAnswer(progress, answerMapper.toChosenAnswer(request), questions)));
 		scoring.settle(progress);
+		publishLiveProgress(progress);
 		return answerResult(progress, index, questions);
 	}
 
 	/** The match as the player sees it now; also writes timeouts for questions whose deadline has passed. */
 	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
 	public MatchStateDto state(long matchId, String userId) {
-		DuelProgress progress = load(matchId, userId);
+		DuelMatch found = findMatch(matchId, userId);
+		if (found.isLive()) {
+			recordOpponentTimeouts(found);
+		}
+		DuelProgress progress = progressLoader.load(found);
 		List<DuelQuestion> questions = selectionService.selectQuestions(progress.match());
 		recordTimeouts(progress, questions);
 		scoring.settle(progress);
 		DuelMatch match = progress.match();
 		return matchMapper.toStateDto(match, playerCards.card(match.getUserId()), playerCards.rivalCard(match),
-				progress.questionCount(), progress.results(), currentQuestion(progress, questions), rival.snapshot(progress),
+				progress.questionCount(), progress.results(), currentQuestion(progress, questions), snapshot(progress),
 				scoring.yourFinal(progress));
 	}
 
@@ -135,9 +176,40 @@ public class DuelMatchService {
 	}
 
 	private DuelProgress load(long matchId, String userId) {
-		DuelMatch match = matches.findByIdAndUserId(matchId, userId)
+		return progressLoader.load(findMatch(matchId, userId));
+	}
+
+	private DuelMatch findMatch(long matchId, String userId) {
+		return matches.findByIdAndUserId(matchId, userId)
 			.orElseThrow(() -> new BusinessException(DuelErrorCode.MATCH_NOT_FOUND, String.valueOf(matchId)));
-		return new DuelProgress(match, answers.findByMatchIdOrderByPositionAsc(matchId), questionCount());
+	}
+
+	private RivalSnapshotDto snapshot(DuelProgress progress) {
+		return snapshotProviders.stream()
+			.filter(provider -> provider.supports(progress.match()))
+			.findFirst()
+			.map(provider -> provider.snapshot(progress))
+			.orElse(null);
+	}
+
+	/** An opponent who left has their overdue questions written as timeouts, so the match always ends. */
+	private void recordOpponentTimeouts(DuelMatch match) {
+		matches.findById(match.getOpponentMatchId()).ifPresent(opponent -> {
+			DuelProgress opponentProgress = new DuelProgress(opponent,
+					answers.findByMatchIdOrderByPositionAsc(opponent.getId()), questionCount());
+			recordTimeouts(opponentProgress, selectionService.selectQuestions(opponent));
+		});
+	}
+
+	/** Tells the opponent, once this transaction commits, how far the player has got. */
+	private void publishLiveProgress(DuelProgress progress) {
+		DuelMatch match = progress.match();
+		if (!match.isLive()) {
+			return;
+		}
+		List<Boolean> done = progress.results().stream().filter(java.util.Objects::nonNull).toList();
+		Integer finalScore = progress.isComplete() ? progress.score() : null;
+		events.publishEvent(new LiveRivalUpdate(match.getRivalUserId(), match.getOpponentMatchId(), done, finalScore));
 	}
 
 	/** Grades the next question's answer; an answer after the deadline is a timeout and is not graded. */
@@ -196,7 +268,7 @@ public class DuelMatchService {
 
 	private void withRival(DuelAnswer.DuelAnswerBuilder answer, DuelProgress progress, boolean playerCorrect,
 			Instant playerAnsweredAt) {
-		if (!progress.match().hasRival()) {
+		if (!progress.match().hasRival() || progress.match().isLive()) {
 			return;
 		}
 		RivalAnswer rivalAnswer = rival.answer(progress, playerCorrect, playerAnsweredAt);
@@ -209,7 +281,7 @@ public class DuelMatchService {
 		if (index + 1 < progress.questionCount()) {
 			next = question(progress, index + 1, questions);
 		}
-		return answerMapper.toResultDto(answer, next, rival.snapshot(progress), scoring.yourFinal(progress),
+		return answerMapper.toResultDto(answer, next, snapshot(progress), scoring.yourFinal(progress),
 				progress.match().isFinished());
 	}
 

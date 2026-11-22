@@ -173,6 +173,20 @@ The build follows the option marked "chosen".
   the two-per-area limit of the gap lessons, as §5 words it. (b) note every lesson of a picked path.
 - **C17 Extra copy on the screen.** (a) **chosen:** a helper line "Pick every topic that is new to you." and a
   subtitle on "Not sure yet", which `OptionCard` requires. (b) title only.
+- **C18 Consent notice (high; settle before merging to main).** F1b Q20's wording still says "the ranges you pick"
+  and "We keep the result and the ranges". Nothing asks for ranges now; picked topics are sent and kept. (a) keep it:
+  the notice is inaccurate. (b) **recommended, not built, needs Jan:** "Your answers, the topics you pick and ranges
+  from your accounts are checked by an external AI provider to pick your first lesson. Exact account numbers never
+  leave this phone. We keep the result, your topics and the ranges." followed by the existing last sentence.
+- **C19 Jev wording.** (a) **chosen:** as §4 words it. (b) explain `interests` in the F1 and `first_lesson` questions
+  and drop the horizon clause when it is null: verbatim spec blocks, and needs a live probe.
+- **C20 Every area solid, no Jev pick.** Smoke: picking Inflation & savings and passing everything starts in Seoul,
+  with Berlin second; later picks are not in the path. (a) **chosen:** §5, the rule's start is unchanged. (b) start on
+  the first pick and append the other picks: closer to §0, changes the rules.
+- **C21 "New to you".** Preselected hints and plain interest are both reported as "new to you". (a) **chosen:** §0's
+  meaning. (b) "You chose to learn about X.": softer, a weaker signal.
+- **C22 Risk and retirement focus.** No path maps to them, so a pick cannot raise them. (a) **chosen:** §3's mapping.
+  (b) a separate focus mapping for interests.
 
 ## Tasks
 
@@ -182,9 +196,66 @@ The build follows the option marked "chosen".
 - [x] T3 Screen, personas, frontend contract (§1, §2, §3, C9, C10): done when the jest cases of §6 pass, with tsc and
       lint clean.
 - [ ] T4 e2e and recordings (§6): done when the touched Playwright specs pass against this branch's backend.
-- [ ] T5 Smoke without a Jev key (§6): done when the picked path is first or second on a real run.
+- [x] T5 Smoke without a Jev key (§6): done when the picked path is first or second on a real run.
 
 ## Review triage
 
 | # | finding | file:line | severity | fix/defer/reject | reason or commit |
 |---|---|---|---|---|---|
+| A1 | consent notice says "the ranges you pick"; interests are sent and kept | `ConsentCard.tsx:45` | high | defer | real; the notice is Jan's Q20 wording: C18 |
+| A2 | disclosure keeps ids and omits the per-lesson notes | `CategorizationService.java:155` | medium | defer | ids follow C3; the notes derive from disclosed picks and answers; follow-up |
+| A3 | pre-V26 categorisation rows read with null interests and old lines | `V26__interests.sql:3` | medium | defer | by reading: no caller dereferences it; the next onboarding rewrites the row |
+| A4 | front type lacks sharedWithModel.interests, answers not nullable | `types/categorization.ts:63` | low | defer | already wrong on main, no reader |
+| A5 | F1 questions never say what state.interests means | `JevClient.java:71` | medium | defer | Jev wording: C19 |
+| A6 | first_lesson instruction ignores the interest notes | `JevClient.java:119` | medium | defer | Jev wording: C19 |
+| A7 | step choices never offer Gold as the first question | `QuickCheckRules.java:137` | medium | defer | C15 |
+| A8 | step questions refer to a horizon that is always null | `JevClient.java:93` | medium | defer | §1 and §4 keep horizon: C19 |
+| A9 | all areas solid without a Jev pick starts at Seoul | `QuickCheckRules.java:380` | medium | defer | seen in smoke, follows §5 and C6: C20 |
+| A10 | only the first pick is added to an all-solid path | `QuickCheckRules.java:393` | medium | defer | follows §5 and C7: C20 |
+| A11 | Jev's later lesson still opens the path at lesson 1 | `QuickCheckRules.java:385` | medium | reject | C5, lessons unlock in order |
+| A12 | "want to learn" is reported as "new to you", hints included | `InterestsStep.tsx:52` | medium | defer | §0's meaning: C21 |
+| A13 | interests cannot reach the risk or retirement focus | `FocusArea.java:34` | medium | defer | follows §3: C22 |
+| A14 | API accepts coming-soon stories | `UserProfileService.java:39` | low | reject | all 7 stories are available, §3 asks for a story id |
+| A15 | enum imports a service type | `FocusArea.java:7` | low | defer | refactor with simplify-jev (C11) |
+| A16 | advice guard runs on fixture categories only | `CategorizationRulesTests.java:250` | low | defer | the 7 real names were read and hold no advice; follow-up test |
+| A17 | old goals are wiped without asking again | `V26__interests.sql:3` | medium | reject | §3 and §7: no backfill |
+| A18 | rename without an alias | `OnboardingRequest.java:10` | medium | reject | §3: deliberate change, front and back land together |
+| A19 | a 400 on the background save is only logged | `useOnboarding.tsx:95` | medium | defer | old fire-and-forget; C9 sends rendered ids only |
+| A20 | Skip and "Not sure yet" are stored alike | `InterestsStep.tsx:60` | low | reject | §2 defines both as an empty list |
+| A21 | Back before Continue drops picks and restores hints | `InterestsStep.tsx:23` | medium | defer | regression, visible before saving; small follow-up: lift the state |
+| A22 | Skip after a failed refetch erases confirmed picks | `InterestsStep.tsx:60` | medium | defer | needs a failed request; small follow-up with A21 |
+| A23 | a hung stories request has no way out | `InterestsStep.tsx:62` | medium | defer | useApi has no timeout anywhere; small follow-up: withTimeout |
+| A24 | hardware back closes the onboarding | `onboarding.tsx:60` | medium | defer | same on main |
+| A25 | F1/F1b specs still describe goals | `docs/specs/F1b-quick-check.md:213` | medium | defer | docs pass after simplify-jev |
+| A26 | dead style, stale comments, stale fixture line | `personas.ts:22` | low | defer | cosmetic |
+| S1 | record layout | `OnboardingRequest.java:10` | low | reject | layout already on main |
+| S2 | limits live on the DTO, not in consts | `OnboardingRequest.java:14` | low | defer | same place as the removed GOALS constant |
+| S3 | spec under .plans | `.plans/onboarding-interests-spec.md` | low | reject | the path Jan gave |
+| S4 | multi-line comment | `personas.ts:19` | low | reject | it replaces a comment of the same length |
+| S5 | F1b contract still says goals | `docs/specs/F1b-quick-check.md:213` | medium | defer | same as A25 |
+| S6 | two meanings of category in adjacent comments | `types/stories.ts:40` | low | defer | cosmetic |
+| S7 | many yellow icons with multi-select | `InterestsStep.tsx:68` | low | reject | the Design Kit's selected OptionCard |
+| S8 | multi-select looks like radios | `ui.tsx:153` | low | reject | C10; a selected card shows a check |
+| S9 | component fetches its data | `InterestsStep.tsx:21` | low | reject | §2 asks for useApi, as PathSummary does |
+| S10 | copied styles, one now unused | `onboarding.tsx:217` | low | defer | same as A26 |
+| S11 | duplicate add-interests block | `JevClient.java:158` | low | reject | three lines |
+| S12 | story-to-area mapping repeated | `CategorizationRules.java:184` | low | reject | both call ofStoryArea |
+| S13 | fromInterests in the enum reverses layering | `FocusArea.java:7` | low | defer | same as A15 |
+| S14 | test provider tree repeated | `interests.test.tsx:41` | low | reject | test-only |
+| S15 | answers and stories travel together | `CategorizationRules.java:68` | low | reject | refactor outside the change |
+| S16 | plan has eight parameters | `QuickCheckRules.java:377` | low | defer | simplify-jev (C11) |
+| S17 | stories() borrowed from CategorizationService | `QuickCheckService.java:54` | low | defer | simplify-jev (C11) |
+| S18 | notes and ids are plain strings | `JevQuickCheck.java:16` | low | reject | a type would add code only |
+| S19 | Intake wraps one field | `types/onboarding.ts:16` | low | reject | §1 only deletes fields |
+| S20 | Survey is a stale name | `e2e/app.ts:82` | low | reject | test-only |
+| P1 | start-here spec still stubs a horizon | `e2e/start-here.spec.ts:10` | low | reject | stub only, the spec passes |
+| P2 | first_lesson instruction not updated | `JevClient.java:119` | medium | defer | same as A6: C19 |
+| P3 | T4 and T5 unverified | `.plans/onboarding-interests-spec.md` | low | reject | run afterwards: 23/23 Playwright, 5 smoke runs |
+| P4 | deleted constants beyond the list | `constants/quickCheck.ts` | low | reject | dead after §1 |
+| P5 | readyForNext now computed with candidates | `QuickCheckRules.java:379` | low | reject | a candidate is never solid, so it stays false; true only under C6 |
+| P6 | plan counts any lesson, pool only quiz lessons | `QuickCheckRules.java:397` | low | reject | C5 and C8 |
+| P7 | unknown story area throws | `FocusArea.java:40` | low | reject | all areas map; the question pool already throws on main |
+| P8 | API accepts coming-soon stories | `UserProfileService.java:39` | low | reject | same as A14 |
+| P9 | duplicate ids reach Story.picked | `Story.java` | low | reject | answers come from the profile, which is de-duplicated |
+
+A = adversarial, S = code review Standards, P = code review Spec. One round; no fix was sent.

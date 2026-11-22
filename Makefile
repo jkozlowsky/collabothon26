@@ -1,6 +1,6 @@
 # Local development shortcuts. `make help` lists them.
 SHELL := /bin/bash
-.PHONY: help dev phone phone-usb setup db db-stop db-reset back front web android check test e2e record
+.PHONY: help dev phone phone-usb setup db db-stop db-reset back front web android check test e2e record record-berlin
 
 help: ## List commands
 	@grep -E '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
@@ -49,4 +49,7 @@ e2e: ## End-to-end tests in Chromium (reuses a running backend/app). Resets demo
 	cd front && npx playwright install chromium && npx playwright test
 
 record: ## Demo clips of Alex's journey (Learn → onboarding → globe → lesson → duel), one MP4 per step in front/recordings/out/. Reuses a running make dev; resets demo-user's onboarding and lesson progress
-	cd front && npx playwright install chromium && npx playwright test -c playwright.record.config.ts
+	cd front && npx playwright install chromium && npx playwright test -c playwright.record.config.ts alex-journey
+
+record-berlin: ## Demo take "Berlin, from first lesson to first step" (onboarding → lesson with glossary → bank offers → duel), clips + one film in front/recordings/out/berlin/. Reuses a running make dev; resets demo-user's onboarding and lesson progress
+	cd front && npx playwright install chromium && npx playwright test -c playwright.record.config.ts berlin-first-step

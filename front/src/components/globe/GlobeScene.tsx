@@ -17,6 +17,8 @@ type Props = {
   active: boolean;
   /** No frame within FIRST_FRAME_TIMEOUT: the GL context or the texture never came up. */
   onFail: () => void;
+  /** The first frame with the land texture is on screen. */
+  onReady?: () => void;
 };
 
 const FIRST_FRAME_TIMEOUT = 5000;
@@ -76,7 +78,7 @@ void main() {
  * The three.js globe: one textured sphere turned by `yaw`/`pitch`. Pins and the plane are RN overlays.
  * The canvas fills its parent.
  */
-export function GlobeScene({ radius, yaw, pitch, active, onFail }: Props) {
+export function GlobeScene({ radius, yaw, pitch, active, onFail, onReady }: Props) {
   const drawn = useRef(false);
   useEffect(() => {
     const timer = setTimeout(() => !drawn.current && onFail(), FIRST_FRAME_TIMEOUT);
@@ -90,7 +92,10 @@ export function GlobeScene({ radius, yaw, pitch, active, onFail }: Props) {
       frameloop={active ? 'demand' : 'never'}
       gl={{ antialias: true, alpha: true }}
     >
-      <Sphere yaw={yaw} pitch={pitch} onFirstFrame={() => (drawn.current = true)} />
+      <Sphere yaw={yaw} pitch={pitch} onFirstFrame={() => {
+          drawn.current = true;
+          onReady?.();
+        }} />
     </Canvas>
   );
 }

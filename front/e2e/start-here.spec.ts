@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
-import { goToInvite, openApp, passConsent, resetOnboarding, tap } from './app';
+import { expectOnLearn, openApp, resetOnboarding, skipOnboarding, tap } from './app';
 import { categorization } from '../src/test-utils/categorization';
 
 const CATEGORIZATION_URL = '**/api/users/demo-user/categorization';
@@ -14,24 +14,21 @@ const row = (storyId: string | null, patch: object = {}) =>
   });
 
 test.beforeEach(async ({ request }) => {
-  await resetOnboarding(request);
+  await skipOnboarding(request);
 });
 
 test.afterAll(async ({ request }) => {
   await resetOnboarding(request);
 });
 
-/** The POST of onboarding's categorisation answers `stored`; reads answer through `current`. */
+/** Onboarding is already skipped (beforeEach); the stored categorisation is read through `current`. */
 async function toMap(page: Page, current: { get: () => { status: number; json?: object } }) {
-  await openApp(page);
   await page.route(CATEGORIZATION_URL, (route) => {
-    if (route.request().method() === 'POST') return route.fulfill({ json: row(null) });
     const { status, json } = current.get();
     return route.fulfill({ status, json });
   });
-  await goToInvite(page);
-  await tap(page, 'onboarding-skip-all');
-  await passConsent(page);
+  await openApp(page);
+  await expectOnLearn(page);
 }
 
 test('the badge and its why line show on the startHere story card only', async ({ page }) => {
@@ -39,10 +36,10 @@ test('the badge and its why line show on the startHere story card only', async (
   await expect(page.getByTestId('story-card-start-here')).toHaveCount(1);
   await expect(page.getByTestId('story-card-berlin').getByTestId('story-card-start-here')).toBeVisible();
   await expect(page.getByTestId('story-card-seoul').getByTestId('story-card-start-here')).toHaveCount(0);
-  await expect(page.getByTestId('story-card-why-here')).toHaveText('Why here: Your answers about Saving');
+  await expect(page.getByTestId('story-card-why-here')).toHaveText('Based on your onboarding answers');
   // The globe turns to the story and its callout carries the same cue.
   await expect(page.getByTestId('callout-start-here')).toBeVisible();
-  await expect(page.getByTestId('callout-why-here')).toHaveText('Why here: Your answers about Saving');
+  await expect(page.getByTestId('callout-why-here')).toHaveText('Based on your onboarding answers');
 });
 
 test('no stored categorisation leaves the sheet as it is', async ({ page }) => {

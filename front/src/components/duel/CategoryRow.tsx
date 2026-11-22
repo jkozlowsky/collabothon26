@@ -22,6 +22,8 @@ export function CategoryRow({ cat, checked, onToggle }: Props) {
       onPress={onToggle}
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
+      // react-native-web drops accessibilityState, so the web build also gets the ARIA attribute.
+      aria-checked={checked}
       accessibilityLabel={`${cat.name}, level ${cat.level}`}
       testID={`duel-category-${cat.story}`}
       style={styles.row}

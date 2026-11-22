@@ -6,7 +6,7 @@ import Animated, { cubicBezier, useReducedMotion, type CSSStyle } from 'react-na
 
 import type { IconName } from '@/constants/onboarding';
 import * as theme from '@/constants/theme';
-import { colors, radii, spacing } from '@/constants/theme';
+import { colors, fonts, radii, spacing } from '@/constants/theme';
 
 /** Strong ease-out for UI; ease-in-out for things moving across the screen. */
 export const EASE_OUT = cubicBezier(0.23, 1, 0.32, 1);
@@ -210,20 +210,27 @@ export function ChoiceChip({ label, selected, disabled, onPress, testID }: ChipP
   );
 }
 
-type StepHeaderProps = { step: number; total: number; onBack: () => void; onSkip: () => void };
+type StepHeaderProps = {
+  /** The control on the left: `BackButton` in the survey; the quick check has none. */
+  left?: ReactNode;
+  /** The centre label, e.g. "Step 2 of 3". */
+  label: string;
+  /** How much of the track is filled, 0–1. */
+  progress: number;
+  /** Only Profile → "Edit answers" can be skipped. */
+  onSkip?: () => void;
+};
 
-export function StepHeader({ step, total, onBack, onSkip }: StepHeaderProps) {
+export function StepHeader({ left, label, progress, onSkip }: StepHeaderProps) {
   return (
     <View style={styles.stepHeader}>
       <View style={styles.stepRow}>
-        <BackButton onPress={onBack} />
-        <Text style={styles.stepText}>
-          Step {step} of {total}
-        </Text>
-        <SkipLink onPress={onSkip} />
+        {left ?? <View style={styles.stepSpacer} />}
+        <Text style={styles.stepText}>{label}</Text>
+        {onSkip ? <SkipLink onPress={onSkip} /> : <View style={styles.stepSpacer} />}
       </View>
       <View style={styles.track}>
-        <Animated.View style={[styles.trackFill, motion.size, { width: `${(step / total) * 100}%` }]} />
+        <Animated.View style={[styles.trackFill, motion.size, { width: `${Math.min(1, progress) * 100}%` }]} />
       </View>
     </View>
   );
@@ -245,12 +252,10 @@ export function BackButton({ onPress, onDark }: { onPress: () => void; onDark?: 
   );
 }
 
-type SkipLinkProps = { onPress: () => void; label?: string; onDark?: boolean; testID?: string };
-
-export function SkipLink({ onPress, label = 'Skip', onDark, testID = 'onboarding-skip' }: SkipLinkProps) {
+function SkipLink({ onPress }: { onPress: () => void }) {
   return (
-    <Tappable testID={testID} accessibilityRole="button" onPress={onPress} hitSlop={12} pressedScale={0.92}>
-      <Text style={[styles.skip, onDark && styles.onDark]}>{label}</Text>
+    <Tappable testID="onboarding-skip" accessibilityRole="button" onPress={onPress} hitSlop={12} pressedScale={0.92}>
+      <Text style={styles.skip}>Skip</Text>
     </Tappable>
   );
 }
@@ -302,11 +307,11 @@ export function Rise({ children, delay = 0, style }: { children: ReactNode; dela
 }
 
 export const type = StyleSheet.create({
-  display: { fontSize: 26, lineHeight: 32, fontWeight: '700', color: colors.textPrimary },
-  body: { fontSize: 15, lineHeight: 22, color: colors.textMuted },
-  overline: { fontSize: 10, fontWeight: '700', letterSpacing: 1.2, color: colors.feedbackXp },
-  strong: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
-  label: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
+  display: { fontFamily: fonts.bold, fontSize: 26, lineHeight: 32, color: colors.textPrimary },
+  body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.textMuted },
+  overline: { fontFamily: fonts.bold, fontSize: 10, letterSpacing: 1.2, color: colors.feedbackXp },
+  strong: { fontFamily: fonts.semiBold, fontSize: 12, color: colors.textPrimary },
+  label: { fontFamily: fonts.medium, fontSize: 12, color: colors.textMuted },
 });
 
 /** Shared motion styles (Reanimated CSS transitions and animations; they run on the UI thread). */
@@ -343,7 +348,7 @@ const styles = StyleSheet.create({
   buttonPrimary: { backgroundColor: colors.brandAccent },
   buttonGhost: { backgroundColor: 'transparent' },
   buttonDisabled: { backgroundColor: colors.borderDefault },
-  buttonLabel: { fontSize: 15, fontWeight: '600' },
+  buttonLabel: { fontFamily: fonts.semiBold, fontSize: 15 },
   tile: { borderRadius: radii.tile, alignItems: 'center', justifyContent: 'center' },
   option: {
     flexDirection: 'row',
@@ -357,8 +362,8 @@ const styles = StyleSheet.create({
   },
   optionSelected: { backgroundColor: colors.brandAccentSoft, borderColor: colors.brandPrimary },
   optionText: { flex: 1, gap: 2 },
-  optionTitle: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
-  optionSubtitle: { fontSize: 13, color: colors.textMuted },
+  optionTitle: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.textPrimary },
+  optionSubtitle: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
   radio: {
     width: 24,
     height: 24,
@@ -409,9 +414,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
-  skip: { fontSize: 13, fontWeight: '600', color: colors.brandPrimary },
-  onDark: { color: colors.textOnBrand },
+  stepText: { fontFamily: fonts.semiBold, fontSize: 12, color: colors.textMuted },
+  // As big as the back button: the label stays centred and the row keeps its height with no control beside it.
+  stepSpacer: { width: 36, height: 36 },
+  skip: { fontFamily: fonts.semiBold, fontSize: 13, color: colors.brandPrimary },
   closeOnDark: { backgroundColor: colors.onBrandTile, borderColor: colors.onBrandTile },
   track: { height: 6, borderRadius: 3, backgroundColor: colors.borderDefault, overflow: 'hidden' },
   trackFill: { height: '100%', borderRadius: 3, backgroundColor: colors.brandAccent },

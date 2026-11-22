@@ -1,7 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 
-import { AREA_LABEL } from '@/constants/quickCheck';
 import { api } from '@/lib/api';
 import { CATEGORIZATION_PATH } from '@/lib/categorization';
 import type { Categorization } from '@/types/categorization';
@@ -19,13 +18,5 @@ export function useStartHere() {
       return () => ctrl.abort();
     }, []),
   );
-  return categorization?.startHere ? { storyId: categorization.startHere.storyId, why: whyHere(categorization) } : null;
-}
-
-/** The three "Why here" lines of the spec. */
-function whyHere({ startHere, readyForNext, mastery }: Categorization) {
-  const { area: key } = startHere!;
-  if (readyForNext || key === null) return 'Why here: Next on your path';
-  const area = AREA_LABEL[key];
-  return mastery[key] == null ? `Why here: ${area} is not checked yet` : `Why here: Your answers about ${area}`;
+  return categorization?.startHere ? { storyId: categorization.startHere.storyId, why: 'Based on your onboarding answers' } : null;
 }

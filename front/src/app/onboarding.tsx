@@ -1,78 +1,99 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { useState, type ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { AtlasHero, DuelIllustration, LessonGlobeIllustration } from '@/components/onboarding/Illustrations';
+import { AnswerTile } from '@/components/categorizing/AnswerTile';
+import { ConsentCard } from '@/components/onboarding/ConsentCard';
+import { AtlasHero, DuelIllustration, LessonGlobeIllustration, QuickCheckHero } from '@/components/onboarding/Illustrations';
+import { Page } from '@/components/onboarding/Page';
 import {
   BackButton,
   BigButton,
   ChoiceChip,
   CloseButton,
-  FadeIn,
-  IconTile,
   OptionCard,
   Rise,
-  SkipLink,
   StepHeader,
   type,
 } from '@/components/onboarding/ui';
-import {
-  EXPERIENCE,
-  GOAL_GROUPS,
-  LIFE_STAGES,
-  type Option,
-} from '@/constants/onboarding';
+import { EXPERIENCE, GOAL_GROUPS, LIFE_STAGES, PURPOSES, type Option } from '@/constants/onboarding';
+import { PROFILE_QUESTIONS } from '@/constants/quickCheck';
 import { colors, radii, spacing, type as text } from '@/constants/theme';
+import { useBank } from '@/hooks/useBank';
 import { useOnboarding } from '@/hooks/useOnboarding';
-import type { Goal, OnboardingAnswers } from '@/types/onboarding';
+import { ageBandOf, ageLabel, factLabels, factsFrom } from '@/lib/categorization';
+import type { Goal, Intake, OnboardingAnswers, Purpose } from '@/types/onboarding';
+import type { Horizon, ProfileRanges } from '@/types/quickCheck';
 
-const STEPS = [
-  'welcome',
-  'intro',
-  'challenge',
-  'invite',
-  'life-stage',
-  'goals',
-  'experience',
-] as const;
-type Step = (typeof STEPS)[number];
+type Step =
+  | 'welcome'
+  | 'intro'
+  | 'challenge'
+  | 'consent'
+  | 'life-stage'
+  | 'experience'
+  | 'goals'
+  | 'purpose'
+  | 'horizon'
+  | 'check-intro';
 
-const QUESTIONS = ['life-stage', 'goals', 'experience'] as const;
+const OPENING: Step[] = ['welcome', 'intro', 'challenge', 'consent'];
+const FRESH: Step[] = [...OPENING, 'purpose', 'horizon', 'check-intro'];
+/** Profile → "Edit answers". */
+const EDITING: Step[] = ['life-stage', 'goals', 'experience'];
+const NOT_QUESTIONS: Step[] = [...OPENING, 'check-intro'];
+
+/** Everything the survey collects; the profile keeps the life stage, the goals and the experience. */
+type Survey = OnboardingAnswers & {
+  purpose?: Purpose;
+  horizon?: Horizon;
+};
 
 export default function OnboardingScreen() {
   const { complete, answers: saved } = useOnboarding();
+  const { state: bank } = useBank();
   // Profile → "Edit answers": straight to the questions, prefilled, and back to the profile when done.
   const editing = useLocalSearchParams<{ edit?: string }>().edit === '1';
-  const firstStep = editing ? STEPS.indexOf('life-stage') : 0;
-  const [index, setIndex] = useState(firstStep);
-  const [answers, setAnswers] = useState<OnboardingAnswers>(editing ? saved : { goals: [] });
+  const [index, setIndex] = useState(0);
+  const [answers, setAnswers] = useState<Survey>(editing ? saved : { goals: [] });
 
-  const step: Step = STEPS[index];
-  const next = () => setIndex((i) => Math.min(i + 1, STEPS.length - 1));
-  const back = () => (editing && index === firstStep ? router.back() : setIndex((i) => Math.max(i - 1, 0)));
-  const finish = () => {
-    complete(answers, false);
-    if (editing) router.back();
+  const steps = editing ? EDITING : FRESH;
+  const questions = steps.filter((s) => !NOT_QUESTIONS.includes(s));
+  const step = steps[index];
+  const purpose = PURPOSES.find((p) => p.value === answers.purpose);
+
+  const next = () => setIndex((i) => Math.min(i + 1, steps.length - 1));
+  const back = () => (editing && index === 0 ? router.back() : setIndex((i) => Math.max(i - 1, 0)));
+  const set = <K extends keyof Survey>(key: K, value: Survey[K]) => setAnswers((a) => ({ ...a, [key]: value }));
+
+  const intake = (): Intake => {
+    const horizon = answers.horizon ?? null;
+    const profile: ProfileRanges = { ageBand: ageBandOf(bank.owner.age), savingsCover: null, horizon };
+    return {
+      purpose: purpose && purpose.value !== 'none' ? purpose.title : null,
+      horizon,
+      check: { profile },
+    };
   };
-  // Skip: onboarding counts as done (nothing personalised) and Learn opens.
-  const skipAll = () => complete({ goals: [] }, true);
-  // Close: nothing is saved, back to the bank; the next Learn tap shows onboarding again.
+
+  const finishEditing = () => {
+    complete({ lifeStage: answers.lifeStage, goals: answers.goals, experience: answers.experience });
+    router.back();
+  };
+  // The purpose goes on the profile as its goals.
+  const startCheck = () => complete({ goals: purpose?.goals ?? [] }, intake());
+  // Close and "Not now": nothing is saved, back to the bank; the next Learn tap shows onboarding again.
   const exit = () => (router.canGoBack() ? router.back() : router.navigate('/'));
-  const set = <K extends keyof OnboardingAnswers>(key: K, value: OnboardingAnswers[K]) =>
-    setAnswers((a) => ({ ...a, [key]: value }));
 
   if (step === 'welcome') {
     return (
       <Page
         dark
-        stepKey={step}
+        testID="onboarding-welcome"
         header={
           <View style={styles.row}>
             <CloseButton onPress={exit} onDark />
-            <SkipLink onPress={skipAll} onDark testID="onboarding-skip-intro" />
           </View>
         }
         footer={<BigButton label="Get started" onPress={next} testID="onboarding-start" />}
@@ -86,6 +107,11 @@ export default function OnboardingScreen() {
         <Rise delay={350}>
           <Text style={styles.wordmark} accessibilityRole="header">
             Atlas<Text style={styles.wordmarkDot}>.</Text>
+          </Text>
+        </Rise>
+        <Rise delay={420}>
+          <Text style={styles.motto} testID="atlas-motto">
+            Atlas lets your financial decisions land safely.
           </Text>
         </Rise>
         <Rise delay={480}>
@@ -120,11 +146,10 @@ export default function OnboardingScreen() {
     return (
       <Page
         dark
-        stepKey={step}
+        testID="onboarding-intro"
         header={
           <View style={styles.row}>
             <BackButton onPress={back} onDark />
-            <SkipLink onPress={skipAll} onDark testID="onboarding-skip-intro" />
           </View>
         }
         footer={<BigButton label="Next" onPress={next} testID="onboarding-next" />}
@@ -165,11 +190,10 @@ export default function OnboardingScreen() {
     return (
       <Page
         dark
-        stepKey={step}
+        testID="onboarding-challenge"
         header={
           <View style={styles.row}>
             <BackButton onPress={back} onDark />
-            <SkipLink onPress={skipAll} onDark testID="onboarding-skip-intro" />
           </View>
         }
         footer={<BigButton label="Next" onPress={next} testID="onboarding-challenge-next" />}
@@ -184,8 +208,7 @@ export default function OnboardingScreen() {
         </Rise>
         <Rise delay={500}>
           <Text style={styles.welcomeBody}>
-            Go head-to-head with friends or other learners: same questions, same clock. Climb the weekly league and see
-            whose ideas hold up.
+            Same questions, same clock. See whose ideas hold up.
           </Text>
         </Rise>
         <Rise delay={620} style={styles.pillars}>
@@ -206,72 +229,81 @@ export default function OnboardingScreen() {
     );
   }
 
-  if (step === 'invite') {
+  if (step === 'consent') {
     return (
       <Page
-        stepKey={step}
+        testID="onboarding-consent"
         header={
           <View style={styles.row}>
             <BackButton onPress={back} />
-            <CloseButton onPress={exit} />
           </View>
         }
         footer={
           <>
-            <BigButton label="Let's do it" onPress={next} testID="onboarding-personalise" />
-            <BigButton label="Skip for now" variant="ghost" onPress={skipAll} testID="onboarding-skip-all" />
-            <Text style={[type.label, { textAlign: 'center' }]}>You can personalise any time later in Profile.</Text>
+            <BigButton label="Use my account data" onPress={next} testID="consent-accept" />
+            <BigButton label="Not now" variant="ghost" onPress={exit} testID="consent-not-now" />
           </>
         }
       >
-        <View style={styles.grow} />
-        <IconTile icon="user" active size={64} />
-        <View style={{ height: spacing.sm }} />
-        <Text style={type.overline}>PERSONALISE · OPTIONAL</Text>
-        <Text style={type.display}>Got a minute for a few questions?</Text>
-        <Text style={type.body}>
-          Tell us about your goals and how you like to learn, and we&apos;ll shape your path around you. No tests, no
-          wrong answers.
-        </Text>
-        <View style={styles.benefits}>
-          {['Lessons matched to your goals', 'Examples from your stage of life', 'A starting level that fits you'].map(
-            (b) => (
-              <View key={b} style={styles.benefit}>
-                <View style={styles.benefitCheck}>
-                  <Feather name="check" size={14} color={colors.feedbackSuccess} />
-                </View>
-                <Text style={styles.benefitText}>{b}</Text>
-              </View>
-            ),
-          )}
-        </View>
-        <View style={[styles.row, { justifyContent: 'center', gap: 6 }]}>
-          <Feather name="clock" size={14} color={colors.textMuted} />
-          <Text style={type.label}>3 questions · under a minute</Text>
-        </View>
-        <View style={styles.grow} />
+        <ConsentCard facts={[...factLabels(factsFrom(bank)), ageLabel(ageBandOf(bank.owner.age))]} />
       </Page>
     );
   }
 
-  // Personalisation questions
-  const qIndex = QUESTIONS.indexOf(step);
-  const isLast = qIndex === QUESTIONS.length - 1;
-  const answered = {
+  if (step === 'check-intro') {
+    return (
+      <Page
+        testID="onboarding-check-intro"
+        header={
+          <View style={styles.row}>
+            <BackButton onPress={back} />
+          </View>
+        }
+        footer={<BigButton label="Start the quick check" onPress={startCheck} testID="check-start" />}
+      >
+        <View style={styles.grow} />
+        <QuickCheckHero />
+        <View style={styles.gap} />
+        <Text style={type.overline}>QUICK CHECK · 3–6 QUESTIONS</Text>
+        <Text style={type.display} accessibilityRole="header">
+          Let&apos;s see what you already know
+        </Text>
+        <Text style={type.body}>Pick an answer and you see the right one straight away. Nothing here can be failed.</Text>
+        <View style={styles.meta}>
+          <Feather name="clock" size={14} color={colors.textMuted} />
+          <Text style={type.label}>About 2 minutes</Text>
+        </View>
+        <View style={styles.growDouble} />
+      </Page>
+    );
+  }
+
+  const qIndex = questions.indexOf(step);
+  const lastEdit = editing && qIndex === questions.length - 1;
+  const answered: Partial<Record<Step, boolean>> = {
     'life-stage': !!answers.lifeStage,
     goals: answers.goals.length > 0,
     experience: !!answers.experience,
-  }[step];
+    purpose: !!answers.purpose,
+    horizon: !!answers.horizon,
+  };
 
   return (
     <Page
-      stepKey={step}
-      header={<StepHeader step={qIndex + 1} total={QUESTIONS.length} onBack={back} onSkip={finish} />}
+      testID={`onboarding-${step}`}
+      header={
+        <StepHeader
+          left={<BackButton onPress={back} />}
+          label={`Step ${qIndex + 1} of ${questions.length}`}
+          progress={(qIndex + 1) / questions.length}
+          onSkip={editing ? finishEditing : undefined}
+        />
+      }
       footer={
         <BigButton
-          label={isLast ? 'Finish' : 'Continue'}
-          onPress={isLast ? finish : next}
-          disabled={!answered}
+          label={lastEdit ? 'Finish' : 'Continue'}
+          onPress={lastEdit ? finishEditing : next}
+          disabled={!answered[step]}
           testID="onboarding-continue"
         />
       }
@@ -291,27 +323,17 @@ export default function OnboardingScreen() {
           <SingleChoice options={EXPERIENCE} value={answers.experience} onChange={(v) => set('experience', v)} />
         </Question>
       )}
+      {step === 'purpose' && (
+        <Question title="What are you saving for?" subtitle="Pick the one that fits best. It shapes your first lessons.">
+          <SingleChoice options={PURPOSES} value={answers.purpose} onChange={(v) => set('purpose', v)} />
+        </Question>
+      )}
+      {step === 'horizon' && (
+        <Question title={PROFILE_QUESTIONS.horizon.prompt} subtitle={`${PROFILE_QUESTIONS.horizon.why}.`}>
+          <RangeChoice options={PROFILE_QUESTIONS.horizon.options} value={answers.horizon} onChange={(v) => set('horizon', v)} />
+        </Question>
+      )}
     </Page>
-  );
-}
-
-type PageProps = { stepKey: Step; dark?: boolean; header?: ReactNode; footer: ReactNode; children: ReactNode };
-
-function Page({ stepKey, dark, header, footer, children }: PageProps) {
-  return (
-    <SafeAreaView
-      style={[styles.page, { backgroundColor: dark ? colors.brandPrimary : colors.bgCanvas }]}
-      testID={`onboarding-${stepKey}`}
-    >
-      <StatusBar style={dark ? 'light' : 'dark'} />
-      {header && <View style={styles.header}>{header}</View>}
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <FadeIn key={stepKey} style={styles.content}>
-          {children}
-        </FadeIn>
-      </ScrollView>
-      <View style={styles.footer}>{footer}</View>
-    </SafeAreaView>
   );
 }
 
@@ -369,7 +391,7 @@ function GoalPicker({ value, onChange }: { value: Goal[]; onChange: (v: Goal[]) 
           </View>
         </View>
       ))}
-      <View style={[styles.row, { justifyContent: 'flex-start', gap: 8 }]}>
+      <View style={styles.selected}>
         <Feather name="check" size={16} color={value.length ? colors.feedbackSuccess : colors.textMuted} />
         <Text style={[type.strong, { color: value.length ? colors.feedbackSuccess : colors.textMuted }]}>
           {value.length} selected
@@ -379,17 +401,38 @@ function GoalPicker({ value, onChange }: { value: Goal[]; onChange: (v: Goal[]) 
   );
 }
 
+/** The range questions: `OptionCard`s without an icon. */
+function RangeChoice<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { label: string; value: T }[];
+  value?: T;
+  onChange: (v: T) => void;
+}) {
+  return options.map((o) => (
+    <AnswerTile
+      key={o.value}
+      testID={`option-${o.value}`}
+      title={o.label}
+      state={value === o.value ? 'selected' : 'default'}
+      checked={value === o.value}
+      onPress={() => onChange(o.value)}
+    />
+  ));
+}
+
 const styles = StyleSheet.create({
-  page: { flex: 1 },
-  header: { paddingHorizontal: spacing.xxl, paddingTop: spacing.sm, paddingBottom: spacing.lg },
-  scroll: { flexGrow: 1, paddingHorizontal: spacing.xxl, paddingBottom: spacing.lg },
-  content: { flexGrow: 1, gap: 10 },
-  footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm },
   grow: { flexGrow: 1 },
+  growDouble: { flexGrow: 2 },
+  gap: { height: spacing.xxxl },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm - 2 },
   welcomeOverline: { ...text.overline, color: colors.brandAccent, letterSpacing: 3 },
   wordmark: { ...text.displayHero, color: colors.textOnBrand },
   wordmarkDot: { color: colors.brandAccent },
+  motto: { ...text.titleSection, color: colors.brandAccent, marginTop: -spacing.xs },
   welcomeTitle: { ...text.displayLarge, color: colors.textOnBrand },
   welcomeBody: { ...type.body, color: colors.onBrandMuted },
   pillars: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
@@ -405,27 +448,9 @@ const styles = StyleSheet.create({
     borderColor: colors.onBrandHairline,
   },
   pillarText: { ...text.labelStrong, color: colors.textOnBrand },
-  answers: { gap: 10, marginTop: spacing.lg },
+  answers: { gap: spacing.smPlus, marginTop: spacing.lg },
   goalGroup: { gap: spacing.xs + spacing.xxs },
   goalGroupTitle: { ...type.overline, color: colors.textMuted, textTransform: 'uppercase' },
   goalRow: { flexDirection: 'row', gap: spacing.sm },
-  benefits: {
-    marginTop: spacing.lg,
-    backgroundColor: colors.bgSurface,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    padding: spacing.lg,
-    gap: 14,
-  },
-  benefit: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  benefitCheck: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(30, 138, 94, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  benefitText: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  selected: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
 });

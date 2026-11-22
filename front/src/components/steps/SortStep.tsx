@@ -7,6 +7,7 @@ import { Feedback } from '@/components/lesson/Feedback';
 import { StepLayout } from '@/components/lesson/StepLayout';
 import { haptic } from '@/components/onboarding/ui';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
+import { playSfx } from '@/lib/sfx';
 import { shuffle } from '@/lib/lessonPlayer';
 import type { SortStep as SortStepData, StepOutcome } from '@/types/lessons';
 
@@ -44,6 +45,7 @@ export function SortStep({ step, retry = false, onDone }: Props) {
     setLast({ text: currentItem.text, correct, bucket: currentItem.bucket });
     if (!correct) setMistakes((m) => m + 1);
     haptic(correct ? 'success' : 'light');
+    playSfx(correct ? 'correct' : 'wrong');
     x.setValue(0);
     setPos((p) => p + 1);
   }

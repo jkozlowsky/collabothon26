@@ -1,15 +1,18 @@
 import Feather from '@expo/vector-icons/Feather';
 import { StyleSheet, View } from 'react-native';
-import Animated, { useReducedMotion, type CSSStyle } from 'react-native-reanimated';
+import Animated, { useReducedMotion, ZoomIn, type CSSStyle } from 'react-native-reanimated';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 import { Tappable } from '@/components/onboarding/ui';
 import { colors, elevation, storyColors } from '@/constants/theme';
-import { storyLabel, type StoryState } from '@/lib/stories';
+import { calloutState, storyLabel, type StoryState } from '@/lib/stories';
 import type { Story } from '@/types/stories';
 
 type Props = {
   story: Story;
   state: StoryState;
+  /** The path was finished just now: the check pops in. */
+  justDone?: boolean;
   onPress: () => void;
 };
 
@@ -17,7 +20,7 @@ type Props = {
 export const PIN_BOX = { width: 60, height: 64 } as const;
 
 /** Figma "Globe Pin": a teardrop in the story colour; the current one is larger and yellow, with a pulse. */
-export function GlobePin({ story, state, onPress }: Props) {
+export function GlobePin({ story, state, justDone, onPress }: Props) {
   const reduced = useReducedMotion();
   const active = state === 'active';
   const locked = state === 'comingSoon';
@@ -25,6 +28,8 @@ export function GlobePin({ story, state, onPress }: Props) {
   // A square turned 45° with one sharp corner reads as a pin; that corner is the tip.
   const headTop = PIN_BOX.height - size * Math.SQRT1_2 - size / 2;
   const head = { width: size, height: size, left: (PIN_BOX.width - size) / 2, top: headTop };
+  const progress = calloutState(story);
+  const badgeAt = { left: head.left + size - 10, top: headTop - 6 };
   const fill = active ? colors.brandAccent : locked ? colors.storySlate : storyColors[story.color];
 
   return (
@@ -50,12 +55,39 @@ export function GlobePin({ story, state, onPress }: Props) {
       <View style={[styles.icon, head]}>
         <Feather name={locked ? 'lock' : story.icon} size={active ? 20 : 16} color={active ? colors.textOnAccent : colors.textOnBrand} />
       </View>
-      {state === 'done' && (
-        <View style={[styles.badge, { left: head.left + size - 10, top: headTop - 6 }]}>
+      {progress === 'done' && (
+        // Keyed so a fresh finish remounts the badge and plays its entrance.
+        <Animated.View
+          key={justDone ? 'new' : 'old'}
+          entering={justDone && !reduced ? ZoomIn.springify().damping(9).delay(250) : undefined}
+          style={[styles.badge, styles.badgeDone, badgeAt]}
+          testID={`globe-pin-done-${story.id}`}
+        >
           <Feather name="check" size={10} color={colors.textOnBrand} />
+        </Animated.View>
+      )}
+      {progress === 'inProgress' && (
+        <View style={[styles.badge, badgeAt]} testID={`globe-pin-progress-${story.id}`}>
+          <ProgressPie share={story.progress.done / story.progress.total} />
         </View>
       )}
     </Tappable>
+  );
+}
+
+const PIE = 14;
+
+/** A filled wedge from 12 o'clock: the share of the path's lessons done. */
+function ProgressPie({ share }: { share: number }) {
+  const r = PIE / 2;
+  const a = 2 * Math.PI * Math.min(share, 0.999);
+  const x = r + r * Math.sin(a);
+  const y = r - r * Math.cos(a);
+  return (
+    <Svg width={PIE} height={PIE}>
+      <Circle cx={r} cy={r} r={r} fill={colors.brandPrimarySoft} />
+      <Path d={`M${r} ${r} L${r} 0 A${r} ${r} 0 ${a > Math.PI ? 1 : 0} 1 ${x} ${y} Z`} fill={colors.brandPrimary} />
+    </Svg>
   );
 }
 
@@ -100,8 +132,10 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     borderWidth: 2,
     borderColor: colors.bgSurface,
-    backgroundColor: colors.feedbackSuccess,
+    backgroundColor: colors.bgSurface,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  badgeDone: { backgroundColor: colors.feedbackSuccess },
 });

@@ -69,7 +69,10 @@ export function VideoLessonPlayer({ lesson, session, onClose, onNext, onOpenGlos
   const choiceKey = shown?.byChoice ? progress.choices[shown.byChoice.step] : undefined;
 
   const retry = isRetry(progress);
-  const segments: SegmentState[] = beats.map((id) => (id === current ? 'now' : progress.done.has(id) ? 'done' : 'todo'));
+  // One segment per scene: the bar counts the parts of the video, not the steps between them.
+  const segments: SegmentState[] = beats
+    .filter((id) => byId.has(id))
+    .map((id) => (id === current ? 'now' : progress.done.has(id) ? 'done' : 'todo'));
   // A repeated quiz at the end lights the last segment again.
   if (retry) segments[segments.length - 1] = 'now';
 
@@ -128,6 +131,7 @@ export function VideoLessonPlayer({ lesson, session, onClose, onNext, onOpenGlos
             ) : (
               <LessonEnd
                 title={lesson.title}
+                stop={{ position: lesson.position, total: lesson.total, city: lesson.city }}
                 xp={xp}
                 concepts={lesson.concepts.map((key) => ({ key, term: lesson.glossary[key]?.term ?? key, weak: weak.has(key) }))}
                 onConcept={setConcept}

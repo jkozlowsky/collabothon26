@@ -5,6 +5,15 @@ import { useOnboarding } from '@/hooks/useOnboarding';
 
 /** Where to go once onboarding finishes. Module state is fine: one app, one onboarding at a time. */
 let pendingTarget: Href | null = null;
+/** Set when onboarding hands over to the Map: the globe plays the arrival flight once. */
+let arrivalPending = false;
+
+/** True once after onboarding finished; the Map reads it to fly the plane in. */
+export function takeArrival() {
+  const pending = arrivalPending;
+  arrivalPending = false;
+  return pending;
+}
 
 /**
  * Opens the Atlas module from the bank. The first time (onboarding not done yet) the
@@ -13,21 +22,17 @@ let pendingTarget: Href | null = null;
  * @returns open(target, go) — `go` performs the switch when onboarding is done (defaults to navigating to `target`).
  */
 export function useOpenLearn() {
-  const { done } = useOnboarding();
+  const { loaded, done } = useOnboarding();
   return useCallback(
     (target: Href = '/map', go: () => void = () => router.navigate(target)) => {
+      // Until the profile has loaded nobody knows whether onboarding is behind this user.
+      if (!loaded) return;
       if (done) return go();
       pendingTarget = target;
       router.push('/onboarding');
     },
-    [done],
+    [loaded, done],
   );
-}
-
-/** Opens the Map focused on a story/lesson id (Map may ignore it until stories exist). */
-export function useOpenLearnFocus() {
-  const open = useOpenLearn();
-  return useCallback((focus: string) => open({ pathname: '/map', params: { focus } }), [open]);
 }
 
 /** Closes the screen on top of the bank and goes to `target`. */
@@ -39,7 +44,7 @@ function closeAndGo(target: Href) {
 /**
  * Mount once inside the main layout. Onboarding is a plain stack screen on top of the bank (not a
  * protected one: removing a protected screen rebuilds the stack and loses the bank's tab and scroll),
- * so when it completes this closes it and moves on to the consent card, which then calls continueToLearn.
+ * so when it completes this closes it and moves on to /categorizing (the quick check and the path), which then calls continueToLearn.
  */
 export function useResumeLearnAfterOnboarding() {
   const { done } = useOnboarding();
@@ -54,5 +59,6 @@ export function useResumeLearnAfterOnboarding() {
 export function continueToLearn() {
   const target = pendingTarget ?? '/map';
   pendingTarget = null;
+  arrivalPending = true;
   closeAndGo(target);
 }

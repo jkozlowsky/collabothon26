@@ -47,7 +47,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
-import com.collabothon.back.categorization.repositories.CheckQuestionRepository;
 import com.collabothon.back.lesson.repositories.LessonContentRepository;
 
 import tools.jackson.databind.json.JsonMapper;
@@ -109,9 +108,6 @@ class CategorizationControllerTests {
 	JdbcClient jdbc;
 
 	@Autowired
-	CheckQuestionRepository questions;
-
-	@Autowired
 	CategorizationRepository categorizations;
 
 	// Boot resets the Jev stub after each test; the clock needs its own reset, before the test, so a failed
@@ -141,10 +137,6 @@ class CategorizationControllerTests {
 	@Test
 	@Transactional
 	void alexIsCategorisedByJev() throws Exception {
-		TestBank bank = new TestBank(questions);
-		bank.question("sv-a", "berlin-1", "saving", "easy");
-		bank.question("sv-b", "sao-paulo-1", "saving", "easy");
-		bank.question("in-a", "tokyo-1", "investing", "easy");
 		onboard("alex", ANSWERS);
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(method(HttpMethod.POST))
@@ -157,10 +149,10 @@ class CategorizationControllerTests {
 		String expected = """
 				{"userId": "alex", "consent": true, "bankData": true, "role": "intermediate", "lifeStage": "family",
 				 "focusAreas": ["investing", "debt", "risk"],
-				 "confidenceGaps": [
-				   {"area": "saving", "direction": "under",
+				 "gaps": [
+				   {"area": "saving", "direction": "habit-ahead",
 				    "because": "You said: I save now and then. Money goes to savings or investments every month."},
-				   {"area": "investing", "direction": "under",
+				   {"area": "investing", "direction": "habit-ahead",
 				    "because": "You said: I save now and then. Your accounts with us include investment products."}],
 				 "lessonVariant": {"persona": "family", "level": "beginner", "lang": "standard"},
 				 "explanation": [
@@ -172,15 +164,16 @@ class CategorizationControllerTests {
 				    "because": ["Your accounts cover more than 6 months of spending.", "You picked investing as a goal.",
 				                "You are paying off a loan with us.",
 				                "Your accounts with us include investment products."]}],
-				 "profile": null, "mastery": {}, "confidence": {}, "answerCount": 0,
-				 "startLesson": {"lessonId": "tokyo-1", "title": "%1$s", "area": "investing", "storyId": "tokyo",
-				                 "storyCity": "Tokyo"},
-				 "readyForNext": false, "pathStoryIds": ["tokyo", "berlin", "sao-paulo"],
-				 "startHere": {"lessonId": "tokyo-1", "title": "%1$s", "area": "investing", "storyId": "tokyo",
-				               "storyCity": "Tokyo"},
+				 "profile": null, "mastery": {}, "answerCount": 0,
+				 "startLesson": {"lessonId": "seoul-1", "title": "%1$s", "area": "investing", "storyId": "seoul",
+				                 "storyCity": "Seoul"},
+				 "readyForNext": false,
+				 "pathStoryIds": ["seoul", "tokyo", "mumbai", "sao-paulo", "berlin", "buenos-aires", "nairobi"],
+				 "startHere": {"lessonId": "seoul-1", "title": "%1$s", "area": "investing", "storyId": "seoul",
+				               "storyCity": "Seoul"},
 				 "sharedWithModel": {"facts": %2$s, "answers": %3$s, "goals": ["start-saving", "stocks-etfs"], "profile": null, "answerCount": 0, "stepCallsMade": 0},
 				 "source": "jev", "model": "jev-2026-05", "categorizedAt": "2026-06-15T10:00:00Z"}"""
-			.formatted(lessonContent.lesson("tokyo-1").orElseThrow().path("title").asString(), FACTS, ANSWERS);
+			.formatted(lessonContent.lesson("seoul-1").orElseThrow().path("title").asString(), FACTS, ANSWERS);
 
 		categorize("alex", WITH_FACTS).andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json(expected, JsonCompareMode.STRICT));
@@ -268,7 +261,7 @@ class CategorizationControllerTests {
 
 		categorize("alex", "{\"consent\": false}").andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json("""
-					{"consent": false, "bankData": false, "lifeStage": "family", "confidenceGaps": [],
+					{"consent": false, "bankData": false, "lifeStage": "family", "gaps": [],
 					 "explanation": [{"output": "role", "because": ["You said: I save now and then."]},
 					                 {"output": "focusAreas",
 					                  "because": ["You picked investing as a goal.", "It fits the answers you gave."]}],
@@ -284,7 +277,7 @@ class CategorizationControllerTests {
 
 		categorize("alex", "{\"consent\": true}").andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json("""
-					{"consent": true, "bankData": false, "confidenceGaps": [], "sharedWithModel": {"facts": null}}"""));
+					{"consent": true, "bankData": false, "gaps": [], "sharedWithModel": {"facts": null}}"""));
 	}
 
 	@Test
@@ -296,7 +289,7 @@ class CategorizationControllerTests {
 
 		categorize("alex", WITH_FACTS).andExpect(status().isOk())
 			.andExpect(MockMvcResultMatchers.content().json("""
-					{"role": "novice", "lifeStage": null, "confidenceGaps": [],
+					{"role": "novice", "lifeStage": null, "gaps": [],
 					 "lessonVariant": {"persona": null, "level": "beginner", "lang": "plain"}}"""));
 	}
 

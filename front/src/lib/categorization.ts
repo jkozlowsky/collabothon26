@@ -4,7 +4,7 @@ import { positionCount } from '@/lib/bank/selectors';
 import { USER_ID } from '@/lib/user';
 import type { BankState } from '@/types/bank';
 import type { Categorization, Facts } from '@/types/categorization';
-import type { QuickResult } from '@/types/quickCheck';
+import type { AgeBand, QuickResult } from '@/types/quickCheck';
 
 export const CATEGORIZATION_PATH = `/api/users/${encodeURIComponent(USER_ID)}/categorization`;
 
@@ -65,7 +65,7 @@ async function postCategorization(body: object, signal: AbortSignal): Promise<Ca
 
 /**
  * `facts` only with consent: the backend refuses account data the user did not agree to share. `quick` is absent
- * when the Quick check was skipped (the backend then runs the F1 path); after an opt-out it is just `{ useRules: true }`.
+ * when the Quick check was skipped (the backend then runs the F1 path).
  * A 400 on the Quick check's answers (the bank changed under it) must not strand the user in Retry: F1 runs instead.
  */
 export async function categorize(
@@ -101,6 +101,11 @@ function band<T>(value: number, bounds: number[], bands: readonly T[]): T {
   const i = bounds.findIndex((b) => value < b);
   return bands[i === -1 ? bands.length - 1 : i];
 }
+
+/** The owner's age as the contract's band, computed on the device like the facts. */
+export const ageBandOf = (age: number): AgeBand => band(age, [26, 41, 60], ['18-25', '26-40', '41-59', '60+']);
+/** "Age 26–40", the consent screen's line for the band. */
+export const ageLabel = (ageBand: AgeBand) => `Age ${ageBand.replace('-', '–')}`;
 
 const CENTS_PER_EUR = 100;
 const SAVINGS_TARGET = /^(Savings|Depot)/;

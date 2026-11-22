@@ -5,8 +5,9 @@
   "place": "Your stop · your plan",
   "topic": "Small amounts over a long time",
   "minutes": 4,
-  "xp": 70,
+  "xp": 60,
   "concepts": [
+    "cost-averaging",
     "compound-interest",
     "time-horizon"
   ],
@@ -16,8 +17,80 @@
       "id": "t1",
       "phase": "learn",
       "kicker": "Savings plans",
-      "title": "How a monthly plan grows",
-      "body": "A savings plan invests the same amount every month. Over the years, the returns start to earn returns too. This is called [[compound-interest]]. Prices still move, so the value goes down at times. A plan needs money that can wait for many years, which means a long [[time-horizon]]."
+      "title": "Small amounts, long time",
+      "body": "A savings plan invests the same amount every month. When prices are low, the same €100 buys more fund units. When prices are high, it buys fewer. This is called [[cost-averaging]]. Over the years, the returns start to earn returns too. This is called [[compound-interest]]. Prices still move, so the value goes down at times. A plan needs money that can wait, a long [[time-horizon]].",
+      "stat": {
+        "value": "€69,299",
+        "label": "€100 a month for 25 years, at an assumed 6% a year",
+        "tone": "good"
+      }
+    },
+    {
+      "type": "slider-chart",
+      "id": "s1",
+      "phase": "learn",
+      "concepts": [
+        "compound-interest"
+      ],
+      "prompt": "€100 a month. Move the years. When does the growth pass the money you paid in?",
+      "model": "monthlyPlan",
+      "visual": "split",
+      "params": {
+        "years": {
+          "label": "Years",
+          "min": 1,
+          "max": 40,
+          "step": 1,
+          "value": 5,
+          "unit": " years"
+        },
+        "monthly": {
+          "label": "Monthly amount",
+          "min": 100,
+          "max": 100,
+          "step": 25,
+          "value": 100,
+          "unit": "€"
+        },
+        "rate": {
+          "label": "Assumed return per year",
+          "min": 6,
+          "max": 6,
+          "step": 1,
+          "value": 6,
+          "unit": "%"
+        }
+      },
+      "output": {
+        "label": "Value of the plan",
+        "unit": "€"
+      },
+      "goal": {
+        "condition": {
+          "of": "years",
+          "min": 22
+        },
+        "hint": "At 6% a year, it takes about 22 years."
+      },
+      "note": "This is an example, not a forecast. Returns can be negative for years."
+    },
+    {
+      "type": "predict",
+      "id": "p1",
+      "phase": "challenge",
+      "concepts": [
+        "cost-averaging"
+      ],
+      "prompt": "You invest €100 every month. One month, the fund unit costs €20. The next month, €10. How many units do you own after the two months?",
+      "input": {
+        "kind": "slider",
+        "min": 0,
+        "max": 30,
+        "step": 1,
+        "unit": " units"
+      },
+      "answer": 15,
+      "reveal": "15 units: 5 in the first month and 10 in the second. A low price bought twice as many. That is [[cost-averaging]]."
     },
     {
       "type": "quiz",
@@ -74,13 +147,14 @@
     },
     {
       "type": "slider-chart",
-      "id": "s1",
+      "id": "s2",
       "phase": "you",
       "concepts": [
         "compound-interest"
       ],
-      "prompt": "Today, {monthlyInvesting} a month goes into your savings plan. See how much the plan could be worth after some years, with an assumed return. Move the sliders to change the years, the amount and the return.",
+      "prompt": "Today, {monthlyInvesting} a month goes into your plan. See what it could grow into.",
       "model": "monthlyPlan",
+      "visual": "split",
       "params": {
         "years": {
           "label": "Years",
@@ -109,7 +183,7 @@
         }
       },
       "output": {
-        "label": "Value of the plan after these years",
+        "label": "Value of your plan",
         "unit": "€"
       },
       "goal": {
@@ -148,7 +222,7 @@
         "type": "scene",
         "id": "v1",
         "title": "How a plan grows",
-        "desc": "A monthly plan grows faster in later years, and its value still goes down at times.",
+        "desc": "The same amount every month buys more when prices are low: [[cost-averaging]]. Returns on returns are [[compound-interest]]. The value still goes down at times, so a plan needs a long [[time-horizon]].",
         "duration": 13,
         "camera": "push",
         "setting": {
@@ -211,10 +285,21 @@
     ],
     "beats": [
       "v1",
+      "s1",
+      "p1",
       "q1",
       "q2",
-      "s1",
+      "s2",
       "a1"
     ]
+  },
+  "variants": {
+    "level:beginner": {
+      "s1": {
+        "goal": {
+          "hint": "Move the years slider to 22 or more."
+        }
+      }
+    }
   }
 }

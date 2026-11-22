@@ -2,53 +2,71 @@
   "id": "seoul-3",
   "story": "seoul",
   "title": "Spot the red flags",
-  "place": "Hongdae · paid tip room",
-  "topic": "Sort the messages",
+  "place": "Mission 3 · Scams",
+  "topic": "Tip groups and pump and dump",
   "minutes": 3,
   "xp": 50,
-  "concepts": ["leading-room", "pump-and-dump"],
+  "concepts": [
+    "leading-room",
+    "pump-and-dump"
+  ],
   "steps": [
-    {
-      "type": "chat",
-      "id": "c1",
-      "title": "VIP Room · 1,284 members",
-      "messages": [
-        { "from": "Room leader", "text": "Welcome! Our members made 300% last month" },
-        { "from": "Room leader", "text": "Guaranteed 2x in a month. VIP only" },
-        { "from": "Room leader", "text": "VIP fee ₩990,000. Only 3 seats left" },
-        { "from": "Room leader", "text": "Everyone buys XYZ at 9:00 sharp. Tell no one" },
-        { "from": "Ji-woo", "me": true, "text": "How do you know it will go up?" },
-        { "from": "Room leader", "text": "Trust the process" }
-      ]
-    },
     {
       "type": "text",
       "id": "t1",
-      "kicker": "Word from Seoul",
-      "title": "리딩방 · leading room",
-      "body": "Paid chat rooms that sell “sure” stock tips. Korea's financial regulator has warned about them many times. Some leaders buy first, hype the stock to members, then sell into the rise. That is a [[pump-and-dump]]."
+      "kicker": "Scams",
+      "title": "“Guaranteed 2x in a month”",
+      "body": "Paid chat groups sell “sure” stock tips. Regulators across Europe warn about them. Some group leaders buy first, hype the share to members, then sell into the rise. That is a [[pump-and-dump]]. A paid tip group like this is sometimes called a [[leading-room]]."
     },
     {
       "type": "sort",
       "id": "so1",
-      "concepts": ["leading-room"],
+      "concepts": [
+        "leading-room"
+      ],
       "prompt": "Swipe each message: is it a red flag or information?",
-      "buckets": ["Red flag", "Information"],
+      "buckets": [
+        "Red flag",
+        "Information"
+      ],
       "items": [
-        { "text": "Guaranteed 2x in a month", "bucket": 0 },
-        { "text": "The company reported higher revenue this quarter", "bucket": 1 },
-        { "text": "Only 3 seats left, decide now", "bucket": 0 },
-        { "text": "The share price fell 12% this year", "bucket": 1 },
-        { "text": "Everyone is buying, don't miss out", "bucket": 0 },
-        { "text": "Pay ₩990,000 to join the VIP room", "bucket": 0 },
-        { "text": "The annual report lists the company's debts", "bucket": 1 }
+        {
+          "text": "Guaranteed 2x in a month",
+          "bucket": 0
+        },
+        {
+          "text": "The company reported higher revenue this quarter",
+          "bucket": 1
+        },
+        {
+          "text": "Only 3 seats left, decide now",
+          "bucket": 0
+        },
+        {
+          "text": "The share price fell 12% this year",
+          "bucket": 1
+        },
+        {
+          "text": "Everyone is buying, don't miss out",
+          "bucket": 0
+        },
+        {
+          "text": "Pay €700 to join the VIP group",
+          "bucket": 0
+        },
+        {
+          "text": "The annual report lists the company's debts",
+          "bucket": 1
+        }
       ],
       "explanation": "Red flags rush you, promise certain gains or ask you to pay for access. Information can be checked and doesn't tell you what to do."
     },
     {
       "type": "quiz",
       "id": "q1",
-      "concepts": ["leading-room"],
+      "concepts": [
+        "leading-room"
+      ],
       "prompt": "Which message is the strongest warning sign?",
       "options": [
         "“Guaranteed returns, no risk”",
@@ -61,16 +79,17 @@
     {
       "type": "quiz",
       "id": "q2",
-      "concepts": ["pump-and-dump"],
-      "prompt": "Why would a room leader want all members to buy at the same minute?",
+      "concepts": [
+        "pump-and-dump"
+      ],
+      "prompt": "Why would a group leader want all members to buy at the same minute?",
       "options": [
         "Their buying pushes the price up, so the leader can sell high",
         "Buying together is cheaper",
         "The stock exchange requires it"
       ],
       "correctIndex": 0,
-      "explanation": "When many members buy at once, the price jumps. A leader who bought earlier sells to them at that higher price. When the buying stops, the price falls back."
+      "explanation": "When many members buy at once, the price jumps. A leader who bought earlier sells to them at the higher price. When the buying stops, the price falls back."
     }
-  ],
-  "variants": {}
+  ]
 }

@@ -1,30 +1,28 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useEffectEvent, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, ActivityIndicator, BackHandler, Platform } from 'react-native';
 
-import { ConsentCard } from '@/components/categorizing/ConsentCard';
 import { FlowMessage } from '@/components/categorizing/FlowMessage';
-import { FlowPage } from '@/components/categorizing/FlowPage';
-import { KnowCard } from '@/components/categorizing/KnowCard';
-import { MapDock } from '@/components/categorizing/MapDock';
 import { LiveRegions } from '@/components/categorizing/LiveRegions';
 import { LockedLessons } from '@/components/categorizing/LockedLessons';
 import { PathSteps, type Step } from '@/components/categorizing/PathSteps';
 import { QuickCheckPage } from '@/components/categorizing/QuickCheckPage';
-import { Button } from '@/components/Button';
-import { GOAL_GROUPS, LIFE_STAGES } from '@/constants/onboarding';
+import { Page } from '@/components/onboarding/Page';
+import { BigButton } from '@/components/onboarding/ui';
 import { STATUS_TEXT } from '@/constants/quickCheck';
 import { colors } from '@/constants/theme';
 import { useBank } from '@/hooks/useBank';
 import { continueToLearn } from '@/hooks/useOpenLearn';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useQuickCheck } from '@/hooks/useQuickCheck';
+import { isE2E } from '@/lib/e2e';
 import { categorize, checkBackend, factLabels, factsFrom, isRetryable, withTimeout } from '@/lib/categorization';
 import { setSummary } from '@/lib/learningPath';
-import { answerCounts, fetchCheckQuestions } from '@/lib/quickCheck';
-import type { CheckQuestion, QuickResult } from '@/types/quickCheck';
+import { answerCounts, fetchCheckQuestions, savingForLine } from '@/lib/quickCheck';
+import type { CheckQuestion, ProfileRanges, QuickResult } from '@/types/quickCheck';
 
 const STEP_MS = 800;
+// The path screen stays up at least this long, so people can read its steps; e2e skips the wait.
 const MIN_MS = 2400;
 
 const STEPS = {
@@ -39,22 +37,30 @@ const ANSWERS_ONLY: StepId[] = ['answers', 'picking'];
 const ERROR_TITLE = 'Your path stopped halfway';
 const CHECK_ERROR_TITLE = "Your learning path didn't load";
 
-type Phase = 'consent' | 'know' | 'quick' | 'loading' | 'error';
+type Phase = 'opening' | 'quick' | 'loading' | 'error';
 
-const GOAL_LABEL = Object.fromEntries(GOAL_GROUPS.flatMap((g) => g.goals.map((goal) => [goal.value, goal.label])));
+const NO_PROFILE: ProfileRanges = { ageBand: null, savingsCover: null, horizon: null };
+// Without the survey's hand-over the user never saw the AI notice, so the path is built by rules alone.
+const RULES_ONLY: Partial<QuickResult> = { useRules: true };
 
-/** After a fresh onboarding: ask whether account data may be used, show what we know, the Quick check, then build the learning path. */
+/**
+ * After a fresh onboarding: the Quick check when the survey asked for it, then the learning path is built.
+ * Without the survey's hand-over (a reload here) the path is built from the saved answers alone.
+ */
 export default function CategorizingScreen() {
   const { state: bank } = useBank();
-  const { answers } = useOnboarding();
-  // Computed once per visit, so the facts sent are exactly the ones the card previewed.
+  const { intake } = useOnboarding();
+  // Computed once per visit, so every call of this visit sends the same facts.
   const [facts] = useState(() => factsFrom(bank));
   const labels = factLabels(facts);
-  const [check, setCheck] = useState<'pending' | 'ask' | 'failed'>('pending');
-  const [checkAttempt, setCheckAttempt] = useState(0);
-  const [phase, setPhase] = useState<Phase>('consent');
-  const [consent, setConsent] = useState(false);
-  const [pool, setPool] = useState<CheckQuestion[]>([]);
+  // A hand-over only exists once the user agreed on the consent screen.
+  const consent = intake !== null;
+  const check = intake?.check ?? null;
+  const wantsCheck = check !== null;
+  const [openFailed, setOpenFailed] = useState(false);
+  const [openAttempt, setOpenAttempt] = useState(0);
+  const [phase, setPhase] = useState<Phase>('opening');
+  const pool = useRef<CheckQuestion[]>([]);
   const sent = useRef<Partial<QuickResult> | undefined>(undefined);
   const [step, setStep] = useState(0);
   const [retryable, setRetryable] = useState(true);
@@ -67,24 +73,23 @@ export default function CategorizingScreen() {
     return () => ctrl.abort();
   }, []);
 
-  /** The one categorisation call; `quickResult` is absent when the Quick check was skipped. */
-  const start = async (withConsent: boolean, quickResult?: Partial<QuickResult>) => {
+  /** The one categorisation call; `quickResult` is absent when the Quick check did not run. */
+  const start = async (quickResult: Partial<QuickResult> | undefined = intake ? undefined : RULES_ONLY) => {
     const outer = visit.current?.signal;
-    if (inFlight.current || !outer) return;
+    if (inFlight.current || !outer || outer.aborted) return;
     inFlight.current = true;
     sent.current = quickResult;
-    setConsent(withConsent);
     setStep(0);
     setPhase('loading');
-    const judged = withTimeout(outer, (signal) => categorize(withConsent ? facts : null, signal, quickResult));
-    const [result] = await Promise.allSettled([judged, new Promise((r) => setTimeout(r, MIN_MS))]);
+    const judged = withTimeout(outer, (signal) => categorize(consent ? facts : null, signal, quickResult));
+    const [result] = await Promise.allSettled([judged, new Promise((r) => setTimeout(r, isE2E() ? 0 : MIN_MS))]);
     if (outer.aborted) return;
     if (result.status === 'fulfilled') {
       const history = quickResult?.history;
       setSummary({
         categorization: result.value,
-        counts: history && answerCounts(history, pool),
-        chipped: history?.some((h) => h.confidence !== null),
+        counts: history && answerCounts(history, pool.current),
+        savingFor: savingForLine(intake?.purpose ?? null, intake?.horizon ?? null),
       });
       return router.replace('/learning-path');
     }
@@ -94,55 +99,48 @@ export default function CategorizingScreen() {
   };
 
   const quick = useQuickCheck({
-    pool,
-    bank,
     consent,
     facts,
-    lifeStageSkipped: !answers.lifeStage,
-    onFinish: (result) => void start(consent, result),
-    onSkip: (useRules, calls) =>
-      void start(consent, useRules || calls > 0 ? { ...(useRules && { useRules }), ...(calls > 0 && { stepCallsMade: calls }) } : undefined),
+    profile: check?.profile ?? NO_PROFILE,
+    onFinish: (result) => void start(result),
+    onSkip: () => void start(),
   });
 
+  // No questions (or no hand-over) leaves the test out: the F1 path.
+  const opened = useEffectEvent((questions: CheckQuestion[]) => {
+    pool.current = questions;
+    if (!wantsCheck || !questions.length) return void start();
+    setPhase('quick');
+    quick.begin(questions);
+  });
   useEffect(() => {
     const ctrl = new AbortController();
     withTimeout(ctrl.signal, async (signal) => {
       await checkBackend(signal);
-      return fetchCheckQuestions(signal);
+      return wantsCheck ? fetchCheckQuestions(signal) : [];
     }).then(
       (questions) => {
-        if (ctrl.signal.aborted) return;
-        setPool(questions);
-        setCheck('ask');
+        if (!ctrl.signal.aborted) opened(questions);
       },
       (e: unknown) => {
         if (ctrl.signal.aborted) return;
         setRetryable(isRetryable(e));
-        setCheck('failed');
+        setOpenFailed(true);
       },
     );
     return () => ctrl.abort();
-  }, [checkAttempt]);
-  const recheck = () => {
-    setCheck('pending');
-    setCheckAttempt((a) => a + 1);
+  }, [openAttempt, wantsCheck]);
+  const reopen = () => {
+    setOpenFailed(false);
+    setOpenAttempt((a) => a + 1);
   };
-
-  const { back } = quick;
-  const goBack = useCallback(() => {
-    back();
-    setPhase('know');
-  }, [back]);
 
   // Leaving with the hardware back button would drop the user out of the flow uncategorised.
   useFocusEffect(
     useCallback(() => {
-      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-        if (phase === 'quick') goBack();
-        return true;
-      });
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
       return () => sub.remove();
-    }, [phase, goBack]),
+    }, []),
   );
 
   const ids = consent ? WITH_ACCOUNTS : ANSWERS_ONLY;
@@ -153,26 +151,17 @@ export default function CategorizingScreen() {
     return () => clearInterval(id);
   }, [phase, ids.length]);
 
-  const quickStatus = quick.stage === 'waiting' || quick.stage === 'done' ? quick.stage : null;
-  const status = phase === 'loading' ? STEPS[ids[step]] : phase === 'quick' && quickStatus ? STATUS_TEXT[quickStatus] : undefined;
-  const alert = phase === 'error' ? ERROR_TITLE : check === 'failed' ? CHECK_ERROR_TITLE : undefined;
+  const feedback = phase === 'quick' ? quick.view?.result?.feedback : undefined;
+  const quickStatus = phase === 'quick' && quick.status ? STATUS_TEXT[quick.status] : feedback && `${feedback.title}. ${feedback.body}`;
+  const status = phase === 'loading' ? STEPS[ids[step]] : quickStatus;
+  const alert = phase === 'error' ? ERROR_TITLE : phase === 'opening' && openFailed ? CHECK_ERROR_TITLE : undefined;
   // Native announces; web reads the live regions (aria-live on a Text is web-only). A question is read by the focus
-  // that lands on its prompt, so only the quiz's status lines are announced.
+  // that lands on its prompt, so only the quiz's feedback and status lines are announced.
   useEffect(() => {
     const message = status ?? alert;
     if (Platform.OS !== 'web' && message) AccessibilityInfo.announceForAccessibility(message);
   }, [phase, status, alert]);
 
-  /** Consent given or declined: "What we know" follows, unless there are no questions. */
-  const decide = (withConsent: boolean) => {
-    setConsent(withConsent);
-    if (!pool.length) return void start(withConsent);
-    setPhase('know');
-  };
-  const begin = (useRules: boolean) => {
-    quick.begin(useRules);
-    setPhase('quick');
-  };
   const screen = (): ReactNode => {
     if (phase === 'quick') {
       return (
@@ -180,86 +169,43 @@ export default function CategorizingScreen() {
           view={quick.view}
           position={quick.position}
           total={quick.total}
-          status={quickStatus}
-          ready={quick.ready}
-          dock={quick.view?.kind === 'knowledge' ? <MapDock marks={quick.dock} /> : undefined}
+          status={quick.status}
           onAnswer={quick.answer}
-          onBack={goBack}
+          onContinue={quick.proceed}
         />
       );
     }
 
-    if (phase === 'know') {
-      return (
-        <FlowPage
-          testID="categorizing-know"
-          footer={
-            <>
-              <Button label="Start the quick check" onPress={() => begin(false)} testID="know-start" />
-              <Button label="Change account access" variant="secondary" onPress={() => setPhase('consent')} testID="know-change" />
-              <Button label="Use simple check instead" variant="ghost" onPress={() => begin(true)} testID="know-simple" />
-            </>
-          }
-        >
-          <KnowCard
-            lifeStage={LIFE_STAGES.find((s) => s.value === answers.lifeStage)?.title ?? null}
-            goals={answers.goals.map((goal) => GOAL_LABEL[goal])}
-            facts={consent ? labels : null}
-          />
-        </FlowPage>
-      );
-    }
-
-    if (phase === 'consent') {
-      if (check === 'failed') {
+    if (phase === 'opening') {
+      if (!openFailed) {
         return (
-          <FlowPage
-            testID="categorizing-check-error"
-            center
-            note="You'll start with the general lessons."
-            footer={
-              <>
-                {retryable && <Button label="Retry" onPress={recheck} testID="categorizing-check-retry" />}
-                <Button
-                  label="Skip for now"
-                  variant={retryable ? 'ghost' : 'primary'}
-                  onPress={() => continueToLearn()}
-                  testID="categorizing-check-skip"
-                />
-              </>
-            }
-          >
-            <FlowMessage
-              title={CHECK_ERROR_TITLE}
-              body={retryable ? 'Try again in a moment.' : "We couldn't open your learning path this time."}
-            />
-          </FlowPage>
-        );
-      }
-      if (check === 'pending') {
-        return (
-          <FlowPage testID="categorizing-checking" center>
+          <Page testID="categorizing-checking" center>
             <ActivityIndicator color={colors.brandPrimary} accessibilityLabel="Checking your learning path" />
-          </FlowPage>
+          </Page>
         );
       }
       return (
-        <FlowPage
-          testID="categorizing-consent"
+        <Page
+          testID="categorizing-check-error"
+          center
+          note="You'll start with the general lessons."
           footer={
             <>
-              <Button label="Use my account data" onPress={() => decide(true)} testID="consent-accept" />
-              <Button
-                label="Continue without"
-                variant="secondary"
-                onPress={() => decide(false)}
-                testID="consent-decline"
+              {retryable && <BigButton label="Retry" onPress={reopen} testID="categorizing-check-retry" />}
+              <BigButton
+                label="Continue to Learn"
+                variant={retryable ? 'ghost' : 'primary'}
+                onPress={() => continueToLearn()}
+                testID="categorizing-check-skip"
               />
             </>
           }
         >
-          <ConsentCard facts={labels} quickCheck={pool.length > 0} />
-        </FlowPage>
+          <FlowMessage
+            title={CHECK_ERROR_TITLE}
+            body={retryable ? 'Try again in a moment.' : "We couldn't open your learning path this time."}
+          />
+        </Page>
       );
     }
 
@@ -273,27 +219,27 @@ export default function CategorizingScreen() {
 
     if (phase === 'loading') {
       return (
-        <FlowPage testID="categorizing-loading" center>
+        <Page testID="categorizing-loading" center>
           <FlowMessage title="Building your learning path…" body="This takes a few seconds.">
             <PathSteps steps={steps} />
             <LockedLessons />
           </FlowMessage>
-        </FlowPage>
+        </Page>
       );
     }
 
     return (
-      <FlowPage
+      <Page
         testID="categorizing-error"
         center
         note="You'll start with the general lessons."
         footer={
           <>
             {retryable && (
-              <Button label="Retry" onPress={() => void start(consent, sent.current)} testID="categorizing-retry" />
+              <BigButton label="Retry" onPress={() => void start(sent.current)} testID="categorizing-retry" />
             )}
-            <Button
-              label="Skip for now"
+            <BigButton
+              label="Continue to Learn"
               variant={retryable ? 'ghost' : 'primary'}
               onPress={() => continueToLearn()}
               testID="categorizing-skip"
@@ -311,7 +257,7 @@ export default function CategorizingScreen() {
         >
           <PathSteps steps={steps} />
         </FlowMessage>
-      </FlowPage>
+      </Page>
     );
   };
 

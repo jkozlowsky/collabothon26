@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -80,29 +81,41 @@ public class JevClient {
 			}
 			""";
 
-	// Verbatim from docs/specs/F1b-quick-check.md ("Jev step call"); `next.criteria` is filled per request.
+	// Verbatim from docs/specs/F1b-quick-check.md ("Jev step call"); `next.criteria` is filled per request, and
+	// before the first answer `first` is sent in its place.
 	private static final String STEP_QUESTIONS = """
 			{
-			  "mastery_saving":     {"type": "noul", "instructions": "Do this person's answers about saving, emergency funds and inflation show that they understand these ideas well?"},
-			  "mastery_investing":  {"type": "noul", "instructions": "Do this person's answers about investing, compound interest and market ups and downs show that they understand these ideas well?"},
+			  "mastery_saving":    {"type": "noul", "instructions": "Do this person's saving answers, the entries of `answers` whose `area` is saving, show that they understand ideas such as inflation, an emergency fund and how savings grow?"},
+			  "mastery_debt":      {"type": "noul", "instructions": "Do this person's borrowing answers, the entries of `answers` whose `area` is debt, show that they understand ideas such as instalments, card debt and the full cost of a loan?"},
+			  "mastery_investing": {"type": "noul", "instructions": "Do this person's investing answers, the entries of `answers` whose `area` is investing, show that they understand ideas such as market falls, borrowing to invest and spreading risk?"},
 			  "next": {"type": "choice",
-			    "instructions": "Which of these questions would show best what this person still needs to learn, given their answers so far, how sure they felt and when they might need their money?",
+			    "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers` and when they might need their money in `profile.horizon`?",
+			    "criteria": {}},
+			  "first": {"type": "choice",
+			    "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given their goals in `goals`, when they might need their money in `profile.horizon` and, when given, the facts about their accounts in `facts`?",
 			    "criteria": {}},
 			  "enough": {"type": "noul", "instructions": "Do the answers so far show clearly enough what this person already understands and what they should learn first?"}
 			}
 			""";
 
-	// Verbatim from docs/specs/F1b-quick-check.md ("Jev final call"); one gap question per area, criteria per request.
+	// Verbatim from docs/specs/F1b-quick-check.md ("Jev final call"); a gap question for each area that has a habit,
+	// `first_lesson.criteria` filled per request.
 	private static final String FINAL_QUESTIONS = """
 			{
-			  "gap_<area>": {"type": "choice",
-			    "instructions": "In this area, how does how sure this person felt compare with how well they answered?",
+			  "gap_saving": {"type": "choice",
+			    "instructions": "How does this person's saving habit in `facts.savesRegularly` (true when they move money to savings every month) compare with their knowledge answers about saving, the entries of `checkAnswers` whose `area` is saving?",
 			    "criteria": {
-			      "under": "Their answers in this area are mostly right, yet they said they were guessing or only fairly sure.",
-			      "over": "They said they were sure, yet their answers in this area show gaps.",
-			      "aligned": "How sure they felt roughly matches how well they answered."}},
+			      "habit_ahead": "They move money to savings every month, and at least one of their saving answers is wrong or not sure.",
+			      "knowledge_ahead": "Every one of their saving answers is correct, and they do not move money to savings every month.",
+			      "aligned": "The habit and the answers match: they move money to savings every month and every saving answer is correct, or they do not and at least one saving answer is wrong or not sure."}},
+			  "gap_investing": {"type": "choice",
+			    "instructions": "How does this person's investing habit in `facts.holdsInvestments` (true when they hold investment products) compare with their knowledge answers about investing, the entries of `checkAnswers` whose `area` is investing?",
+			    "criteria": {
+			      "habit_ahead": "They hold investment products, and at least one of their investing answers is wrong or not sure.",
+			      "knowledge_ahead": "Every one of their investing answers is correct, and they hold no investment products.",
+			      "aligned": "The habit and the answers match: they hold investment products and every investing answer is correct, or they hold none and at least one investing answer is wrong or not sure."}},
 			  "first_lesson": {"type": "choice",
-			    "instructions": "Which lesson should this person start with, given which ideas their answers show they have not mastered yet?",
+			    "instructions": "Which of these lessons should this person start with, given which ideas their knowledge answers in `checkAnswers` show they have not mastered yet?",
 			    "criteria": {}}
 			}
 			""";
@@ -138,32 +151,36 @@ public class JevClient {
 	}
 
 	public Optional<StepJudgement> step(ProfileRangesDto profile, List<String> goals, FactsDto facts,
-			List<JevAnswerDto> answers, List<FocusArea> answeredAreas, Map<String, String> unasked) {
+			List<JevAnswerDto> answers, List<FocusArea> answeredAreas, List<CheckLesson> lessons) {
 		Map<String, Object> state = new LinkedHashMap<>();
 		state.put("profile", profile);
 		state.put("goals", goals);
 		if (facts != null) {
 			state.put("facts", facts);
 		}
-		state.put("answers", answers);
+		// Before the first answer there is nothing to rate, and an empty list would read as a signal.
+		boolean first = answers.isEmpty();
+		if (!first) {
+			state.put("answers", answers);
+		}
 		ObjectNode asked = stepQuestions.objectNode();
 		answeredAreas.stream()
 			.map(area -> "mastery_" + area.wire())
-			// ponytail: an area gets a mastery question only once its text is in STEP_QUESTIONS (spec: areas without lessons).
+			// ponytail: an area gets a mastery question only once its text is in STEP_QUESTIONS (areas without lessons).
 			.filter(stepQuestions::has)
 			.forEach(key -> asked.set(key, stepQuestions.get(key).deepCopy()));
-		if (unasked.size() >= JevConsts.MIN_CHOICE_LABELS) {
-			ObjectNode next = (ObjectNode) stepQuestions.get("next").deepCopy();
-			unasked.forEach(next.putObject("criteria")::put);
-			asked.set("next", next);
+		if (lessons.size() >= JevConsts.MIN_CHOICE_LABELS) {
+			asked.set("next", lessonChoice(stepQuestions.get(first ? "first" : "next"), lessons));
 		}
-		asked.set("enough", stepQuestions.get("enough").deepCopy());
+		if (!first) {
+			asked.set("enough", stepQuestions.get("enough").deepCopy());
+		}
 		JevRequestDto body = new JevRequestDto(properties.model(), state, asked);
 		long start = System.nanoTime();
 		Future<JsonNode> call = stepCalls.submit(() -> post(body));
 		try {
 			JsonNode response = call.get(JevConsts.STEP_READ_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
-			Optional<StepJudgement> judgement = parseStep(response, asked, unasked.keySet(),
+			Optional<StepJudgement> judgement = parseStep(response, asked, lessons,
 					Duration.ofNanos(System.nanoTime() - start));
 			if (judgement.isEmpty()) {
 				log.warn("Jev step answer broke the contract, using the rule");
@@ -187,7 +204,7 @@ public class JevClient {
 		}
 	}
 
-	private static Optional<StepJudgement> parseStep(JsonNode response, ObjectNode asked, Set<String> unasked,
+	private static Optional<StepJudgement> parseStep(JsonNode response, ObjectNode asked, List<CheckLesson> lessons,
 			Duration elapsed) {
 		if (response == null) {
 			return Optional.empty();
@@ -204,12 +221,10 @@ public class JevClient {
 				mastery.put(area, p);
 			}
 		}
-		Double enough = probability(answers.path("enough").path("noul"));
+		Double enough = asked.has("enough") ? probability(answers.path("enough").path("noul")) : Double.valueOf(0);
 		String next = null;
 		if (asked.has("next")) {
-			Map<String, String> labels = new LinkedHashMap<>();
-			unasked.forEach(id -> labels.put(id, id));
-			JevChoice<String> choice = choice(answers.path("next"), labels);
+			JevChoice<String> choice = choice(answers.path("next"), lessonsByLabel(lessons));
 			if (choice == null) {
 				return Optional.empty();
 			}
@@ -249,13 +264,10 @@ public class JevClient {
 			state.put("checkAnswers", quickCheck.answers());
 			asked = questions.deepCopy();
 			for (FocusArea area : quickCheck.gapAreas()) {
-				asked.set(gapKey(area), finalQuestions.get("gap_<area>").deepCopy());
+				asked.set(gapKey(area), finalQuestions.get(gapKey(area)).deepCopy());
 			}
-			if (!quickCheck.stories().isEmpty()) {
-				ObjectNode firstLesson = (ObjectNode) finalQuestions.get("first_lesson").deepCopy();
-				ObjectNode criteria = firstLesson.putObject("criteria");
-				quickCheck.stories().forEach((id, topic) -> criteria.put(storyLabel(id), topic));
-				asked.set("first_lesson", firstLesson);
+			if (!quickCheck.lessons().isEmpty()) {
+				asked.set("first_lesson", lessonChoice(finalQuestions.get("first_lesson"), quickCheck.lessons()));
 			}
 		}
 		try {
@@ -288,8 +300,28 @@ public class JevClient {
 		return "gap_" + area.wire();
 	}
 
-	private static String storyLabel(String storyId) {
-		return "story_" + storyId;
+	/** Jev's option names for a gap: the enum names in lower case, with their underscores. */
+	private static Map<String, GapDirection> gapLabels() {
+		Map<String, GapDirection> labels = new LinkedHashMap<>();
+		for (GapDirection direction : GapDirection.values()) {
+			labels.put(direction.name().toLowerCase(Locale.ROOT), direction);
+		}
+		return labels;
+	}
+
+	/** A choice among lessons: each option is named by the lesson's topic and described by what the lesson covers. */
+	private static ObjectNode lessonChoice(JsonNode question, List<CheckLesson> lessons) {
+		ObjectNode choice = (ObjectNode) question.deepCopy();
+		ObjectNode criteria = choice.putObject("criteria");
+		lessons.forEach(lesson -> criteria.put(lesson.label(), "%s. Covers: %s.".formatted(lesson.topic(),
+				String.join(", ", lesson.concepts()).replace('-', ' '))));
+		return choice;
+	}
+
+	private static Map<String, String> lessonsByLabel(List<CheckLesson> lessons) {
+		Map<String, String> byLabel = new LinkedHashMap<>();
+		lessons.forEach(lesson -> byLabel.put(lesson.label(), lesson.id()));
+		return byLabel;
 	}
 
 	private static Optional<Judgement> parse(JsonNode response, JevQuickCheck quickCheck) {
@@ -312,29 +344,27 @@ public class JevClient {
 			return Optional.empty();
 		}
 		Map<FocusArea, GapDirection> gaps = new EnumMap<>(FocusArea.class);
-		String firstStory = null;
+		String firstLesson = null;
 		if (quickCheck != null) {
 			for (FocusArea area : quickCheck.gapAreas()) {
-				JevChoice<GapDirection> gap = choice(answers.path(gapKey(area)), GapDirection.values());
+				JevChoice<GapDirection> gap = choice(answers.path(gapKey(area)), gapLabels());
 				if (gap == null) {
 					return Optional.empty();
 				}
 				gaps.put(area, gap.value());
 			}
-			if (!quickCheck.stories().isEmpty()) {
-				Map<String, String> byLabel = new LinkedHashMap<>();
-				quickCheck.stories().keySet().forEach(id -> byLabel.put(storyLabel(id), id));
-				JevChoice<String> story = choice(answers.path("first_lesson"), byLabel);
-				if (story == null) {
+			if (!quickCheck.lessons().isEmpty()) {
+				JevChoice<String> lesson = choice(answers.path("first_lesson"), lessonsByLabel(quickCheck.lessons()));
+				if (lesson == null) {
 					return Optional.empty();
 				}
-				firstStory = story.value();
+				firstLesson = lesson.value();
 			}
 		}
 		JsonNode model = response.path("model");
 		boolean validModel = model.isString() && MODEL_ID.matcher(model.stringValue()).matches();
 		return Optional.of(new Judgement(role.value(), role.probabilities(), CategorizationRules.focusFromNoul(noul),
-				focus, validModel ? model.stringValue() : null, gaps, firstStory));
+				focus, validModel ? model.stringValue() : null, gaps, firstLesson));
 	}
 
 	private static <E extends Enum<E>> JevChoice<E> choice(JsonNode answer, E[] values) {

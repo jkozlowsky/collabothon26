@@ -6,9 +6,9 @@ import { STORIES } from '@/lib/stories';
 const berlin = STORIES.find((s) => s.id === 'berlin')!;
 
 test('the Start here story card shows the badge and its why line', async () => {
-  await render(<StoryCard story={berlin} state="default" onPress={() => {}} startHere={{ why: 'Why here: Your answers about Saving' }} />);
+  await render(<StoryCard story={berlin} state="default" onPress={() => {}} startHere={{ why: 'Based on your onboarding answers' }} />);
   expect(screen.getByTestId('story-card-start-here')).toHaveTextContent('Start here');
-  expect(screen.getByTestId('story-card-why-here')).toHaveTextContent('Why here: Your answers about Saving');
+  expect(screen.getByTestId('story-card-why-here')).toHaveTextContent('Based on your onboarding answers');
 });
 
 test('a card without startHere has neither', async () => {

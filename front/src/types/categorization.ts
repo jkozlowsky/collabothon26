@@ -37,7 +37,8 @@ export type Categorization = {
   role: Role;
   lifeStage: 'student' | 'family' | 'established' | 'pre-retirement' | null;
   focusAreas: FocusArea[];
-  confidenceGaps: { area: FocusArea; direction: 'under' | 'over'; because: string }[];
+  /** Where the knowledge answers and the account differ; `because` is the card's text. */
+  gaps: { area: FocusArea; direction: 'habit-ahead' | 'knowledge-ahead'; because: string }[];
   lessonVariant: {
     persona: 'student' | 'family' | 'pre-retirement' | null;
     level: 'beginner' | 'advanced';
@@ -51,8 +52,6 @@ export type Categorization = {
   /** Set when the Quick check ran (docs/specs/F1b-quick-check.md); the rest reads {} / 0 / [] / false without it. */
   profile: ProfileRanges | null;
   mastery: Mastery;
-  /** Per-area mean of the chips the user tapped, 0-1. */
-  confidence: Mastery;
   answerCount: number;
   startLesson: StartLesson | null;
   readyForNext: boolean;

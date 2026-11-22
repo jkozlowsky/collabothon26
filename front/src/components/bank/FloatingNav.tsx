@@ -1,5 +1,6 @@
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { router, usePathname, type Href } from 'expo-router';
+import { useEffect, useRef, type ComponentRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +10,7 @@ import { Icon } from '@/components/bank/Icon';
 import { motion, Tappable } from '@/components/onboarding/ui';
 import { colors, elevation, nav, radii, type } from '@/constants/theme';
 import { useOpenLearn } from '@/hooks/useOpenLearn';
+import { setAtlasDot, setOrbMeasure, useAtlasDot } from '@/lib/atlasOrb';
 import type { BankIconName } from '@/types/bank';
 
 type Mode = 'bank' | 'learn';
@@ -46,12 +48,28 @@ export function FloatingNav({ state, navigateToTab }: BottomTabBarProps) {
 
   const mode: Mode = state.routes[state.index].name === '(learn)' ? 'learn' : 'bank';
   // Group routes have no path segment, so "/" is Overview and "/payments" is Payments.
-  const activeRoute = pathname.replace(/^\//, '') || 'index';
+  // Only the first segment picks the tab, so a nested screen ("/glossary/<slug>") keeps its tab lit.
+  const activeRoute = pathname.split('/')[1] || 'index';
   const groupKey = (name: string) => state.routes.find((r) => r.name === name)!.key;
 
+  // The Atlas popup flies into this button when it closes (AtlasNudge); the dot stays until it is tapped.
+  const orbRef = useRef<ComponentRef<typeof View>>(null);
+  const dot = useAtlasDot() && mode === 'bank';
+  useEffect(() => {
+    if (mode !== 'bank') return setOrbMeasure(null);
+    setOrbMeasure((done) => {
+      if (!orbRef.current) return done(null);
+      orbRef.current.measureInWindow((x, y, width, height) => done(width ? { x, y, width, height } : null));
+    });
+    return () => setOrbMeasure(null);
+  }, [mode]);
+
   // Switching by tab key (not by URL) brings back the tab the user left on that side.
-  const onOrb = () =>
-    mode === 'bank' ? openLearn('/map', () => navigateToTab(groupKey('(learn)'))) : navigateToTab(groupKey('(bank)'));
+  const onOrb = () => {
+    setAtlasDot(false);
+    if (mode === 'bank') openLearn('/map', () => navigateToTab(groupKey('(learn)')));
+    else navigateToTab(groupKey('(bank)'));
+  };
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { bottom: insets.bottom + nav.bottomOffset }]}>
@@ -67,20 +85,24 @@ export function FloatingNav({ state, navigateToTab }: BottomTabBarProps) {
           </Glass>
         </Animated.View>
         <Animated.View layout={MORPH}>
-          <Tappable
-            testID={mode === 'bank' ? 'nav-learn' : 'nav-bank'}
-            accessibilityRole="button"
-            accessibilityLabel={mode === 'bank' ? 'Open Atlas' : 'Back to the bank'}
-            haptic="light"
-            pressedScale={0.94}
-            onPress={onOrb}
-            style={[styles.orb, mode === 'bank' ? styles.orbLearn : styles.orbBank]}
-          >
-            <Animated.View key={mode} entering={FadeIn.duration(220)} style={styles.orbInner}>
-              <Icon name={mode === 'bank' ? 'globe' : 'card'} size={22} color={colors.brandPrimary} />
-              <Text style={styles.orbLabel}>{mode === 'bank' ? 'Atlas' : 'Bank'}</Text>
-            </Animated.View>
-          </Tappable>
+          <View ref={orbRef} collapsable={false}>
+            <Tappable
+              testID={mode === 'bank' ? 'nav-learn' : 'nav-bank'}
+              accessibilityRole="button"
+              accessibilityLabel={mode === 'bank' ? (dot ? 'Open Atlas, a lesson is waiting' : 'Open Atlas') : 'Back to the bank'}
+              haptic="light"
+              pressedScale={0.94}
+              onPress={onOrb}
+              style={[styles.orb, mode === 'bank' ? styles.orbLearn : styles.orbBank]}
+            >
+              <Animated.View key={mode} entering={FadeIn.duration(220)} style={styles.orbInner}>
+                <Icon name={mode === 'bank' ? 'globe' : 'card'} size={22} color={colors.brandPrimary} />
+                <Text style={styles.orbLabel}>{mode === 'bank' ? 'Atlas' : 'Bank'}</Text>
+              </Animated.View>
+            </Tappable>
+            {/* Lands with the popup: a pop, then a quiet dot until the user opens Atlas. */}
+            {dot && <Animated.View pointerEvents="none" testID="nav-learn-dot" style={[styles.dot, motion.pop]} />}
+          </View>
         </Animated.View>
       </View>
     </View>
@@ -136,5 +158,16 @@ const styles = StyleSheet.create({
   // Learn side: a quiet glass-like way back.
   orbBank: { borderWidth: 1, borderColor: colors.glassBorder },
   orbInner: { alignItems: 'center', gap: 2 },
+  dot: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.brandPrimary,
+    borderWidth: 2,
+    borderColor: colors.bgSurface,
+  },
   orbLabel: { ...type.labelTabActive, color: colors.textOnAccent },
 });

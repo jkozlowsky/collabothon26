@@ -1,42 +1,21 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 
-import { resetOnboarding, skipQuickCheck } from './app';
+import { openApp, resetOnboarding, skipOnboarding } from './app';
 
 const CATEGORY_SLUGS = ['seoul', 'berlin', 'sao-paulo', 'tokyo'] as const;
 
 test.beforeEach(async ({ request }) => {
-  await resetOnboarding(request);
+  await skipOnboarding(request);
 });
 
 test.afterAll(async ({ request }) => {
   await resetOnboarding(request);
 });
 
-/** Open the app and navigate from Bank to Learn, complete/skip onboarding if prompted, then open Duel. */
+/** Onboarding is already skipped (beforeEach): open the app, go to Learn, then Duel. */
 async function openDuelLobby(page: Page) {
-  await skipQuickCheck(page);
-  await page.goto('/');
-  await page.getByTestId('nav-learn').click();
-
-  const welcome = page.getByTestId('onboarding-welcome');
-  const learn = page.getByTestId('screen-learn');
-
-  await Promise.race([
-    welcome.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {}),
-    learn.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {}),
-  ]);
-
-  if (await welcome.isVisible()) {
-    await page.getByTestId('onboarding-start').click();
-    await page.getByTestId('onboarding-next').click();
-    await page.getByTestId('onboarding-challenge-next').click();
-    await page.getByTestId('onboarding-skip-all').click();
-    await page.getByTestId('consent-decline').click();
-    await page.getByTestId('summary-start').click();
-    await expect(learn).toBeVisible({ timeout: 15000 });
-  }
-
-  await expect(learn).toBeVisible();
+  await openApp(page);
+  await expect(page.getByTestId('screen-learn')).toBeVisible();
   await page.getByTestId('nav-duel').click();
   await expect(page.getByTestId('screen-duel')).toBeVisible();
 }

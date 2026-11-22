@@ -52,7 +52,7 @@ The old 15-value `goals` vocabulary is **removed** everywhere. `interests` repla
 
 Change these deliberately and tell the team; this is a shared contract.
 
-- **DB:** new migration `V26__interests.sql` (written as V25, see C1): `ALTER TABLE user_profile RENAME COLUMN goals TO interests; UPDATE user_profile SET interests = '{}';`. Old goal ids are not story ids. Check that the V24 demo account seeds do not write `goals`; if they do, rewrite them.
+- **DB:** new migration `V27__interests.sql` (written as V25, then V26, see C1): `ALTER TABLE user_profile RENAME COLUMN goals TO interests; UPDATE user_profile SET interests = '{}';`. Old goal ids are not story ids. Check that the V24 demo account seeds do not write `goals`; if they do, rewrite them.
 - **Backend:**
   - `UserProfile.goals` becomes `interests` (same `TEXT[]`).
   - `goals` becomes `interests` in `OnboardingRequest`, `ProfileDto`, `OnboardingAnswersDto`, `ProfileAnswersProjection`, `SharedWithModelDto`, `JevQuickCheck` and `ProfileAnswersRepository`.
@@ -137,6 +137,7 @@ The build follows the option marked "chosen".
 - **C1 Migration number.** (a) V25: collides with `V25__duel_live.sql` in open PR #51, and Flyway refuses to start
   once both merge. (b) **chosen:** V26. PR #51 should merge first; otherwise a database that already ran V26 rejects
   the late V25. (Resolved during the build: #51 merged as `03d5f8f` and is merged into this branch.)
+  Moved again to V27: main merged and deployed `V26__duel_v4_areas.sql` (PR #56) before this branch landed.
 - **C2 List limit.** (a) **chosen:** `MAX_INTERESTS = 32`, well above the 7 paths. (b) the live story count.
 - **C3 Final Jev call.** The onboarding answers are serialised to Jev as they are, so ids such as `seoul` would leave
   the backend and read like the person's location. (a) **chosen:** §4's rule holds for both calls: `state.interests`
@@ -215,7 +216,7 @@ The build follows the option marked "chosen".
 |---|---|---|---|---|---|
 | A1 | consent notice says "the ranges you pick"; interests are sent and kept | `ConsentCard.tsx:45` | high | defer | real; the notice is Jan's Q20 wording: C18 |
 | A2 | disclosure keeps ids and omits the per-lesson notes | `CategorizationService.java:155` | medium | defer | ids follow C3; the notes derive from disclosed picks and answers; follow-up |
-| A3 | pre-V26 categorisation rows read with null interests and old lines | `V26__interests.sql:3` | medium | defer | by reading: no caller dereferences it; the next onboarding rewrites the row |
+| A3 | pre-V27 categorisation rows read with null interests and old lines | `V27__interests.sql:3` | medium | defer | by reading: no caller dereferences it; the next onboarding rewrites the row |
 | A4 | front type lacks sharedWithModel.interests, answers not nullable | `types/categorization.ts:63` | low | defer | already wrong on main, no reader |
 | A5 | F1 questions never say what state.interests means | `JevClient.java:71` | medium | defer | Jev wording: C19 |
 | A6 | first_lesson instruction ignores the interest notes | `JevClient.java:119` | medium | defer | Jev wording: C19 |
@@ -229,7 +230,7 @@ The build follows the option marked "chosen".
 | A14 | API accepts coming-soon stories | `UserProfileService.java:39` | low | reject | all 7 stories are available, §3 asks for a story id |
 | A15 | enum imports a service type | `FocusArea.java:7` | low | defer | refactor with simplify-jev (C11) |
 | A16 | advice guard runs on fixture categories only | `CategorizationRulesTests.java:250` | low | defer | the 7 real names were read and hold no advice; follow-up test |
-| A17 | old goals are wiped without asking again | `V26__interests.sql:3` | medium | reject | §3 and §7: no backfill |
+| A17 | old goals are wiped without asking again | `V27__interests.sql:3` | medium | reject | §3 and §7: no backfill |
 | A18 | rename without an alias | `OnboardingRequest.java:10` | medium | reject | §3: deliberate change, front and back land together |
 | A19 | a 400 on the background save is only logged | `useOnboarding.tsx:95` | medium | defer | old fire-and-forget; C9 sends rendered ids only |
 | A20 | Skip and "Not sure yet" are stored alike | `InterestsStep.tsx:60` | low | reject | §2 defines both as an empty list |

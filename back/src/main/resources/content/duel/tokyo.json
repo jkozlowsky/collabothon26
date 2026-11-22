@@ -70,6 +70,189 @@
     },
     {
       "id": "tokyo-d03",
+      "lessonId": "tokyo-1",
+      "sourceStepId": "m1",
+      "concepts": [
+        "asset-classes"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "match",
+        "id": "d03",
+        "prompt": "Match each financial asset type with its fundamental role:",
+        "pairs": [
+          [
+            "Bank cash deposit",
+            "Capital preservation and immediate accessibility for liquidity"
+          ],
+          [
+            "Corporate bond",
+            "Lending capital to receive fixed periodic interest payments"
+          ],
+          [
+            "Company equity share",
+            "Owning a fractional share of business profits and long-term growth"
+          ]
+        ],
+        "explanation": "Deposits lend for safety, bonds lend for income, and stocks provide ownership for capital growth."
+      }
+    },
+    {
+      "id": "tokyo-d04",
+      "lessonId": "tokyo-2",
+      "sourceStepId": "s1",
+      "concepts": [
+        "drawdown"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "chart",
+        "id": "d04",
+        "prompt": "A diversified equity index drops by 20% in a bear market. What percentage gain is needed from the bottom to break even?",
+        "model": "drawdownRecovery",
+        "params": {
+          "loss": {
+            "label": "Loss",
+            "min": -80,
+            "max": 0,
+            "step": 5,
+            "value": -20,
+            "unit": "%"
+          }
+        },
+        "output": {
+          "label": "Gain needed",
+          "unit": "%"
+        },
+        "input": {
+          "kind": "slider",
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "unit": "%"
+        },
+        "answer": 25,
+        "tolerance": 5,
+        "explanation": "After dropping 20% from 100 to 80, climbing back to 100 requires 20 / 80 = +25%."
+      }
+    },
+    {
+      "id": "tokyo-d05",
+      "lessonId": "tokyo-2",
+      "sourceStepId": "q1",
+      "concepts": [
+        "drawdown"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d05",
+        "prompt": "True or false: an investment fund that loses 20% in year one recovers all its losses if it gains 20% in year two.",
+        "options": [
+          "False, a 20% drop requires a 25% gain to recover the original balance",
+          "True, equal percentage moves in opposite directions cancel each other out",
+          "True, because exchange rules automatically compensate for first-year losses",
+          "False, but it breaks even if dividend yields are under 1%"
+        ],
+        "correctIndex": 0,
+        "explanation": "Gains apply to the reduced balance: 100 \u00d7 0.80 = 80; 80 \u00d7 1.20 = 96, leaving a net 4% loss."
+      }
+    },
+    {
+      "id": "tokyo-d06",
+      "lessonId": "tokyo-2",
+      "sourceStepId": "q2",
+      "concepts": [
+        "time-horizon"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d06",
+        "prompt": "Why does a 20% temporary drop matter very little for money invested for a child's university education in 17 years?",
+        "options": [
+          "There are many years for the market to recover and resume economic growth",
+          "Government insurance automatically reimburses educational fund drawdowns",
+          "University tuition fees are legally pegged to the lowest market valuation",
+          "Equity funds legally convert to cash deposits after any 20% market correction"
+        ],
+        "correctIndex": 0,
+        "explanation": "With a 17-year horizon, interim market cycles have ample time to recover before the funds are required."
+      }
+    },
+    {
+      "id": "tokyo-d07",
+      "lessonId": "tokyo-3",
+      "sourceStepId": "s1",
+      "concepts": [
+        "time-horizon",
+        "drawdown"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d07",
+        "prompt": "Kenji's index fund drops 40% during a severe recession. If the market then rebounds with a steady 8% annual return, how many years will it take for his balance to fully break even?",
+        "input": {
+          "kind": "slider",
+          "min": 0,
+          "max": 20,
+          "step": 1,
+          "unit": " years"
+        },
+        "answer": 7,
+        "tolerance": 1,
+        "reveal": "About 7 years. 0.60 \u00d7 (1.08)^7 \u2248 1.028, restoring the original balance.",
+        "explanation": "Recovering from 60 to 100 at 8% annual growth takes ln(100/60) / ln(1.08) \u2248 6.64 years (7 years)."
+      }
+    },
+    {
+      "id": "tokyo-d08",
+      "lessonId": "tokyo-3",
+      "sourceStepId": "q2",
+      "concepts": [
+        "drawdown"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d08",
+        "prompt": "Hiroshi invests \u20ac10,000 into a fund that drops 40% to \u20ac6,000 during a crash. The fund then rebounds with a 40% gain in the next period. What is his fund worth now?",
+        "options": [
+          "\u20ac8,400, leaving a net loss of \u20ac1,600",
+          "\u20ac10,000, fully returning to the start",
+          "\u20ac9,600, leaving a minor \u20ac400 loss",
+          "\u20ac7,200, gaining only half of the fall"
+        ],
+        "correctIndex": 0,
+        "explanation": "\u20ac6,000 \u00d7 1.40 = \u20ac8,400. Because the 40% gain applies to the smaller post-drop balance, it does not undo the \u20ac4,000 loss."
+      }
+    },
+    {
+      "id": "tokyo-d09",
+      "lessonId": "tokyo-3",
+      "sourceStepId": "q1",
+      "concepts": [
+        "drawdown",
+        "market-peaks"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d09",
+        "prompt": "What happened to investors who invested a lump sum in Japan's Nikkei 225 index at its 1989 bubble peak?",
+        "options": [
+          "It took approximately 34 years for the index to surpass that peak",
+          "The index rebounded to double its peak valuation within two years",
+          "The government dissolved the exchange and refunded all capital",
+          "The index permanently lost 99% of its value with zero recovery"
+        ],
+        "correctIndex": 0,
+        "explanation": "Concentrated bubble markets can take decades to recover, underscoring the vital importance of global diversification."
+      }
+    },
+    {
+      "id": "tokyo-d10",
       "lessonId": "tokyo-4",
       "sourceStepId": "s1",
       "concepts": [
@@ -78,7 +261,7 @@
       "timeLimitMs": null,
       "step": {
         "type": "chart",
-        "id": "d03",
+        "id": "d10",
         "prompt": "Aoi divides her portfolio between 60% domestic equities and 40% global equities. If domestic shares fall 30% while global shares gain 10%, what is her total return?",
         "model": "countryMix",
         "params": {
@@ -120,11 +303,11 @@
         },
         "answer": -14,
         "tolerance": 2,
-        "explanation": "Net return = (0.60 × −30%) + (0.40 × 10%) = −18% + 4% = −14%."
+        "explanation": "Net return = (0.60 \u00d7 \u221230%) + (0.40 \u00d7 10%) = \u221218% + 4% = \u221214%."
       }
     },
     {
-      "id": "tokyo-d04",
+      "id": "tokyo-d11",
       "lessonId": "tokyo-4",
       "sourceStepId": "q3",
       "concepts": [
@@ -133,7 +316,7 @@
       "timeLimitMs": null,
       "step": {
         "type": "quiz",
-        "id": "d04",
+        "id": "d11",
         "prompt": "Which statement accurately describes what broad global diversification achieves for an investor?",
         "options": [
           "It reduces single-company and single-country risks, but not market drops",
@@ -146,55 +329,7 @@
       }
     },
     {
-      "id": "tokyo-d05",
-      "lessonId": "tokyo-3",
-      "sourceStepId": "s1",
-      "concepts": [
-        "time-horizon",
-        "drawdown"
-      ],
-      "timeLimitMs": null,
-      "step": {
-        "type": "predict",
-        "id": "d05",
-        "prompt": "Kenji's index fund drops 40% during a severe recession. If the market then rebounds with a steady 8% annual return, how many years will it take for his balance to fully break even?",
-        "input": {
-          "kind": "slider",
-          "min": 0,
-          "max": 20,
-          "step": 1,
-          "unit": " years"
-        },
-        "answer": 7,
-        "tolerance": 1,
-        "reveal": "About 7 years. 0.60 × (1.08)^7 ≈ 1.028, restoring the original balance.",
-        "explanation": "Recovering from 60 to 100 at 8% annual growth takes ln(100/60) / ln(1.08) ≈ 6.64 years (7 years)."
-      }
-    },
-    {
-      "id": "tokyo-d06",
-      "lessonId": "tokyo-3",
-      "sourceStepId": "q2",
-      "concepts": [
-        "drawdown"
-      ],
-      "timeLimitMs": null,
-      "step": {
-        "type": "quiz",
-        "id": "d06",
-        "prompt": "Hiroshi invests €10,000 into a fund that drops 40% to €6,000 during a crash. The fund then rebounds with a 40% gain in the next period. What is his fund worth now?",
-        "options": [
-          "€8,400, leaving a net loss of €1,600",
-          "€10,000, fully returning to the start",
-          "€9,600, leaving a minor €400 loss",
-          "€7,200, gaining only half of the fall"
-        ],
-        "correctIndex": 0,
-        "explanation": "€6,000 × 1.40 = €8,400. Because the 40% gain applies to the smaller post-drop balance, it does not undo the €4,000 loss."
-      }
-    },
-    {
-      "id": "tokyo-d07",
+      "id": "tokyo-d12",
       "lessonId": "tokyo-4",
       "sourceStepId": "q2",
       "concepts": [
@@ -203,8 +338,8 @@
       "timeLimitMs": null,
       "step": {
         "type": "predict",
-        "id": "d07",
-        "prompt": "Yuki converts €2,000 to $2,000 to buy shares of a US firm. With the share price unchanged at $2,000, the euro strengthens from $1.00 to $1.20. What is her return in euros?",
+        "id": "d12",
+        "prompt": "Yuki converts \u20ac2,000 to $2,000 to buy shares of a US firm. With the share price unchanged at $2,000, the euro strengthens from $1.00 to $1.20. What is her return in euros?",
         "input": {
           "kind": "slider",
           "min": -50,
@@ -214,46 +349,37 @@
         },
         "answer": -17,
         "tolerance": 2,
-        "reveal": "−16.7% (approx −17%). The $2,000 investment converts back to only €1,667 due to euro strength.",
-        "explanation": "The $2,000 shares are now worth $2,000 / 1.20 = €1,666.67, representing a return of −16.7% (approx −17%)."
+        "reveal": "\u221216.7% (approx \u221217%). The $2,000 investment converts back to only \u20ac1,667 due to euro strength.",
+        "explanation": "The $2,000 shares are now worth $2,000 / 1.20 = \u20ac1,666.67, representing a return of \u221216.7% (approx \u221217%)."
       }
     },
     {
-      "id": "tokyo-d08",
-      "lessonId": "tokyo-4",
-      "sourceStepId": "t1",
+      "id": "tokyo-d13",
+      "lessonId": "tokyo-5",
+      "sourceStepId": "p1",
       "concepts": [
-        "currency-risk",
-        "diversification"
+        "dollar-cost-averaging"
       ],
       "timeLimitMs": null,
       "step": {
-        "type": "match",
-        "id": "d08",
-        "prompt": "Match each global investing concept with its corresponding financial description:",
-        "pairs": [
-          [
-            "Home bias",
-            "Disproportionately holding domestic assets despite global alternatives"
-          ],
-          [
-            "Currency risk",
-            "Exchange rate movements changing returns measured in home currency"
-          ],
-          [
-            "Drawdown",
-            "The peak-to-trough percentage decline in an asset valuation"
-          ],
-          [
-            "Global diversification",
-            "Allocating capital across multiple countries and economic sectors"
-          ]
-        ],
-        "explanation": "Awareness of these concepts prevents common errors such as currency surprises or over-investing in domestic companies."
+        "type": "predict",
+        "id": "d13",
+        "prompt": "Souta invests \u20ac150 every month into an index fund. In a dip month, the fund unit price drops to \u20ac25. How many fund units does he purchase that month?",
+        "input": {
+          "kind": "slider",
+          "min": 1,
+          "max": 15,
+          "step": 1,
+          "unit": " units"
+        },
+        "answer": 6,
+        "tolerance": 1,
+        "reveal": "6 units. \u20ac150 divided by \u20ac25 per unit equals exactly 6 units.",
+        "explanation": "Units acquired = \u20ac150 / \u20ac25 = 6 units."
       }
     },
     {
-      "id": "tokyo-d09",
+      "id": "tokyo-d14",
       "lessonId": "tokyo-5",
       "sourceStepId": "q1",
       "concepts": [
@@ -262,7 +388,7 @@
       "timeLimitMs": null,
       "step": {
         "type": "quiz",
-        "id": "d09",
+        "id": "d14",
         "prompt": "In a regular monthly investment plan, why does the portfolio growth curve become much steeper after 20 years?",
         "options": [
           "Compound returns on past capital begin to exceed new monthly contributions",
@@ -275,7 +401,7 @@
       }
     },
     {
-      "id": "tokyo-d10",
+      "id": "tokyo-d15",
       "lessonId": "tokyo-5",
       "sourceStepId": "q2",
       "concepts": [
@@ -284,7 +410,7 @@
       "timeLimitMs": null,
       "step": {
         "type": "quiz",
-        "id": "d10",
+        "id": "d15",
         "prompt": "Does investing via a regular monthly savings plan guarantee a profit in every market scenario?",
         "options": [
           "No, investments fluctuate and can still experience net losses",

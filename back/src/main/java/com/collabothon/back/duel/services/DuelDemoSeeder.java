@@ -104,8 +104,7 @@ public class DuelDemoSeeder implements ApplicationRunner {
 	public void run(ApplicationArguments args) {
 		WeekWindow week = weekCalculator.currentWeek();
 
-		List<String> categories = stories.findAll().stream()
-			.map(Story::id)
+		List<String> categories = stories.canonicalAreaSlugs().stream()
 			.filter(content::hasDuelContent)
 			.toList();
 
@@ -122,10 +121,10 @@ public class DuelDemoSeeder implements ApplicationRunner {
 		for (DemoPlayer player : PLAYERS) {
 			if (!xpService.hasXpBetween(player.userId(), week.start(), week.end())) {
 				if ("demo-user".equals(player.userId())) {
-					record("demo-user", "berlin", "w1", 62, dates.thisWeek1());
-					record("demo-user", "seoul", "w2", 63, dates.thisWeek2());
-					record("demo-user", "sao-paulo", "p1", 60, dates.pastWeek1());
-					record("demo-user", "tokyo", "p2", 60, dates.pastWeek2());
+					record("demo-user", "saving", "w1", 59, dates.thisWeek1());
+					record("demo-user", "risk", "w2", 66, dates.thisWeek2());
+					record("demo-user", "borrowing", "p1", 60, dates.pastWeek1());
+					record("demo-user", "investing", "p2", 60, dates.pastWeek2());
 				}
 				else {
 					seedPlayer(player, categories, dates);

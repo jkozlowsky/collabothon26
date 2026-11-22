@@ -10,62 +10,47 @@ export type CategoryMeta = {
   tint: string;
 };
 
+/** The five duel categories are the learning-path areas (v4). */
 export const STORY_CATEGORIES: Record<string, CategoryMeta> = {
-  seoul: {
-    story: 'seoul',
-    name: 'Hype & leverage',
-    icon: 'message-circle',
-    color: 'violet',
-    accent: storyColors.violet,
-    tint: tints.violet,
+  'money-basics': {
+    story: 'money-basics',
+    name: 'Money basics',
+    icon: 'tag',
+    color: 'slate',
+    accent: storyColors.slate,
+    tint: tints.slate,
   },
-  berlin: {
-    story: 'berlin',
-    name: 'Inflation & savings',
+  'saving': {
+    story: 'saving',
+    name: 'Saving',
     icon: 'shield',
     color: 'teal',
     accent: storyColors.teal,
     tint: tints.teal,
   },
-  'sao-paulo': {
-    story: 'sao-paulo',
-    name: 'Instalments & debt',
+  'borrowing': {
+    story: 'borrowing',
+    name: 'Borrowing',
     icon: 'credit-card',
     color: 'orange',
     accent: storyColors.orange,
     tint: tints.orange,
   },
-  tokyo: {
-    story: 'tokyo',
-    name: 'Diversification',
-    icon: 'globe',
+  'investing': {
+    story: 'investing',
+    name: 'Investing',
+    icon: 'trending-up',
     color: 'rose',
     accent: storyColors.rose,
     tint: tints.rose,
   },
-  'buenos-aires': {
-    story: 'buenos-aires',
-    name: 'Fast inflation',
-    icon: 'tag',
-    color: 'orange',
-    accent: storyColors.orange,
-    tint: tints.orange,
-  },
-  nairobi: {
-    story: 'nairobi',
-    name: 'Small savings',
-    icon: 'smartphone',
+  'risk': {
+    story: 'risk',
+    name: 'Risk',
+    icon: 'zap',
     color: 'violet',
     accent: storyColors.violet,
     tint: tints.violet,
-  },
-  mumbai: {
-    story: 'mumbai',
-    name: 'Gold',
-    icon: 'database',
-    color: 'orange',
-    accent: storyColors.orange,
-    tint: tints.orange,
   },
 };
 

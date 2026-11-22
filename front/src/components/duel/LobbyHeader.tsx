@@ -1,38 +1,52 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
+import { useContext } from 'react';
 
-import { StatusChip } from '@/components/duel/StatusChip';
-import { colors, spacing, type } from '@/constants/theme';
-import { formatNumber } from '@/lib/duel/meta';
+import { Icon } from '@/components/bank/Icon';
+import { PlayerAvatar } from '@/components/duel/PlayerAvatar';
+import { colors, radii, spacing, type } from '@/constants/theme';
+import type { AvatarId } from '@/types/account';
 
 type Props = {
-  firstName?: string;
-  streak: number;
-  xp: number;
+  avatar: AvatarId;
+  level: number;
 };
 
-/** Lobby header with streak and XP chips (Figma 157:3800). */
-export function LobbyHeader({ firstName, streak, xp }: Props) {
+/** Navy lobby header (Figma v4·1): avatar, "Duel arena" and the level pill. No subtitle lines. */
+export function LobbyHeader({ avatar, level }: Props) {
+  const insets = useContext(SafeAreaInsetsContext) ?? { top: 0 };
   return (
-    <View style={styles.row}>
-      <View style={styles.text}>
-        <Text style={styles.greeting} numberOfLines={1} testID="duel-greeting">
-          {firstName ? `Hi ${firstName} · 1v1 Duels` : '1v1 Knowledge Duels'}
-        </Text>
-        <Text style={type.displayLarge} accessibilityRole="header">
-          Ready for a duel?
-        </Text>
-      </View>
-      <View style={styles.chips}>
-        <StatusChip label={String(streak)} tone="streak" icon="flame" testID="duel-streak-chip" />
-        <StatusChip label={`${formatNumber(xp)} XP`} tone="xp" icon="zap" testID="duel-xp-chip" />
+    <View style={[styles.header, { paddingTop: insets.top + spacing.xl }]} testID="duel-lobby-header">
+      <PlayerAvatar avatar={avatar} size={56} ring="accent" />
+      <Text style={styles.title} accessibilityRole="header">
+        Duel arena
+      </Text>
+      <View style={styles.pill} testID="duel-level-pill">
+        <Icon name="zap" size={14} color={colors.textOnAccent} />
+        <Text style={styles.pillText}>Lv {level}</Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },
-  text: { flex: 1, gap: spacing.xxs },
-  greeting: { ...type.bodyDefault, color: colors.textMuted },
-  chips: { flexDirection: 'row', gap: spacing.xs, paddingBottom: spacing.xs },
+  header: {
+    backgroundColor: colors.brandPrimary,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+  },
+  title: { ...type.displayLarge, color: colors.textOnBrand, flex: 1 },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.brandAccent,
+    borderRadius: radii.pill,
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+  },
+  pillText: { ...type.labelStrong, color: colors.textOnAccent },
 });

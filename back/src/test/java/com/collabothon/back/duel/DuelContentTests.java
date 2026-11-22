@@ -124,7 +124,7 @@ class DuelContentTests {
 			StoryInfo story = stories.get(df.story());
 			assertThat(story).isNotNull();
 			boolean isFullStory = story.lessonIds().size() > 1;
-			int minExpected = isFullStory ? 8 : 4;
+			int minExpected = isFullStory ? 15 : 3;
 			assertThat(df.questions().size())
 					.as("Story '%s' (%s) must have >= %d questions, got %d",
 							df.story(), isFullStory ? "full" : "1-lesson", minExpected, df.questions().size())

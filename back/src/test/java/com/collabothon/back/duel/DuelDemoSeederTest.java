@@ -104,6 +104,7 @@ class DuelDemoSeederTest {
 		assertThat(rankings.me()).isNotNull();
 		assertThat(rankings.me().rank()).isEqualTo(6);
 		assertThat(rankings.me().weeklyXp()).isEqualTo(125);
+		assertThat(xpService.totalXp("demo-user")).isEqualTo(245);
 
 		WeekWindow week = weekCalculator.currentWeek();
 		Instant weekStart = week.start();
@@ -129,18 +130,25 @@ class DuelDemoSeederTest {
 				XpEvent::getCreatedAt
 			)
 			.containsExactly(
-				tuple("demo-user", "berlin", XpSource.DUEL, "seed-demo-user-w1", 62, thisWeek1),
-				tuple("demo-user", "seoul", XpSource.DUEL, "seed-demo-user-w2", 63, thisWeek2),
-				tuple("demo-user", "sao-paulo", XpSource.DUEL, "seed-demo-user-p1", 60, pastWeek1),
-				tuple("demo-user", "tokyo", XpSource.DUEL, "seed-demo-user-p2", 60, pastWeek2)
+				tuple("demo-user", "saving", XpSource.DUEL, "seed-demo-user-w1", 59, thisWeek1),
+				tuple("demo-user", "risk", XpSource.DUEL, "seed-demo-user-w2", 66, thisWeek2),
+				tuple("demo-user", "borrowing", XpSource.DUEL, "seed-demo-user-p1", 60, pastWeek1),
+				tuple("demo-user", "investing", XpSource.DUEL, "seed-demo-user-p2", 60, pastWeek2)
 			);
+
+		// Risk XP (66) is 5-10 XP below next level (Level 4, threshold 73; 73 - 66 = 7)
+		int riskXp = demoUserEvents.stream().filter(e -> "risk".equals(e.getCategory())).mapToInt(XpEvent::getXp).sum();
+		var levelCurve = new com.collabothon.back.xp.services.LevelCurve();
+		var riskLevel = levelCurve.fromXp(riskXp);
+		int xpToNext = riskLevel.xpForLevel() - riskLevel.xpIntoLevel();
+		assertThat(xpToNext).isBetween(5, 10);
 	}
 
 	@Test
 	void newPlayersAreSeededWhenWeekWasAlreadySeededForExistingPlayers() {
 		// Simulate a DB where existing players already have XP this week
 		WeekWindow week = weekCalculator.currentWeek();
-		xpService.record("demo-tomasz", "berlin", XpSource.DUEL, "preseed-tomasz", 310, week.start().plusSeconds(3600));
+		xpService.record("demo-tomasz", "saving", XpSource.DUEL, "preseed-tomasz", 310, week.start().plusSeconds(3600));
 
 		// Run seeder
 		seeder.run(new DefaultApplicationArguments());

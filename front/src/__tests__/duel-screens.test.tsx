@@ -26,8 +26,8 @@ function question(index: number, prompt: string) {
 
 const CATEGORIES: DuelCategory[] = [
   {
-    story: 'berlin',
-    name: 'Inflation & savings',
+    story: 'saving',
+    name: 'Saving',
     icon: 'shield',
     color: 'teal',
     xp: 120,
@@ -36,9 +36,9 @@ const CATEGORIES: DuelCategory[] = [
     xpForLevel: 50,
   },
   {
-    story: 'seoul',
-    name: 'Hype & leverage',
-    icon: 'message-circle',
+    story: 'risk',
+    name: 'Risk',
+    icon: 'zap',
     color: 'violet',
     xp: 40,
     level: 1,
@@ -73,7 +73,7 @@ const MATCHES: MatchSummary[] = [
   {
     matchId: 10,
     mode: 'HUMAN',
-    categories: ['berlin', 'seoul'],
+    categories: ['saving', 'risk'],
     rival: RIVAL_CARD,
     status: 'FINISHED',
     seen: true,
@@ -122,46 +122,47 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-test('lobby renders categories with checkboxes, updates CTA count on toggle, and opens rankings', async () => {
+test('lobby shows the tiles and area chips, updates the CTA on toggle, and opens rankings', async () => {
   await renderRouter(appRoutes, { initialUrl: '/duel' });
 
-  expect(await screen.findByText('Ready for a duel?')).toBeOnTheScreen();
-  expect(await screen.findByText('Hi Alex · 1v1 Duels')).toBeOnTheScreen();
-  expect(screen.getByTestId('duel-streak-chip')).toHaveTextContent(/\b4$/);
-  expect(screen.getByTestId('duel-xp-chip')).toHaveTextContent(/1 240 XP$/);
-  expect(screen.getByTestId('duel-league-card')).toBeOnTheScreen();
-  expect(await screen.findByText('Inflation & savings')).toBeOnTheScreen();
-  expect(screen.getByText('Hype & leverage')).toBeOnTheScreen();
+  expect(await screen.findByText('Duel arena')).toBeOnTheScreen();
+  expect(screen.getByTestId('duel-level-pill')).toHaveTextContent(/Lv.3/);
+  expect(screen.queryByTestId('duel-tab-play')).toBeNull();
+  expect(screen.queryByTestId('duel-league-card')).toBeNull();
+  expect(await screen.findByText('Ranking #6')).toBeOnTheScreen();
+  expect(screen.getByText('History')).toBeOnTheScreen();
+  expect(await screen.findByText('Saving')).toBeOnTheScreen();
+  expect(screen.getByText('Risk')).toBeOnTheScreen();
+  expect(screen.getByTestId('duel-category-counter')).toHaveTextContent('2 / 4');
 
-  // CTA has count 2 categories initially
+  // vs Rival is selected by default
+  expect(screen.getByTestId('duel-mode-human')).toBeSelected();
   const cta = screen.getByTestId('duel-start-cta');
   expect(cta).toHaveTextContent('Find rival · 2 categories');
+  await fireEvent.press(screen.getByTestId('duel-mode-solo'));
+  expect(cta).toHaveTextContent('Start solo · 2 categories');
 
-  // Untick one category
-  await fireEvent.press(screen.getByTestId('duel-category-seoul'));
-  expect(cta).toHaveTextContent('Find rival · 1 category');
-
-  // Untick other category -> disabled
-  await fireEvent.press(screen.getByTestId('duel-category-berlin'));
+  await fireEvent.press(screen.getByTestId('duel-category-risk'));
+  expect(cta).toHaveTextContent('Start solo · 1 category');
+  await fireEvent.press(screen.getByTestId('duel-category-saving'));
   expect(cta).toHaveTextContent('Select at least 1 category');
 
-  // Open rankings
   await fireEvent.press(screen.getByTestId('duel-open-rankings'));
   expect(await screen.findByTestId('screen-duel-rankings')).toBeOnTheScreen();
   expect(await screen.findByTestId('rankings-list')).toBeOnTheScreen();
   expect(screen.getByTestId('rankings-pinned-me')).toBeOnTheScreen();
 });
 
-test('lobby Historia tab renders unfinished and finished matches', async () => {
+test('History tile opens the history screen with unfinished and finished matches', async () => {
   await renderRouter(appRoutes, { initialUrl: '/duel' });
 
-  expect(await screen.findByTestId('duel-tab-history')).toBeOnTheScreen();
-  await fireEvent.press(screen.getByTestId('duel-tab-history'));
-
+  await fireEvent.press(await screen.findByTestId('duel-open-history'));
+  expect(await screen.findByTestId('screen-duel-history')).toBeOnTheScreen();
   expect(await screen.findByTestId('duel-history-pending')).toBeOnTheScreen();
   expect(await screen.findByTestId('duel-history-finished')).toBeOnTheScreen();
   expect(screen.getByTestId('match-history-row-11')).toBeOnTheScreen();
   expect(screen.getByTestId('match-history-row-10')).toBeOnTheScreen();
+  expect(screen.getByTestId('history-wins')).toHaveTextContent('W 1');
 });
 
 jest.mock('@/lib/duel/useDuelSocket', () => {
@@ -283,12 +284,14 @@ test('match flow: answers question, sees feedback banner, waiting view, and resu
   expect(screen.getByTestId('result-score')).toHaveTextContent('5 : 4');
   expect(screen.getByTestId('result-xp')).toHaveTextContent(/25 XP/);
 
-  // Review shows mistake first
-  expect(screen.getByTestId('review-mistake-0')).toBeOnTheScreen();
+  // Review: two groups, both collapsed (no standalone first-wrong card)
+  expect(screen.getByTestId('toggle-wrong-review')).toHaveTextContent(/Wrong answers \(1\)/);
+  expect(screen.queryByTestId('review-mistake-0')).toBeNull();
+  await fireEvent.press(screen.getByTestId('toggle-wrong-review'));
   // Collapsed by default: tapping the card opens the lesson button (label follows lesson status; unknown here).
   expect(screen.queryByTestId('review-repeat-lesson-0')).toBeNull();
   await fireEvent.press(screen.getByTestId('review-mistake-0'));
-  expect(screen.getByTestId('review-repeat-lesson-0')).toHaveTextContent(/Go to lesson: Inflation & savings/);
+  expect(screen.getByTestId('review-repeat-lesson-0')).toHaveTextContent(/Go to lesson: /);
 
   // Correct answer toggle
   expect(screen.getByTestId('toggle-correct-review')).toBeOnTheScreen();

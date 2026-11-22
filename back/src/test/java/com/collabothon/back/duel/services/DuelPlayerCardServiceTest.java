@@ -46,7 +46,7 @@ class DuelPlayerCardServiceTest {
 		when(accounts.findById("u1")).thenReturn(Optional.of(
 				Account.builder().userId("u1").firstName("Anna").lastName("Kowalska").avatar("f1").build()));
 		when(xpService.xpPerCategory("u1")).thenReturn(Map.of());
-		when(stories.findAll()).thenReturn(List.of());
+		when(stories.canonicalAreaSlugs()).thenReturn(List.of());
 
 		PlayerCardDto card = service.card("u1");
 
@@ -59,7 +59,7 @@ class DuelPlayerCardServiceTest {
 		when(accounts.findById("u2")).thenReturn(Optional.of(
 				Account.builder().userId("u2").firstName("Piotr").lastName("   ").avatar("m1").build()));
 		when(xpService.xpPerCategory("u2")).thenReturn(Map.of());
-		when(stories.findAll()).thenReturn(List.of());
+		when(stories.canonicalAreaSlugs()).thenReturn(List.of());
 
 		PlayerCardDto card = service.card("u2");
 
@@ -71,7 +71,7 @@ class DuelPlayerCardServiceTest {
 	void cardFallsBackToUserIdWhenAccountNotFound() {
 		when(accounts.findById("u3")).thenReturn(Optional.empty());
 		when(xpService.xpPerCategory("u3")).thenReturn(Map.of());
-		when(stories.findAll()).thenReturn(List.of());
+		when(stories.canonicalAreaSlugs()).thenReturn(List.of());
 
 		PlayerCardDto card = service.card("u3");
 

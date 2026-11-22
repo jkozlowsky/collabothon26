@@ -14,6 +14,7 @@ import MapScreen from '@/app/(main)/(learn)/map';
 import ProfileScreen from '@/app/(main)/(learn)/profile';
 import ScenePreviewScreen from '@/app/dev/scene/[lessonId]/[sceneId]';
 import DuelMatchScreen from '@/app/duel/match';
+import DuelHistoryScreen from '@/app/duel/history';
 import DuelRankingsScreen from '@/app/duel/rankings';
 import RootLayout from '@/app/_layout';
 import CategorizingScreen from '@/app/categorizing';
@@ -45,6 +46,7 @@ export const appRoutes = {
   '(main)/(learn)/duel': DuelLobbyScreen,
   '(main)/(learn)/profile': ProfileScreen,
   'duel/match': DuelMatchScreen,
+  'duel/history': DuelHistoryScreen,
   'duel/rankings': DuelRankingsScreen,
   'dev/scene/[lessonId]/[sceneId]': ScenePreviewScreen,
 };

@@ -91,9 +91,9 @@ class DuelLiveSocketIntegrationTests {
 		Client daniel = connect("demo-daniel", "device-daniel");
 		Client elena = connect("demo-elena", "device-elena");
 
-		daniel.send("{\"type\":\"queue\",\"categories\":[\"berlin\"]}");
+		daniel.send("{\"type\":\"queue\",\"categories\":[\"saving\"]}");
 		assertThat(daniel.next().path("type").asString()).isEqualTo("queued");
-		elena.send("{\"type\":\"queue\",\"categories\":[\"berlin\"]}");
+		elena.send("{\"type\":\"queue\",\"categories\":[\"saving\"]}");
 		JsonNode danielMatched = daniel.next();
 		JsonNode elenaMatched = elena.next();
 
@@ -140,12 +140,41 @@ class DuelLiveSocketIntegrationTests {
 	}
 
 	@Test
+	void demoUserVersusAnotherPlayerBothGetRiskAndTheSameFixedSet() throws Exception {
+		Client alex = connect("demo-user", "device-alex");
+		Client daniel = connect("demo-daniel", "device-daniel");
+		alex.send("{\"type\":\"queue\",\"categories\":[\"saving\"]}");
+		assertThat(alex.next().path("type").asString()).isEqualTo("queued");
+		daniel.send("{\"type\":\"queue\",\"categories\":[\"saving\"]}");
+		JsonNode alexMatched = alex.next();
+		JsonNode danielMatched = daniel.next();
+		long alexMatch = alexMatched.path("matchId").asLong();
+		long danielMatch = danielMatched.path("matchId").asLong();
+
+		List<String> alexCategories = new ArrayList<>();
+		alexMatched.path("categories").forEach(c -> alexCategories.add(c.asString()));
+		assertThat(alexCategories).contains("risk");
+
+		JsonNode alexQuestion = state(alexMatch, "demo-user").path("question");
+		JsonNode danielQuestion = state(danielMatch, "demo-daniel").path("question");
+		List<String> alexSteps = new ArrayList<>();
+		List<String> danielSteps = new ArrayList<>();
+		for (int index = 0; index < 6; index++) {
+			alexSteps.add(alexQuestion.path("step").path("id").asString());
+			danielSteps.add(danielQuestion.path("step").path("id").asString());
+			alexQuestion = answer(alexMatch, "demo-user", index, alexQuestion, true).path("nextQuestion");
+			danielQuestion = answer(danielMatch, "demo-daniel", index, danielQuestion, true).path("nextQuestion");
+		}
+		assertThat(danielSteps).isEqualTo(alexSteps);
+	}
+
+	@Test
 	void equalScoresEndInADrawForBothPlayers() throws Exception {
 		Client daniel = connect("demo-daniel", "device-daniel");
 		Client elena = connect("demo-elena", "device-elena");
-		daniel.send("{\"type\":\"queue\",\"categories\":[\"berlin\"]}");
+		daniel.send("{\"type\":\"queue\",\"categories\":[\"saving\"]}");
 		assertThat(daniel.next().path("type").asString()).isEqualTo("queued");
-		elena.send("{\"type\":\"queue\",\"categories\":[\"berlin\"]}");
+		elena.send("{\"type\":\"queue\",\"categories\":[\"saving\"]}");
 		long danielMatch = daniel.next().path("matchId").asLong();
 		long elenaMatch = elena.next().path("matchId").asLong();
 
@@ -168,7 +197,7 @@ class DuelLiveSocketIntegrationTests {
 	@Test
 	void aLoneClientGetsNoRivalAfterFifteenSeconds() throws Exception {
 		Client alex = connect("demo-user", "device-alex");
-		alex.send("{\"type\":\"queue\",\"categories\":[\"berlin\"]}");
+		alex.send("{\"type\":\"queue\",\"categories\":[\"saving\"]}");
 		assertThat(alex.next().path("type").asString()).isEqualTo("queued");
 
 		CLOCK.advance(Duration.ofSeconds(15));
@@ -216,9 +245,16 @@ class DuelLiveSocketIntegrationTests {
 			.body(String.class));
 	}
 
+	private java.util.Optional<com.collabothon.back.entities.duel.DuelQuestion> findServed(JsonNode servedStep) {
+		return java.util.stream.Stream.of("money-basics", "saving", "borrowing", "investing", "risk")
+			.flatMap(area -> content.findByStory(area).stream())
+			.filter(q -> q.step().path("prompt").asString().equals(servedStep.path("prompt").asString()))
+			.findFirst();
+	}
+
 	/** The request body of a right or wrong answer to {@code question}, graded against the player's own shuffle. */
 	private String answerBody(String userId, int index, long matchId, JsonNode question, boolean correct) {
-		var step = content.findById("berlin-" + question.path("step").path("id").asString()).orElseThrow();
+		var step = findServed(question.path("step")).orElseThrow();
 		String head = "{\"userId\":\"" + userId + "\",\"index\":" + index + ",";
 		return switch (step.type()) {
 			case "quiz" -> {
@@ -230,17 +266,19 @@ class DuelLiveSocketIntegrationTests {
 				yield head + "\"value\":" + (correct ? target : target + 50000) + "}";
 			}
 			case "sort" -> {
-				List<Integer> buckets = new ArrayList<>(DuelShuffle.sortPermutation(matchId, index, 6)
-					.stream().map(i -> i % 2 == 0 ? 0 : 1).toList());
+				var items = step.step().path("items");
+				List<Integer> buckets = new ArrayList<>(DuelShuffle.sortPermutation(matchId, index, items.size())
+					.stream().map(i -> items.get(i).path("bucket").asInt()).toList());
 				if (!correct) {
 					buckets.set(0, 1 - buckets.get(0));
 				}
 				yield head + "\"buckets\":" + buckets + "}";
 			}
 			default -> {
-				var perms = DuelShuffle.matchPermutations(matchId, index, 4);
+				int size = step.step().path("pairs").size();
+				var perms = DuelShuffle.matchPermutations(matchId, index, size);
 				List<Integer> pairs = new ArrayList<>();
-				for (int i = 0; i < 4; i++) {
+				for (int i = 0; i < size; i++) {
 					pairs.add(perms.right().indexOf(perms.left().get(i)));
 				}
 				if (!correct) {

@@ -2,6 +2,7 @@ package com.collabothon.back.duel.services;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -47,6 +48,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class DuelMatchService {
 
+	public static final String DEMO_USER_ID = "demo-user";
+
+	public static final String RISK_CATEGORY = "risk";
+
 	static final int MAX_CATEGORIES = 4;
 
 	private final DuelMatchRepository matches;
@@ -83,14 +88,28 @@ public class DuelMatchService {
 
 	private final Clock clock;
 
+	public static List<String> adjustCategories(String userId, List<String> categories) {
+		if (categories == null || !DEMO_USER_ID.equals(userId) || categories.contains(RISK_CATEGORY)) {
+			return categories;
+		}
+		List<String> adjusted = new ArrayList<>(categories);
+		if (adjusted.size() >= MAX_CATEGORIES) {
+			adjusted.remove(adjusted.size() - 1);
+		}
+		adjusted.add(RISK_CATEGORY);
+		return adjusted;
+	}
+
 	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
 	public MatchStartDto start(StartMatchRequest request) {
-		validateCategories(request.categories());
+		validateCategoryCount(request.categories());
+		List<String> categories = adjustCategories(request.userId(), request.categories());
+		validateCategories(categories);
 		String rivalUserId = null;
 		if (request.mode() == DuelMode.HUMAN) {
 			rivalUserId = rival.pickRival(request.userId());
 		}
-		DuelMatch match = matches.save(DuelMatch.start(request.mode(), request.categories(), request.userId(),
+		DuelMatch match = matches.save(DuelMatch.start(request.mode(), categories, request.userId(),
 				rivalUserId, clock.instant()));
 		List<DuelQuestion> questions = selectionService.selectQuestions(match);
 		DuelProgress progress = new DuelProgress(match, List.of(), questionCount());
@@ -104,14 +123,19 @@ public class DuelMatchService {
 	 */
 	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
 	public LiveMatch startLive(String userA, String userB, List<String> categories) {
-		validateCategories(categories);
+		validateCategoryCount(categories);
+		List<String> adjustedCategories = categories;
+		if (DEMO_USER_ID.equals(userA) || DEMO_USER_ID.equals(userB)) {
+			adjustedCategories = adjustCategories(DEMO_USER_ID, categories);
+		}
+		validateCategories(adjustedCategories);
 		Instant now = clock.instant();
-		DuelMatch matchA = matches.save(DuelMatch.start(DuelMode.HUMAN, categories, userA, userB, now));
-		DuelMatch matchB = matches.save(DuelMatch.start(DuelMode.HUMAN, categories, userB, userA, now));
+		DuelMatch matchA = matches.save(DuelMatch.start(DuelMode.HUMAN, adjustedCategories, userA, userB, now));
+		DuelMatch matchB = matches.save(DuelMatch.start(DuelMode.HUMAN, adjustedCategories, userB, userA, now));
 		matchA.linkOpponent(matchB.getId());
 		matchB.linkOpponent(matchA.getId());
 		return new LiveMatch(matchA.getId(), matchB.getId(), userA, userB, playerCards.card(userA),
-				playerCards.card(userB), categories);
+				playerCards.card(userB), adjustedCategories);
 	}
 
 	/** The unfinished live duels of {@code userId} in which they still have questions to answer. */
@@ -163,13 +187,17 @@ public class DuelMatchService {
 				scoring.yourFinal(progress));
 	}
 
-	private void validateCategories(List<String> categories) {
-		if (categories.isEmpty() || categories.size() > MAX_CATEGORIES) {
+	private void validateCategoryCount(List<String> categories) {
+		if (categories == null || categories.isEmpty() || categories.size() > MAX_CATEGORIES) {
 			throw new BusinessException(DuelErrorCode.INVALID_CATEGORY_COUNT);
 		}
-		Set<String> storyIds = stories.findAll().stream().map(Story::id).collect(Collectors.toSet());
+	}
+
+	private void validateCategories(List<String> categories) {
+		validateCategoryCount(categories);
+		List<String> validAreas = stories.canonicalAreaSlugs();
 		for (String category : categories) {
-			if (!storyIds.contains(category)) {
+			if (!validAreas.contains(category)) {
 				throw new BusinessException(DuelErrorCode.UNKNOWN_CATEGORY, category);
 			}
 		}

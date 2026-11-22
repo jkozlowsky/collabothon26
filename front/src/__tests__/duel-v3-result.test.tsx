@@ -20,7 +20,7 @@ describe('Duel v3 ResultView', () => {
 
   const CATEGORIES: CategoryMatchEnd[] = [
     {
-      story: 'berlin',
+      story: 'saving',
       xpGained: 20,
       xpBefore: 92,
       xpAfter: 112,
@@ -30,7 +30,7 @@ describe('Duel v3 ResultView', () => {
       xpForLevelAfter: 120,
     },
     {
-      story: 'tokyo',
+      story: 'investing',
       xpGained: 15,
       xpBefore: 72,
       xpAfter: 87,
@@ -48,14 +48,14 @@ describe('Duel v3 ResultView', () => {
     outcome: 'WIN',
     score: 5,
     rivalScore: 4,
-    you: { name: 'Alex Weber', avatar: 'm1', levels: { berlin: 3, tokyo: 2 } },
-    rival: { name: 'Ola Wisniewska', avatar: 'f1', levels: { berlin: 2, tokyo: 2 } },
+    you: { name: 'Alex Weber', avatar: 'm1', levels: { saving: 3, investing: 2 } },
+    rival: { name: 'Ola Wisniewska', avatar: 'f1', levels: { saving: 2, investing: 2 } },
     xpGained: 35,
-    xpByCategory: { berlin: 20, tokyo: 15 },
+    xpByCategory: { saving: 20, investing: 15 },
     review: [
       {
         index: 0,
-        category: 'berlin',
+        category: 'saving',
         step: {
           type: 'quiz',
           id: 'q0',
@@ -149,12 +149,12 @@ describe('Duel v3 ResultView', () => {
     expect(screen.queryByTestId('result-confetti')).toBeNull();
   });
 
-  it('renders SOLO outcome: "Practice complete", score "n / 6", no rival side or XP pill', async () => {
+  it('renders SOLO below 60 %: "Practice complete", score "n / total", no rival side or XP pill', async () => {
     const soloResult: MatchEnd = {
       ...WIN_RESULT,
       mode: 'SOLO',
       outcome: 'SOLO',
-      score: 5,
+      score: 0,
       rivalScore: null,
       rival: null,
       xpGained: 0,
@@ -169,7 +169,7 @@ describe('Duel v3 ResultView', () => {
     );
 
     expect(screen.getByTestId('result-heading')).toHaveTextContent('Practice complete');
-    expect(screen.getByTestId('result-score')).toHaveTextContent('5 / 1');
+    expect(screen.getByTestId('result-score')).toHaveTextContent('0 / 1');
     expect(screen.getByText('You · solo, no XP')).toBeOnTheScreen();
     expect(screen.queryByTestId('result-rival-name')).toBeNull();
     expect(screen.queryByTestId('result-xp')).toBeNull();
@@ -184,10 +184,10 @@ describe('Duel v3 ResultView', () => {
       />
     );
 
-    // 1st category in sequence: Berlin (Inflation & savings, Lv 3 -> Lv 4)
+    // 1st category in sequence: Saving (Lv 3 -> Lv 4)
     expect(screen.getByTestId('level-up-overlay')).toBeOnTheScreen();
     expect(screen.getByTestId('level-up-title')).toHaveTextContent('Level up!');
-    expect(screen.getByTestId('level-up-category')).toHaveTextContent('Inflation & savings');
+    expect(screen.getByTestId('level-up-category')).toHaveTextContent('Saving');
     const firstLevels = screen.getByTestId('level-up-levels');
     expect(firstLevels).toHaveTextContent(/Lv 3/);
     expect(screen.getByTestId('level-up-confetti')).toBeOnTheScreen();
@@ -204,13 +204,13 @@ describe('Duel v3 ResultView', () => {
     mockPlaySound.mockClear();
     mockHaptic.mockClear();
 
-    // Tap to advance to 2nd category (Tokyo: Diversification, Lv 2 -> Lv 3)
+    // Tap to advance to 2nd category (Investing, Lv 2 -> Lv 3)
     await act(async () => {
       fireEvent.press(screen.getByTestId('level-up-overlay'));
     });
 
     expect(screen.getByTestId('level-up-overlay')).toBeOnTheScreen();
-    expect(screen.getByTestId('level-up-category')).toHaveTextContent('Diversification');
+    expect(screen.getByTestId('level-up-category')).toHaveTextContent('Investing');
     const secondLevels = screen.getByTestId('level-up-levels');
     expect(secondLevels).toHaveTextContent(/Lv 2/);
     expect(mockPlaySound).toHaveBeenCalledWith('level-up');

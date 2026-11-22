@@ -32,6 +32,7 @@ import { colors, fonts, radii, spacing, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import { haptic, playSound } from '@/lib/duel/feedback';
 import { getWeeklyLeagueClock } from '@/lib/duel/meta';
+import { stickyPosition, type StickyPosition } from '@/lib/duel/sticky';
 import { useCurrentUser } from '@/lib/user';
 import type { RankingRow, Rankings } from '@/types/duel';
 
@@ -168,27 +169,14 @@ function RankingsContent({
     (r) => r.userId === meUserId || (me ? r.rank === me.rank : false)
   );
 
-  // Absolute Y range of me's row within ScrollView content
+  // Absolute Y of me's row within the ScrollView content
   const estimatedRowY = me && me.rank >= 4 ? (me.rank - 4) * 64 : 0;
   const rowTop = listContainerY + listCardY + (meRowLayout ? meRowLayout.y : estimatedRowY);
   const rowHeight = meRowLayout?.height ?? 64;
-  const rowBottom = rowTop + rowHeight;
 
-  // The row is visible only if it is actually rendered in the list AND any part of it intersects the visible scroll viewport
-  const isMeRowVisible = Boolean(
-    me &&
-      !isMeInTop3 &&
-      isMeRenderedInList &&
-      rowBottom > scrollY &&
-      rowTop < scrollY + viewportHeight
-  );
-
-  // The sticky copy must be shown ONLY while your real row is fully outside the visible scroll viewport
-  const showSticky = Boolean(
-    me &&
-      !isMeInTop3 &&
-      !isMeRowVisible
-  );
+  // Inline while in view, pinned to the top once scrolled past, to the bottom while not reached yet.
+  const stickyPos: StickyPosition =
+    me && !isMeInTop3 ? (isMeRenderedInList ? stickyPosition(rowTop, rowHeight, scrollY, viewportHeight) : 'bottom') : null;
 
   function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     setScrollY(e.nativeEvent.contentOffset.y);
@@ -279,11 +267,11 @@ function RankingsContent({
         )}
       </ScrollView>
 
-      {/* Sticky own row at bottom while off-screen */}
-      {showSticky && me && (
+      {/* Pinned own row while the real one is out of view */}
+      {stickyPos && me && (
         <StickyRankRow
           row={me}
-          position="bottom"
+          position={stickyPos}
           testID="rankings-pinned-me"
         />
       )}

@@ -25,10 +25,13 @@ export const CLIP_SIZE = { width: 1236, height: 2516 };
 const LESSON = (() => {
   const raw = JSON.parse(readFileSync(path.resolve('../back/src/main/resources/content/lessons/berlin-1.json'), 'utf8')) as {
     steps: { type: string; options?: string[]; correctIndex?: number; items?: { text: string; bucket: 0 | 1 }[] }[];
+    video: { scenes: { captions: { text: string }[] }[] };
   };
   const correct = new Set(raw.steps.filter((st) => st.type === 'quiz').map((st) => normalise(st.options![st.correctIndex!])));
   const bucket = new Map(raw.steps.flatMap((st) => st.items ?? []).map((it) => [normalise(it.text), it.bucket] as const));
-  return { correct, bucket };
+  // The caption that shows once the second scene has started.
+  const secondScene = raw.video.scenes[1].captions[0].text;
+  return { correct, bucket, secondScene };
 })();
 
 const CATEGORIZATION_URL = '**/api/users/demo-user/categorization';
@@ -214,27 +217,22 @@ export async function drag(page: Page, testId: string, from: number, to: number,
 
 const visible = (page: Page, testId: string) => page.getByTestId(testId).filter({ visible: true });
 
-/** The first video scene of berlin-1 lasts 13 s; the transcript opens halfway through it. Real time, not PACE. */
-const HALF_FIRST_SCENE_MS = 6500;
 /** The whole lesson at the slowest PACE fits well within this. */
 const LESSON_TIMEOUT_MS = 8 * 60_000;
 
 /**
- * Plays berlin-1 in video mode (content: back/src/main/resources/content/lessons/berlin-1.json). Halfway through
- * the first scene the transcript opens for a moment, then the video goes on. Steps are recognised by their testIDs and
- * quiz answers come from the lesson file, so the order of the beats can change. In Myth or fact, once every card is
- * sorted, `glossary` (a word underlined in the explanation) opens in the glossary for a second.
+ * Plays berlin-1 (content: back/src/main/resources/content/lessons/berlin-1.json): the first scene as video, then,
+ * as soon as the second scene starts, the transcript instead, and the rest of the lesson as text. Steps are recognised
+ * by their testIDs and quiz answers come from the lesson file, so the order of the beats can change. In Myth or fact,
+ * once every card is sorted, `glossary` (a word underlined in the explanation) opens in the glossary for a second.
  * Returns whether the glossary word was opened.
  */
 export async function playLesson(page: Page, { glossary }: { glossary: string }): Promise<boolean> {
   await expect(page.getByTestId('video-lesson')).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByTestId('scene-caption')).toBeVisible({ timeout: 20_000 });
-  await page.waitForTimeout(HALF_FIRST_SCENE_MS);
+  // The first scene plays to its end; the transcript replaces the second one and the lesson stays in reading mode.
+  await expect(page.getByTestId('scene-caption')).toContainText(LESSON.secondScene, { timeout: 60_000 });
   await tap(page, 'lesson-transcript', 0);
   await expect(page.getByTestId('lesson-watch')).toBeVisible();
-  await beat(page, 4000); // the same scene as text
-  await tap(page, 'lesson-watch', 600);
-  await expect(page.getByTestId('video-lesson')).toBeVisible();
 
   const end = page.getByTestId('lesson-end');
   const step = (id: string) => visible(page, id);

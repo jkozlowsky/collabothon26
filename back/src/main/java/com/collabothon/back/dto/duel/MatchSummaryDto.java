@@ -5,7 +5,6 @@ import java.util.List;
 import com.collabothon.back.entities.duel.DuelMode;
 import com.collabothon.back.entities.duel.MatchOutcome;
 
-/** One row of the "Historia" tab. */
 public record MatchSummaryDto(
 		long matchId,
 		DuelMode mode,
@@ -18,5 +17,4 @@ public record MatchSummaryDto(
 		MatchOutcome outcome,
 		int xpGained,
 		String startedAt
-) {
-}
+) {}

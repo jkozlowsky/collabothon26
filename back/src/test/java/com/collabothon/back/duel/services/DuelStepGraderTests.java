@@ -7,8 +7,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.collabothon.back.duel.models.MatchPermutations;
 import com.collabothon.back.entities.duel.ChosenAnswer;
-import com.collabothon.back.entities.duel.DuelQuestion;
+import com.collabothon.back.duel.models.DuelQuestion;
 
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -26,11 +27,11 @@ class DuelStepGraderTests {
 		step.putArray("options").add("A").add("B").add("C").add("D");
 		DuelQuestion quiz = question(step);
 
-		assertThat(grader.grade(quiz, option(2))).isTrue();
-		assertThat(grader.grade(quiz, option(0))).isFalse();
-		assertThat(grader.grade(quiz, option(1))).isFalse();
-		assertThat(grader.grade(quiz, value(2.0))).isFalse();
-		assertThat(grader.grade(quiz, null)).isFalse();
+		assertThat(grader.grade(0L, 0, quiz, option(2))).isTrue();
+		assertThat(grader.grade(0L, 0, quiz, option(0))).isFalse();
+		assertThat(grader.grade(0L, 0, quiz, option(1))).isFalse();
+		assertThat(grader.grade(0L, 0, quiz, value(2.0))).isFalse();
+		assertThat(grader.grade(0L, 0, quiz, null)).isFalse();
 	}
 
 	@Test
@@ -38,12 +39,12 @@ class DuelStepGraderTests {
 		DuelQuestion predict = question(json.createObjectNode().put("type", "predict").put("answer", 100.0)
 			.put("tolerance", 10.0));
 
-		assertThat(grader.grade(predict, value(100.0))).isTrue();
-		assertThat(grader.grade(predict, value(110.0))).isTrue();
-		assertThat(grader.grade(predict, value(90.0))).isTrue();
-		assertThat(grader.grade(predict, value(110.01))).isFalse();
-		assertThat(grader.grade(predict, value(89.99))).isFalse();
-		assertThat(grader.grade(predict, option(100))).isFalse();
+		assertThat(grader.grade(0L, 0, predict, value(100.0))).isTrue();
+		assertThat(grader.grade(0L, 0, predict, value(110.0))).isTrue();
+		assertThat(grader.grade(0L, 0, predict, value(90.0))).isTrue();
+		assertThat(grader.grade(0L, 0, predict, value(110.01))).isFalse();
+		assertThat(grader.grade(0L, 0, predict, value(89.99))).isFalse();
+		assertThat(grader.grade(0L, 0, predict, option(100))).isFalse();
 	}
 
 	@Test
@@ -51,11 +52,11 @@ class DuelStepGraderTests {
 		DuelQuestion chart = question(json.createObjectNode().put("type", "chart").put("answer", 25.0)
 			.put("tolerance", 2.5));
 
-		assertThat(grader.grade(chart, value(25.0))).isTrue();
-		assertThat(grader.grade(chart, value(27.5))).isTrue();
-		assertThat(grader.grade(chart, value(22.5))).isTrue();
-		assertThat(grader.grade(chart, value(27.51))).isFalse();
-		assertThat(grader.grade(chart, value(22.49))).isFalse();
+		assertThat(grader.grade(0L, 0, chart, value(25.0))).isTrue();
+		assertThat(grader.grade(0L, 0, chart, value(27.5))).isTrue();
+		assertThat(grader.grade(0L, 0, chart, value(22.5))).isTrue();
+		assertThat(grader.grade(0L, 0, chart, value(27.51))).isFalse();
+		assertThat(grader.grade(0L, 0, chart, value(22.49))).isFalse();
 	}
 
 	@Test
@@ -80,19 +81,19 @@ class DuelStepGraderTests {
 		}
 
 		// All correct -> true
-		assertThat(grader.grade(matchId, index, sort, ChosenAnswer.ofBuckets(correctBuckets))).isTrue();
+		assertThat(grader.grade(matchId, index, sort, buckets(correctBuckets))).isTrue();
 
 		// Partial wrong: flip first answer -> false
 		List<Integer> partialWrong = new ArrayList<>(correctBuckets);
 		partialWrong.set(0, 1 - partialWrong.get(0));
-		assertThat(grader.grade(matchId, index, sort, ChosenAnswer.ofBuckets(partialWrong))).isFalse();
+		assertThat(grader.grade(matchId, index, sort, buckets(partialWrong))).isFalse();
 
 		// Wrong length -> false
-		assertThat(grader.grade(matchId, index, sort, ChosenAnswer.ofBuckets(List.of(0, 1)))).isFalse();
+		assertThat(grader.grade(matchId, index, sort, buckets(List.of(0, 1)))).isFalse();
 
 		// Null answer or null buckets -> false
 		assertThat(grader.grade(matchId, index, sort, null)).isFalse();
-		assertThat(grader.grade(matchId, index, sort, ChosenAnswer.ofBuckets(null))).isFalse();
+		assertThat(grader.grade(matchId, index, sort, buckets(null))).isFalse();
 		assertThat(grader.grade(matchId, index, sort, option(0))).isFalse();
 	}
 
@@ -109,7 +110,7 @@ class DuelStepGraderTests {
 		pairs.addArray().add("L3").add("R3");
 		DuelQuestion match = question(step);
 
-		DuelShuffle.MatchPermutations perms = DuelShuffle.matchPermutations(matchId, index, 4);
+		MatchPermutations perms = DuelShuffle.matchPermutations(matchId, index, 4);
 		// For shown left item i, it came from pair perms.left().get(i).
 		// We need the index in shown right that came from the same pair.
 		List<Integer> correctPairs = new ArrayList<>();
@@ -120,34 +121,42 @@ class DuelStepGraderTests {
 		}
 
 		// All correct -> true
-		assertThat(grader.grade(matchId, index, match, ChosenAnswer.ofPairs(correctPairs))).isTrue();
+		assertThat(grader.grade(matchId, index, match, pairs(correctPairs))).isTrue();
 
 		// Partial wrong: swap two answers -> false
 		List<Integer> partialWrong = new ArrayList<>(correctPairs);
 		partialWrong.set(0, correctPairs.get(1));
 		partialWrong.set(1, correctPairs.get(0));
-		assertThat(grader.grade(matchId, index, match, ChosenAnswer.ofPairs(partialWrong))).isFalse();
+		assertThat(grader.grade(matchId, index, match, pairs(partialWrong))).isFalse();
 
 		// Out of bounds right index -> false
 		List<Integer> outOfBounds = new ArrayList<>(correctPairs);
 		outOfBounds.set(0, 99);
-		assertThat(grader.grade(matchId, index, match, ChosenAnswer.ofPairs(outOfBounds))).isFalse();
+		assertThat(grader.grade(matchId, index, match, pairs(outOfBounds))).isFalse();
 
 		// Wrong length -> false
-		assertThat(grader.grade(matchId, index, match, ChosenAnswer.ofPairs(List.of(0, 1)))).isFalse();
+		assertThat(grader.grade(matchId, index, match, pairs(List.of(0, 1)))).isFalse();
 
 		// Null answer or null pairs -> false
 		assertThat(grader.grade(matchId, index, match, null)).isFalse();
-		assertThat(grader.grade(matchId, index, match, ChosenAnswer.ofPairs(null))).isFalse();
+		assertThat(grader.grade(matchId, index, match, pairs(null))).isFalse();
 		assertThat(grader.grade(matchId, index, match, option(0))).isFalse();
 	}
 
 	private static DuelQuestion question(ObjectNode step) {
-		return new DuelQuestion("q", "berlin-1", null, "berlin", step);
+		return new DuelQuestion("q", "berlin-1", null, List.of(), null, "berlin", step);
 	}
 
 	private static ChosenAnswer option(int option) {
 		return new ChosenAnswer(option, null, null, null);
+	}
+
+	private static ChosenAnswer buckets(List<Integer> buckets) {
+		return new ChosenAnswer(null, null, buckets, null);
+	}
+
+	private static ChosenAnswer pairs(List<Integer> pairs) {
+		return new ChosenAnswer(null, null, null, pairs);
 	}
 
 	private static ChosenAnswer value(double value) {

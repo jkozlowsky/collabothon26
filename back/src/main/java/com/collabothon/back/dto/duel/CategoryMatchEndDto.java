@@ -9,5 +9,4 @@ public record CategoryMatchEndDto(
 		int levelAfter,
 		int xpIntoLevelAfter,
 		int xpForLevelAfter
-) {
-}
+) {}

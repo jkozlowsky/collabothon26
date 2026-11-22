@@ -2,9 +2,11 @@ package com.collabothon.back.duel.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
-import com.collabothon.back.entities.duel.DuelQuestion;
+import com.collabothon.back.duel.models.DuelQuestion;
 
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -64,7 +66,7 @@ class DuelTimerCalculatorTests {
 	}
 
 	private static DuelQuestion question(ObjectNode step, Long timeLimitMs) {
-		return new DuelQuestion("q", "berlin-1", timeLimitMs, "berlin", step);
+		return new DuelQuestion("q", "berlin-1", null, List.of(), timeLimitMs, "berlin", step);
 	}
 
 }

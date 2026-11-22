@@ -5,7 +5,6 @@ import java.util.Arrays;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-/** Main's onboarding answers to "How do you handle money today?", with their titles. */
 @RequiredArgsConstructor
 public enum Experience {
 
@@ -16,8 +15,11 @@ public enum Experience {
 	private final String label;
 
 	public static Experience fromWire(String value) {
-		return value == null ? null : Arrays.stream(values())
-			.filter(e -> WireNames.of(e).equals(value))
+		if (value == null) {
+			return null;
+		}
+		return Arrays.stream(values())
+			.filter(experience -> WireNames.of(experience).equals(value))
 			.findFirst()
 			.orElseThrow(() -> new IllegalArgumentException("Unknown experience: " + value));
 	}

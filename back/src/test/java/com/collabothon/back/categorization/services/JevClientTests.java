@@ -31,6 +31,9 @@ import com.collabothon.back.categorization.dto.FactsDto;
 import com.collabothon.back.categorization.dto.JevInterestDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
 import com.collabothon.back.categorization.dto.ProfileRangesDto;
+import com.collabothon.back.categorization.models.JevQuickCheck;
+import com.collabothon.back.categorization.models.JevResult;
+import com.collabothon.back.categorization.models.JevStepInput;
 
 import tools.jackson.databind.json.JsonMapper;
 
@@ -49,7 +52,7 @@ class JevClientTests {
 	}
 
 	private static JevResult ask(RestClient.Builder builder, String baseUrl, String apiKey) {
-		return new JevClient(builder, JSON, properties(baseUrl, apiKey)).ask(ANSWERS, List.of(), null, null);
+		return new JevClient(builder, JSON, properties(baseUrl, apiKey)).ask(ANSWERS, List.of(), null, Optional.empty());
 	}
 
 	// These records describe what goes to an external model; a new component must be a deliberate change here.
@@ -75,8 +78,9 @@ class JevClientTests {
 			.andRespond(withServerError());
 		JevClient client = new JevClient(builder, JSON, properties("http://localhost:8000", ""));
 
-		client.ask(ANSWERS, List.of(), null, null);
-		client.ask(new OnboardingAnswersDto("building", List.of("berlin"), "occasional", true), List.of(), null, null);
+		client.ask(ANSWERS, List.of(), null, Optional.empty());
+		client.ask(new OnboardingAnswersDto("building", List.of("berlin"), "occasional", true), List.of(), null,
+				Optional.empty());
 		server.verify();
 	}
 
@@ -94,11 +98,11 @@ class JevClientTests {
 			.andRespond(withServerError());
 		JevClient client = new JevClient(builder, JSON, properties("http://localhost:8000", ""));
 
-		client.step(null, List.of(), null, List.of(), List.of(), List.of());
-		client.step(new ProfileRangesDto(null, "", null), List.of(), null, List.of(), List.of(), List.of());
-		client.step(new ProfileRangesDto("26-40", null, null), List.of(), null, List.of(), List.of(), List.of());
+		client.step(new JevStepInput(null, List.of(), null, List.of(), List.of(), List.of()));
+		client.step(new JevStepInput(new ProfileRangesDto(null, "", null), List.of(), null, List.of(), List.of(), List.of()));
+		client.step(new JevStepInput(new ProfileRangesDto("26-40", null, null), List.of(), null, List.of(), List.of(), List.of()));
 		client.ask(ANSWERS, List.of(), null,
-				new JevQuickCheck(new ProfileRangesDto(null, null, null), List.of(), List.of(), Map.of()));
+				Optional.of(new JevQuickCheck(new ProfileRangesDto(null, null, null), List.of(), List.of(), Map.of())));
 		server.verify();
 	}
 

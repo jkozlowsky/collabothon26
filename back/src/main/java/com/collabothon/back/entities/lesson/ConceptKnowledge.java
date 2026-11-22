@@ -4,8 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -24,10 +24,4 @@ public class ConceptKnowledge {
 	@Column(name = "attempts", nullable = false)
 	private int attempts;
 
-	@Builder
-	public ConceptKnowledge(ConceptKnowledgeId id, int correct, int attempts) {
-		this.id = id;
-		this.correct = correct;
-		this.attempts = attempts;
-	}
 }

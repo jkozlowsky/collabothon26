@@ -18,9 +18,7 @@ import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.entities.glossary.GlossaryTerm;
 import com.collabothon.back.glossary.repositories.GlossaryTermRepository;
 
-/**
- * Guards the seeded content: a broken [[link]] would otherwise only show up as a dead word on a phone.
- */
+// Guards the seeded content: a broken [[link]] would otherwise only show up as a dead word on a phone.
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @Transactional

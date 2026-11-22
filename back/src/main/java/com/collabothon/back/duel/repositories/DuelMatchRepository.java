@@ -19,12 +19,11 @@ public interface DuelMatchRepository extends JpaRepository<DuelMatch, Long> {
 
 	Optional<DuelMatch> findByIdAndUserId(Long id, String userId);
 
-	/** The player's live duels that are in the given status. */
 	List<DuelMatch> findByUserIdAndStatusAndOpponentMatchIdIsNotNull(String userId, MatchStatus status);
 
 	List<DuelMatch> findTop2ByUserIdAndIdLessThanOrderByIdDesc(String userId, Long matchId);
 
-	/** The "Historia" order: unfinished matches first, then newest first. */
+	/** Unfinished matches first, then newest first. */
 	@Query("""
 			SELECT m FROM DuelMatch m
 			WHERE m.userId = :userId

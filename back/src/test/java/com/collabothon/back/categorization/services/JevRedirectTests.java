@@ -7,6 +7,7 @@ import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterAll;
@@ -23,6 +24,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import com.collabothon.back.TestcontainersConfiguration;
 import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
+import com.collabothon.back.categorization.models.JevResult;
 import com.sun.net.httpserver.HttpServer;
 
 // A followed redirect would re-send the body to a second host, which the sent flag cannot account for.
@@ -61,7 +63,7 @@ class JevRedirectTests {
 	@Test
 	void redirectIsNotFollowed() {
 		OnboardingAnswersDto answers = new OnboardingAnswersDto(null, List.of(), "occasional", false);
-		JevResult result = jev.ask(answers, List.of(), null, null);
+		JevResult result = jev.ask(answers, List.of(), null, Optional.empty());
 
 		assertEquals(1, ASKED.get());
 		assertEquals(0, REDIRECTED.get());

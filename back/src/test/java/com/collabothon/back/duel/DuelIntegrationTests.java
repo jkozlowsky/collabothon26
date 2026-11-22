@@ -9,9 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +23,14 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
+import com.collabothon.back.MutableClock;
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.duel.consts.DuelStepConsts;
+import com.collabothon.back.duel.models.DuelQuestion;
+import com.collabothon.back.duel.models.MatchPermutations;
+import com.collabothon.back.duel.repositories.DuelContentRepository;
 import com.collabothon.back.duel.services.DuelShuffle;
 import com.collabothon.back.entities.xp.XpSource;
 import com.collabothon.back.xp.services.XpService;
@@ -58,42 +65,41 @@ class DuelIntegrationTests {
 	XpService xpService;
 
 	@Autowired
-	com.collabothon.back.duel.repositories.DuelContentRepository contentRepository;
+	DuelContentRepository contentRepository;
 
-	private java.util.Optional<com.collabothon.back.entities.duel.DuelQuestion> findServed(JsonNode servedStep) {
-		return java.util.stream.Stream.of("money-basics", "saving", "borrowing", "investing", "risk")
-			.flatMap(area -> contentRepository.findByStory(area).stream())
+	private Optional<DuelQuestion> findServed(JsonNode servedStep) {
+		return Stream.of("money-basics", "saving", "borrowing", "investing", "risk")
+			.flatMap(area -> contentRepository.findByArea(area).stream())
 			.filter(q -> q.step().path("prompt").asString().equals(servedStep.path("prompt").asString()))
 			.findFirst();
 	}
 
 	private String answerForQuestion(String userId, int index, long matchId, JsonNode questionNode, boolean correct) {
 		JsonNode step = questionNode.path("step");
-		String stepId = step.path("id").asString();
-		var questionOpt = findServed(step);
+		Optional<DuelQuestion> questionOpt = findServed(step);
 		if (questionOpt.isEmpty()) {
 			return "{\"userId\":\"" + userId + "\",\"index\":" + index + ",\"option\":0}";
 		}
-		var q = questionOpt.get();
+		DuelQuestion q = questionOpt.get();
 		String type = q.type();
-		if ("quiz".equals(type)) {
+		if (DuelStepConsts.QUIZ.equals(type)) {
 			int opt = correct ? q.step().path("correctIndex").asInt() : (q.step().path("correctIndex").asInt() + 1) % 4;
 			return "{\"userId\":\"" + userId + "\",\"index\":" + index + ",\"option\":" + opt + "}";
 		}
-		if ("predict".equals(type) || "chart".equals(type)) {
+		if (DuelStepConsts.PREDICT.equals(type) || DuelStepConsts.CHART.equals(type)) {
 			double target = q.step().path("answer").asDouble();
 			double val = correct ? target : target + 50000;
 			return "{\"userId\":\"" + userId + "\",\"index\":" + index + ",\"value\":" + val + "}";
 		}
-		if ("sort".equals(type)) {
-			var items = q.step().path("items");
+		if (DuelStepConsts.SORT.equals(type)) {
+			JsonNode items = q.step().path("items");
 			List<Integer> buckets = DuelShuffle.sortPermutation(matchId, index, items.size()).stream()
 				.map(i -> items.get(i).path("bucket").asInt()).toList();
 			return "{\"userId\":\"" + userId + "\",\"index\":" + index + ",\"buckets\":" + buckets + "}";
 		}
-		if ("match".equals(type)) {
+		if (DuelStepConsts.MATCH.equals(type)) {
 			int size = q.step().path("pairs").size();
-			DuelShuffle.MatchPermutations perms = DuelShuffle.matchPermutations(matchId, index, size);
+			MatchPermutations perms = DuelShuffle.matchPermutations(matchId, index, size);
 			List<Integer> pairs = new ArrayList<>();
 			for (int i = 0; i < size; i++) {
 				pairs.add(perms.right().indexOf(perms.left().get(i)));
@@ -298,7 +304,7 @@ class DuelIntegrationTests {
 
 		// Answer all 6 questions correctly
 		for (int i = 0; i < 6; i++) {
-			var mvcResult = mvc.perform(post("/api/duel/matches/{id}/answers", matchId)
+			MvcResult mvcResult = mvc.perform(post("/api/duel/matches/{id}/answers", matchId)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(answerForQuestion("human-player", i, matchId, curQ, true)))
 				.andExpect(status().isOk())
@@ -496,49 +502,12 @@ class DuelIntegrationTests {
 	}
 
 	private static List<Integer> matchPairsForBerlin(long matchId, int index) {
-		DuelShuffle.MatchPermutations perms = DuelShuffle.matchPermutations(matchId, index, 4);
+		MatchPermutations perms = DuelShuffle.matchPermutations(matchId, index, 4);
 		List<Integer> pairs = new ArrayList<>();
 		for (int i = 0; i < 4; i++) {
 			pairs.add(perms.right().indexOf(perms.left().get(i)));
 		}
 		return pairs;
-	}
-
-	static class MutableClock extends Clock {
-		private Instant instant;
-		private final ZoneId zone;
-
-		MutableClock(Instant initial) {
-			this(initial, ZoneId.of("Europe/Warsaw"));
-		}
-
-		MutableClock(Instant initial, ZoneId zone) {
-			this.instant = initial;
-			this.zone = zone;
-		}
-
-		void set(Instant instant) {
-			this.instant = instant;
-		}
-
-		void advance(Duration duration) {
-			this.instant = this.instant.plus(duration);
-		}
-
-		@Override
-		public ZoneId getZone() {
-			return zone;
-		}
-
-		@Override
-		public Clock withZone(ZoneId zone) {
-			return new MutableClock(instant, zone);
-		}
-
-		@Override
-		public Instant instant() {
-			return instant;
-		}
 	}
 
 }

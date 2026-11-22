@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Pattern;
 import com.collabothon.back.categorization.consts.CategorizationConsts;
 import com.collabothon.back.categorization.consts.FactsConsts;
 
-// Ranges the user picked in the Quick check; JevClient names the ones it sends, so a new component goes there too.
+// JevRequests names the ranges it sends, so a new component goes there too.
 public record ProfileRangesDto(
 		@Pattern(regexp = CategorizationConsts.AGE_BANDS)
 		String ageBand,

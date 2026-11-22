@@ -24,7 +24,7 @@ public class GlossaryService {
 	private final GlossaryTermRepository termRepository;
 	private final GlossaryMapper glossaryMapper;
 
-	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
 	public List<CategoryDto> getCategories() {
 		return categoryRepository.findAllByOrderByPosition()
 				.stream()
@@ -33,10 +33,11 @@ public class GlossaryService {
 				.toList();
 	}
 
-	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
 	public TermDetail getTerm(String slug) {
 		GlossaryTerm term = termRepository.findBySlug(slug)
 				.orElseThrow(() -> new BusinessException(GlossaryErrorCode.TERM_NOT_FOUND));
 		return glossaryMapper.toTermDetail(term);
 	}
+
 }

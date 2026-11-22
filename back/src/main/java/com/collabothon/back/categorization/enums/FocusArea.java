@@ -1,10 +1,9 @@
 package com.collabothon.back.categorization.enums;
 
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonValue;
-
-import com.collabothon.back.categorization.services.Story;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +25,14 @@ public enum FocusArea {
 		return WireNames.of(this);
 	}
 
-	/** The area a story teaches: the one place the {@code area} names of stories.json are read. */
+	// Keeps null values: an area without an answer is still a key.
+	public static Map<String, Double> byWire(Map<FocusArea, Double> values) {
+		Map<String, Double> wire = new LinkedHashMap<>();
+		values.forEach((area, value) -> wire.put(area.wire(), value));
+		return wire;
+	}
+
+	// The one place the area names of stories.json are read.
 	public static FocusArea ofStoryArea(String storyArea) {
 		return switch (storyArea) {
 			case "Saving", "Money basics" -> SAVING;
@@ -35,14 +41,6 @@ public enum FocusArea {
 			case "Investing", "Risk" -> INVESTING;
 			default -> throw new IllegalStateException("No focus area for the story area " + storyArea);
 		};
-	}
-
-	/** The areas of the picked paths, in the order the user picked them. */
-	public static List<FocusArea> fromInterests(List<String> storyIds, List<Story> stories) {
-		return Story.picked(storyIds, stories).stream()
-			.map(story -> ofStoryArea(story.area()))
-			.distinct()
-			.toList();
 	}
 
 }

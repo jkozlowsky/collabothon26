@@ -14,12 +14,7 @@ import com.collabothon.back.entities.profile.AccountSession;
 @Transactional(propagation = Propagation.MANDATORY)
 public interface AccountSessionRepository extends JpaRepository<AccountSession, String> {
 
-	/**
-	 * Conditional upsert: inserts new session or updates existing session only if
-	 * the existing session belongs to the same device or its heartbeat has expired (< cutoff).
-	 *
-	 * Returns 1 if acquired / renewed, 0 if conflict with active session on another device.
-	 */
+	// One statement, so two devices cannot both win. Returns 0 while another device holds a live lock.
 	@Modifying
 	@Query(value = """
 			INSERT INTO account_session (user_id, device_id, heartbeat_at)

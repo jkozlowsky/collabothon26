@@ -3,7 +3,6 @@ package com.collabothon.back.categorization.dto;
 import java.util.List;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -19,22 +18,13 @@ public record StepRequestDto(
 		@NotNull
 		@Size(max = CategorizationConsts.MAX_QUESTIONS)
 		List<@NotNull @Valid HistoryEntryDto> history,
+		// Primitive on purpose, unlike the final request: a step without useRules is a 400.
 		boolean useRules,
 		Boolean stepFellBack
-) {
+) implements ConsentedRequest {
 
 	public StepRequestDto {
 		stepFellBack = Boolean.TRUE.equals(stepFellBack);
-	}
-
-	@AssertTrue(message = "facts are only accepted with consent")
-	boolean isFactsOnlyWithConsent() {
-		return facts == null || Boolean.TRUE.equals(consent);
-	}
-
-	@AssertTrue(message = "savings cover is only asked without consent")
-	boolean isSavingsCoverOnlyWithoutConsent() {
-		return profile == null || profile.savingsCover() == null || !Boolean.TRUE.equals(consent);
 	}
 
 }

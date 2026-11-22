@@ -9,7 +9,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
-import com.collabothon.back.entities.duel.DuelQuestion;
+import com.collabothon.back.duel.models.DuelQuestion;
 
 import tools.jackson.databind.json.JsonMapper;
 

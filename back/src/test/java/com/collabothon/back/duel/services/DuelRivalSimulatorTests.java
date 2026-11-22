@@ -12,6 +12,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.collabothon.back.dto.duel.RivalSnapshotDto;
+import com.collabothon.back.duel.demo.DuelDemoConsts;
 import com.collabothon.back.entities.duel.AnswerOutcome;
 import com.collabothon.back.entities.duel.DuelAnswer;
 import com.collabothon.back.entities.duel.DuelMatch;
@@ -78,7 +79,7 @@ class DuelRivalSimulatorTests {
 	void rivalFallsBackWhenThereAreNoOtherDemoAccounts() {
 		when(accounts.findByUserIdStartingWith("demo-")).thenReturn(List.of(account("demo-user")));
 
-		assertThat(simulator.pickRival("demo-user")).isEqualTo(DuelRivalSimulator.FALLBACK_RIVAL);
+		assertThat(simulator.pickRival("demo-user")).isEqualTo(DuelDemoConsts.FALLBACK_RIVAL);
 	}
 
 	private static DuelMatch humanMatch() {

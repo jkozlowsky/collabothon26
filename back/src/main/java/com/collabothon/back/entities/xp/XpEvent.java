@@ -10,16 +10,15 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+
+import com.collabothon.back.common.consts.UserConsts;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * One row of the shared XP ledger (V17). Immutable once written: a (user, source, sourceRef, category) quadruple is
- * unique, which makes awarding XP idempotent.
- */
 @Entity
 @Table(name = "xp_event")
 @Getter
@@ -33,7 +32,7 @@ public class XpEvent {
 	@Column(name = "id", nullable = false, updatable = false)
 	private Long id;
 
-	@Column(name = "user_id", nullable = false, length = 64)
+	@Column(name = "user_id", nullable = false, length = UserConsts.MAX_USER_ID_LENGTH)
 	private String userId;
 
 	@Column(name = "category", nullable = false, length = 32)

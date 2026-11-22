@@ -2,7 +2,6 @@ package com.collabothon.back.lesson.repositories;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -10,128 +9,110 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Repository;
 
-import com.collabothon.back.dto.lesson.LessonContentItem;
-import com.collabothon.back.dto.lesson.Story;
+import com.collabothon.back.dto.lesson.VideoSummary;
 import com.collabothon.back.glossary.repositories.GlossaryContentRepository;
-import com.collabothon.back.lesson.services.LessonRules;
+import com.collabothon.back.lesson.consts.LessonConsts;
+import com.collabothon.back.lesson.models.LessonContentItem;
+import com.collabothon.back.lesson.models.Story;
+import com.collabothon.back.lesson.validation.LessonRules;
 
-import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 @Repository
 public class LessonContentRepository {
 
-	private final Map<String, ObjectNode> lessons = new LinkedHashMap<>();
-	private final Map<String, LessonContentItem> lessonItems = new LinkedHashMap<>();
-	private final StoryRepository storyRepo;
+	private final Map<String, LessonContentItem> lessons;
 
-	public LessonContentRepository(JsonMapper json, GlossaryContentRepository glossaryRepo, StoryRepository storyRepo) throws IOException {
-		this.storyRepo = storyRepo;
-		var resolver = new PathMatchingResourcePatternResolver();
-		Set<String> concepts = glossaryRepo.concepts();
+	public LessonContentRepository(JsonMapper json, GlossaryContentRepository glossary, StoryRepository stories)
+			throws IOException {
+		this.lessons = load(json, glossary.concepts());
+		requireEveryLessonListedOnce(stories.findAll(), lessons);
+	}
 
-		for (Resource file : resolver.getResources("classpath:content/lessons/*.json")) {
-			ObjectNode lesson;
-			try (InputStream in = file.getInputStream()) {
-				lesson = (ObjectNode) json.readTree(in);
-			}
-			// Narration files live in static/audio/{lessonId}/…; a scene naming a missing one stops startup.
-			LessonRules.validate(lesson, concepts,
-					audio -> resolver.getResource("classpath:static/audio/" + audio).exists());
+	public Optional<LessonContentItem> findById(String lessonId) {
+		return Optional.ofNullable(lessons.get(lessonId));
+	}
+
+	private static Map<String, LessonContentItem> load(JsonMapper json, Set<String> concepts) throws IOException {
+		PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+		Predicate<String> audioExists = audio -> resolver.getResource(LessonConsts.AUDIO_FILES + audio).exists();
+		Map<String, LessonContentItem> loaded = new LinkedHashMap<>();
+		for (Resource file : resolver.getResources(LessonConsts.LESSON_FILES)) {
+			ObjectNode lesson = read(json, file);
+			LessonRules.validate(lesson, concepts, audioExists);
 			String id = lesson.path("id").asString();
-			String expectedFilename = id + ".json";
-			if (!expectedFilename.equals(file.getFilename())) {
-				throw new IllegalStateException("Lesson file " + file.getFilename() + " must hold lesson id " + id);
-			}
-			if (lessons.put(id, lesson) != null) {
+			requireFileNamedById(file, id);
+			if (loaded.put(id, toItem(id, lesson)) != null) {
 				throw new IllegalStateException("Duplicate lesson id " + id);
 			}
-
-			List<String> lessonConcepts = new ArrayList<>();
-			for (JsonNode c : lesson.path("concepts")) {
-				lessonConcepts.add(c.asString());
-			}
-
-			LessonContentItem item = new LessonContentItem(
-					id,
-					lesson.path("story").asString(""),
-					lesson.path("title").asString(""),
-					lesson.path("place").asString(""),
-					lesson.path("topic").asString(null),
-					lesson.path("minutes").asInt(0),
-					lesson.path("xp").asInt(0),
-					lessonConcepts,
-					lesson
-			);
-			lessonItems.put(id, item);
 		}
+		return Collections.unmodifiableMap(loaded);
+	}
 
+	private static ObjectNode read(JsonMapper json, Resource file) throws IOException {
+		try (InputStream in = file.getInputStream()) {
+			return (ObjectNode) json.readTree(in);
+		}
+	}
+
+	private static void requireFileNamedById(Resource file, String id) {
+		String expected = id + LessonConsts.LESSON_FILE_SUFFIX;
+		if (!expected.equals(file.getFilename())) {
+			throw new IllegalStateException("Lesson file " + file.getFilename() + " must hold lesson id " + id);
+		}
+	}
+
+	private static LessonContentItem toItem(String id, ObjectNode lesson) {
+		return new LessonContentItem(
+				id,
+				lesson.path("story").asString(""),
+				lesson.path("title").asString(""),
+				lesson.path("place").asString(""),
+				lesson.path("topic").asString(null),
+				lesson.path("minutes").asInt(0),
+				lesson.path("xp").asInt(0),
+				videoSummary(lesson),
+				lesson);
+	}
+
+	private static VideoSummary videoSummary(ObjectNode lesson) {
+		if (!lesson.hasNonNull("video")) {
+			return null;
+		}
+		return new VideoSummary(lesson.path("video").path("minutes").asInt());
+	}
+
+	private static void requireEveryLessonListedOnce(List<Story> stories, Map<String, LessonContentItem> lessons) {
 		Set<String> listed = new HashSet<>();
-		for (Story story : storyRepo.findAll()) {
+		for (Story story : stories) {
 			for (String lessonId : story.lessonIds()) {
-				ObjectNode lesson = lessons.get(lessonId);
-				if (lesson == null) {
-					throw new IllegalStateException("Story " + story.id() + " lists lesson " + lessonId + " that is missing");
-				}
-				if (!story.id().equals(lesson.path("story").asString(""))) {
-					throw new IllegalStateException("Story " + story.id() + " lists lesson " + lessonId + " belonging to another story");
-				}
+				requireLessonOfStory(story, lessonId, lessons);
 				if (!listed.add(lessonId)) {
 					throw new IllegalStateException("Lesson " + lessonId + " listed twice");
 				}
 			}
 		}
-
 		if (!listed.equals(lessons.keySet())) {
 			throw new IllegalStateException("Every lesson must be listed in exactly one story in stories.json");
 		}
 	}
 
-	public Optional<LessonContentItem> findById(String lessonId) {
-		if (lessonId == null) {
-			return Optional.empty();
+	private static void requireLessonOfStory(Story story, String lessonId, Map<String, LessonContentItem> lessons) {
+		LessonContentItem lesson = lessons.get(lessonId);
+		if (lesson == null) {
+			throw new IllegalStateException("Story " + story.id() + " lists lesson " + lessonId + " that is missing");
 		}
-		return Optional.ofNullable(lessonItems.get(lessonId));
-	}
-
-	public Optional<ObjectNode> findNodeById(String lessonId) {
-		if (lessonId == null) {
-			return Optional.empty();
+		if (!story.id().equals(lesson.story())) {
+			throw new IllegalStateException(
+					"Story " + story.id() + " lists lesson " + lessonId + " belonging to another story");
 		}
-		return Optional.ofNullable(lessons.get(lessonId));
 	}
 
-	public Optional<ObjectNode> lesson(String id) {
-		return findNodeById(id);
-	}
-
-	public List<JsonNode> stories() {
-		return storyRepo.rawStories();
-	}
-
-	public Map<String, ObjectNode> allLessons() {
-		return Collections.unmodifiableMap(lessons);
-	}
-
-	public List<String> lessonIdsOf(JsonNode story) {
-		List<String> ids = new ArrayList<>();
-		story.path("lessonIds").forEach(i -> ids.add(i.asString()));
-		return ids;
-	}
-
-	public List<String> lessonIdsOfStory(String storyId) {
-		List<String> ids = new ArrayList<>();
-		for (LessonContentItem item : lessonItems.values()) {
-			if (item.story().equals(storyId)) {
-				ids.add(item.id());
-			}
-		}
-		return ids;
-	}
 }

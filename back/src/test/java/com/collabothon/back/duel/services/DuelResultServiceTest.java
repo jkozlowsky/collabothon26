@@ -15,9 +15,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mapstruct.factory.Mappers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.collabothon.back.config.DuelProperties;
 import com.collabothon.back.dto.converters.duel.DuelAnswerMapper;
+import com.collabothon.back.dto.converters.duel.DuelCategoryMapper;
 import com.collabothon.back.dto.converters.duel.DuelMatchMapper;
 import com.collabothon.back.dto.converters.duel.DuelQuestionConverter;
 import com.collabothon.back.dto.duel.CategoryMatchEndDto;
@@ -25,16 +27,12 @@ import com.collabothon.back.dto.duel.MatchEndDto;
 import com.collabothon.back.dto.duel.PlayerCardDto;
 import com.collabothon.back.duel.repositories.DuelAnswerRepository;
 import com.collabothon.back.duel.repositories.DuelMatchRepository;
-import com.collabothon.back.entities.duel.DuelAnswer;
 import com.collabothon.back.entities.duel.DuelMatch;
 import com.collabothon.back.entities.duel.DuelMode;
-import com.collabothon.back.entities.duel.DuelQuestion;
 import com.collabothon.back.entities.duel.MatchOutcome;
 import com.collabothon.back.lesson.repositories.LessonContentRepository;
 import com.collabothon.back.xp.services.LevelCurve;
 import com.collabothon.back.xp.services.XpService;
-
-import tools.jackson.databind.node.JsonNodeFactory;
 
 @ExtendWith(MockitoExtension.class)
 class DuelResultServiceTest {
@@ -68,16 +66,18 @@ class DuelResultServiceTest {
 
 	DuelMatchMapper matchMapper = Mappers.getMapper(DuelMatchMapper.class);
 
+	DuelCategoryMapper categoryMapper = Mappers.getMapper(DuelCategoryMapper.class);
+
 	LevelCurve levelCurve = new LevelCurve();
 
-	DuelProperties properties = new DuelProperties();
+	DuelProperties properties = DuelTestFixtures.PROPERTIES;
 
 	DuelResultService service;
 
 	@BeforeEach
 	void setUp() {
-		service = new DuelResultService(matches, answers, selectionService, lessons, scoring, playerCards,
-				matchMapper, answerMapper, questionConverter, properties, xpService, levelCurve);
+		service = new DuelResultService(new DuelProgressLoader(matches, answers, properties), selectionService, lessons,
+				scoring, playerCards, matchMapper, categoryMapper, answerMapper, questionConverter, xpService, levelCurve);
 	}
 
 	@Test
@@ -85,7 +85,7 @@ class DuelResultServiceTest {
 		long matchId = 10L;
 		String userId = "player1";
 		DuelMatch match = DuelMatch.start(DuelMode.HUMAN, List.of("berlin"), userId, "rival1", Instant.now());
-		org.springframework.test.util.ReflectionTestUtils.setField(match, "id", matchId);
+		ReflectionTestUtils.setField(match, "id", matchId);
 		match.finish(MatchOutcome.WIN, 5, 3, Instant.now());
 
 		when(matches.findByIdAndUserId(matchId, userId)).thenReturn(Optional.of(match));
@@ -123,7 +123,7 @@ class DuelResultServiceTest {
 		long matchId = 11L;
 		String userId = "player1";
 		DuelMatch match = DuelMatch.start(DuelMode.SOLO, List.of("berlin"), userId, null, Instant.now());
-		org.springframework.test.util.ReflectionTestUtils.setField(match, "id", matchId);
+		ReflectionTestUtils.setField(match, "id", matchId);
 		match.finish(MatchOutcome.SOLO, 4, null, Instant.now());
 
 		when(matches.findByIdAndUserId(matchId, userId)).thenReturn(Optional.of(match));

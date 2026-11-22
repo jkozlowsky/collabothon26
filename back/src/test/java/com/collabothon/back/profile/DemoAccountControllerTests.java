@@ -11,7 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.util.concurrent.Callable;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -25,8 +24,11 @@ import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.collabothon.back.MutableClock;
 import com.collabothon.back.Race;
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.entities.profile.AccountSession;
+import com.collabothon.back.profile.consts.ProfileConsts;
 import com.collabothon.back.profile.repositories.AccountSessionRepository;
 import com.collabothon.back.profile.services.AccountSessionService;
 
@@ -59,12 +61,11 @@ class DemoAccountControllerTests {
 	@BeforeEach
 	void setUp() {
 		CLOCK.set(Instant.parse("2026-11-23T10:00:00Z"));
-		sessionRepository.deleteAll();
+		tx.executeWithoutResult(status -> sessionRepository.deleteAll());
 	}
 
 	@Test
 	void getDemoAccountsReturnsAllThreeInFixedOrderWithStatuses() throws Exception {
-		// Initially all free
 		mvc.perform(get("/api/demo-accounts").param("deviceId", "dev-1"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.length()").value(3))
@@ -84,7 +85,6 @@ class DemoAccountControllerTests {
 				.andExpect(jsonPath("$[2].avatar").value("f3"))
 				.andExpect(jsonPath("$[2].status").value("free"));
 
-		// dev-1 acquires demo-daniel, dev-2 acquires demo-elena
 		mvc.perform(post("/api/users/demo-daniel/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"deviceId\":\"dev-1\"}"))
@@ -95,21 +95,18 @@ class DemoAccountControllerTests {
 						.content("{\"deviceId\":\"dev-2\"}"))
 				.andExpect(status().isOk());
 
-		// dev-1 checks: Alex free, Daniel mine, Elena in-use
 		mvc.perform(get("/api/demo-accounts").param("deviceId", "dev-1"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].status").value("free"))
 				.andExpect(jsonPath("$[1].status").value("mine"))
 				.andExpect(jsonPath("$[2].status").value("in-use"));
 
-		// dev-2 checks: Alex free, Daniel in-use, Elena mine
 		mvc.perform(get("/api/demo-accounts").param("deviceId", "dev-2"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].status").value("free"))
 				.andExpect(jsonPath("$[1].status").value("in-use"))
 				.andExpect(jsonPath("$[2].status").value("mine"));
 
-		// dev-3 checks (no lock): Alex free, Daniel in-use, Elena in-use
 		mvc.perform(get("/api/demo-accounts").param("deviceId", "dev-3"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].status").value("free"))
@@ -119,7 +116,6 @@ class DemoAccountControllerTests {
 
 	@Test
 	void acquireFreeAndHeldAccounts() throws Exception {
-		// Acquire free -> 200
 		mvc.perform(post("/api/users/demo-user/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"deviceId\":\"dev-1\"}"))
@@ -128,14 +124,12 @@ class DemoAccountControllerTests {
 				.andExpect(jsonPath("$.ttlMs").value(120000))
 				.andExpect(jsonPath("$.heartbeatMs").value(30000));
 
-		// Re-acquire by same device -> 200
 		mvc.perform(post("/api/users/demo-user/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"deviceId\":\"dev-1\"}"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.userId").value("demo-user"));
 
-		// Acquire by another device -> 409
 		mvc.perform(post("/api/users/demo-user/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"deviceId\":\"dev-2\"}"))
@@ -165,7 +159,6 @@ class DemoAccountControllerTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.userId").value("demo-daniel"));
 
-		// dev-1 tries heartbeat after takeover -> 409
 		mvc.perform(put("/api/users/demo-daniel/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"deviceId\":\"dev-1\"}"))
@@ -180,10 +173,8 @@ class DemoAccountControllerTests {
 						.content("{\"deviceId\":\"dev-1\"}"))
 				.andExpect(status().isOk());
 
-		// Advance 100s
 		CLOCK.advance(Duration.ofSeconds(100));
 
-		// Heartbeat from dev-1
 		mvc.perform(put("/api/users/demo-elena/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"deviceId\":\"dev-1\"}"))
@@ -193,7 +184,6 @@ class DemoAccountControllerTests {
 		// Advance another 100s (total 200s from initial acquire, but 100s from heartbeat)
 		CLOCK.advance(Duration.ofSeconds(100));
 
-		// Still held by dev-1 -> dev-2 gets 409
 		mvc.perform(post("/api/users/demo-elena/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"deviceId\":\"dev-2\"}"))
@@ -207,21 +197,17 @@ class DemoAccountControllerTests {
 						.content("{\"deviceId\":\"dev-1\"}"))
 				.andExpect(status().isOk());
 
-		// Delete by dev-2 -> 204, but does not delete session
 		mvc.perform(delete("/api/users/demo-user/session").param("deviceId", "dev-2"))
 				.andExpect(status().isNoContent());
 
-		// dev-2 still cannot acquire
 		mvc.perform(post("/api/users/demo-user/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"deviceId\":\"dev-2\"}"))
 				.andExpect(status().isConflict());
 
-		// Delete by dev-1 (owner) -> 204, released
 		mvc.perform(delete("/api/users/demo-user/session").param("deviceId", "dev-1"))
 				.andExpect(status().isNoContent());
 
-		// Now dev-2 can acquire
 		mvc.perform(post("/api/users/demo-user/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"deviceId\":\"dev-2\"}"))
@@ -230,31 +216,26 @@ class DemoAccountControllerTests {
 
 	@Test
 	void validationErrorsAndUnknownUsers() throws Exception {
-		// Unknown user -> 404
 		mvc.perform(post("/api/users/unknown-user/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"deviceId\":\"dev-1\"}"))
 				.andExpect(status().isNotFound());
 
-		// Non-lockable demo account (e.g. demo-tomasz) -> 404
 		mvc.perform(post("/api/users/demo-tomasz/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"deviceId\":\"dev-1\"}"))
 				.andExpect(status().isNotFound());
 
-		// Blank deviceId -> 400
 		mvc.perform(post("/api/users/demo-user/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"deviceId\":\"\"}"))
 				.andExpect(status().isBadRequest());
 
-		// Null deviceId -> 400
 		mvc.perform(post("/api/users/demo-user/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{}"))
 				.andExpect(status().isBadRequest());
 
-		// deviceId too long (>64 chars) -> 400
 		String longId = "a".repeat(65);
 		mvc.perform(post("/api/users/demo-user/session")
 						.contentType(MediaType.APPLICATION_JSON)
@@ -271,52 +252,17 @@ class DemoAccountControllerTests {
 
 		Callable<Boolean> second = () -> {
 			Instant now = CLOCK.instant();
-			Instant cutoff = now.minus(AccountSessionService.TTL);
-			int updated = sessionRepository.tryAcquireOrHeartbeat("demo-daniel", "dev-second", now, cutoff);
+			Instant cutoff = now.minus(ProfileConsts.SESSION_TTL);
+			int updated = tx.execute(status -> sessionRepository.tryAcquireOrHeartbeat("demo-daniel", "dev-second", now,
+					cutoff));
 			return updated == 1;
 		};
 
 		boolean secondWon = Race.secondDuringFirst(tx, first, second);
 		assertThat(secondWon).isFalse();
 
-		var session = sessionRepository.findById("demo-daniel").orElseThrow();
+		AccountSession session = tx.execute(status -> sessionRepository.findById("demo-daniel")).orElseThrow();
 		assertThat(session.getDeviceId()).isEqualTo("dev-first");
 	}
 
-	static class MutableClock extends Clock {
-		private Instant instant;
-		private final ZoneId zone;
-
-		MutableClock(Instant initial) {
-			this(initial, ZoneId.of("Europe/Warsaw"));
-		}
-
-		MutableClock(Instant initial, ZoneId zone) {
-			this.instant = initial;
-			this.zone = zone;
-		}
-
-		void set(Instant instant) {
-			this.instant = instant;
-		}
-
-		void advance(Duration duration) {
-			this.instant = this.instant.plus(duration);
-		}
-
-		@Override
-		public ZoneId getZone() {
-			return zone;
-		}
-
-		@Override
-		public Clock withZone(ZoneId zone) {
-			return new MutableClock(instant, zone);
-		}
-
-		@Override
-		public Instant instant() {
-			return instant;
-		}
-	}
 }

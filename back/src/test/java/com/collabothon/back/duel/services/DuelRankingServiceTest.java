@@ -11,9 +11,11 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mapstruct.factory.Mappers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.collabothon.back.dto.converters.duel.DuelPlayerMapper;
 import com.collabothon.back.dto.duel.RankingsDto;
 import com.collabothon.back.entities.profile.Account;
 import com.collabothon.back.profile.repositories.AccountRepository;
@@ -40,7 +42,8 @@ class DuelRankingServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new DuelRankingService(leaderboard, xpService, levelCurve, accounts);
+		service = new DuelRankingService(leaderboard, xpService, levelCurve, accounts,
+				Mappers.getMapper(DuelPlayerMapper.class));
 	}
 
 	@Test

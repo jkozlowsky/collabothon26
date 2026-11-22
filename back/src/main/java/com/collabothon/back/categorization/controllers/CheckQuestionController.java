@@ -2,6 +2,7 @@ package com.collabothon.back.categorization.controllers;
 
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,8 +20,8 @@ class CheckQuestionController {
 	private final CheckQuestionService service;
 
 	@GetMapping
-	List<CheckQuestionDto> questions() {
-		return service.questions();
+	ResponseEntity<List<CheckQuestionDto>> questions() {
+		return ResponseEntity.ok(service.questions());
 	}
 
 }

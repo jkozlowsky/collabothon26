@@ -32,14 +32,13 @@ import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.jayway.jsonpath.JsonPath;
 
 import com.collabothon.back.Race;
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.categorization.FixedRandom;
 import com.collabothon.back.categorization.repositories.CategorizationRepository;
 
 // The default for teammates: no key, so nothing may reach the hosted API.
@@ -47,7 +46,6 @@ import com.collabothon.back.categorization.repositories.CategorizationRepository
 @SpringBootTest(properties = "jev.api-key=")
 @AutoConfigureMockMvc
 @AutoConfigureMockRestServiceServer
-@Transactional
 class CategorizationWithoutKeyTests {
 
 	@Autowired
@@ -266,10 +264,7 @@ class CategorizationWithoutKeyTests {
 		return play(ALEX, asked, right);
 	}
 
-	/**
-	 * Plays the Quick check on the rule (by default two saving paths picked; money needed in 1-5 years) until it is done,
-	 * answering question i right or wrong as {@code right[i]} says, then categorizes.
-	 */
+	// Plays the Quick check on the rule until it is done, question i right as right[i] says, then categorizes.
 	private ResultActions play(String account, List<String> asked, boolean... right) throws Exception {
 		return play(account, "\"berlin\", \"buenos-aires\"", asked, right);
 	}
@@ -304,7 +299,7 @@ class CategorizationWithoutKeyTests {
 			{%s, "profile": {"ageBand": "26-40", "savingsCover": null, "horizon": "1-5y"}, "history": [%s],
 			 "useRules": true}""";
 
-	/** The seeded demo customer: saves every month and holds investments. */
+	// The seeded demo customer: saves every month and holds investments.
 	private static final String ALEX = """
 			"consent": true, "facts": {"incomeBand": "2-3.5k", "cashBufferMonths": "6+", "savingsRate": "20%+",
 			 "savesRegularly": true, "inOverdraft": false, "holdsInvestments": true, "hasLoan": true}""";
@@ -315,7 +310,6 @@ class CategorizationWithoutKeyTests {
 	private static final String NO_FACTS = "\"consent\": false";
 
 	@Test
-	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	void aDoubleTapOnCategorizeKeepsOneResultAndFailsNothing() throws Exception {
 		String userId = "tap-" + UUID.randomUUID();
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
@@ -325,7 +319,7 @@ class CategorizationWithoutKeyTests {
 		int second = Race.secondDuringFirst(tx, () -> categorize(userId), () -> categorize(userId));
 
 		assertEquals(200, second);
-		assertTrue(categorizations.findData(userId).isPresent());
+		assertTrue(tx.execute(status -> categorizations.findData(userId)).isPresent());
 	}
 
 	private int categorize(String userId) throws Exception {

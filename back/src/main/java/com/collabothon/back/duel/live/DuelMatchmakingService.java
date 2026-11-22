@@ -1,35 +1,28 @@
 package com.collabothon.back.duel.live;
 
 import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
+import java.util.SequencedMap;
 
 import org.springframework.stereotype.Service;
 
-import com.collabothon.back.duel.services.DuelMatchService;
+import com.collabothon.back.duel.consts.DuelConsts;
+import com.collabothon.back.duel.consts.DuelSocketConsts;
+import com.collabothon.back.duel.services.DuelStartService;
 import com.collabothon.back.duel.services.LiveMatch;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * The live-duel queue: a player waits up to {@link #QUEUE_TIMEOUT} for another account, then gets {@code no-rival}
- * and the client falls back to the simulated rival. Never pairs an account with itself.
- */
+// The live-duel queue. It tells players of a match only once startLive has committed its own transaction.
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class DuelMatchmakingService {
 
-	public static final Duration QUEUE_TIMEOUT = Duration.ofSeconds(15);
-
-	static final int MAX_CATEGORIES = 4;
-
-	private final DuelMatchService matchService;
+	private final DuelStartService startService;
 
 	private final DuelLiveNotifier notifier;
 
@@ -37,76 +30,81 @@ public class DuelMatchmakingService {
 
 	private final Clock clock;
 
-	/** Waiting players in queue order; guarded by {@code this}. */
-	private final Map<String, Waiting> queue = new LinkedHashMap<>();
+	/** Waiting players by user id, in queue order; guarded by {@code this}. */
+	private final SequencedMap<String, WaitingPlayer> queue = new LinkedHashMap<>();
 
-	private long sequence;
+	private long lastTicket;
 
-	private record Waiting(String userId, List<String> categories, Instant queuedAt, long sequence) {
-	}
-
-	/** Joins the queue, or pairs with the longest-waiting other account. Queuing again restarts the wait. */
+	/** Pairs with the longest-waiting other account, or waits. Queuing again restarts the wait. */
 	public void join(String userId, List<String> categories) {
-		if (categories == null || categories.isEmpty() || categories.size() > MAX_CATEGORIES) {
-			notifier.send(userId, DuelSocketMessages.error("INVALID_CATEGORIES"));
+		if (categories.isEmpty() || categories.size() > DuelConsts.MAX_CATEGORIES) {
+			notifier.send(userId, DuelSocketMessages.error(DuelSocketConsts.INVALID_CATEGORIES_ERROR));
 			return;
 		}
-		Waiting rival;
-		Waiting self = null;
+		WaitingPlayer player;
+		Optional<WaitingPlayer> rival;
 		synchronized (this) {
-			queue.remove(userId);
-			rival = queue.values().stream().filter(waiting -> !waiting.userId().equals(userId)).findFirst().orElse(null);
-			if (rival != null) {
-				queue.remove(rival.userId());
-			}
-			else {
-				self = new Waiting(userId, List.copyOf(categories), clock.instant(), ++sequence);
-				queue.put(userId, self);
-			}
+			player = new WaitingPlayer(userId, List.copyOf(categories), clock.instant(), ++lastTicket);
+			rival = takeRivalOrQueue(player);
 		}
-		if (rival != null) {
-			pair(rival, userId, categories);
-			return;
-		}
-		Waiting queued = self;
-		timers.schedule(() -> expire(queued), QUEUE_TIMEOUT);
-		notifier.send(userId, DuelSocketMessages.queued(QUEUE_TIMEOUT.toMillis()));
+		rival.ifPresentOrElse(waiting -> pair(waiting, player), () -> awaitRival(player));
 	}
 
 	public synchronized void cancel(String userId) {
 		queue.remove(userId);
 	}
 
-	private void expire(Waiting waiting) {
-		synchronized (this) {
-			Waiting current = queue.get(waiting.userId());
-			if (current == null || current.sequence() != waiting.sequence()
-					|| clock.instant().isBefore(waiting.queuedAt().plus(QUEUE_TIMEOUT))) {
-				return;
-			}
-			queue.remove(waiting.userId());
+	// Leaving the queue first is what keeps an account from being paired with itself.
+	private Optional<WaitingPlayer> takeRivalOrQueue(WaitingPlayer player) {
+		queue.remove(player.userId());
+		if (queue.isEmpty()) {
+			queue.put(player.userId(), player);
+			return Optional.empty();
 		}
-		notifier.send(waiting.userId(), DuelSocketMessages.noRival());
+		return Optional.of(queue.pollFirstEntry().getValue());
 	}
 
-	private void pair(Waiting first, String secondUserId, List<String> secondCategories) {
-		List<String> categories = commonCategories(first.categories(), secondCategories);
+	private void awaitRival(WaitingPlayer player) {
+		timers.schedule(() -> expire(player), DuelSocketConsts.QUEUE_TIMEOUT);
+		notifier.send(player.userId(), DuelSocketMessages.queued(DuelSocketConsts.QUEUE_TIMEOUT.toMillis()));
+	}
+
+	private void expire(WaitingPlayer player) {
+		if (removeIfExpired(player)) {
+			notifier.send(player.userId(), DuelSocketMessages.noRival());
+		}
+	}
+
+	private synchronized boolean removeIfExpired(WaitingPlayer player) {
+		if (!player.equals(queue.get(player.userId()))
+				|| clock.instant().isBefore(player.queuedAt().plus(DuelSocketConsts.QUEUE_TIMEOUT))) {
+			return false;
+		}
+		queue.remove(player.userId());
+		return true;
+	}
+
+	private void pair(WaitingPlayer first, WaitingPlayer second) {
+		List<String> categories = commonCategories(first.categories(), second.categories());
 		try {
-			LiveMatch live = matchService.startLive(first.userId(), secondUserId, categories);
+			LiveMatch live = startService.startLive(first.userId(), second.userId(), categories);
 			notifier.send(live.userA(), DuelSocketMessages.matched(live.matchIdA(), live.cardB(), live.categories()));
 			notifier.send(live.userB(), DuelSocketMessages.matched(live.matchIdB(), live.cardA(), live.categories()));
 		}
 		catch (RuntimeException e) {
-			log.warn("Could not start a live duel for {} and {}", first.userId(), secondUserId, e);
-			notifier.send(first.userId(), DuelSocketMessages.error("MATCH_FAILED"));
-			notifier.send(secondUserId, DuelSocketMessages.error("MATCH_FAILED"));
+			log.warn("Could not start a live duel for {} and {}", first.userId(), second.userId(), e);
+			notifier.send(first.userId(), DuelSocketMessages.error(DuelSocketConsts.MATCH_FAILED_ERROR));
+			notifier.send(second.userId(), DuelSocketMessages.error(DuelSocketConsts.MATCH_FAILED_ERROR));
 		}
 	}
 
 	/** The categories both ticked, in the first player's order; the first player's own when there are none. */
-	static List<String> commonCategories(List<String> first, List<String> second) {
-		List<String> common = new ArrayList<>(first.stream().filter(second::contains).distinct().toList());
-		return common.isEmpty() ? first : common;
+	private static List<String> commonCategories(List<String> first, List<String> second) {
+		List<String> common = first.stream().filter(second::contains).distinct().toList();
+		if (common.isEmpty()) {
+			return first;
+		}
+		return common;
 	}
 
 }

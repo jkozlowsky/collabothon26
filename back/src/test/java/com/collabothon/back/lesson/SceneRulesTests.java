@@ -5,10 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import org.junit.jupiter.api.Test;
 
-import com.collabothon.back.lesson.services.LessonRules;
+import com.collabothon.back.lesson.validation.LessonRules;
 
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -20,6 +21,8 @@ class SceneRulesTests {
 	private final JsonMapper json = JsonMapper.builder().build();
 
 	private static final Set<String> GLOSSARY = Set.of("leverage");
+
+	private static final Predicate<String> NO_AUDIO = audio -> false;
 
 	private static final String SCENE = """
 			{ "type": "scene", "id": "%s", "title": "T", "desc": "D", "duration": 10, "camera": "push", "transcript": "t1",
@@ -48,7 +51,7 @@ class SceneRulesTests {
 	private void fails(Consumer<ObjectNode> breakIt, String message) {
 		ObjectNode l = lesson();
 		breakIt.accept(l);
-		assertThatThrownBy(() -> LessonRules.validate(l, GLOSSARY)).hasMessageContaining("x-1").hasMessageContaining(message);
+		assertThatThrownBy(() -> LessonRules.validate(l, GLOSSARY, NO_AUDIO)).hasMessageContaining("x-1").hasMessageContaining(message);
 	}
 
 	private ArrayNode beats(ObjectNode l) {
@@ -57,7 +60,7 @@ class SceneRulesTests {
 
 	@Test
 	void aValidTrackPasses() {
-		assertThatCode(() -> LessonRules.validate(lesson(), GLOSSARY)).doesNotThrowAnyException();
+		assertThatCode(() -> LessonRules.validate(lesson(), GLOSSARY, NO_AUDIO)).doesNotThrowAnyException();
 	}
 
 	@Test
@@ -89,7 +92,7 @@ class SceneRulesTests {
 		ObjectNode ok = lesson();
 		phased.accept(ok);
 		beats(ok).removeAll().add("v1").add("v2").add("v3").add("sc1").add("q1");
-		assertThatCode(() -> LessonRules.validate(ok, GLOSSARY)).doesNotThrowAnyException();
+		assertThatCode(() -> LessonRules.validate(ok, GLOSSARY, NO_AUDIO)).doesNotThrowAnyException();
 	}
 
 	@Test
@@ -98,7 +101,7 @@ class SceneRulesTests {
 		ObjectNode ok = lesson();
 		ok.putArray("concepts").add("leverage");
 		scene(ok, 0).put("desc", "Borrowing to invest is called [[leverage]].");
-		assertThatCode(() -> LessonRules.validate(ok, GLOSSARY)).doesNotThrowAnyException();
+		assertThatCode(() -> LessonRules.validate(ok, GLOSSARY, NO_AUDIO)).doesNotThrowAnyException();
 		fails(l -> scene(l, 0).putArray("captions").addObject().put("at", 1).put("text", "[[leverage]]"), "captions and layers hold no [[links]]");
 	}
 
@@ -126,9 +129,9 @@ class SceneRulesTests {
 		for (int i = 0; i < 4; i++) {
 			scene(l, i).put("duration", 15);
 		}
-		assertThatCode(() -> LessonRules.validate(l, GLOSSARY)).doesNotThrowAnyException();
+		assertThatCode(() -> LessonRules.validate(l, GLOSSARY, NO_AUDIO)).doesNotThrowAnyException();
 		scene(l, 3).put("duration", 15.5);
-		assertThatThrownBy(() -> LessonRules.validate(l, GLOSSARY)).hasMessageContaining("duration must be");
+		assertThatThrownBy(() -> LessonRules.validate(l, GLOSSARY, NO_AUDIO)).hasMessageContaining("duration must be");
 		// 4 scenes × 15 s is exactly the 60 s cap; more needs a fifth scene or a longer one, both rejected above.
 	}
 
@@ -155,7 +158,7 @@ class SceneRulesTests {
 				"duration must be");
 		ObjectNode ok = lesson();
 		scene(ok, 1).set("byChoice", json.readTree("{ \"step\": \"sc1\", \"0\": { \"desc\": \"x\" }, \"1\": { \"camera\": \"none\" } }"));
-		assertThatCode(() -> LessonRules.validate(ok, GLOSSARY)).doesNotThrowAnyException();
+		assertThatCode(() -> LessonRules.validate(ok, GLOSSARY, NO_AUDIO)).doesNotThrowAnyException();
 	}
 
 	@Test
@@ -174,7 +177,7 @@ class SceneRulesTests {
 		ObjectNode ok = lesson();
 		((ArrayNode) scene(ok, 2).get("layers")).add(json.readTree(amount.formatted("savingsBalance", fallback)));
 		scene(ok, 2).set("noData", json.readTree(noData));
-		assertThatCode(() -> LessonRules.validate(ok, GLOSSARY)).doesNotThrowAnyException();
+		assertThatCode(() -> LessonRules.validate(ok, GLOSSARY, NO_AUDIO)).doesNotThrowAnyException();
 	}
 
 	@Test

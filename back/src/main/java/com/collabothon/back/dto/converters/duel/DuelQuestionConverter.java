@@ -1,128 +1,102 @@
 package com.collabothon.back.dto.converters.duel;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
 import com.collabothon.back.dto.duel.DuelQuestionDto;
+import com.collabothon.back.duel.consts.DuelStepConsts;
+import com.collabothon.back.duel.models.DuelQuestion;
+import com.collabothon.back.duel.models.MatchPermutations;
 import com.collabothon.back.duel.services.DuelShuffle;
-import com.collabothon.back.entities.duel.DuelQuestion;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
-/**
- * Turns a duel question into what the player sees before answering: the step without the fields that give the answer
- * away. The review sends the full step instead.
- */
+/** A step as played, without what gives the answer away, and as reviewed, in full plus the order it was shown in. */
 @Component
 public class DuelQuestionConverter {
 
-	private static final String EXPLANATION = "explanation";
-
 	private static final Map<String, Set<String>> ANSWER_FIELDS_BY_TYPE = Map.of(
-			"quiz", Set.of("correctIndex", EXPLANATION),
-			"predict", Set.of("answer", "reveal", "tolerance", EXPLANATION),
-			"chart", Set.of("answer", "tolerance", EXPLANATION));
+			DuelStepConsts.QUIZ, Set.of("correctIndex", "explanation"),
+			DuelStepConsts.PREDICT, Set.of("answer", "reveal", "tolerance", "explanation"),
+			DuelStepConsts.CHART, Set.of("answer", "tolerance", "explanation"));
 
-	private static final Set<String> DEFAULT_ANSWER_FIELDS = Set.of(EXPLANATION);
+	private static final Set<String> DEFAULT_ANSWER_FIELDS = Set.of("explanation");
 
 	public DuelQuestionDto toDto(long matchId, int index, DuelQuestion question, long deadline, long timeLimitMs) {
 		return new DuelQuestionDto(index, question.category(), toDuelStep(matchId, index, question.step()), deadline,
 				timeLimitMs);
 	}
 
-	public DuelQuestionDto toDto(int index, DuelQuestion question, long deadline, long timeLimitMs) {
-		return toDto(0L, index, question, deadline, timeLimitMs);
-	}
-
 	public ObjectNode toDuelStep(long matchId, int index, ObjectNode step) {
 		String type = step.path("type").asString();
-		if ("sort".equals(type)) {
-			return toDuelSortStep(matchId, index, step);
+		return switch (type) {
+			case DuelStepConsts.SORT -> toDuelSortStep(matchId, index, step);
+			case DuelStepConsts.MATCH -> toDuelMatchStep(matchId, index, step);
+			default -> withoutAnswers(type, step);
+		};
+	}
+
+	public ObjectNode toReviewStep(long matchId, int index, ObjectNode step) {
+		ObjectNode review = step.deepCopy();
+		switch (review.path("type").asString()) {
+			case DuelStepConsts.SORT ->
+				addShownItems(review.putArray("shownItems"), matchId, index, review.path("items"));
+			case DuelStepConsts.MATCH -> addShownPairs(review.putArray("shownLeft"), review.putArray("shownRight"),
+					matchId, index, review.path("pairs"));
 		}
-		if ("match".equals(type)) {
-			return toDuelMatchStep(matchId, index, step);
-		}
+		return review;
+	}
+
+	private static ObjectNode withoutAnswers(String type, ObjectNode step) {
 		ObjectNode copy = step.deepCopy();
 		copy.remove(ANSWER_FIELDS_BY_TYPE.getOrDefault(type, DEFAULT_ANSWER_FIELDS));
 		return copy;
 	}
 
-	public ObjectNode withoutAnswerFields(ObjectNode step) {
-		return toDuelStep(0L, 0, step);
-	}
-
 	private static ObjectNode toDuelSortStep(long matchId, int index, ObjectNode step) {
-		ObjectNode duelStep = step.objectNode();
-		duelStep.put("type", "sort");
-		duelStep.put("id", step.path("id").asString());
-		if (step.hasNonNull("prompt")) {
-			duelStep.put("prompt", step.path("prompt").asString());
-		}
-		duelStep.set("buckets", step.path("buckets").deepCopy());
-		ArrayNode itemsNode = duelStep.putArray("items");
-		JsonNode origItems = step.path("items");
-		List<Integer> perm = DuelShuffle.sortPermutation(matchId, index, origItems.size());
-		for (int idx : perm) {
-			JsonNode item = origItems.get(idx);
-			itemsNode.add(extractItemText(item));
-		}
-		return duelStep;
+		ObjectNode shown = stepHeader(DuelStepConsts.SORT, step);
+		shown.set("buckets", step.path("buckets").deepCopy());
+		addShownItems(shown.putArray("items"), matchId, index, step.path("items"));
+		return shown;
 	}
 
 	private static ObjectNode toDuelMatchStep(long matchId, int index, ObjectNode step) {
-		ObjectNode duelStep = step.objectNode();
-		duelStep.put("type", "match");
-		duelStep.put("id", step.path("id").asString());
+		ObjectNode shown = stepHeader(DuelStepConsts.MATCH, step);
+		addShownPairs(shown.putArray("left"), shown.putArray("right"), matchId, index, step.path("pairs"));
+		return shown;
+	}
+
+	private static ObjectNode stepHeader(String type, ObjectNode step) {
+		ObjectNode header = step.objectNode();
+		header.put("type", type);
+		header.put("id", step.path("id").asString());
 		if (step.hasNonNull("prompt")) {
-			duelStep.put("prompt", step.path("prompt").asString());
+			header.put("prompt", step.path("prompt").asString());
 		}
-		ArrayNode leftNode = duelStep.putArray("left");
-		ArrayNode rightNode = duelStep.putArray("right");
-		JsonNode origPairs = step.path("pairs");
-		int size = origPairs.size();
-		DuelShuffle.MatchPermutations perms = DuelShuffle.matchPermutations(matchId, index, size);
-		for (int idx : perms.left()) {
-			leftNode.add(origPairs.get(idx).get(0).asString());
-		}
-		for (int idx : perms.right()) {
-			rightNode.add(origPairs.get(idx).get(1).asString());
-		}
-		return duelStep;
+		return header;
 	}
 
-	public ObjectNode toReviewStep(long matchId, int index, ObjectNode step) {
-		ObjectNode copy = step.deepCopy();
-		String type = copy.path("type").asString();
-		if ("sort".equals(type)) {
-			ArrayNode shownItems = copy.putArray("shownItems");
-			JsonNode origItems = copy.path("items");
-			List<Integer> perm = DuelShuffle.sortPermutation(matchId, index, origItems.size());
-			for (int idx : perm) {
-				JsonNode item = origItems.get(idx);
-				shownItems.add(extractItemText(item));
-			}
+	private static void addShownItems(ArrayNode shown, long matchId, int index, JsonNode items) {
+		for (int original : DuelShuffle.sortPermutation(matchId, index, items.size())) {
+			shown.add(itemText(items.get(original)));
 		}
-		else if ("match".equals(type)) {
-			ArrayNode shownLeft = copy.putArray("shownLeft");
-			ArrayNode shownRight = copy.putArray("shownRight");
-			JsonNode origPairs = copy.path("pairs");
-			DuelShuffle.MatchPermutations perms = DuelShuffle.matchPermutations(matchId, index, origPairs.size());
-			for (int idx : perms.left()) {
-				shownLeft.add(origPairs.get(idx).get(0).asString());
-			}
-			for (int idx : perms.right()) {
-				shownRight.add(origPairs.get(idx).get(1).asString());
-			}
-		}
-		return copy;
 	}
 
-	private static String extractItemText(JsonNode item) {
+	private static void addShownPairs(ArrayNode left, ArrayNode right, long matchId, int index, JsonNode pairs) {
+		MatchPermutations order = DuelShuffle.matchPermutations(matchId, index, pairs.size());
+		for (int original : order.left()) {
+			left.add(pairs.get(original).get(0).asString());
+		}
+		for (int original : order.right()) {
+			right.add(pairs.get(original).get(1).asString());
+		}
+	}
+
+	private static String itemText(JsonNode item) {
 		if (item.isObject()) {
 			return item.path("text").asString();
 		}

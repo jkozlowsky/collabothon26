@@ -5,8 +5,7 @@ import jakarta.validation.constraints.Pattern;
 
 import com.collabothon.back.categorization.consts.FactsConsts;
 
-// Computed on the device from the bank (front/src/lib/categorization.ts): bands and flags, nothing identifying.
-// Serialised verbatim to Jev, so a new component here is sent out too (pinned by a test).
+// Serialised verbatim to Jev: a new component is sent out too, so keep it to bands and flags (pinned by a test).
 public record FactsDto(
 		@NotNull
 		@Pattern(regexp = FactsConsts.INCOME_BANDS)

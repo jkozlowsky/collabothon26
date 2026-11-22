@@ -11,7 +11,7 @@ import com.collabothon.back.lesson.repositories.ScenarioChoiceRepository;
 
 import lombok.RequiredArgsConstructor;
 
-/** Wipes a user's learning progress so the demo can start again from a fresh account (no streak, no XP). */
+// Demo hack: lets the presenter replay the learning path.
 @Service
 @RequiredArgsConstructor
 public class DemoProgressService {
@@ -21,11 +21,12 @@ public class DemoProgressService {
 	private final ConceptKnowledgeRepository concepts;
 	private final ScenarioChoiceRepository scenarioChoices;
 
-	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = false, propagation = Propagation.REQUIRES_NEW)
 	public void reset(String userId) {
 		activities.deleteByIdUserId(userId);
 		completions.deleteByIdUserId(userId);
 		concepts.deleteByIdUserId(userId);
 		scenarioChoices.deleteByUserId(userId);
 	}
+
 }

@@ -1,40 +1,16 @@
 package com.collabothon.back.entities.lesson;
 
 import java.io.Serializable;
-import java.util.Objects;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+
+import com.collabothon.back.common.consts.UserConsts;
+import com.collabothon.back.lesson.consts.LessonConsts;
 
 @Embeddable
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
-public class LessonCompletionId implements Serializable {
-
-	@Column(name = "user_id", nullable = false, length = 64)
-	private String userId;
-
-	@Column(name = "lesson_id", nullable = false, length = 64)
-	private String lessonId;
-
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) {
-			return true;
-		}
-		if (o == null || getClass() != o.getClass()) {
-			return false;
-		}
-		LessonCompletionId that = (LessonCompletionId) o;
-		return Objects.equals(userId, that.userId) && Objects.equals(lessonId, that.lessonId);
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(userId, lessonId);
-	}
-}
+public record LessonCompletionId(
+		@Column(name = "user_id", nullable = false, length = UserConsts.MAX_USER_ID_LENGTH)
+		String userId,
+		@Column(name = "lesson_id", nullable = false, length = LessonConsts.MAX_ID_LENGTH)
+		String lessonId) implements Serializable {}

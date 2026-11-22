@@ -9,10 +9,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.collabothon.back.common.consts.WebConsts;
 import com.collabothon.back.dto.lesson.LessonSummary;
 import com.collabothon.back.entities.profile.UserProfile;
 import com.collabothon.back.glossary.repositories.GlossaryContentRepository;
+import com.collabothon.back.lesson.consts.LessonConsts;
+import com.collabothon.back.lesson.models.LessonContentItem;
+import com.collabothon.back.lesson.models.LessonJson;
+import com.collabothon.back.lesson.models.Story;
 import com.collabothon.back.lesson.repositories.StoryRepository;
+import com.collabothon.back.profile.consts.ProfileConsts;
 import com.collabothon.back.profile.repositories.UserProfileRepository;
 import com.collabothon.back.profile.services.UserProfileService;
 
@@ -20,134 +26,141 @@ import lombok.RequiredArgsConstructor;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
-/** The lesson map and single lessons, personalised by the user's progress and onboarding profile. */
 @Service
 @RequiredArgsConstructor
 public class LessonService {
 
-	/** Spring serves {@code resources/static/audio/} here; scene {@code audio} paths are relative to it. */
-	static final String AUDIO_BASE = "/audio/";
+	private final StoryRepository stories;
 
-	private final StoryRepository storyRepo;
+	private final GlossaryContentRepository glossaryContent;
 
-	private final GlossaryContentRepository glossaryContentRepo;
-
-	private final UserProfileRepository userProfileRepo;
+	private final UserProfileRepository profiles;
 
 	private final LessonProgression progression;
 
 	private final UserProfileService userProfileService;
 
-	/** Every story with its lessons and progress; the first available story with lessons left is "current". */
-	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
 	public List<ObjectNode> getStories(String userId) {
 		Set<String> done = progression.completedLessonIds(userId);
-		List<ObjectNode> out = new ArrayList<>();
+		List<ObjectNode> views = new ArrayList<>();
 		boolean currentTaken = false;
-		for (JsonNode storyNode : storyRepo.rawStories()) {
-			ObjectNode story = (ObjectNode) storyNode.deepCopy();
-			story.remove("lessonIds");
-			List<LessonSummary> lessons = progression.summaries(storyNode, done);
-			long completed = lessons.stream().filter(l -> LessonProgression.DONE.equals(l.status())).count();
-			story.putPOJO("lessons", lessons);
-			story.putObject("progress").put("done", completed).put("total", lessons.size());
-			LessonSummary next = lessons.stream()
-				.filter(l -> !LessonProgression.DONE.equals(l.status()))
-				.findFirst()
-				.orElse(null);
-			story.putPOJO("nextLesson", next);
-			boolean current = !currentTaken && next != null && "available".equals(storyNode.path("status").asString());
+		for (Story story : stories.findAll()) {
+			List<LessonSummary> lessons = progression.summaries(story, done);
+			Optional<LessonSummary> next = lessons.stream().filter(lesson -> !isDone(lesson)).findFirst();
+			// Only the first available story with a lesson left is current.
+			boolean current = !currentTaken && next.isPresent() && LessonConsts.STORY_AVAILABLE.equals(story.status());
 			currentTaken = currentTaken || current;
-			story.put("current", current);
-			out.add(story);
+
+			ObjectNode view = storyView(story, lessons);
+			view.putPOJO("nextLesson", next.orElse(null));
+			view.put("current", current);
+			views.add(view);
 		}
-		return out;
+		return views;
 	}
 
-	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
 	public List<LessonSummary> getLessons(String userId) {
 		Set<String> done = progression.completedLessonIds(userId);
-		List<LessonSummary> out = new ArrayList<>();
-		for (JsonNode story : storyRepo.rawStories()) {
-			out.addAll(progression.summaries(story, done));
-		}
-		return out;
+		return stories.findAll().stream().flatMap(story -> progression.summaries(story, done).stream()).toList();
 	}
 
-	/**
-	 * The lesson with the variants for the user's level and persona applied, plus its glossary. Lessons with a video
-	 * track carry both play orders, so switching mode mid-lesson needs no reload.
-	 */
-	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	// Both play orders go out together, so switching mode mid-lesson needs no reload.
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
 	public ObjectNode getLesson(String id, String userId) {
-		ObjectNode base = progression.lessonOrNotFound(id);
-		progression.requireUnlocked(base, userId);
+		LessonContentItem lesson = progression.lessonOrNotFound(id);
+		progression.requireUnlocked(lesson, userId);
 
-		ObjectNode lesson = LessonRules.applyVariants(base, variantKeys(userId));
+		ObjectNode view = LessonJson.applyVariants(lesson.node(), variantKeys(userId));
+		putPathPosition(view, lesson);
+		putGlossary(view);
+		putPlayMode(view, userId);
+		putStoryLook(view, stories.findById(lesson.story()).orElseThrow());
+		view.put("audioBase", WebConsts.AUDIO_BASE);
+		return view;
+	}
+
+	private static ObjectNode storyView(Story story, List<LessonSummary> lessons) {
+		ObjectNode view = (ObjectNode) story.rawNode().deepCopy();
+		view.remove("lessonIds");
+		view.putPOJO("lessons", lessons);
+		long completed = lessons.stream().filter(LessonService::isDone).count();
+		view.putObject("progress").put("done", completed).put("total", lessons.size());
+		return view;
+	}
+
+	private static boolean isDone(LessonSummary lesson) {
+		return LessonConsts.STATUS_DONE.equals(lesson.status());
+	}
+
+	private void putPathPosition(ObjectNode view, LessonContentItem lesson) {
 		List<String> ids = progression.storyLessonIds(lesson);
-		lesson.put("position", ids.indexOf(id) + 1);
-		lesson.put("total", ids.size());
-		lesson.put("next", progression.nextLessonId(lesson));
+		view.put("position", ids.indexOf(lesson.id()) + 1);
+		view.put("total", ids.size());
+		view.put("next", progression.nextLessonId(lesson));
+	}
 
-		ObjectNode glossary = lesson.putObject("glossary");
-		for (String concept : LessonRules.concepts(lesson)) {
-			glossaryContentRepo.findByConcept(concept).ifPresent(c -> glossary.set(concept, c));
+	private void putGlossary(ObjectNode view) {
+		ObjectNode glossary = view.putObject("glossary");
+		for (String concept : LessonJson.concepts(view)) {
+			glossaryContent.findByConcept(concept).ifPresent(entry -> glossary.set(concept, entry));
 		}
+	}
 
-		boolean video = lesson.hasNonNull("video");
-		if (!video) {
-			lesson.putNull("video");
+	private void putPlayMode(ObjectNode view, String userId) {
+		if (view.hasNonNull("video")) {
+			view.put("startMode", userProfileService.lessonMode(userId));
+			return;
 		}
-		lesson.put("startMode", video ? userProfileService.lessonMode(userId) : "classic");
-		JsonNode story = storyRepo.findRawById(lesson.path("story").asString()).orElseThrow();
-		lesson.put("city", story.path("city").asString());
-		lesson.put("color", story.path("color").asString("slate"));
-		if (story.hasNonNull("landmark")) {
-			lesson.set("landmark", story.get("landmark").deepCopy());
+		view.putNull("video");
+		view.put("startMode", ProfileConsts.LESSON_MODE_CLASSIC);
+	}
+
+	private static void putStoryLook(ObjectNode view, Story story) {
+		JsonNode content = story.rawNode();
+		view.put("city", story.city());
+		view.put("color", content.path("color").asString(LessonConsts.DEFAULT_STORY_COLOR));
+		if (content.hasNonNull("landmark")) {
+			view.set("landmark", content.get("landmark").deepCopy());
 		}
 		else {
-			lesson.putNull("landmark");
+			view.putNull("landmark");
 		}
-		lesson.put("audioBase", AUDIO_BASE);
-		return lesson;
 	}
 
 	private List<String> variantKeys(String userId) {
 		List<String> keys = new ArrayList<>();
-		profile(userId).ifPresent(profile -> {
+		findProfile(userId).ifPresent(profile -> {
 			levelKey(profile.getExperience()).ifPresent(keys::add);
 			personaKey(profile.getLifeStage()).ifPresent(keys::add);
 		});
 		return keys;
 	}
 
-	private Optional<UserProfile> profile(String userId) {
+	private Optional<UserProfile> findProfile(String userId) {
 		if (userId == null) {
 			return Optional.empty();
 		}
-		return userProfileRepo.findById(userId);
+		return profiles.findById(userId);
 	}
 
 	private static Optional<String> levelKey(String experience) {
-		if (experience == null) {
-			return Optional.empty();
-		}
 		return switch (experience) {
-			case "not-saving", "occasional" -> Optional.of("level:beginner");
-			case "investing", "planning" -> Optional.of("level:advanced");
-			default -> Optional.empty();
+			case ProfileConsts.EXPERIENCE_NOT_SAVING, ProfileConsts.EXPERIENCE_OCCASIONAL ->
+				Optional.of(LessonConsts.LEVEL_BEGINNER);
+			case ProfileConsts.EXPERIENCE_INVESTING, ProfileConsts.EXPERIENCE_PLANNING ->
+				Optional.of(LessonConsts.LEVEL_ADVANCED);
+			case null, default -> Optional.empty();
 		};
 	}
 
 	private static Optional<String> personaKey(String lifeStage) {
-		if (lifeStage == null) {
-			return Optional.empty();
-		}
 		return switch (lifeStage) {
-			case "starting-out" -> Optional.of("persona:student");
-			case "building" -> Optional.of("persona:family");
-			case "later-life" -> Optional.of("persona:pre-retirement");
-			default -> Optional.empty();
+			case ProfileConsts.LIFE_STAGE_STARTING_OUT -> Optional.of(LessonConsts.PERSONA_STUDENT);
+			case ProfileConsts.LIFE_STAGE_BUILDING -> Optional.of(LessonConsts.PERSONA_FAMILY);
+			case ProfileConsts.LIFE_STAGE_LATER_LIFE -> Optional.of(LessonConsts.PERSONA_PRE_RETIREMENT);
+			case null, default -> Optional.empty();
 		};
 	}
 

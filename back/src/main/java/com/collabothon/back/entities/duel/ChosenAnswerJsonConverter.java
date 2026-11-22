@@ -4,7 +4,7 @@ import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Maps {@link ChosenAnswer} to the JSON text column {@code duel_answer.chosen_answer}, e.g. {@code {"option":2}}. */
+// Its own mapper, not the app's: what is stored must not follow the web JSON settings.
 @Converter
 public class ChosenAnswerJsonConverter implements AttributeConverter<ChosenAnswer, String> {
 

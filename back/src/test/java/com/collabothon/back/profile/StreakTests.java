@@ -11,7 +11,7 @@ import com.collabothon.back.profile.services.Streak;
 
 class StreakTests {
 
-	/** A Thursday. */
+	// A Thursday.
 	static final LocalDate TODAY = LocalDate.of(2026, 11, 19);
 
 	static LocalDate daysAgo(int n) {

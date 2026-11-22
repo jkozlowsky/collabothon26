@@ -2,15 +2,13 @@ package com.collabothon.back.exceptions;
 
 import org.springframework.http.HttpStatus;
 
-/** A business error: one enum per feature implements this, so every failure has a stable code and status. */
+// One enum per feature; name() is the stable code the API returns.
 public interface ErrorCode {
 
-	HttpStatus status();
+	HttpStatus getStatus();
 
-	/** Polish, user-facing message returned as the problem detail. */
-	String message();
+	String getMessage();
 
-	/** Stable machine-readable code, sent as the {@code code} property of the problem detail. */
 	String name();
 
 }

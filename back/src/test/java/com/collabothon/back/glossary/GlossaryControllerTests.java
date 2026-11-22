@@ -1,5 +1,6 @@
 package com.collabothon.back.glossary;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -40,7 +41,7 @@ class GlossaryControllerTests {
 			.andExpect(jsonPath("$.name").value("ETF"))
 			.andExpect(jsonPath("$.fullName").value("Exchange-traded fund"))
 			.andExpect(jsonPath("$.category.slug").value("investing"))
-			.andExpect(jsonPath("$.definitionStandard").value(org.hamcrest.Matchers.containsString("[[stock|stocks]]")))
+			.andExpect(jsonPath("$.definitionStandard").value(containsString("[[stock|stocks]]")))
 			.andExpect(jsonPath("$.definitionPlain").doesNotExist())
 			.andExpect(jsonPath("$.related[0].slug").value("stock"))
 			.andExpect(jsonPath("$.related[1].slug").value("bond"));

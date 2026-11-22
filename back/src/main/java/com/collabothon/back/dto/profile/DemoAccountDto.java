@@ -5,6 +5,4 @@ public record DemoAccountDto(
 		String firstName,
 		String lastName,
 		String avatar,
-		DemoAccountStatus status
-) {
-}
+		DemoAccountStatus status) {}

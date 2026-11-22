@@ -1,6 +1,7 @@
 package com.collabothon.back.glossary;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
@@ -29,7 +30,7 @@ class GlossarySearchTests {
 	void prefixMatchesComeFirstAndCarryTheirCategory() throws Exception {
 		mvc.perform(get("/api/glossary/search").param("q", "div"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.terms[*].slug").value(org.hamcrest.Matchers.containsInAnyOrder("diversification", "dividend")))
+			.andExpect(jsonPath("$.terms[*].slug").value(containsInAnyOrder("diversification", "dividend")))
 			.andExpect(jsonPath("$.terms[0].category.slug").value("investing"))
 			.andExpect(jsonPath("$.terms[0].shortDescription").isNotEmpty())
 			.andExpect(jsonPath("$.suggestions").isEmpty());
@@ -100,6 +101,21 @@ class GlossarySearchTests {
 		mvc.perform(get("/api/glossary/search").param("q", "   ")).andExpect(status().isBadRequest());
 		mvc.perform(get("/api/glossary/search").param("q", "x".repeat(65))).andExpect(status().isBadRequest());
 		mvc.perform(get("/api/glossary/search")).andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void queryIsValidatedOnTheRequest() throws Exception {
+		mvc.perform(get("/api/glossary/search"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.detail").value("Required parameter 'q' is not present."));
+		// The last is only Unicode spaces: an empty query after strip() would match every term.
+		for (String q : new String[] { "", "   ", "x".repeat(65), " " + "x".repeat(64) + " ", "\u2003\u2003" }) {
+			mvc.perform(get("/api/glossary/search").param("q", q))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.detail").value("Validation failure"))
+				.andExpect(jsonPath("$.code").doesNotExist());
+		}
+		mvc.perform(get("/api/glossary/search").param("q", "x".repeat(64))).andExpect(status().isOk());
 	}
 
 }

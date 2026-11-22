@@ -1,25 +1,32 @@
 package com.collabothon.back.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/** Lets the Expo web dev server (different port = different origin) call the API. */
+import com.collabothon.back.common.consts.WebConsts;
+
+import lombok.RequiredArgsConstructor;
+
+// The web build runs on another origin. Enabled explicitly, because @WebMvcTest does not scan properties records.
 @Configuration
+@EnableConfigurationProperties(CorsProperties.class)
+@RequiredArgsConstructor
 class CorsConfig implements WebMvcConfigurer {
 
-	private final String[] allowedOrigins;
-
-	CorsConfig(@Value("${app.cors.allowed-origins}") String[] allowedOrigins) {
-		this.allowedOrigins = allowedOrigins;
-	}
+	private final CorsProperties properties;
 
 	@Override
 	public void addCorsMappings(CorsRegistry registry) {
-		registry.addMapping("/api/**").allowedOrigins(allowedOrigins).allowedMethods("*");
-		// Lesson narration (static/audio), played by the web build straight from the backend when EXPO_PUBLIC_API_URL is set.
-		registry.addMapping("/audio/**").allowedOrigins(allowedOrigins).allowedMethods("GET", "HEAD");
+		String[] origins = properties.allowedOrigins();
+		registry.addMapping(WebConsts.API_PATHS).allowedOrigins(origins).allowedMethods(CorsConfiguration.ALL);
+		// The web build plays the narration in static/audio straight from the backend.
+		registry.addMapping(WebConsts.AUDIO_PATHS)
+			.allowedOrigins(origins)
+			.allowedMethods(HttpMethod.GET.name(), HttpMethod.HEAD.name());
 	}
 
 }

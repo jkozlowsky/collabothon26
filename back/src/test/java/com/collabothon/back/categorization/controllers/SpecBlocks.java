@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Reads a JSON block that a spec marks with {@code <!-- marker ... -->}, so tests pin the verbatim text. */
+// Reads a JSON block that a spec marks with <!-- marker ... -->, so tests pin the verbatim text.
 final class SpecBlocks {
 
 	static final String F1 = "docs/specs/F1-profiling.md";

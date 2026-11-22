@@ -10,10 +10,13 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mapstruct.factory.Mappers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.collabothon.back.dto.converters.duel.DuelPlayerMapper;
 import com.collabothon.back.dto.duel.PlayerCardDto;
+import com.collabothon.back.duel.consts.DuelConsts;
 import com.collabothon.back.entities.profile.Account;
 import com.collabothon.back.profile.repositories.AccountRepository;
 import com.collabothon.back.lesson.repositories.StoryRepository;
@@ -38,7 +41,8 @@ class DuelPlayerCardServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new DuelPlayerCardService(accounts, xpService, levelCurve, stories);
+		service = new DuelPlayerCardService(accounts, xpService, levelCurve, stories,
+				Mappers.getMapper(DuelPlayerMapper.class));
 	}
 
 	@Test
@@ -76,7 +80,7 @@ class DuelPlayerCardServiceTest {
 		PlayerCardDto card = service.card("u3");
 
 		assertThat(card.name()).isEqualTo("u3");
-		assertThat(card.avatar()).isEqualTo(DuelPlayerCardService.DEFAULT_AVATAR);
+		assertThat(card.avatar()).isEqualTo(DuelConsts.DEFAULT_AVATAR);
 	}
 
 }

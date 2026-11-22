@@ -20,7 +20,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.lesson.models.Story;
 import com.collabothon.back.lesson.repositories.LessonContentRepository;
+import com.collabothon.back.lesson.repositories.StoryRepository;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -30,7 +32,7 @@ import tools.jackson.databind.json.JsonMapper;
 @AutoConfigureMockMvc
 class CheckQuestionControllerTests {
 
-	/** Seoul's story area is "Risk" and Buenos Aires's "Money basics": the test rates them with investing and saving. */
+	// Seoul's story area is "Risk" and Buenos Aires's "Money basics": the test rates them with investing and saving.
 	private static final Map<String, String> AREA_OF_STORY = Map.of("seoul", "investing", "berlin", "saving",
 			"sao-paulo", "debt", "tokyo", "investing", "buenos-aires", "saving", "nairobi", "saving", "mumbai",
 			"investing");
@@ -44,6 +46,9 @@ class CheckQuestionControllerTests {
 	@Autowired
 	LessonContentRepository lessonContent;
 
+	@Autowired
+	StoryRepository stories;
+
 	private JsonNode pool() throws Exception {
 		return json.readTree(mvc.perform(get("/api/check-questions"))
 			.andExpect(status().isOk())
@@ -54,7 +59,7 @@ class CheckQuestionControllerTests {
 
 	@Test
 	void aQuestionIsALessonsQuizStepWithItsStorysArea() throws Exception {
-		JsonNode step = lessonContent.lesson("berlin-1").orElseThrow().path("steps").valueStream()
+		JsonNode step = lessonContent.findById("berlin-1").orElseThrow().node().path("steps").valueStream()
 			.filter(s -> s.path("id").asString().equals("q1"))
 			.findFirst()
 			.orElseThrow();
@@ -76,9 +81,9 @@ class CheckQuestionControllerTests {
 	@Test
 	void thePoolHasTheQuizStepsWithoutAChartInStoryOrderWithAResolvableLesson() throws Exception {
 		List<String> expected = new ArrayList<>();
-		for (JsonNode story : lessonContent.stories()) {
-			for (String lessonId : lessonContent.lessonIdsOf(story)) {
-				JsonNode lesson = lessonContent.lesson(lessonId).orElseThrow();
+		for (Story story : stories.findAll()) {
+			for (String lessonId : story.lessonIds()) {
+				JsonNode lesson = lessonContent.findById(lessonId).orElseThrow().node();
 				lesson.path("steps").valueStream()
 					.filter(s -> s.path("type").asString().equals("quiz") && !s.has("chart"))
 					.map(s -> lessonId + "/" + s.path("id").asString())
@@ -93,7 +98,7 @@ class CheckQuestionControllerTests {
 		for (JsonNode q : pool) {
 			String id = q.get("id").stringValue();
 			String lessonId = q.get("lessonId").stringValue();
-			JsonNode lesson = lessonContent.lesson(lessonId).orElseThrow();
+			JsonNode lesson = lessonContent.findById(lessonId).orElseThrow().node();
 			assertTrue(id.startsWith(lessonId + "/"), id);
 			assertEquals(AREA_OF_STORY.get(lesson.path("story").asString()), q.get("area").stringValue(), id);
 			assertTrue(q.get("options").size() >= 2, id);

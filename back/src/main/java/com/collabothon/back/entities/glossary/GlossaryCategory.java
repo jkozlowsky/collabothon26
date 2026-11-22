@@ -8,13 +8,19 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+
+import org.hibernate.annotations.BatchSize;
+
+import com.collabothon.back.glossary.consts.GlossaryConsts;
+
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "glossary_category")
+// Without it, search loads the category once per hit.
+@BatchSize(size = GlossaryConsts.CATEGORY_BATCH_SIZE)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class GlossaryCategory {
@@ -36,12 +42,4 @@ public class GlossaryCategory {
 	@OrderBy("position")
 	private List<GlossaryTerm> terms;
 
-	@Builder
-	public GlossaryCategory(Long id, String slug, String name, int position, List<GlossaryTerm> terms) {
-		this.id = id;
-		this.slug = slug;
-		this.name = name;
-		this.position = position;
-		this.terms = terms;
-	}
 }

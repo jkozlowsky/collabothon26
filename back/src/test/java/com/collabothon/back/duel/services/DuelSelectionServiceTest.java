@@ -1,10 +1,10 @@
 package com.collabothon.back.duel.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -16,11 +16,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.collabothon.back.config.DuelProperties;
-import com.collabothon.back.dto.lesson.Story;
+import com.collabothon.back.duel.demo.DuelDemoConsts;
+import com.collabothon.back.duel.demo.DuelDemoRules;
+import com.collabothon.back.duel.demo.RiskQuestions;
 import com.collabothon.back.duel.repositories.DuelAnswerRepository;
 import com.collabothon.back.duel.repositories.DuelContentRepository;
 import com.collabothon.back.duel.repositories.DuelMatchRepository;
-import com.collabothon.back.entities.duel.DuelQuestion;
+import com.collabothon.back.duel.models.DuelQuestion;
+import com.collabothon.back.lesson.models.Story;
 import com.collabothon.back.lesson.repositories.StoryRepository;
 
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -41,7 +44,7 @@ class DuelSelectionServiceTest {
 	@Mock
 	DuelAnswerRepository answers;
 
-	DuelProperties properties = new DuelProperties();
+	DuelProperties properties = DuelTestFixtures.PROPERTIES;
 
 	DuelSelectionService service;
 
@@ -53,9 +56,9 @@ class DuelSelectionServiceTest {
 	@Test
 	void singleCategoryTakesAllSixSlots() {
 		List<DuelQuestion> pool = createQuestions("berlin", 10, "quiz");
-		when(content.findByStory("berlin")).thenReturn(pool);
+		when(content.findByArea("berlin")).thenReturn(pool);
 
-		List<DuelQuestion> selected = service.select(100L, List.of("berlin"), Set.of(), 6);
+		List<DuelQuestion> selected = service.select(100L, List.of("berlin"), Set.of(), 6, RiskQuestions.RANDOM);
 		assertThat(selected).hasSize(6);
 		assertThat(selected).allMatch(q -> "berlin".equals(q.category()));
 	}
@@ -64,10 +67,10 @@ class DuelSelectionServiceTest {
 	void twoCategoriesSplitThreeAndThree() {
 		List<DuelQuestion> berlinPool = createQuestions("berlin", 10, "quiz");
 		List<DuelQuestion> tokyoPool = createQuestions("tokyo", 10, "predict");
-		when(content.findByStory("berlin")).thenReturn(berlinPool);
-		when(content.findByStory("tokyo")).thenReturn(tokyoPool);
+		when(content.findByArea("berlin")).thenReturn(berlinPool);
+		when(content.findByArea("tokyo")).thenReturn(tokyoPool);
 
-		List<DuelQuestion> selected = service.select(100L, List.of("berlin", "tokyo"), Set.of(), 6);
+		List<DuelQuestion> selected = service.select(100L, List.of("berlin", "tokyo"), Set.of(), 6, RiskQuestions.RANDOM);
 		assertThat(selected).hasSize(6);
 		long berlinCount = selected.stream().filter(q -> "berlin".equals(q.category())).count();
 		long tokyoCount = selected.stream().filter(q -> "tokyo".equals(q.category())).count();
@@ -77,11 +80,11 @@ class DuelSelectionServiceTest {
 
 	@Test
 	void threeCategoriesSplitTwoEach() {
-		when(content.findByStory("c1")).thenReturn(createQuestions("c1", 5, "quiz"));
-		when(content.findByStory("c2")).thenReturn(createQuestions("c2", 5, "predict"));
-		when(content.findByStory("c3")).thenReturn(createQuestions("c3", 5, "chart"));
+		when(content.findByArea("c1")).thenReturn(createQuestions("c1", 5, "quiz"));
+		when(content.findByArea("c2")).thenReturn(createQuestions("c2", 5, "predict"));
+		when(content.findByArea("c3")).thenReturn(createQuestions("c3", 5, "chart"));
 
-		List<DuelQuestion> selected = service.select(100L, List.of("c1", "c2", "c3"), Set.of(), 6);
+		List<DuelQuestion> selected = service.select(100L, List.of("c1", "c2", "c3"), Set.of(), 6, RiskQuestions.RANDOM);
 		assertThat(selected).hasSize(6);
 		assertThat(selected.stream().filter(q -> "c1".equals(q.category())).count()).isEqualTo(2);
 		assertThat(selected.stream().filter(q -> "c2".equals(q.category())).count()).isEqualTo(2);
@@ -90,12 +93,12 @@ class DuelSelectionServiceTest {
 
 	@Test
 	void fourCategoriesSplitWithRemainderDistributedEvenly() {
-		when(content.findByStory("c1")).thenReturn(createQuestions("c1", 5, "quiz"));
-		when(content.findByStory("c2")).thenReturn(createQuestions("c2", 5, "predict"));
-		when(content.findByStory("c3")).thenReturn(createQuestions("c3", 5, "chart"));
-		when(content.findByStory("c4")).thenReturn(createQuestions("c4", 5, "sort"));
+		when(content.findByArea("c1")).thenReturn(createQuestions("c1", 5, "quiz"));
+		when(content.findByArea("c2")).thenReturn(createQuestions("c2", 5, "predict"));
+		when(content.findByArea("c3")).thenReturn(createQuestions("c3", 5, "chart"));
+		when(content.findByArea("c4")).thenReturn(createQuestions("c4", 5, "sort"));
 
-		List<DuelQuestion> selected = service.select(100L, List.of("c1", "c2", "c3", "c4"), Set.of(), 6);
+		List<DuelQuestion> selected = service.select(100L, List.of("c1", "c2", "c3", "c4"), Set.of(), 6, RiskQuestions.RANDOM);
 		assertThat(selected).hasSize(6);
 		List<Long> counts = List.of("c1", "c2", "c3", "c4").stream()
 			.map(c -> selected.stream().filter(q -> c.equals(q.category())).count())
@@ -108,13 +111,13 @@ class DuelSelectionServiceTest {
 	@Test
 	void prioritizesUnseenQuestionsOverSeenInLastTwoMatches() {
 		List<DuelQuestion> pool = createQuestions("berlin", 6, "quiz");
-		when(content.findByStory("berlin")).thenReturn(pool);
+		when(content.findByArea("berlin")).thenReturn(pool);
 
 		// berlin-0 and berlin-1 were seen in last 2 matches
 		Set<String> seen = Set.of("berlin-0", "berlin-1");
 
 		// Select 4 questions: should pick from unseen (berlin-2..5)
-		List<DuelQuestion> selected = service.select(100L, List.of("berlin"), seen, 4);
+		List<DuelQuestion> selected = service.select(100L, List.of("berlin"), seen, 4, RiskQuestions.RANDOM);
 		assertThat(selected).hasSize(4);
 		assertThat(selected).extracting(DuelQuestion::id)
 			.doesNotContainAnyElementsOf(seen);
@@ -123,12 +126,12 @@ class DuelSelectionServiceTest {
 	@Test
 	void fallsBackToSeenQuestionsWhenUnseenAreInsufficient() {
 		List<DuelQuestion> pool = createQuestions("berlin", 3, "quiz");
-		when(content.findByStory("berlin")).thenReturn(pool);
+		when(content.findByArea("berlin")).thenReturn(pool);
 
 		// All 3 were seen
 		Set<String> seen = Set.of("berlin-0", "berlin-1", "berlin-2");
 
-		List<DuelQuestion> selected = service.select(100L, List.of("berlin"), seen, 3);
+		List<DuelQuestion> selected = service.select(100L, List.of("berlin"), seen, 3, RiskQuestions.RANDOM);
 		assertThat(selected).hasSize(3);
 		assertThat(selected).extracting(DuelQuestion::id).containsExactlyInAnyOrder("berlin-0", "berlin-1", "berlin-2");
 	}
@@ -140,15 +143,15 @@ class DuelSelectionServiceTest {
 		// tokyo has plenty
 		List<DuelQuestion> tokyoPool = createQuestions("tokyo", 10, "chart");
 
-		when(content.findByStory("mumbai")).thenReturn(mumbaiPool);
-		when(content.findByStory("tokyo")).thenReturn(tokyoPool);
+		when(content.findByArea("mumbai")).thenReturn(mumbaiPool);
+		when(content.findByArea("tokyo")).thenReturn(tokyoPool);
 
 		Story mumbaiStory = storyWithFallback("mumbai", "tokyo");
 		when(stories.findByAreaSlug("mumbai")).thenReturn(List.of(mumbaiStory));
 		when(stories.findById("tokyo")).thenReturn(Optional.of(storyWithFallback("tokyo", null)));
 
 		// Needs 6 questions from mumbai
-		List<DuelQuestion> selected = service.select(100L, List.of("mumbai"), Set.of(), 6);
+		List<DuelQuestion> selected = service.select(100L, List.of("mumbai"), Set.of(), 6, RiskQuestions.RANDOM);
 		assertThat(selected).hasSize(6);
 
 		// 2 from mumbai, 4 from tokyo
@@ -164,9 +167,9 @@ class DuelSelectionServiceTest {
 		List<DuelQuestion> pool = new ArrayList<>();
 		pool.addAll(createQuestions("berlin", 4, "quiz"));
 		pool.addAll(createQuestions("berlin", 2, "predict"));
-		when(content.findByStory("berlin")).thenReturn(pool);
+		when(content.findByArea("berlin")).thenReturn(pool);
 
-		List<DuelQuestion> selected = service.select(100L, List.of("berlin"), Set.of(), 6);
+		List<DuelQuestion> selected = service.select(100L, List.of("berlin"), Set.of(), 6, RiskQuestions.RANDOM);
 		assertThat(selected).hasSize(6);
 
 		// Verify no 3 consecutive same types
@@ -182,10 +185,10 @@ class DuelSelectionServiceTest {
 	@Test
 	void deterministicSeedingReplaysExactSameQuestions() {
 		List<DuelQuestion> pool = createQuestions("berlin", 10, "quiz");
-		when(content.findByStory("berlin")).thenReturn(pool);
+		when(content.findByArea("berlin")).thenReturn(pool);
 
-		List<DuelQuestion> first = service.select(42L, List.of("berlin"), Set.of(), 6);
-		List<DuelQuestion> second = service.select(42L, List.of("berlin"), Set.of(), 6);
+		List<DuelQuestion> first = service.select(42L, List.of("berlin"), Set.of(), 6, RiskQuestions.RANDOM);
+		List<DuelQuestion> second = service.select(42L, List.of("berlin"), Set.of(), 6, RiskQuestions.RANDOM);
 
 		assertThat(first).extracting(DuelQuestion::id)
 			.containsExactlyElementsOf(second.stream().map(DuelQuestion::id).toList());
@@ -194,32 +197,32 @@ class DuelSelectionServiceTest {
 	@Test
 	void alexAlwaysGetsTheFixedRiskQuestionsInTheSameOrder() {
 		List<DuelQuestion> risk = new ArrayList<>();
-		for (String id : DuelSelectionService.ALEX_FIXED_RISK_IDS) {
+		for (String id : DuelDemoConsts.ALEX_RISK_QUESTION_IDS) {
 			risk.addAll(createQuestions("risk", 1, "quiz").stream()
 				.map(q -> new DuelQuestion(id, q.lessonId(), null, List.of(), null, "risk", q.step())).toList());
-			org.mockito.Mockito.lenient().when(content.findById(id)).thenReturn(Optional.of(risk.getLast()));
+			lenient().when(content.findById(id)).thenReturn(Optional.of(risk.getLast()));
 		}
-		org.mockito.Mockito.lenient().when(content.findByStory("risk")).thenReturn(risk);
-		when(content.findByStory("saving")).thenReturn(createQuestions("saving", 10, "match"));
+		lenient().when(content.findByArea("risk")).thenReturn(risk);
+		when(content.findByArea("saving")).thenReturn(createQuestions("saving", 10, "match"));
 
 		List<List<String>> riskOrders = new ArrayList<>();
 		for (long matchId : new long[] { 11L, 12L, 13L }) {
-			List<DuelQuestion> selected = service.select(matchId, List.of("saving", "risk"), Set.of(), 6, true);
+			List<DuelQuestion> selected = service.select(matchId, List.of("saving", "risk"), Set.of(), 6, RiskQuestions.FIXED_FOR_DEMO);
 			assertThat(selected).hasSize(6);
 			riskOrders.add(selected.stream().filter(q -> "risk".equals(q.category())).map(DuelQuestion::id).toList());
 		}
 		assertThat(riskOrders.get(0)).containsExactlyElementsOf(
-				DuelSelectionService.ALEX_FIXED_RISK_IDS.subList(0, 3));
+				DuelDemoConsts.ALEX_RISK_QUESTION_IDS.subList(0, 3));
 		assertThat(riskOrders).allMatch(order -> order.equals(riskOrders.get(0)));
 	}
 
 	@Test
 	void adjustCategoriesAddsRiskForAlexAndDropsTheLastTickedWhenFull() {
-		assertThat(DuelMatchService.adjustCategories("demo-user", List.of("saving")))
+		assertThat(DuelDemoRules.adjustCategories("demo-user", List.of("saving")))
 			.containsExactly("saving", "risk");
-		assertThat(DuelMatchService.adjustCategories("demo-user", List.of("saving", "borrowing", "investing", "money-basics")))
+		assertThat(DuelDemoRules.adjustCategories("demo-user", List.of("saving", "borrowing", "investing", "money-basics")))
 			.containsExactly("saving", "borrowing", "investing", "risk");
-		assertThat(DuelMatchService.adjustCategories("someone", List.of("saving"))).containsExactly("saving");
+		assertThat(DuelDemoRules.adjustCategories("someone", List.of("saving"))).containsExactly("saving");
 	}
 
 	private static List<DuelQuestion> createQuestions(String category, int count, String stepType) {
@@ -234,7 +237,7 @@ class DuelSelectionServiceTest {
 	}
 
 	private static Story storyWithFallback(String id, String fallback) {
-		return new Story(id, id, id, id, id, "available", null, "", "", null, null, "", List.of(), null, List.of(), fallback, null);
+		return new Story(id, id, id, id, id, "available", "", "", List.of(), fallback, null);
 	}
 
 }

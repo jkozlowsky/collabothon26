@@ -8,10 +8,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.collabothon.back.common.validation.NoNul;
 import com.collabothon.back.dto.glossary.CategoryDto;
 import com.collabothon.back.dto.glossary.TermDetail;
+import com.collabothon.back.glossary.consts.GlossaryConsts;
 import com.collabothon.back.glossary.services.GlossaryService;
 
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -27,7 +30,9 @@ public class GlossaryController {
 	}
 
 	@GetMapping("/terms/{slug}")
-	public ResponseEntity<TermDetail> get(@PathVariable String slug) {
+	public ResponseEntity<TermDetail> get(
+			@PathVariable @Size(max = GlossaryConsts.MAX_SLUG_LENGTH) @NoNul String slug) {
 		return ResponseEntity.ok(glossaryService.getTerm(slug));
 	}
+
 }

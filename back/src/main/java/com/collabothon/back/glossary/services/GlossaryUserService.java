@@ -19,12 +19,12 @@ public class GlossaryUserService {
 	private final GlossaryFavoriteRepository favoriteRepository;
 	private final GlossaryTermRepository termRepository;
 
-	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
 	public List<String> getFavorites(String userId) {
 		return favoriteRepository.findSlugsByUserId(userId);
 	}
 
-	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = false, propagation = Propagation.REQUIRES_NEW)
 	public void addFavorite(String userId, String slug) {
 		int added = favoriteRepository.addFavorite(userId, slug);
 		if (added == 0 && !termRepository.existsBySlug(slug)) {
@@ -32,7 +32,7 @@ public class GlossaryUserService {
 		}
 	}
 
-	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
+	@Transactional(readOnly = false, propagation = Propagation.REQUIRES_NEW)
 	public void removeFavorite(String userId, String slug) {
 		favoriteRepository.deleteFavorite(userId, slug);
 	}

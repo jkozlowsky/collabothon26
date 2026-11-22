@@ -32,6 +32,7 @@ import com.collabothon.back.duel.services.DuelLobbyService;
 import com.collabothon.back.duel.services.DuelMatchService;
 import com.collabothon.back.duel.services.DuelRankingService;
 import com.collabothon.back.duel.services.DuelResultService;
+import com.collabothon.back.duel.services.DuelStartService;
 import com.collabothon.back.entities.duel.DuelMode;
 import com.collabothon.back.exceptions.BusinessException;
 
@@ -43,6 +44,9 @@ class DuelControllerTests {
 
 	@MockitoBean
 	DuelLobbyService lobbyService;
+
+	@MockitoBean
+	DuelStartService startService;
 
 	@MockitoBean
 	DuelMatchService matchService;
@@ -68,19 +72,33 @@ class DuelControllerTests {
 			.content("{\"userId\":\"u1\",\"categories\":[\"berlin\"],\"mode\":\"BOT\"}"))
 			.andExpect(status().isBadRequest());
 
-		verifyNoInteractions(matchService);
+		verifyNoInteractions(startService);
+	}
+
+	@Test
+	void startRejectsMoreThanFourCategoriesBeforeTheService() throws Exception {
+		mvc.perform(post("/api/duel/matches").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"userId\":\"u1\",\"categories\":[\"a\",\"b\",\"c\",\"d\",\"e\"],"
+					+ "\"mode\":\"SOLO\"}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.detail").value("Invalid request content."));
+		verifyNoInteractions(startService);
+
+		mvc.perform(post("/api/duel/matches").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"userId\":\"u1\",\"categories\":[\"a\",\"b\",\"c\",\"d\"],\"mode\":\"SOLO\"}"))
+			.andExpect(status().isOk());
 	}
 
 	@Test
 	void businessErrorsBecomeProblemDetailsWithTheirCode() throws Exception {
-		when(matchService.start(any(StartMatchRequest.class)))
+		when(startService.start(any(StartMatchRequest.class)))
 			.thenThrow(new BusinessException(DuelErrorCode.UNKNOWN_CATEGORY, "mars"));
 
 		mvc.perform(post("/api/duel/matches").contentType(MediaType.APPLICATION_JSON)
 			.content("{\"userId\":\"u1\",\"categories\":[\"mars\"],\"mode\":\"SOLO\"}"))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.code").value("UNKNOWN_CATEGORY"))
-			.andExpect(jsonPath("$.detail").value(DuelErrorCode.UNKNOWN_CATEGORY.message()));
+			.andExpect(jsonPath("$.detail").value(DuelErrorCode.UNKNOWN_CATEGORY.getMessage()));
 	}
 
 	@Test
@@ -137,7 +155,7 @@ class DuelControllerTests {
 	@Test
 	void rankingsWithoutAUserHaveNoOwnRow() throws Exception {
 		when(rankingService.weeklyRankings(null))
-			.thenReturn(new RankingsDto(List.of(new RankingRowDto(1, "demo-ola", "Ola", "f1", 3, 265)), null));
+			.thenReturn(new RankingsDto(List.of(new RankingRowDto(1, "demo-ola", "Ola", "f1", 3, 265, null, null)), null));
 
 		mvc.perform(get("/api/duel/rankings"))
 			.andExpect(status().isOk())

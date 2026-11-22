@@ -4,45 +4,40 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-/**
- * Deterministic shuffle for sort and match questions in a duel.
- * Seeded by (matchId, question index) so the server can reconstruct the shown order without storing it.
- */
+import com.collabothon.back.duel.consts.DuelConsts;
+import com.collabothon.back.duel.models.MatchPermutations;
+
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
+/** The shown order of sort and match steps, rebuilt from (match id, question index) instead of being stored. */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DuelShuffle {
 
-	private static final long MULTIPLIER = 10007L;
-
-	private DuelShuffle() {
-	}
-
-	public static long seed(long matchId, int index) {
-		return matchId * MULTIPLIER + index;
-	}
-
 	public static List<Integer> sortPermutation(long matchId, int index, int size) {
-		List<Integer> order = new ArrayList<>(size);
-		for (int i = 0; i < size; i++) {
-			order.add(i);
-		}
-		Collections.shuffle(order, new Random(seed(matchId, index)));
+		List<Integer> order = indexes(size);
+		Collections.shuffle(order, random(matchId, index));
 		return Collections.unmodifiableList(order);
 	}
 
-	public record MatchPermutations(List<Integer> left, List<Integer> right) {
+	public static MatchPermutations matchPermutations(long matchId, int index, int size) {
+		List<Integer> left = indexes(size);
+		List<Integer> right = indexes(size);
+		Random random = random(matchId, index);
+		Collections.shuffle(left, random);
+		Collections.shuffle(right, random);
+		return new MatchPermutations(Collections.unmodifiableList(left), Collections.unmodifiableList(right));
 	}
 
-	public static MatchPermutations matchPermutations(long matchId, int index, int size) {
-		List<Integer> left = new ArrayList<>(size);
-		List<Integer> right = new ArrayList<>(size);
-		for (int i = 0; i < size; i++) {
-			left.add(i);
-			right.add(i);
-		}
-		Random rnd = new Random(seed(matchId, index));
-		Collections.shuffle(left, rnd);
-		Collections.shuffle(right, rnd);
-		return new MatchPermutations(Collections.unmodifiableList(left), Collections.unmodifiableList(right));
+	private static Random random(long matchId, int index) {
+		return new Random(matchId * DuelConsts.SHUFFLE_SEED_MULTIPLIER + index);
+	}
+
+	private static List<Integer> indexes(int size) {
+		return IntStream.range(0, size).boxed().collect(Collectors.toCollection(ArrayList::new));
 	}
 
 }

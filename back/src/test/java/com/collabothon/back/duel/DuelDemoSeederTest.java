@@ -17,13 +17,18 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.convention.TestBean;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.collabothon.back.TestcontainersConfiguration;
-import com.collabothon.back.duel.services.DuelDemoSeeder;
+import com.collabothon.back.dto.duel.RankingRowDto;
+import com.collabothon.back.dto.duel.RankingsDto;
+import com.collabothon.back.duel.demo.DuelDemoSeeder;
 import com.collabothon.back.duel.services.DuelRankingService;
 import com.collabothon.back.entities.xp.XpEvent;
 import com.collabothon.back.entities.xp.XpSource;
 import com.collabothon.back.xp.repositories.XpEventRepository;
+import com.collabothon.back.xp.services.LevelCurve;
+import com.collabothon.back.xp.services.LevelInfo;
 import com.collabothon.back.xp.services.WeekWindow;
 import com.collabothon.back.xp.services.XpService;
 import com.collabothon.back.xp.services.XpWeekCalculator;
@@ -53,6 +58,9 @@ class DuelDemoSeederTest {
 	XpEventRepository xpEvents;
 
 	@Autowired
+	TransactionTemplate tx;
+
+	@Autowired
 	XpWeekCalculator weekCalculator;
 
 	@Test
@@ -61,7 +69,7 @@ class DuelDemoSeederTest {
 		seeder.run(new DefaultApplicationArguments());
 
 		// Verify weekly rankings
-		var rankings = rankingService.weeklyRankings("demo-user");
+		RankingsDto rankings = rankingService.weeklyRankings("demo-user");
 		assertThat(rankings.top()).hasSize(50);
 
 		// Tomasz rank 1 with 310 weekly XP
@@ -79,18 +87,18 @@ class DuelDemoSeederTest {
 		assertThat(rankings.me().rank()).isEqualTo(6);
 
 		// Verify Daniel and Elena are in top 50, around ranks 12-25, weekly XP < 125
-		var daniel = rankings.top().stream().filter(r -> r.userId().equals("demo-daniel")).findFirst().orElseThrow();
+		RankingRowDto daniel = rankings.top().stream().filter(r -> r.userId().equals("demo-daniel")).findFirst().orElseThrow();
 		assertThat(daniel.weeklyXp()).isLessThan(125);
 		assertThat(daniel.rank()).isBetween(12, 25);
 
-		var elena = rankings.top().stream().filter(r -> r.userId().equals("demo-elena")).findFirst().orElseThrow();
+		RankingRowDto elena = rankings.top().stream().filter(r -> r.userId().equals("demo-elena")).findFirst().orElseThrow();
 		assertThat(elena.weeklyXp()).isLessThan(125);
 		assertThat(elena.rank()).isBetween(12, 25);
 
 		// Run seeder second time -> must be idempotent (no duplicate rows)
 		seeder.run(new DefaultApplicationArguments());
 
-		var rankings2 = rankingService.weeklyRankings("demo-user");
+		RankingsDto rankings2 = rankingService.weeklyRankings("demo-user");
 		assertThat(rankings2.me().weeklyXp()).isEqualTo(125);
 		assertThat(rankings2.me().rank()).isEqualTo(6);
 		assertThat(rankings2.top().get(0).weeklyXp()).isEqualTo(310);
@@ -100,7 +108,7 @@ class DuelDemoSeederTest {
 	void demoUserRowsPinnedToOriginalFourRowsAndRankSix() {
 		seeder.run(new DefaultApplicationArguments());
 
-		var rankings = rankingService.weeklyRankings("demo-user");
+		RankingsDto rankings = rankingService.weeklyRankings("demo-user");
 		assertThat(rankings.me()).isNotNull();
 		assertThat(rankings.me().rank()).isEqualTo(6);
 		assertThat(rankings.me().weeklyXp()).isEqualTo(125);
@@ -113,7 +121,7 @@ class DuelDemoSeederTest {
 		Instant pastWeek1 = weekStart.minus(Duration.ofDays(7));
 		Instant pastWeek2 = weekStart.minus(Duration.ofDays(16));
 
-		List<XpEvent> demoUserEvents = xpEvents.findAll().stream()
+		List<XpEvent> demoUserEvents = tx.execute(status -> xpEvents.findAll()).stream()
 			.filter(e -> "demo-user".equals(e.getUserId()))
 			.sorted(Comparator.comparing(XpEvent::getId))
 			.toList();
@@ -138,8 +146,8 @@ class DuelDemoSeederTest {
 
 		// Risk XP (66) is 5-10 XP below next level (Level 4, threshold 73; 73 - 66 = 7)
 		int riskXp = demoUserEvents.stream().filter(e -> "risk".equals(e.getCategory())).mapToInt(XpEvent::getXp).sum();
-		var levelCurve = new com.collabothon.back.xp.services.LevelCurve();
-		var riskLevel = levelCurve.fromXp(riskXp);
+		LevelCurve levelCurve = new LevelCurve();
+		LevelInfo riskLevel = levelCurve.fromXp(riskXp);
 		int xpToNext = riskLevel.xpForLevel() - riskLevel.xpIntoLevel();
 		assertThat(xpToNext).isBetween(5, 10);
 	}

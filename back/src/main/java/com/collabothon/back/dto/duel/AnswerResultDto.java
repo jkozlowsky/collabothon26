@@ -8,5 +8,4 @@ public record AnswerResultDto(
 		RivalSnapshotDto rivalProgress,
 		YourFinalDto yourFinal,
 		boolean finished
-) {
-}
+) {}

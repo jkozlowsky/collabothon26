@@ -1,246 +1,152 @@
 package com.collabothon.back.categorization.services;
 
 import static com.collabothon.back.categorization.consts.CategorizationConsts.FOCUS_THRESHOLD;
-import static com.collabothon.back.categorization.consts.FactsConsts.BUFFER_1_3;
-import static com.collabothon.back.categorization.consts.FactsConsts.BUFFER_3_6;
+import static com.collabothon.back.categorization.consts.CategorizationConsts.JUST_STARTING_BELOW;
+import static com.collabothon.back.categorization.consts.CategorizationConsts.SOLID_ABOVE;
 import static com.collabothon.back.categorization.consts.FactsConsts.BUFFER_6_PLUS;
-import static com.collabothon.back.categorization.consts.FactsConsts.BUFFER_UNDER_1;
-import static com.collabothon.back.categorization.consts.FactsConsts.RATE_NEGATIVE;
+import static com.collabothon.back.categorization.consts.FactsConsts.SHORT_BUFFERS;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 
-import com.collabothon.back.categorization.dto.GapDto;
 import com.collabothon.back.categorization.dto.FactsDto;
 import com.collabothon.back.categorization.dto.LessonVariantDto;
-import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
 import com.collabothon.back.categorization.enums.Experience;
 import com.collabothon.back.categorization.enums.FocusArea;
-import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.LessonLang;
 import com.collabothon.back.categorization.enums.LessonLevel;
 import com.collabothon.back.categorization.enums.LifeStage;
 import com.collabothon.back.categorization.enums.Role;
+import com.collabothon.back.categorization.models.Answer;
+import com.collabothon.back.categorization.models.Judgement;
+import com.collabothon.back.categorization.models.Learner;
+import com.collabothon.back.categorization.models.Measurement;
 
 final class CategorizationRules {
 
-	static final String NEUTRAL_LINE = "It fits the answers you gave.";
-
-	static final String SAVES_LINE = "Money goes to savings or investments every month.";
-
-	static final String NO_SAVES_LINE = "No regular transfers to savings or investments.";
-
-	static final String HOLDS_LINE = "Your accounts with us include investment products.";
-
-	static final String NO_HOLDS_LINE = "No investment products in your accounts with us.";
-
-	static final String OVERSPENT_LINE = "You spent more than you earned this month.";
-
-	static final String OVERDRAFT_LINE = "Your current account is below zero.";
-
-	static final String LOAN_LINE = "You are paying off a loan with us.";
-
-	static final String RETIREMENT_LINE = "You said retirement is close or already here.";
-
-	static final Map<String, String> BUFFER = Map.of(BUFFER_UNDER_1, "less than a month", BUFFER_1_3,
-			"1 to 3 months", BUFFER_3_6, "3 to 6 months", BUFFER_6_PLUS, "more than 6 months");
-
-	private static final Set<String> SHORT_BUFFER = Set.of(BUFFER_UNDER_1, BUFFER_1_3);
-
-	private static final Set<Experience> SAYS_LITTLE_SAVING = EnumSet.of(Experience.NOT_SAVING,
-			Experience.OCCASIONAL);
-
-	private static final Set<Experience> SAYS_INVESTING = EnumSet.of(Experience.INVESTING, Experience.PLANNING);
-
-	/**
-	 * {@code savingsCover}, picked in the survey, stands in for the buffer fact without bank data. {@code measured}
-	 * is the role the Quick check showed for a user who declared no experience, null otherwise.
-	 */
-	static Judgement fallback(OnboardingAnswersDto a, FactsDto f, LifeStage lifeStage, String savingsCover,
-			Role measured, List<Story> stories) {
-		Role role = measured != null ? measured : fallbackRole(a, f);
-		return new Judgement(role, Map.of(), fallbackFocus(a, f, role, lifeStage, savingsCover, stories), Map.of(), null,
-				null);
+	static Judgement fallback(Learner learner, Measurement measurement) {
+		Role role = ruleRole(learner, measurement);
+		return Judgement.byRules(role, fallbackFocus(learner, role));
 	}
 
-	/** The declaration decides; facts only lift someone who saves now and then but does so every month. */
-	static Role fallbackRole(OnboardingAnswersDto a, FactsDto f) {
-		return switch (Experience.fromWire(a.experience())) {
+	private static Role ruleRole(Learner learner, Measurement measurement) {
+		if (measurement.ran() && Experience.fromWire(learner.onboarding().experience()) == null) {
+			return measuredRole(measurement);
+		}
+		return fallbackRole(learner);
+	}
+
+	// The declaration decides; facts only lift someone who saves now and then but does so every month.
+	static Role fallbackRole(Learner learner) {
+		return switch (Experience.fromWire(learner.onboarding().experience())) {
 			case INVESTING, PLANNING -> Role.ADVANCED;
 			case REGULAR -> Role.INTERMEDIATE;
-			case OCCASIONAL -> f != null && f.savesRegularly() ? Role.INTERMEDIATE : Role.NOVICE;
+			case OCCASIONAL -> occasionalSaverRole(learner.facts());
 			case NOT_SAVING -> Role.NOVICE;
 			case null -> Role.NOVICE;
 		};
 	}
 
-	static List<FocusArea> fallbackFocus(OnboardingAnswersDto a, FactsDto f, Role role, LifeStage lifeStage,
-			String savingsCover, List<Story> stories) {
-		Set<FocusArea> areas = new LinkedHashSet<>();
-		if (f != null) {
-			if (f.inOverdraft() || f.hasLoan()) {
-				areas.add(FocusArea.DEBT);
-			}
-			if (hasShortBuffer(f)) {
-				areas.add(FocusArea.SAVING);
-			}
-			if (!f.holdsInvestments() && f.cashBufferMonths().equals(BUFFER_6_PLUS)) {
-				areas.add(FocusArea.INVESTING);
-			}
+	private static Role occasionalSaverRole(FactsDto facts) {
+		if (facts != null && facts.savesRegularly()) {
+			return Role.INTERMEDIATE;
 		}
-		else if (savingsCover != null && SHORT_BUFFER.contains(savingsCover)) {
-			areas.add(FocusArea.SAVING);
+		return Role.NOVICE;
+	}
+
+	// One strong answered area is enough for intermediate; advanced needs every answered area Solid.
+	static Role measuredRole(Measurement measurement) {
+		List<FocusArea> answered = measurement.answers().stream().map(Answer::area).distinct().toList();
+		if (answered.stream().noneMatch(area -> isAbove(measurement.mastery().get(area), SOLID_ABOVE))) {
+			return Role.NOVICE;
 		}
-		if (lifeStage == LifeStage.PRE_RETIREMENT) {
+		if (answered.stream().allMatch(measurement::isSolid)) {
+			return Role.ADVANCED;
+		}
+		return Role.INTERMEDIATE;
+	}
+
+	private static boolean isAbove(Double mastery, double threshold) {
+		return mastery != null && mastery > threshold;
+	}
+
+	// After a Quick check without an answered area at least Building the role is novice, whoever judged it.
+	static Role cappedRole(Role role, Measurement measurement) {
+		if (!measurement.ran() || hasBuildingArea(measurement)) {
+			return role;
+		}
+		return Role.NOVICE;
+	}
+
+	private static boolean hasBuildingArea(Measurement measurement) {
+		return measurement.mastery().entrySet().stream()
+			.anyMatch(area -> area.getValue() != null && area.getValue() >= JUST_STARTING_BELOW
+					&& measurement.isAnswered(area.getKey()));
+	}
+
+	// The insertion order is the fixed priority.
+	static List<FocusArea> fallbackFocus(Learner learner, Role role) {
+		Set<FocusArea> areas = new LinkedHashSet<>(moneyFocus(learner));
+		if (learner.lifeStage() == LifeStage.PRE_RETIREMENT) {
 			areas.add(FocusArea.RETIREMENT);
 		}
 		if (role == Role.NOVICE) {
 			areas.add(FocusArea.RISK);
 		}
-		areas.addAll(FocusArea.fromInterests(a.interests(), stories));
-		return areas.isEmpty() ? List.of(FocusArea.SAVING) : List.copyOf(areas);
+		areas.addAll(OrderRules.areasOf(learner.picked()));
+		if (areas.isEmpty()) {
+			return List.of(FocusArea.SAVING);
+		}
+		return List.copyOf(areas);
 	}
 
-	/** Areas at or above the threshold, most likely first; none passes → the single most likely one. */
+	// Without bank data the savings cover from the survey stands in for the buffer fact.
+	private static Set<FocusArea> moneyFocus(Learner learner) {
+		Set<FocusArea> areas = new LinkedHashSet<>();
+		FactsDto facts = learner.facts();
+		if (facts != null && (facts.inOverdraft() || facts.hasLoan())) {
+			areas.add(FocusArea.DEBT);
+		}
+		String buffer = learner.savingsCover();
+		if (facts != null) {
+			buffer = facts.cashBufferMonths();
+		}
+		if (buffer != null && SHORT_BUFFERS.contains(buffer)) {
+			areas.add(FocusArea.SAVING);
+		}
+		if (facts != null && !facts.holdsInvestments() && BUFFER_6_PLUS.equals(buffer)) {
+			areas.add(FocusArea.INVESTING);
+		}
+		return areas;
+	}
+
+	// None at the threshold gives the single most likely area.
 	static List<FocusArea> focusFromNoul(Map<FocusArea, Double> noul) {
-		List<FocusArea> sorted = Arrays.stream(FocusArea.values())
+		List<FocusArea> mostLikelyFirst = Arrays.stream(FocusArea.values())
 			.sorted(Comparator.comparing(noul::get).reversed())
 			.toList();
-		List<FocusArea> picked = sorted.stream().filter(area -> noul.get(area) >= FOCUS_THRESHOLD).toList();
-		return picked.isEmpty() ? sorted.subList(0, 1) : picked;
-	}
-
-	private static final List<FocusArea> ACCOUNT_GAP_AREAS = List.of(FocusArea.SAVING, FocusArea.INVESTING);
-
-	/**
-	 * Where what the user said about themselves and what their accounts show differ (F1, without a Quick check):
-	 * the account ahead of what they said is habit ahead, the reverse knowledge ahead.
-	 */
-	static List<GapDto> saidGaps(OnboardingAnswersDto a, FactsDto f) {
-		Experience said = Experience.fromWire(a.experience());
-		if (said == null || f == null) {
-			return List.of();
+		List<FocusArea> likely = mostLikelyFirst.stream().filter(area -> noul.get(area) >= FOCUS_THRESHOLD).toList();
+		if (likely.isEmpty()) {
+			return List.of(mostLikelyFirst.getFirst());
 		}
-		return ACCOUNT_GAP_AREAS.stream().flatMap(area -> accountGap(said, area, f).stream()).toList();
-	}
-
-	private static Optional<GapDto> accountGap(Experience said, FocusArea area, FactsDto f) {
-		if (area == FocusArea.SAVING) {
-			if (SAYS_LITTLE_SAVING.contains(said) && f.savesRegularly()) {
-				return Optional.of(gap(area, GapDirection.HABIT_AHEAD, said, SAVES_LINE));
-			}
-			if (!SAYS_LITTLE_SAVING.contains(said) && f.cashBufferMonths().equals(BUFFER_UNDER_1)) {
-				return Optional.of(gap(area, GapDirection.KNOWLEDGE_AHEAD, said, bufferLine(f)));
-			}
-		}
-		else {
-			if (!SAYS_INVESTING.contains(said) && f.holdsInvestments()) {
-				return Optional.of(gap(area, GapDirection.HABIT_AHEAD, said, HOLDS_LINE));
-			}
-			if (SAYS_INVESTING.contains(said) && !f.holdsInvestments()) {
-				return Optional.of(gap(area, GapDirection.KNOWLEDGE_AHEAD, said, NO_HOLDS_LINE));
-			}
-		}
-		return Optional.empty();
-	}
-
-	private static GapDto gap(FocusArea area, GapDirection direction, Experience said, String shows) {
-		return new GapDto(area, direction, said.saidLine() + " " + shows);
+		return likely;
 	}
 
 	static LessonVariantDto lessonVariant(Role role, LifeStage lifeStage) {
-		LifeStage persona = lifeStage == LifeStage.ESTABLISHED ? null : lifeStage;
-		return new LessonVariantDto(persona, role == Role.ADVANCED ? LessonLevel.ADVANCED : LessonLevel.BEGINNER,
-				role == Role.NOVICE ? LessonLang.PLAIN : LessonLang.STANDARD);
-	}
-
-	static List<String> roleBecause(OnboardingAnswersDto a, FactsDto f) {
-		List<String> lines = new ArrayList<>();
-		Experience said = Experience.fromWire(a.experience());
-		if (said != null) {
-			lines.add(said.saidLine());
+		LifeStage persona = lifeStage;
+		if (lifeStage == LifeStage.ESTABLISHED) {
+			// No lesson variant for this stage: it reads the base content.
+			persona = null;
 		}
-		if (f != null) {
-			lines.add(f.savesRegularly() ? SAVES_LINE : NO_SAVES_LINE);
-			lines.add(holdsLine(f));
-		}
-		return lines;
-	}
-
-	static List<String> focusBecause(List<FocusArea> areas, OnboardingAnswersDto a, FactsDto f, List<Story> stories) {
-		List<Story> picked = Story.picked(a.interests(), stories);
-		Set<String> lines = new LinkedHashSet<>();
-		for (FocusArea area : areas) {
-			List<String> own = supportingLines(area, a, f);
-			picked.stream()
-				.filter(story -> FocusArea.ofStoryArea(story.area()) == area)
-				.forEach(story -> own.add("You said " + story.area() + " is new to you."));
-			lines.addAll(own.isEmpty() ? List.of(NEUTRAL_LINE) : own);
-		}
-		return List.copyOf(lines);
-	}
-
-	/** Only the lines that argue for this area; a fact that argues against it is left out. */
-	private static List<String> supportingLines(FocusArea area, OnboardingAnswersDto a, FactsDto f) {
-		List<String> lines = new ArrayList<>();
-		if (area == FocusArea.RETIREMENT && LifeStage.fromAnswer(a.lifeStage()) == LifeStage.PRE_RETIREMENT) {
-			lines.add(RETIREMENT_LINE);
-		}
-		if (f == null) {
-			return lines;
-		}
-		switch (area) {
-			case SAVING -> {
-				if (hasShortBuffer(f)) {
-					lines.add(bufferLine(f));
-				}
-				if (f.savingsRate().equals(RATE_NEGATIVE)) {
-					lines.add(OVERSPENT_LINE);
-				}
-			}
-			case DEBT -> {
-				if (f.inOverdraft()) {
-					lines.add(OVERDRAFT_LINE);
-				}
-				if (f.hasLoan()) {
-					lines.add(LOAN_LINE);
-				}
-			}
-			case INVESTING -> {
-				if (!f.holdsInvestments()) {
-					lines.add(holdsLine(f));
-				}
-				if (f.cashBufferMonths().equals(BUFFER_6_PLUS)) {
-					lines.add(bufferLine(f));
-				}
-			}
-			case RISK -> {
-				if (f.holdsInvestments()) {
-					lines.add(holdsLine(f));
-				}
-			}
-		}
-		return lines;
-	}
-
-	private static String holdsLine(FactsDto f) {
-		return f.holdsInvestments() ? HOLDS_LINE : NO_HOLDS_LINE;
-	}
-
-	private static String bufferLine(FactsDto f) {
-		return "Your accounts cover " + Objects.requireNonNull(BUFFER.get(f.cashBufferMonths())) + " of spending.";
-	}
-
-	private static boolean hasShortBuffer(FactsDto f) {
-		return SHORT_BUFFER.contains(f.cashBufferMonths());
+		return switch (role) {
+			case NOVICE -> new LessonVariantDto(persona, LessonLevel.BEGINNER, LessonLang.PLAIN);
+			case INTERMEDIATE -> new LessonVariantDto(persona, LessonLevel.BEGINNER, LessonLang.STANDARD);
+			case ADVANCED -> new LessonVariantDto(persona, LessonLevel.ADVANCED, LessonLang.STANDARD);
+		};
 	}
 
 }

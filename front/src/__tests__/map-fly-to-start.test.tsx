@@ -17,7 +17,7 @@ const ok = (body: unknown) => Promise.resolve({ ok: true, status: 200, json: () 
 function backend(stored: unknown) {
   globalThis.fetch = jest.fn((url: string) => {
     if (url.endsWith('/categorization')) return stored ? ok(stored) : Promise.resolve({ ok: false, status: 404, statusText: 'Not Found' });
-    if (url.endsWith('/profile')) return ok({ userId: 'demo-user', goals: [], onboardingCompleted: true });
+    if (url.endsWith('/profile')) return ok({ userId: 'demo-user', interests: [], onboardingCompleted: true });
     return ok([]);
   }) as jest.Mock;
 }

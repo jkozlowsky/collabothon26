@@ -24,7 +24,7 @@ const GAP_NOTE = {
 };
 
 /** Result first, then the one lesson to start, then where each area stands. */
-export function PathSummary({ categorization: c, counts = {}, savingFor }: Summary) {
+export function PathSummary({ categorization: c, counts = {} }: Summary) {
   const { userId } = useCurrentUser();
   const start = c.startLesson;
   const { data: stories } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(userId)}`);
@@ -42,11 +42,6 @@ export function PathSummary({ categorization: c, counts = {}, savingFor }: Summa
         <Text style={text.display} accessibilityRole="header" testID="summary-role">
           You&apos;re {ROLE[c.role]} learner
         </Text>
-        {savingFor && (
-          <Text style={text.strong} testID="summary-saving-for">
-            {savingFor}
-          </Text>
-        )}
         {c.answerCount > 0 ? (
           <Text style={styles.muted} testID="summary-based-on">
             Based on {c.answerCount} answers and what your account shows.

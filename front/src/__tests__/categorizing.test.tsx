@@ -32,7 +32,7 @@ const hang = (init?: RequestInit) =>
   );
 
 /** A profile whose onboarding is done, so /categorizing is open to it. */
-const PROFILE = { userId: 'demo-user', goals: [], onboardingCompleted: true };
+const PROFILE = { userId: 'demo-user', interests: [], onboardingCompleted: true };
 
 type Handler = (init?: RequestInit) => Promise<unknown>;
 let fetchMock: jest.Mock;

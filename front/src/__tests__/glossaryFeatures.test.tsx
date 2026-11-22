@@ -68,7 +68,7 @@ function mockApi(opts: { favorites?: string[]; failFavoriteSave?: boolean } = {}
   globalThis.fetch = jest.fn((url: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET';
     calls.push({ url, method, body: init?.body as string | undefined });
-    if (url.endsWith('/profile')) return respond({ userId: 'demo-user', goals: [], onboardingCompleted: true });
+    if (url.endsWith('/profile')) return respond({ userId: 'demo-user', interests: [], onboardingCompleted: true });
     if (url.endsWith('/api/glossary')) return respond(categories);
     if (url.includes('/glossary/favorites/')) return opts.failFavoriteSave ? respond(null, 500) : respond(null, 204);
     if (url.endsWith('/glossary/favorites')) return respond(opts.favorites ?? []);

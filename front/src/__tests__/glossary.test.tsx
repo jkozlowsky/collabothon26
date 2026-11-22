@@ -49,7 +49,7 @@ beforeEach(() => {
       json: () =>
         Promise.resolve(
           url.endsWith('/profile')
-            ? { userId: 'demo-user', goals: [], onboardingCompleted: true }
+            ? { userId: 'demo-user', interests: [], onboardingCompleted: true }
             : url.endsWith('/api/glossary')
               ? categories
               : (details[url.split('/terms/')[1]] ?? []),

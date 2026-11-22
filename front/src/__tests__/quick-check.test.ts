@@ -1,8 +1,7 @@
 import { seedAccount } from '@/lib/bank/seed';
-import { PURPOSES } from '@/constants/onboarding';
 import { FEEDBACK } from '@/constants/quickCheck';
 import { ageBandOf, ageLabel } from '@/lib/categorization';
-import { answerCounts, feedbackFor, fetchCheckQuestions, levelOf, plainText, savingForLine } from '@/lib/quickCheck';
+import { answerCounts, feedbackFor, fetchCheckQuestions, levelOf, plainText } from '@/lib/quickCheck';
 import { POOL } from '@/test-utils/checkPool';
 import type { HistoryEntry } from '@/types/quickCheck';
 
@@ -75,25 +74,6 @@ test('glossary markup in an explanation reads as plain words', () => {
   const marked = POOL.find((item) => item.id === 'berlin-1/q1')!;
   expect(feedbackFor(null, marked).body).toMatch(/^inflation is an average over a basket\./);
   for (const q of POOL) expect(feedbackFor(null, q).body).not.toContain('[[');
-});
-
-test('each purpose is saved as the goals of its area', () => {
-  expect(Object.fromEntries(PURPOSES.map((p) => [p.title, p.goals]))).toEqual({
-    'A home of my own': ['start-saving', 'inflation'],
-    'A safety net': ['emergency-fund'],
-    Retirement: ['retirement'],
-    'Growing it long term': ['start-investing'],
-    'No plan yet': [],
-  });
-});
-
-test('the summary line names the purpose and, when known, the time frame', () => {
-  expect(savingForLine('A home of my own', '1-5y')).toBe('Saving for: A home of my own · needed in 1–5 years');
-  expect(savingForLine('A safety net', 'within-1y')).toBe('Saving for: A safety net · needed within a year');
-  expect(savingForLine('Retirement', '5y+')).toBe('Saving for: Retirement · needed in 5+ years');
-  expect(savingForLine('Retirement', 'not-sure')).toBe('Saving for: Retirement');
-  expect(savingForLine('Retirement', null)).toBe('Saving for: Retirement');
-  expect(savingForLine(null, '5y+')).toBeUndefined();
 });
 
 test('the age band is computed from the owner\'s age', () => {

@@ -22,7 +22,7 @@ beforeEach(() => {
     Promise.resolve({
       ok: true,
       status: 200,
-      json: () => Promise.resolve(url.endsWith('/profile') ? { userId: 'demo-user', goals: [], onboardingCompleted: true } : url.includes('/api/lessons?') ? lessons
+      json: () => Promise.resolve(url.endsWith('/profile') ? { userId: 'demo-user', interests: [], onboardingCompleted: true } : url.includes('/api/lessons?') ? lessons
         : url.includes('/api/stories?') ? [{
           id: 'seoul', city: 'Seoul', topic: 'Hype and borrowed money', color: 'violet',
           character: { name: 'Ji-woo', age: 27, role: 'Office worker' },

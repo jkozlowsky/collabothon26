@@ -37,6 +37,8 @@ module.exports = {
   useAnimatedStyle: (updater) => updater(),
   useAnimatedProps: (updater) => updater(),
   useAnimatedReaction: () => {},
+  // Never runs in tests: nothing moves by itself.
+  useFrameCallback: () => useState(() => ({ setActive: () => {}, isActive: false, callbackId: -1 }))[0],
   withTiming: (to) => to,
   withSpring: (to) => to,
   withDecay: () => 0,

@@ -146,7 +146,7 @@ class CategorizationControllerTests {
 			.andExpect(method(HttpMethod.POST))
 			.andExpect(header("Authorization", "Bearer test-key"))
 			.andExpect(content().json("""
-					{"model": "jev-latest", "state": {"answers": %s, "facts": %s}, "questions": %s}"""
+					{"model": "jev-1.14.0", "state": {"answers": %s, "facts": %s}, "questions": %s}"""
 				.formatted(SENT_ANSWERS, FACTS, SpecBlocks.read(json, SpecBlocks.F1, "jev-questions")), JsonCompareMode.STRICT))
 			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 
@@ -303,7 +303,7 @@ class CategorizationControllerTests {
 		onboard("alex", "{\"goals\": [\"start-saving\"], \"skipped\": false}");
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(content().json("""
-					{"model": "jev-latest", "state": {"answers": {"goals": ["start-saving"]}}, "questions": %s}"""
+					{"model": "jev-1.14.0", "state": {"answers": {"goals": ["start-saving"]}}, "questions": %s}"""
 				.formatted(SpecBlocks.read(json, SpecBlocks.F1, "jev-questions")), JsonCompareMode.STRICT))
 			.andRespond(withSuccess(JEV_ANSWER, MediaType.APPLICATION_JSON));
 

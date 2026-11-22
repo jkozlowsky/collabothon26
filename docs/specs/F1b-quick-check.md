@@ -230,7 +230,7 @@ v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / f
   ]
 }
 ```
-`goals` is left out when empty, `facts` without consent and `answers` before the first answer. `result` is `correct` | `wrong` | `not-sure`; `lessonId`, `topic` and `concepts` are those of the lesson the question came from. Questions, verbatim (`mastery_<area>` only for areas with at least one answer; `next` only with 2+ lessons to choose from). `next.criteria` is built per request (v5): one option per candidate lesson, named by the lesson's topic in snake case and described by "<topic>. Covers: <concepts, hyphens as spaces>."; the candidates are at most `LESSON_CHOICES_PER_AREA` (2) lessons per area in the area order, lessons with a question left, each story's first such lesson before any story's second. The backend test compares each sent question with its entry below, the criteria filled from the lessons, and finds no extra keys.
+`goals` is left out when empty, `facts` without consent and `answers` before the first answer. `result` is `correct` | `wrong` | `not-sure`; `lessonId`, `topic` and `concepts` are those of the lesson the question came from. Questions, verbatim (`mastery_<area>` only for areas with at least one answer; `next` only with 2+ lessons to choose from). `next.criteria` is built per request (v5): one option per candidate lesson, named by the lesson's topic in snake case and described by an object with the same fields on every option, `{"topic": <topic>, "concepts": [<concepts, hyphens as spaces>]}` (22.11; replaces the "<topic>. Covers: <concepts>." text of v5); the candidates are at most `LESSON_CHOICES_PER_AREA` (2) lessons per area in the area order, lessons with a question left, each story's first such lesson before any story's second. The backend test compares each sent question with its entry below, the criteria filled from the lessons, and finds no extra keys.
 
 <!-- jev-step-questions: the backend test compares the Jev request with this block -->
 ```json
@@ -240,10 +240,10 @@ v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / f
   "mastery_investing": {"type": "noul", "instructions": "Do this person's investing answers, the entries of `answers` whose `area` is investing, show that they understand ideas such as market falls, borrowing to invest and spreading risk?"},
   "next": {"type": "choice",
     "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers` and when they might need their money in `profile.horizon`?",
-    "criteria": {"<lesson topic in snake case>": "<lesson topic>. Covers: <lesson concepts>."}},
+    "criteria": {"<lesson topic in snake case>": {"topic": "<lesson topic>", "concepts": ["<lesson concept>"]}}},
   "first": {"type": "choice",
     "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given their goals in `goals`, when they might need their money in `profile.horizon` and, when given, the facts about their accounts in `facts`?",
-    "criteria": {"<lesson topic in snake case>": "<lesson topic>. Covers: <lesson concepts>."}},
+    "criteria": {"<lesson topic in snake case>": {"topic": "<lesson topic>", "concepts": ["<lesson concept>"]}}},
   "enough": {"type": "noul", "instructions": "Do the answers so far show clearly enough what this person already understands and what they should learn first?"}
 }
 ```
@@ -262,7 +262,7 @@ F1's request (role and `focus_*` verbatim from F1's `jev-questions` block) plus 
 {
   "first_lesson": {"type": "choice",
     "instructions": "Which of these lessons should this person start with, given which ideas their knowledge answers in `checkAnswers` show they have not mastered yet?",
-    "criteria": {"<lesson topic in snake case>": "<lesson topic>. Covers: <lesson concepts>."}}
+    "criteria": {"<lesson topic in snake case>": {"topic": "<lesson topic>", "concepts": ["<lesson concept>"]}}}
 }
 ```
 F1 validation applies to the whole response; any failure → the whole categorisation on rules (D6), 7 s read timeout. Jev is not asked about gaps (22.11; replaces the `gap_<area>` choices of v4): the v4 gap rule gives them in code from the facts and the history, the same whether the call answered or fell back. The response's `direction` is `habit-ahead` / `knowledge-ahead`.

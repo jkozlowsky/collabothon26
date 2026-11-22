@@ -51,6 +51,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 @Service
@@ -292,8 +293,11 @@ public class JevClient {
 	private static ObjectNode lessonChoice(JsonNode question, List<CheckLesson> lessons) {
 		ObjectNode choice = (ObjectNode) question.deepCopy();
 		ObjectNode criteria = choice.putObject("criteria");
-		lessons.forEach(lesson -> criteria.put(lesson.label(), "%s. Covers: %s.".formatted(lesson.topic(),
-				String.join(", ", lesson.concepts()).replace('-', ' '))));
+		lessons.forEach(lesson -> {
+			ObjectNode option = criteria.putObject(lesson.label()).put("topic", lesson.topic());
+			ArrayNode concepts = option.putArray("concepts");
+			lesson.concepts().forEach(concept -> concepts.add(concept.replace('-', ' ')));
+		});
 		return choice;
 	}
 

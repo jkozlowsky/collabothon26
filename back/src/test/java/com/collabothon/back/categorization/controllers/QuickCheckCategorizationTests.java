@@ -240,12 +240,13 @@ class QuickCheckCategorizationTests {
 		ObjectNode firstLesson = (ObjectNode) block.get("first_lesson").deepCopy();
 		ObjectNode criteria = firstLesson.putObject("criteria");
 		for (String lessonId : CHOICES) {
-			criteria.put(label(lessonId), TestPool.criterion(lessonId));
+			criteria.set(label(lessonId), TestPool.criterion(lessonId));
 		}
 		expected.set("first_lesson", firstLesson);
 		assertEquals(expected, sent.get().get("questions"));
-		assertEquals("Saving, bonds, stocks and funds. Covers: stock, bond, etf, time horizon.",
-				sent.get().at("/questions/first_lesson/criteria/saving_bonds_stocks_and_funds").stringValue());
+		assertEquals(json.readTree("""
+				{"topic": "Saving, bonds, stocks and funds", "concepts": ["stock", "bond", "etf", "time horizon"]}"""),
+				sent.get().at("/questions/first_lesson/criteria/saving_bonds_stocks_and_funds"));
 	}
 
 	@Test

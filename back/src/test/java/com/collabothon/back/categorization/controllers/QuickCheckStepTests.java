@@ -355,7 +355,7 @@ class QuickCheckStepTests {
 					{"mastery": {"saving": 0.8, "debt": 0.3, "investing": null}, "nextQuestionId": "tokyo-1/q2",
 					 "done": false, "useRules": false, "stepFellBack": false}""", JsonCompareMode.STRICT));
 
-		assertEquals("jev-latest", sent.get().get("model").stringValue());
+		assertEquals("jev-1.14.0", sent.get().get("model").stringValue());
 		assertEquals(json.readTree("""
 				{"profile": {"ageBand": null, "savingsCover": "1-3", "horizon": "1-5y"}, "goals": ["start-saving"],
 				 "answers": [
@@ -370,15 +370,18 @@ class QuickCheckStepTests {
 		expected.set("mastery_debt", spec.get("mastery_debt"));
 		ObjectNode next = (ObjectNode) spec.get("next").deepCopy();
 		ObjectNode criteria = next.putObject("criteria");
-		CHOICES.forEach(lesson -> criteria.put(label(lesson), TestPool.criterion(lesson)));
+		CHOICES.forEach(lesson -> criteria.set(label(lesson), TestPool.criterion(lesson)));
 		expected.set("next", next);
 		expected.set("enough", spec.get("enough"));
 		assertEquals(expected, sent.get().get("questions"));
 		// One option written out, so the name and the description are pinned as text too.
-		assertEquals("Why safe money can lose value. Covers: inflation, real return, fixed term deposit, time horizon.",
-				sent.get().at("/questions/next/criteria/why_safe_money_can_lose_value").stringValue());
-		assertEquals("Small payments that add up. Covers: installments, committed income.",
-				sent.get().at("/questions/next/criteria/small_payments_that_add_up").stringValue());
+		assertEquals(json.readTree("""
+				{"topic": "Why safe money can lose value",
+				 "concepts": ["inflation", "real return", "fixed term deposit", "time horizon"]}"""),
+				sent.get().at("/questions/next/criteria/why_safe_money_can_lose_value"));
+		assertEquals(json.readTree("""
+				{"topic": "Small payments that add up", "concepts": ["installments", "committed income"]}"""),
+				sent.get().at("/questions/next/criteria/small_payments_that_add_up"));
 	}
 
 	@Test
@@ -400,7 +403,7 @@ class QuickCheckStepTests {
 				 "facts": %s}""".formatted(FACTS)), sent.get().get("state"));
 		ObjectNode first = (ObjectNode) SpecBlocks.read(json, "jev-step-questions").get("first").deepCopy();
 		ObjectNode criteria = first.putObject("criteria");
-		CHOICES.forEach(lesson -> criteria.put(label(lesson), TestPool.criterion(lesson)));
+		CHOICES.forEach(lesson -> criteria.set(label(lesson), TestPool.criterion(lesson)));
 		// The first wording goes out as `next`, the one question of this call: no mastery, no `enough`.
 		assertEquals(json.createObjectNode().set("next", first), sent.get().get("questions"));
 	}

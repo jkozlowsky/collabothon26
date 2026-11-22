@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Limit;
 
 import com.collabothon.back.TestcontainersConfiguration;
+import com.collabothon.back.entities.xp.XpEvent;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -88,6 +89,19 @@ class XpEventRepositoryTests {
 			.containsExactly(tuple("ann", 25L));
 		assertThat(repository.existsByUserIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThan("ann", WEEK_START,
 				WEEK_END)).isTrue();
+	}
+
+	@Test
+	void findsEventsByUserIdSourceAndSourceRefOrderByIdDesc() {
+		repository.insertIfAbsent("ann", "berlin", "DUEL", "match-1", 10, IN_WEEK);
+		repository.insertIfAbsent("ann", "tokyo", "DUEL", "match-1", 15, IN_WEEK);
+		repository.insertIfAbsent("ann", "berlin", "DUEL", "match-2", 20, IN_WEEK);
+
+		List<XpEvent> events = repository.findByUserIdAndSourceAndSourceRefOrderByIdDesc("ann",
+				com.collabothon.back.entities.xp.XpSource.DUEL, "match-1");
+		assertThat(events).hasSize(2);
+		assertThat(events.get(0).getId()).isGreaterThan(events.get(1).getId());
+		assertThat(events).extracting(XpEvent::getCategory).containsExactly("tokyo", "berlin");
 	}
 
 }

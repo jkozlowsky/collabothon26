@@ -31,6 +31,9 @@ export const colors = {
   // Not Figma variables: 14% tints of the feedback colours, same recipe as the story icon tiles.
   feedbackSuccessSoft: 'rgba(30, 138, 94, 0.14)',
   feedbackDangerSoft: 'rgba(214, 69, 69, 0.14)',
+  // Duel v3 review answer pills: feedback colours at 10%.
+  feedbackSuccessTint: 'rgba(30, 138, 94, 0.1)',
+  feedbackDangerTint: 'rgba(214, 69, 69, 0.1)',
   // 14% tints of the story colours: icon tiles of glossary categories (same recipe as the story tiles).
   storyTealSoft: 'rgba(30, 154, 168, 0.14)',
   storyVioletSoft: 'rgba(110, 90, 214, 0.14)',
@@ -58,6 +61,8 @@ export const colors = {
   heroGradientFrom: '#0B4D5E',
   onBrandTile: 'rgba(255, 255, 255, 0.08)',
   onBrandMuted: 'rgba(255, 255, 255, 0.7)',
+  // Duel v3 level-up "from" chip: white at 12%.
+  onBrandSubtle: 'rgba(255, 255, 255, 0.12)',
   // Duel matchmaking and versus cards: stronger labels, chips and hairlines on petrol.
   onBrandStrong: 'rgba(255, 255, 255, 0.85)',
   onBrandChip: 'rgba(255, 255, 255, 0.14)',
@@ -68,6 +73,14 @@ export const colors = {
   scrim: 'rgba(0, 31, 41, 0.4)',
   /** Darker dim behind a spotlight, so the one lit feature stands out. */
   spotlightScrim: 'rgba(0, 31, 41, 0.72)',
+
+  // Medal tokens (Figma Duel v3 Kit 166:5407)
+  medalGold: '#B8860B',
+  medalGoldSoft: '#FBF1D6',
+  medalSilver: '#7D8A94',
+  medalSilverSoft: '#EEF1F4',
+  medalBronze: '#A0602E',
+  medalBronzeSoft: '#F7E9DE',
 } as const;
 
 /** Story colours at 14% opacity: icon tiles and avatar backgrounds (Figma recipe). */

@@ -41,6 +41,10 @@ export type DuelMatchState = {
   yourFinal: { score: number; xpGained: number } | null;
   finished: boolean;
   result: MatchEnd | null;
+  /** A live duel against another human: the rival's dots come from their real answers. */
+  live: boolean;
+  /** The live rival's socket dropped; their remaining answers will time out. */
+  rivalLeft: boolean;
   error: { code: string; message: string } | null;
 };
 
@@ -57,6 +61,7 @@ export type DuelAction =
       finished: boolean;
     }
   | { type: 'rival.progress'; rivalProgress: RivalSnapshot }
+  | { type: 'rival.left' }
   | { type: 'ui.advance' }
   | { type: 'match.state'; state: MatchState }
   | { type: 'match.end'; result: MatchEnd }
@@ -104,6 +109,8 @@ export function createInitialDuelState(
     yourFinal: null,
     finished: false,
     result: null,
+    live: false,
+    rivalLeft: false,
     error: null,
   };
 }
@@ -215,6 +222,9 @@ export function duelReducer(state: DuelMatchState, action: DuelAction): DuelMatc
       };
     }
 
+    case 'rival.left':
+      return { ...state, rivalLeft: true };
+
     case 'rival.progress': {
       return {
         ...state,
@@ -255,6 +265,7 @@ export function duelReducer(state: DuelMatchState, action: DuelAction): DuelMatc
         question: ms.question ?? state.question,
         yourFinal: ms.yourFinal ?? state.yourFinal,
         finished: ms.finished,
+        live: ms.live ?? state.live,
       };
     }
 

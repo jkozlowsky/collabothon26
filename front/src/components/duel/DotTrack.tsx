@@ -10,20 +10,23 @@ type Props = {
   activeIndex?: number | null;
   /** Light dots for petrol cards. */
   onBrand?: boolean;
+  /** Dot size and gap in px (Figma result header: 10 and 5). */
+  size?: number;
+  gap?: number;
   testID?: string;
 };
 
 /** One dot per question: green right, red wrong, grey timed out, ring current, pale not yet. */
-export function DotTrack({ dots, activeIndex = null, onBrand = false, testID }: Props) {
+export function DotTrack({ dots, activeIndex = null, onBrand = false, size = 9, gap = spacing.xs, testID }: Props) {
   return (
-    <View style={styles.row} testID={testID}>
+    <View style={[styles.row, { gap }]} testID={testID}>
       {dots.map((d, i) => {
         let style: ViewStyle = onBrand ? styles.pendingOnBrand : styles.pending;
         if (d === true || d === 'correct') style = styles.correct;
         else if (d === false || d === 'wrong') style = styles.wrong;
         else if (d === 'timeout') style = styles.timeout;
         else if (activeIndex === i) style = onBrand ? styles.currentOnBrand : styles.current;
-        return <View key={i} style={[styles.dot, style]} />;
+        return <View key={i} style={[styles.dot, { width: size, height: size }, style]} />;
       })}
     </View>
   );

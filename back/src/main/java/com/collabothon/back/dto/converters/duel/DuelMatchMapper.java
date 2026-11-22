@@ -6,6 +6,7 @@ import java.util.Map;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import com.collabothon.back.dto.duel.CategoryMatchEndDto;
 import com.collabothon.back.dto.duel.DuelQuestionDto;
 import com.collabothon.back.dto.duel.MatchEndDto;
 import com.collabothon.back.dto.duel.MatchStartDto;
@@ -27,13 +28,15 @@ public interface DuelMatchMapper {
 
 	@Mapping(target = "matchId", source = "match.id")
 	@Mapping(target = "finished", source = "match.finished")
+	@Mapping(target = "live", source = "match.live")
 	MatchStateDto toStateDto(DuelMatch match, PlayerCardDto you, PlayerCardDto rival, int questionCount,
 			List<Boolean> yourResults, DuelQuestionDto question, RivalSnapshotDto rivalProgress,
 			YourFinalDto yourFinal);
 
 	@Mapping(target = "matchId", source = "match.id")
-	MatchEndDto toEndDto(DuelMatch match, PlayerCardDto you, PlayerCardDto rival, Map<String, Integer> xpByCategory,
-			List<ReviewItemDto> review);
+	@Mapping(target = "categories", source = "categories")
+	MatchEndDto toEndDto(DuelMatch match, PlayerCardDto you, PlayerCardDto rival, List<CategoryMatchEndDto> categories,
+			Map<String, Integer> xpByCategory, List<ReviewItemDto> review);
 
 	@Mapping(target = "matchId", source = "match.id")
 	@Mapping(target = "status", source = "summaryStatus")

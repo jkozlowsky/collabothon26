@@ -1,5 +1,7 @@
 package com.collabothon.back.entities.duel;
 
+import java.util.List;
+
 import tools.jackson.databind.node.ObjectNode;
 
 /**
@@ -9,10 +11,16 @@ import tools.jackson.databind.node.ObjectNode;
 public record DuelQuestion(
 		String id,
 		String lessonId,
+		String sourceStepId,
+		List<String> concepts,
 		Long timeLimitMs,
 		String category,
 		ObjectNode step
 ) {
+
+	public DuelQuestion(String id, String lessonId, Long timeLimitMs, String category, ObjectNode step) {
+		this(id, lessonId, null, List.of(), timeLimitMs, category, step);
+	}
 
 	public String type() {
 		return step.path("type").asString();

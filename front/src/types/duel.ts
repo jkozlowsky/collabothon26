@@ -164,7 +164,26 @@ export type MatchState = {
   rivalProgress: RivalSnapshot | null;
   yourFinal: { score: number; xpGained: number } | null;
   finished: boolean;
+  /** True in a live duel against another human (absent on older backends). */
+  live?: boolean;
 };
+
+/** Server → client messages of the duel socket (`/ws/duel`, live matchmaking and rival push). */
+export type DuelSocketMessage =
+  | { type: 'queued'; timeoutMs: number }
+  | { type: 'matched'; matchId: number; rival: PlayerCard; categories: string[] }
+  | { type: 'no-rival' }
+  | { type: 'rival-progress'; matchId: number; answered: number; results: boolean[] }
+  | { type: 'rival-finished'; matchId: number; rivalScore: number }
+  | { type: 'rival-left'; matchId: number }
+  | { type: 'pong' }
+  | { type: 'error'; code: string };
+
+/** Client → server messages of the duel socket. */
+export type DuelSocketRequest =
+  | { type: 'queue'; categories: string[] }
+  | { type: 'cancel' }
+  | { type: 'ping' };
 
 export type MatchOutcome = 'WIN' | 'DRAW' | 'LOSS' | 'SOLO';
 
@@ -184,11 +203,22 @@ export type ReviewItem = {
   lessonTitle: string;
 };
 
+export type CategoryMatchEnd = {
+  story: string;
+  xpGained: number;
+  xpBefore: number;
+  xpAfter: number;
+  levelBefore: number;
+  levelAfter: number;
+  xpIntoLevelAfter: number;
+  xpForLevelAfter: number;
+};
+
 /** GET /api/duel/matches/{id}?userId= */
 export type MatchEnd = {
   matchId: number;
   mode: DuelMode;
-  categories: string[];
+  categories: CategoryMatchEnd[] | string[];
   outcome: MatchOutcome;
   score: number;
   rivalScore: number | null;
@@ -222,6 +252,8 @@ export type RankingRow = {
   avatar: PlayerCard['avatar'];
   level: number;
   weeklyXp: number;
+  previousRank?: number | null;
+  lastXpEventId?: number | null;
 };
 
 export type Rankings = {

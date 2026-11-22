@@ -1,0 +1,121 @@
+{
+  "story": "nairobi",
+  "questions": [
+    {
+      "id": "nairobi-d01",
+      "lessonId": "nairobi-1",
+      "sourceStepId": "p1",
+      "concepts": [
+        "pay-yourself-first"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d01",
+        "prompt": "Aisha saves €25 every week into a separate savings account with no interest. How much does she accumulate in two full years (104 weeks)?",
+        "input": {
+          "kind": "slider",
+          "min": 1000,
+          "max": 4000,
+          "step": 100,
+          "unit": "€"
+        },
+        "answer": 2600,
+        "tolerance": 100,
+        "reveal": "€2,600. 104 weeks × €25 adds up to €2,600.",
+        "explanation": "Weekly savings accumulation = 104 weeks × €25 = €2,600."
+      }
+    },
+    {
+      "id": "nairobi-d02",
+      "lessonId": "nairobi-1",
+      "sourceStepId": "q2",
+      "concepts": [
+        "pay-yourself-first"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d02",
+        "prompt": "What is the key principle behind the 'Pay yourself first' budgeting method?",
+        "options": [
+          "Automatically routing a set savings sum on payday before spending starts",
+          "Treating yourself to discretionary luxury items right after payday",
+          "Transferring whatever money happens to remain at the end of the month",
+          "Paying entertainment subscriptions before paying household bills"
+        ],
+        "correctIndex": 0,
+        "explanation": "Paying yourself first means automating savings as soon as income arrives, ensuring consistent savings before spending begins."
+      }
+    },
+    {
+      "id": "nairobi-d03",
+      "lessonId": "nairobi-1",
+      "sourceStepId": "q1",
+      "concepts": [
+        "pay-yourself-first"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d03",
+        "prompt": "Why is consistently saving modest amounts (e.g. €5 a day) financially impactful over time?",
+        "options": [
+          "Small habitual savings accumulate into significant sums and build resilience",
+          "Commercial banks pay triple interest exclusively on daily micro-deposits",
+          "Micro-savings accounts are legally exempt from national retail price inflation",
+          "Daily deposits guarantee superior performance over equity market indices"
+        ],
+        "correctIndex": 0,
+        "explanation": "Even modest daily amounts accumulate into thousands of euros over years, providing an emergency cushion and investing capital."
+      }
+    },
+    {
+      "id": "nairobi-d04",
+      "lessonId": "nairobi-1",
+      "sourceStepId": "s1",
+      "concepts": [
+        "compound-interest"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d04",
+        "prompt": "Kofi sets aside €60 every month into an emergency cash fund for his small workshop. After 5 years (60 months) of saving without interest, how much has he accumulated?",
+        "input": {
+          "kind": "slider",
+          "min": 1000,
+          "max": 5000,
+          "step": 100,
+          "unit": "€"
+        },
+        "answer": 3600,
+        "tolerance": 100,
+        "reveal": "€3,600. Saving €60 each month across 60 months equals €3,600.",
+        "explanation": "Total saved = 60 months × €60 = €3,600."
+      }
+    },
+    {
+      "id": "nairobi-d05",
+      "lessonId": "nairobi-1",
+      "sourceStepId": "s2",
+      "concepts": [
+        "compound-interest"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d05",
+        "prompt": "Saving €100 monthly for 10 years at 0% interest yields €12,000. If an account earns 4% annual interest compounded, what happens?",
+        "options": [
+          "You end up with more than €12,000 because past interest also earns returns",
+          "You end up with exactly €12,000 because monthly deposits earn zero interest",
+          "You end up with less than €12,000 due to mandatory bank administrative fees",
+          "The account balance doubles every single month through compounding rules"
+        ],
+        "correctIndex": 0,
+        "explanation": "At 4% compound interest, monthly deposits of €100 grow to ~€14,725 after 10 years because interest earns interest."
+      }
+    }
+  ]
+}

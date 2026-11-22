@@ -1,0 +1,155 @@
+{
+  "story": "buenos-aires",
+  "questions": [
+    {
+      "id": "buenos-aires-d01",
+      "lessonId": "buenos-aires-1",
+      "sourceStepId": "q1",
+      "concepts": [
+        "rule-of-72"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d01",
+        "prompt": "In a city where consumer prices rise at 8% per year, using the Rule of 72, in approximately how many years will basic living costs double?",
+        "input": {
+          "kind": "slider",
+          "min": 1,
+          "max": 20,
+          "step": 1,
+          "unit": " years"
+        },
+        "answer": 9,
+        "tolerance": 1,
+        "reveal": "9 years. 72 divided by an 8% inflation rate equals 9 years.",
+        "explanation": "Using the Rule of 72: 72 / 8% = 9 years for prices to double."
+      }
+    },
+    {
+      "id": "buenos-aires-d02",
+      "lessonId": "buenos-aires-1",
+      "sourceStepId": "s1",
+      "concepts": [
+        "inflation"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "chart",
+        "id": "d02",
+        "prompt": "With 0% interest and 10% annual inflation, by what percentage does the purchasing power of cash change after 3 years?",
+        "model": "realValue",
+        "params": {
+          "years": {
+            "label": "Years",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "value": 3,
+            "unit": " years"
+          },
+          "interest": {
+            "label": "Interest",
+            "min": 0,
+            "max": 5,
+            "step": 0.5,
+            "value": 0,
+            "unit": "%"
+          },
+          "inflation": {
+            "label": "Inflation",
+            "min": 0,
+            "max": 20,
+            "step": 1,
+            "value": 10,
+            "unit": "%"
+          }
+        },
+        "output": {
+          "label": "Purchasing power change",
+          "unit": "%"
+        },
+        "input": {
+          "kind": "slider",
+          "min": -50,
+          "max": 0,
+          "step": 1,
+          "unit": "%"
+        },
+        "answer": -25,
+        "tolerance": 2,
+        "explanation": "After 3 years at 10% inflation, real purchasing power drops to (1 / 1.10)^3 ≈ 75.1%, a loss of ~25%."
+      }
+    },
+    {
+      "id": "buenos-aires-d03",
+      "lessonId": "buenos-aires-1",
+      "sourceStepId": "q2",
+      "concepts": [
+        "inflation"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d03",
+        "prompt": "During a year of severe hyperinflation where consumer prices surge by 100%, what happens to the purchasing power of uninvested cash?",
+        "options": [
+          "It is cut in half, buying 50% of what it bought a year ago",
+          "It becomes completely worthless, dropping to 0% purchasing power",
+          "It loses 100% of its nominal balance in the bank account",
+          "It loses only 10% of its purchasing power due to price controls"
+        ],
+        "correctIndex": 0,
+        "explanation": "When price levels double (100% inflation), each unit of currency buys exactly half as much (1 / 2 = 50%)."
+      }
+    },
+    {
+      "id": "buenos-aires-d04",
+      "lessonId": "buenos-aires-1",
+      "sourceStepId": "q3",
+      "concepts": [
+        "inflation"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "quiz",
+        "id": "d04",
+        "prompt": "When an economy enters high inflation (e.g. over 50% a year), which practice is most damaging to household wealth?",
+        "options": [
+          "Holding large amounts of idle cash in a zero-interest account",
+          "Spending money promptly on essential non-perishable goods",
+          "Investing savings in productive businesses or inflation-hedged funds",
+          "Refusing long-term installment loans with fixed low interest rates"
+        ],
+        "correctIndex": 0,
+        "explanation": "In rapid inflation, idle cash loses real purchasing power every week, guaranteeing a severe loss of wealth."
+      }
+    },
+    {
+      "id": "buenos-aires-d05",
+      "lessonId": "buenos-aires-1",
+      "sourceStepId": "s2",
+      "concepts": [
+        "inflation",
+        "real-return"
+      ],
+      "timeLimitMs": null,
+      "step": {
+        "type": "predict",
+        "id": "d05",
+        "prompt": "Mateo holds €10,000 in savings paying 2% interest while inflation runs at 12% for one year. What are his savings worth in today's purchasing power at year end?",
+        "input": {
+          "kind": "slider",
+          "min": 7000,
+          "max": 11000,
+          "step": 100,
+          "unit": "€"
+        },
+        "answer": 9100,
+        "tolerance": 200,
+        "reveal": "About €9,100. A 2% interest rate fails to protect against 12% inflation, losing ~9% in purchasing power.",
+        "explanation": "Real value = €10,000 × (1.02 / 1.12) ≈ €9,107. On a €100 step slider, €9,100 is within tolerance."
+      }
+    }
+  ]
+}

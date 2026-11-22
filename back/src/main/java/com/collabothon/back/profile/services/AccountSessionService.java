@@ -74,6 +74,19 @@ public class AccountSessionService {
 		return result;
 	}
 
+	/** Whether {@code deviceId} currently holds the lock on {@code userId} (a live heartbeat from that device). */
+	@Transactional(readOnly = true, propagation = Propagation.REQUIRED)
+	public boolean holdsLock(String userId, String deviceId) {
+		if (userId == null || deviceId == null || !LOCKABLE_ACCOUNT_IDS.contains(userId)) {
+			return false;
+		}
+		Instant cutoff = clock.instant().minus(TTL);
+		return sessionRepository.findById(userId)
+				.filter(session -> deviceId.equals(session.getDeviceId()))
+				.filter(session -> !session.getHeartbeatAt().isBefore(cutoff))
+				.isPresent();
+	}
+
 	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
 	public SessionResponse acquireSession(String userId, String deviceId) {
 		validateLockableAccount(userId);

@@ -164,6 +164,11 @@ test('lobby Historia tab renders unfinished and finished matches', async () => {
   expect(screen.getByTestId('match-history-row-10')).toBeOnTheScreen();
 });
 
+jest.mock('@/lib/duel/useDuelSocket', () => {
+  const socket = { status: 'idle', send: () => false, waitForOpen: () => Promise.resolve(false) };
+  return { useDuelSocket: () => socket };
+});
+
 test('match flow: answers question, sees feedback banner, waiting view, and result with review', async () => {
   jest.useFakeTimers();
   const matchResult: MatchEnd = {
@@ -250,9 +255,12 @@ test('match flow: answers question, sees feedback banner, waiting view, and resu
     initialUrl: '/duel/match?categories=berlin&mode=HUMAN',
   });
 
-  await act(async () => {
-    jest.advanceTimersByTime(1500);
-  });
+  // The live socket is unavailable here, so the match falls back to the simulated rival after the finding delay.
+  for (let i = 0; i < 4; i += 1) {
+    await act(async () => {
+      jest.advanceTimersByTime(500);
+    });
+  }
 
   // Question view renders
   expect(await screen.findByTestId('duel-question')).toBeOnTheScreen();
@@ -277,7 +285,10 @@ test('match flow: answers question, sees feedback banner, waiting view, and resu
 
   // Review shows mistake first
   expect(screen.getByTestId('review-mistake-0')).toBeOnTheScreen();
-  expect(screen.getByTestId('review-repeat-lesson-0')).toHaveTextContent(/Review lesson: Inflation & savings/);
+  // Collapsed by default: tapping the card opens the lesson button (label follows lesson status; unknown here).
+  expect(screen.queryByTestId('review-repeat-lesson-0')).toBeNull();
+  await fireEvent.press(screen.getByTestId('review-mistake-0'));
+  expect(screen.getByTestId('review-repeat-lesson-0')).toHaveTextContent(/Go to lesson: Inflation & savings/);
 
   // Correct answer toggle
   expect(screen.getByTestId('toggle-correct-review')).toBeOnTheScreen();

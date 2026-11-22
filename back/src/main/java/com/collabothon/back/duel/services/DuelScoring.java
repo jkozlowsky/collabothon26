@@ -46,6 +46,14 @@ public class DuelScoring {
 			match.finish(MatchOutcome.SOLO, progress.score(), null, clock.instant());
 			return;
 		}
+		if (match.isLive()) {
+			// A live duel ends when the opponent has answered or timed out on every question.
+			if (progress.isOpponentComplete()) {
+				match.finish(outcome(progress.score(), progress.rivalScore()), progress.score(), progress.rivalScore(),
+						clock.instant());
+			}
+			return;
+		}
 		Instant lastRivalAnswer = progress.answer(progress.questionCount() - 1).getRivalAnswerAt();
 		Instant now = clock.instant();
 		if (lastRivalAnswer != null && !now.isBefore(lastRivalAnswer)) {

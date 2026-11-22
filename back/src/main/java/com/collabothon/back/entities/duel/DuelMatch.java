@@ -44,6 +44,10 @@ public class DuelMatch {
 	@Column(name = "rival_user_id", length = 64, updatable = false)
 	private String rivalUserId;
 
+	/** The other player's row of a live duel (V24); null in bot and solo matches. */
+	@Column(name = "opponent_match_id")
+	private Long opponentMatchId;
+
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false, length = 16)
 	private MatchStatus status;
@@ -84,6 +88,15 @@ public class DuelMatch {
 
 	public boolean isFinished() {
 		return status == MatchStatus.FINISHED;
+	}
+
+	/** A live duel between two humans: the rival is the opponent's real answers, not the simulator. */
+	public boolean isLive() {
+		return opponentMatchId != null;
+	}
+
+	public void linkOpponent(long opponentMatchId) {
+		this.opponentMatchId = opponentMatchId;
 	}
 
 	public boolean hasRival() {

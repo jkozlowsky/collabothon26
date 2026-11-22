@@ -1,20 +1,22 @@
 import { useIsFocused } from 'expo-router';
-import { Component, lazy, Suspense, useCallback, useEffect, useImperativeHandle, useMemo, useState, type ReactNode, type Ref } from 'react';
+import { Component, lazy, Suspense, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode, type Ref } from 'react';
 import { Image, Platform, Pressable, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
-import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
+import { GestureDetector, usePanGesture, usePinchGesture, useSimultaneousGestures } from 'react-native-gesture-handler';
 import Animated, {
   cancelAnimation,
   Easing,
+  interpolate,
   ReduceMotion,
   useAnimatedReaction,
   useAnimatedStyle,
+  useFrameCallback,
   useReducedMotion,
   useSharedValue,
   withDecay,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import Svg, { Circle, Ellipse } from 'react-native-svg';
+import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { ArenaCallout } from '@/components/globe/ArenaCallout';
@@ -43,7 +45,23 @@ import { calloutState, storyState } from '@/lib/stories';
 import type { Story } from '@/types/stories';
 
 // Loaded on first use: keeps three.js out of every other screen's bundle and out of the jest route tree.
-const GlobeScene = lazy(() => import('@/components/globe/GlobeScene').then((m) => ({ default: m.GlobeScene })));
+let sceneModule: Promise<typeof import('@/components/globe/GlobeScene')> | null = null;
+const loadScene = () => (sceneModule ??= import('@/components/globe/GlobeScene'));
+const GlobeScene = lazy(() => loadScene().then((m) => ({ default: m.GlobeScene })));
+
+/**
+ * Loads three.js and the land texture ahead of the Map, so the globe is drawn by the time the user gets there.
+ * Call it from the screens before the Map (the quick check, the path summary). Safe to call more than once.
+ */
+export function preloadGlobe() {
+  if (FORCE_FALLBACK || !webGLAvailable()) return;
+  loadScene()
+    .then((m) => m.preloadLand())
+    // A failed preload only costs the head start: the Map loads the globe again and falls back on its own.
+    .catch(() => {
+      sceneModule = null;
+    });
+}
 
 export type GlobeHandle = {
   /** Same as tapping the story's pin: fly there and open its callout. `turnOnly`: never open the story itself (static picture). */
@@ -71,13 +89,17 @@ type Props = {
   startHere?: { storyId: string; why: string } | null;
   /** The story whose path was finished just now: its pin's check pops in. */
   justDoneId?: string;
+  /** Px the canvas reaches above the area, up to whatever covers it (the screen's header), for a zoomed-in sphere. */
+  reachUp?: number;
   ref?: Ref<GlobeHandle>;
 };
 
-/** Globe area width : height (390 × 330 in frame 3:496). */
-const ASPECT = 390 / 330;
-/** Sphere radius as a share of the smaller side of the globe area (280 px on a 390 × 330 area). */
-const RADIUS_SHARE = 0.42;
+/** Globe area width : height (390 × 330 in frame 3:496, made taller for a bigger globe). */
+const ASPECT = 390 / 350;
+/** Sphere radius as a share of the smaller side of the globe area (315 px across on a 390 × 350 area). */
+const RADIUS_SHARE = 0.45;
+/** The glow layer reaches this far above and below the area, so a glow wider than the area is not cut off. */
+const HALO_PAD = 40;
 /** Inertia: about 0.95 of the speed is kept per frame at 60 fps. */
 const DECELERATION = 0.997;
 /** During a flight the view catches up with the plane over this first share of the flight. */
@@ -101,6 +123,23 @@ const RIPPLE_MS = 900;
 const RIPPLE_SIZE = 44;
 /** Pause between the globe appearing and the take-off, so the user sees where the plane starts. */
 const ARRIVAL_DELAY_MS = 500;
+/** Idle spin: starts this long after the last touch while no callout is open. */
+const IDLE_MS = 3000;
+/** Idle spin speed: one turn a minute, eased in over IDLE_RAMP_MS. */
+const IDLE_SPEED = (2 * Math.PI) / 60000;
+const IDLE_RAMP_MS = 1500;
+/** Pinch zoom range: 1 is the whole globe in view. */
+const MAX_ZOOM = 3;
+/** The canvas reaches this many area heights below the area (under the hint and the sheet). */
+const CANVAS_BELOW = 1.5;
+/** Mouse wheel on web: zoom factor per pixel of scroll. */
+const WHEEL_ZOOM = 0.002;
+const clampZoom = (z: number) => {
+  'worklet';
+  return Math.min(MAX_ZOOM, Math.max(1, z));
+};
+/** Fade-in of the globe once its first frame is drawn. */
+const REVEAL_MS = 300;
 /** Set EXPO_PUBLIC_GLOBE_FALLBACK=1 to force the static globe (to check the fallback). */
 const FORCE_FALLBACK = process.env.EXPO_PUBLIC_GLOBE_FALLBACK === '1';
 const FALLBACK_IMAGE = require('../../../assets/globe/globe-fallback.png');
@@ -127,7 +166,7 @@ function viewCentre(yaw: number, pitch: number): Vec3 {
  * Orientation lives in Reanimated shared values, so dragging, inertia, flights and the overlay all run
  * on the UI thread without React re-renders. Without WebGL it shows a static picture with fixed pins.
  */
-export function Globe({ stories, onOpenStory, onSpin, arena, startHere, justDoneId, ref }: Props) {
+export function Globe({ stories, onOpenStory, onSpin, arena, startHere, justDoneId, reachUp = 0, ref }: Props) {
   const reduced = useReducedMotion();
   const focused = useIsFocused();
   const window = useWindowDimensions();
@@ -138,6 +177,12 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, justDone
   const [drawn, setDrawn] = useState(false);
   const markDrawn = useCallback(() => setDrawn(true), []);
   const showFallback = useCallback(() => setFallback(true), []);
+  // Nothing shows until the sphere is drawn: no pins floating over an empty area, then a short fade in.
+  const shown = useSharedValue(0);
+  useEffect(() => {
+    if (drawn) shown.set(withTiming(1, { duration: REVEAL_MS, easing: Easing.out(Easing.quad) }));
+  }, [drawn, shown]);
+  const reveal = useAnimatedStyle(() => ({ opacity: shown.value }));
 
   const current = stories.find((s) => s.current) ?? stories[0];
   const [selectedId, setSelectedId] = useState(current.id);
@@ -169,10 +214,24 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, justDone
   const spinTo = useSharedValue({ yaw: 0, pitch: 0 });
   const arrivalDest = useSharedValue<Vec3>([0, 0, 1]);
   const rippleT = useSharedValue(0);
+  // Pinch zoom: the sphere and the projection of every overlay scale by it.
+  const zoom = useSharedValue(1);
+  // Idle spin: ms since the last touch, counted only while nothing is selected, moving or held.
+  const idle = useSharedValue(0);
+  const holding = useSharedValue(false);
+  const calloutShown = useSharedValue(true);
+  const pinchStart = useSharedValue(1);
+  // The ring and the glow sit just outside the sphere: they fade out as soon as the globe is zoomed in.
+  const halo = useAnimatedStyle(() => ({ opacity: interpolate(zoom.value, [1, 1.15], [1, 0], 'clamp') }));
 
   const radius = Math.round(Math.min(area.width, area.height) * RADIUS_SHARE);
   const cx = area.width / 2;
   const cy = area.height / 2;
+  // The glow fades out just inside the screen's sides; top and bottom have HALO_PAD to spare.
+  const glow = Math.min(radius * 1.2, cx - 2, cy + HALO_PAD - 2);
+  const hy = cy + HALO_PAD;
+  // How far the canvas reaches below the area; pins outside the canvas are hidden.
+  const below = Math.round(area.height * CANVAS_BELOW);
 
   useAnimatedReaction(
     () => flightT.value,
@@ -281,6 +340,7 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, justDone
   const [arrival, setArrival] = useState<string | null>(null);
   const flyIn = (id: string) => {
     if (fallback) return flyTo(id, true);
+    zoom.set(1);
     setSelectedId(id);
     setCalloutOpen(false);
     setArrival(id);
@@ -322,10 +382,30 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, justDone
     onSpin?.();
   };
 
+  // With no callout open the globe turns slowly by itself; any touch, flight or selection stops it.
+  useEffect(() => {
+    calloutShown.set(calloutOpen);
+  }, [calloutOpen, calloutShown]);
+  const spin = useFrameCallback((frame) => {
+    const dt = frame.timeSincePreviousFrame ?? 0;
+    if (calloutShown.value || flying.value || arriving.value || holding.value) {
+      idle.set(0);
+      return;
+    }
+    idle.set(idle.value + dt);
+    const ramp = Math.min(1, (idle.value - IDLE_MS) / IDLE_RAMP_MS);
+    if (ramp > 0) yaw.set(yaw.value + IDLE_SPEED * ramp * dt);
+  }, false);
+  // Plays with reduced motion too, like the flights: one slow turn a minute that any touch stops.
+  useEffect(() => {
+    spin.setActive(focused && drawn && !fallback);
+  }, [spin, focused, drawn, fallback]);
+
   const pan = usePanGesture({
     enabled: !fallback,
     minDistance: 4,
     onActivate: () => {
+      holding.set(true);
       // Turning the globe cancels a flight (no callout) and any running inertia.
       cancelAnimation(flightT);
       flying.set(false);
@@ -336,15 +416,51 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, justDone
       scheduleOnRN(onRotateStart);
     },
     onUpdate: (e) => {
-      yaw.set(yaw.value + e.changeX / radius);
-      pitch.set(clampPitch(pitch.value + e.changeY / radius));
+      // Zoomed in, the same drag turns the globe less, so the map stays under the finger.
+      const r = radius * zoom.value;
+      yaw.set(yaw.value + e.changeX / r);
+      pitch.set(clampPitch(pitch.value + e.changeY / r));
     },
     onDeactivate: (e) => {
+      holding.set(false);
+      idle.set(0);
       if (reduced) return;
-      yaw.set(withDecay({ velocity: e.velocityX / radius, deceleration: DECELERATION }));
-      pitch.set(withDecay({ velocity: e.velocityY / radius, deceleration: DECELERATION, clamp: [-MAX_PITCH, MAX_PITCH] }));
+      const r = radius * zoom.value;
+      yaw.set(withDecay({ velocity: e.velocityX / r, deceleration: DECELERATION }));
+      pitch.set(withDecay({ velocity: e.velocityY / r, deceleration: DECELERATION, clamp: [-MAX_PITCH, MAX_PITCH] }));
     },
   });
+
+  const pinch = usePinchGesture({
+    enabled: !fallback,
+    onActivate: () => {
+      holding.set(true);
+      pinchStart.set(zoom.value);
+      scheduleOnRN(setCalloutOpen, false);
+    },
+    onUpdate: (e) => {
+      zoom.set(clampZoom(pinchStart.value * e.scale));
+    },
+    onDeactivate: () => {
+      holding.set(false);
+      idle.set(0);
+    },
+  });
+  const gestures = useSimultaneousGestures(pan, pinch);
+
+  // Web: the mouse wheel (and a trackpad pinch, which browsers send as a wheel) zooms too.
+  const areaRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const node = areaRef.current;
+    if (Platform.OS !== 'web' || fallback || !node?.addEventListener) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      idle.set(0);
+      zoom.set(clampZoom(zoom.value * Math.exp(-e.deltaY * WHEEL_ZOOM)));
+    };
+    node.addEventListener('wheel', onWheel, { passive: false });
+    return () => node.removeEventListener('wheel', onWheel);
+  }, [fallback, zoom, idle]);
 
   const onBackgroundPress = () => {
     if (arriving.value) touchDown();
@@ -360,15 +476,25 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, justDone
   const selected = stories.find((s) => s.id === selectedId);
 
   return (
-    <GestureDetector gesture={pan}>
-      <View style={styles.area} onLayout={onLayout} testID="globe">
-        <>
+    <GestureDetector gesture={gestures}>
+      <View ref={areaRef as never} style={styles.area} onLayout={onLayout} testID="globe">
+        <Animated.View style={[StyleSheet.absoluteFill, reveal]}>
             {/* For e2e and the demo recordings: wait for this before filming or tapping the globe. */}
             {drawn && <View testID="globe-ready" pointerEvents="none" />}
-            <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
-              <Ellipse cx={cx} cy={cy + radius + 18} rx={radius * 0.7} ry={10} fill={colors.brandPrimaryPressed} fillOpacity={0.12} />
-              <Circle cx={cx} cy={cy} r={radius + 16} fill="none" stroke={colors.borderStrong} strokeWidth={1} strokeDasharray="3 6" />
+            <Animated.View style={[StyleSheet.absoluteFill, halo]} pointerEvents="none">
+            {/* Explicit size: on web an absolutely filled Svg falls back to 300 × 150. */}
+            <Svg width={area.width} height={area.height + HALO_PAD * 2} style={styles.halo} pointerEvents="none">
+              {/* A glow around the sphere, so it reads as lit rather than cut out of the page. */}
+              <Defs>
+                <RadialGradient id="globe-glow" cx={cx} cy={hy} r={glow} gradientUnits="userSpaceOnUse">
+                  <Stop offset={radius / glow} stopColor={colors.globeOceanLight} stopOpacity={0.28} />
+                  <Stop offset="1" stopColor={colors.globeOceanLight} stopOpacity={0} />
+                </RadialGradient>
+              </Defs>
+              <Circle cx={cx} cy={hy} r={glow} fill="url(#globe-glow)" />
+              <Circle cx={cx} cy={hy} r={radius + 16} fill="none" stroke={colors.borderStrong} strokeWidth={1} strokeDasharray="3 6" />
             </Svg>
+            </Animated.View>
             <View style={StyleSheet.absoluteFill} pointerEvents="none" importantForAccessibility="no-hide-descendants">
               {fallback ? (
                 <Image
@@ -377,34 +503,37 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, justDone
                   style={{ position: 'absolute', left: cx - radius, top: cy - radius, width: radius * 2, height: radius * 2 }}
                 />
               ) : (
-                <GlBoundary onError={showFallback}>
-                  <Suspense fallback={null}>
-                    <GlobeScene radius={radius} yaw={yaw} pitch={pitch} active={focused} onFail={showFallback} onReady={markDrawn} />
-                  </Suspense>
-                </GlBoundary>
+                // The canvas runs on past the area (under the header, the hint and the sheet), so a zoomed-in sphere is not cut at the area's edge.
+                <View style={[styles.canvas, { top: -reachUp, height: reachUp + area.height + below }]}>
+                  <GlBoundary onError={showFallback}>
+                    <Suspense fallback={null}>
+                      <GlobeScene radius={radius} yaw={yaw} pitch={pitch} zoom={zoom} offsetY={(below - reachUp) / 2} active={focused} onFail={showFallback} onReady={markDrawn} />
+                    </Suspense>
+                  </GlBoundary>
+                </View>
               )}
             </View>
             <Pressable style={StyleSheet.absoluteFill} onPress={onBackgroundPress} accessible={false} />
             {stories.map((s) => (
-              <Slot key={s.id} v={pins[s.id]} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius}>
+              <Slot key={s.id} v={pins[s.id]} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius} zoom={zoom} below={below} above={reachUp}>
                 <GlobePin story={s} state={storyState(s)} justDone={s.id === justDoneId} onPress={() => flyTo(s.id)} />
               </Slot>
             ))}
             {arena && (
-              <Slot key="arena" v={arenaVec} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius}>
+              <Slot key="arena" v={arenaVec} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius} zoom={zoom} below={below} above={reachUp}>
                 <ArenaPin active={selectedId === 'arena'} onPress={() => flyTo('arena')} />
               </Slot>
             )}
-            <PlaneSlot {...{ flightT, flying, withPlane, from, to, yaw, pitch, cx, cy, radius }} />
-            <RippleSlot {...{ rippleT, v: arrivalDest, yaw, pitch, cx, cy, radius }} />
-            <ArrivalSlot {...{ arrivalT, arriving, dest: arrivalDest, yaw, pitch, cx, cy, radius }} />
+            <PlaneSlot {...{ flightT, flying, withPlane, from, to, yaw, pitch, cx, cy, radius, zoom }} />
+            <RippleSlot {...{ rippleT, v: arrivalDest, yaw, pitch, cx, cy, radius, zoom }} />
+            <ArrivalSlot {...{ arrivalT, arriving, dest: arrivalDest, yaw, pitch, cx, cy, radius, zoom }} />
             {calloutOpen && selectedId === 'arena' && arena && (
-              <CalloutSlot v={arenaVec} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius} areaWidth={area.width} areaHeight={area.height}>
+              <CalloutSlot v={arenaVec} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius} zoom={zoom} areaWidth={area.width} areaHeight={area.height}>
                 <ArenaCallout onOpen={arena.onOpen} />
               </CalloutSlot>
             )}
             {calloutOpen && selectedId !== 'arena' && selected && (
-              <CalloutSlot v={pins[selected.id]} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius} areaWidth={area.width} areaHeight={area.height}>
+              <CalloutSlot v={pins[selected.id]} yaw={yaw} pitch={pitch} cx={cx} cy={cy} radius={radius} zoom={zoom} areaWidth={area.width} areaHeight={area.height}>
                 <PinCallout
                   story={selected}
                   state={calloutState(selected)}
@@ -413,19 +542,21 @@ export function Globe({ stories, onOpenStory, onSpin, arena, startHere, justDone
                 />
               </CalloutSlot>
             )}
-        </>
+        </Animated.View>
       </View>
     </GestureDetector>
   );
 }
 
-type Projection = { yaw: SharedValue<number>; pitch: SharedValue<number>; cx: number; cy: number; radius: number };
+type Projection = { yaw: SharedValue<number>; pitch: SharedValue<number>; cx: number; cy: number; radius: number; zoom: SharedValue<number> };
 
 /** Holds a pin with its tip on the city; hidden (and moved off-screen, so untappable) behind the sphere. */
-function Slot({ v, yaw, pitch, cx, cy, radius, children }: Projection & { v: Vec3; children: ReactNode }) {
+function Slot({ v, yaw, pitch, cx, cy, radius, zoom, below, above, children }: Projection & { v: Vec3; below: number; above: number; children: ReactNode }) {
   const style = useAnimatedStyle(() => {
-    const p = project(v, { yaw: yaw.value, pitch: pitch.value }, cx, cy, radius);
-    const opacity = fadeOpacity(p.z);
+    const p = project(v, { yaw: yaw.value, pitch: pitch.value }, cx, cy, radius * zoom.value);
+    // Zoomed in, pins past the canvas would float over a cut-off sphere.
+    const inside = p.x >= 0 && p.x <= cx * 2 && p.y >= -above && p.y <= cy * 2 + below;
+    const opacity = inside ? fadeOpacity(p.z) : 0;
     return {
       opacity,
       zIndex: Math.round(p.z * 100) + 100,
@@ -443,13 +574,14 @@ function CalloutSlot({
   cx,
   cy,
   radius,
+  zoom,
   areaWidth,
   areaHeight,
   children,
 }: Projection & { v: Vec3; areaWidth: number; areaHeight: number; children: ReactNode }) {
   const height = useSharedValue(110);
   const style = useAnimatedStyle(() => {
-    const p = project(v, { yaw: yaw.value, pitch: pitch.value }, cx, cy, radius);
+    const p = project(v, { yaw: yaw.value, pitch: pitch.value }, cx, cy, radius * zoom.value);
     // Only beside a fully visible pin: a half-faded callout at the horizon would cover other pins.
     const shown = p.z >= FADE_BAND;
     // Clears the head of the active pin (a 44 px square turned 45°).
@@ -475,13 +607,13 @@ type PlaneProps = Projection & {
 };
 
 /** The plane on the flight arc, turned along the arc's on-screen direction. */
-function PlaneSlot({ flightT, flying, withPlane, from, to, yaw, pitch, cx, cy, radius }: PlaneProps) {
+function PlaneSlot({ flightT, flying, withPlane, from, to, yaw, pitch, cx, cy, radius, zoom }: PlaneProps) {
   const style = useAnimatedStyle(() => {
     if (!flying.value || !withPlane.value) return { opacity: 0, transform: [{ translateX: -10000 }] };
     const t = flightT.value;
     const o = { yaw: yaw.value, pitch: pitch.value };
-    const p = project(flightPoint(from.value, to.value, t), o, cx, cy, radius);
-    const ahead = project(flightPoint(from.value, to.value, Math.min(1, t + 0.02)), o, cx, cy, radius);
+    const p = project(flightPoint(from.value, to.value, t), o, cx, cy, radius * zoom.value);
+    const ahead = project(flightPoint(from.value, to.value, Math.min(1, t + 0.02)), o, cx, cy, radius * zoom.value);
     const heading = Math.atan2(ahead.y - p.y, ahead.x - p.x) - PLANE_NOSE;
     return {
       opacity: fadeOpacity(p.z),
@@ -507,13 +639,13 @@ type ArrivalProps = Projection & { arrivalT: SharedValue<number>; arriving: Shar
  * onto the destination pin, shrinking to its normal size as it lands. The curve's end follows the pin while the
  * globe is still turning, so it touches down exactly on it.
  */
-function ArrivalSlot({ arrivalT, arriving, dest, yaw, pitch, cx, cy, radius }: ArrivalProps) {
+function ArrivalSlot({ arrivalT, arriving, dest, yaw, pitch, cx, cy, radius, zoom }: ArrivalProps) {
   const style = useAnimatedStyle(() => {
     if (!arriving.value) return { opacity: 0, transform: [{ translateX: -10000 }] };
     const t = arrivalT.value;
     // Slow start, then a long glide that settles at the end.
     const e = t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
-    const end = project(dest.value, { yaw: yaw.value, pitch: pitch.value }, cx, cy, radius);
+    const end = project(dest.value, { yaw: yaw.value, pitch: pitch.value }, cx, cy, radius * zoom.value);
     const p0 = { x: -PLANE_SIZE * 2, y: cy - radius - PLANE_SIZE * 2 };
     const p1 = { x: cx - radius * 0.2, y: cy - radius * 1.15 };
     const u = 1 - e;
@@ -540,11 +672,11 @@ function ArrivalSlot({ arrivalT, arriving, dest, yaw, pitch, cx, cy, radius }: A
 }
 
 /** The touchdown: a ring spreads from the pin's tip and fades. */
-function RippleSlot({ rippleT, v, yaw, pitch, cx, cy, radius }: Projection & { rippleT: SharedValue<number>; v: SharedValue<Vec3> }) {
+function RippleSlot({ rippleT, v, yaw, pitch, cx, cy, radius, zoom }: Projection & { rippleT: SharedValue<number>; v: SharedValue<Vec3> }) {
   const style = useAnimatedStyle(() => {
     const t = rippleT.value;
     if (t <= 0 || t >= 1) return { opacity: 0, transform: [{ translateX: -10000 }] };
-    const p = project(v.value, { yaw: yaw.value, pitch: pitch.value }, cx, cy, radius);
+    const p = project(v.value, { yaw: yaw.value, pitch: pitch.value }, cx, cy, radius * zoom.value);
     return {
       opacity: (1 - t) * 0.8,
       transform: [{ translateX: p.x - RIPPLE_SIZE / 2 }, { translateY: p.y - RIPPLE_SIZE / 2 }, { scale: 0.3 + t * 2.2 }],
@@ -570,6 +702,8 @@ class GlBoundary extends Component<{ onError: () => void; children: ReactNode },
 const styles = StyleSheet.create({
   area: { width: '100%', aspectRatio: ASPECT },
   slot: { position: 'absolute', left: 0, top: 0 },
+  canvas: { position: 'absolute', left: 0, right: 0, top: 0 },
+  halo: { position: 'absolute', left: 0, top: -HALO_PAD },
   callout: { zIndex: 300 },
   plane: { zIndex: 250 },
   ripple: {

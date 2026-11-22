@@ -3,7 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { DotTrack } from '@/components/duel/DotTrack';
 import { DuelPage } from '@/components/duel/DuelPage';
 import { FlowHeader } from '@/components/duel/FlowHeader';
+import { LiveBadge } from '@/components/duel/LiveBadge';
 import { PlayerAvatar } from '@/components/duel/PlayerAvatar';
+import { StatusChip } from '@/components/duel/StatusChip';
 import { Tappable } from '@/components/onboarding/ui';
 import { colors, radii, spacing, type } from '@/constants/theme';
 import { getYourScore, type DuelMatchState } from '@/lib/duel/reducer';
@@ -75,6 +77,19 @@ export function WaitingView({ state, youAvatar, onBackToLobby }: Props) {
             activeIndex={answered < total ? answered : null}
             testID="waiting-rival-dots"
           />
+          {state.live && (
+            <View style={styles.liveRow}>
+              <LiveBadge testID="waiting-live-badge" />
+              {state.rivalLeft && (
+                <StatusChip
+                  label="Rival disconnected · their remaining answers time out"
+                  tone="offline"
+                  icon="wifi-off"
+                  testID="waiting-rival-left"
+                />
+              )}
+            </View>
+          )}
         </View>
       </View>
     </DuelPage>
@@ -125,6 +140,11 @@ const styles = StyleSheet.create({
   rivalTitle: {
     ...type.labelStrong,
     color: colors.textPrimary,
+  },
+  liveRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
   },
   footerWrap: {
     alignItems: 'center',

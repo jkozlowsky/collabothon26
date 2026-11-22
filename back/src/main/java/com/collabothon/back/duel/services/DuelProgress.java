@@ -12,7 +12,7 @@ import com.collabothon.back.entities.duel.DuelMatch;
  * A match with the player's answers so far, in question order, and the counts derived from them. Question {@code k}
  * starts when question {@code k - 1} was answered (the first one when the match started).
  */
-final class DuelProgress {
+public final class DuelProgress {
 
 	private final DuelMatch match;
 
@@ -20,10 +20,28 @@ final class DuelProgress {
 
 	private final int questionCount;
 
+	/** The opponent's own answers in a live duel; null otherwise (the rival is then simulated). */
+	private final List<DuelAnswer> opponentAnswers;
+
 	DuelProgress(DuelMatch match, List<DuelAnswer> answers, int questionCount) {
+		this(match, answers, questionCount, null);
+	}
+
+	DuelProgress(DuelMatch match, List<DuelAnswer> answers, int questionCount, List<DuelAnswer> opponentAnswers) {
 		this.match = match;
 		this.answers = new ArrayList<>(answers);
 		this.questionCount = questionCount;
+		this.opponentAnswers = opponentAnswers == null ? null : List.copyOf(opponentAnswers);
+	}
+
+	/** The opponent's answers, empty unless this is a live duel. */
+	List<DuelAnswer> opponentAnswers() {
+		return opponentAnswers == null ? List.of() : opponentAnswers;
+	}
+
+	/** Whether the opponent of a live duel has answered, or timed out on, every question. */
+	boolean isOpponentComplete() {
+		return opponentAnswers != null && opponentAnswers.size() >= questionCount;
 	}
 
 	DuelMatch match() {
@@ -60,6 +78,9 @@ final class DuelProgress {
 	}
 
 	int rivalScore() {
+		if (opponentAnswers != null) {
+			return (int) opponentAnswers.stream().filter(DuelAnswer::isCorrect).count();
+		}
 		return (int) answers.stream().filter(DuelAnswer::isRivalCorrect).count();
 	}
 

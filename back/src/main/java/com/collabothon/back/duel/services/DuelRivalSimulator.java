@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import com.collabothon.back.config.DuelProperties;
 import com.collabothon.back.dto.duel.RivalSnapshotDto;
 import com.collabothon.back.entities.duel.DuelAnswer;
+import com.collabothon.back.entities.duel.DuelMatch;
 import com.collabothon.back.entities.profile.Account;
 import com.collabothon.back.profile.repositories.AccountRepository;
 
@@ -23,7 +24,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Component
 @RequiredArgsConstructor
-public class DuelRivalSimulator {
+public class DuelRivalSimulator implements RivalSnapshotProvider {
 
 	static final String DEMO_ACCOUNT_PREFIX = "demo-";
 
@@ -64,8 +65,14 @@ public class DuelRivalSimulator {
 		return new RivalAnswer(correct, playerAnsweredAt.plusMillis(delayMs));
 	}
 
+	@Override
+	public boolean supports(DuelMatch match) {
+		return !match.isLive();
+	}
+
 	/** What the player can see of the rival now; null in SOLO matches. */
-	RivalSnapshotDto snapshot(DuelProgress progress) {
+	@Override
+	public RivalSnapshotDto snapshot(DuelProgress progress) {
 		if (!progress.match().hasRival()) {
 			return null;
 		}

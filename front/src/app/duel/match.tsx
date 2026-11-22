@@ -59,6 +59,7 @@ function MatchSession({
 }) {
   const {
     state,
+    search,
     secondsLeft,
     submitAnswer,
     nextQuestion,
@@ -99,6 +100,7 @@ function MatchSession({
         state={state}
         youAvatar={youAvatar}
         onCancel={exitToLobby}
+        search={state.mode === 'HUMAN' ? search : undefined}
       />
     );
   }

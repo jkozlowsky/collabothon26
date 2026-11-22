@@ -1,16 +1,20 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import Animated, { interpolate, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Globe, type GlobeHandle } from '@/components/globe/Globe';
+import { GlobeBackdrop } from '@/components/globe/GlobeBackdrop';
 import { GlobeHint } from '@/components/globe/GlobeHint';
+import { HeaderFade } from '@/components/globe/HeaderFade';
 import { LearnHeader } from '@/components/LearnHeader';
 import { haptic } from '@/components/onboarding/ui';
-import { StorySheet } from '@/components/StorySheet';
-import { colors, spacing } from '@/constants/theme';
+import { SHEET_PEEK, StorySheet } from '@/components/StorySheet';
+import { colors, nav, spacing } from '@/constants/theme';
 import { useAccount } from '@/hooks/useAccount';
 import { useApi } from '@/hooks/useApi';
+import { useBank } from '@/hooks/useBank';
 import { takeArrival } from '@/hooks/useOpenLearn';
 import { useStartHere } from '@/hooks/useStartHere';
 import { calloutState, isDone, LEARNER, sortStories, STORIES, withCurrent, withLessons } from '@/lib/stories';
@@ -19,6 +23,8 @@ import type { LessonSummary } from '@/types/lessons';
 
 /** After a city's check pops in, the plane takes off for the next one. */
 const TAKE_OFF_MS = 1300;
+/** With the sheet low, the globe moves down to the middle of the free space, by at most this much. */
+const MAX_DROP = 120;
 
 /** Map tab (Figma 3:496): header, the globe with story pins, and the "Your journeys" sheet. */
 export default function MapScreen() {
@@ -29,13 +35,24 @@ export default function MapScreen() {
   const [height, setHeight] = useState(window.height);
   const [sheetTop, setSheetTop] = useState(Math.round(window.height * 0.66));
   const [hint, setHint] = useState(true);
+  // Sheet stops: half sits just under the globe (sheetTop), peek leaves only the header above the nav.
+  const peekTop = Math.max(sheetTop, height - nav.clearance - SHEET_PEEK);
+  const drop = Math.min(MAX_DROP, (peekTop - sheetTop) / 2);
+  const sheetY = useSharedValue(peekTop);
+  // The globe rides up as the sheet rises from peek to half; above half the sheet covers it.
+  const globeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: interpolate(sheetY.value, [sheetTop, peekTop], [0, drop], 'clamp') }],
+  }));
   const { data: lessons, reload } = useApi<LessonSummary[]>(`/api/lessons?userId=${encodeURIComponent(userId)}`);
   // Coming back from a lesson moves the story's progress on.
   useFocusEffect(reload);
   const startHere = useStartHere();
   // Real streak and XP once the stats load; the mock until then.
-  const { stats } = useAccount();
-  const learner = stats ? { ...LEARNER, streak: stats.currentStreak, xp: stats.totalXp } : LEARNER;
+  const { account, stats } = useAccount();
+  // The signed-in user's first name; before the account loads (or offline) the bank's own copy of it.
+  const { state: bank } = useBank();
+  const name = account?.firstName ?? bank.owner.name.split(' ')[0];
+  const learner = { ...LEARNER, name, ...(stats && { streak: stats.currentStreak, xp: stats.totalXp }) };
   // One "start" cue: the Quick check's story replaces main's default current story.
   const startId = startHere?.storyId;
   // The globe picks its first view at mount, before the startHere story is known.
@@ -74,23 +91,40 @@ export default function MapScreen() {
 
   return (
     <View style={styles.screen} testID="screen-learn" onLayout={(e) => setHeight(e.nativeEvent.layout.height)}>
+      <GlobeBackdrop />
       <SafeAreaView edges={['top', 'left', 'right']} onLayout={(e) => setSheetTop(e.nativeEvent.layout.height + spacing.md)}>
-        <LearnHeader learner={learner} />
-        <Globe
-          ref={globe}
-          stories={stories}
-          onOpenStory={openStory}
-          onSpin={() => setHint(false)}
-          arena={{ onOpen: openDuel }}
-          startHere={startHere}
-          justDoneId={justDoneId}
-        />
-        {/* Keeps its space when hidden, so the sheet does not jump. */}
-        <View style={!hint && styles.hidden}>
-          <GlobeHint />
+        {/* Above the globe: a zoomed-in sphere slides under the header and fades out at its edge. */}
+        <View style={styles.header}>
+          <View style={styles.headerFill} />
+          <LearnHeader learner={learner} />
+          <HeaderFade />
         </View>
+        <Animated.View style={globeStyle}>
+          <Globe
+            ref={globe}
+            stories={stories}
+            onOpenStory={openStory}
+            onSpin={() => setHint(false)}
+            arena={{ onOpen: openDuel }}
+            startHere={startHere}
+            justDoneId={justDoneId}
+            reachUp={drop}
+          />
+          {/* Keeps its space when hidden, so the sheet does not jump. */}
+          <View style={!hint && styles.hidden}>
+            <GlobeHint />
+          </View>
+        </Animated.View>
       </SafeAreaView>
-      <StorySheet stories={stories} height={height} collapsedTop={sheetTop} onSelect={(id) => globe.current?.flyTo(id)} startHere={startHere} />
+      <StorySheet
+        stories={stories}
+        height={height}
+        halfTop={sheetTop}
+        peekTop={peekTop}
+        top={sheetY}
+        onSelect={(id) => globe.current?.flyTo(id)}
+        startHere={startHere}
+      />
     </View>
   );
 }
@@ -98,4 +132,7 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bgCanvas },
   hidden: { opacity: 0 },
+  header: { zIndex: 1, backgroundColor: colors.brandPrimarySoft },
+  // Covers the status-bar inset above the header too.
+  headerFill: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 1000, backgroundColor: colors.brandPrimarySoft },
 });

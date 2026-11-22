@@ -11,12 +11,16 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.entities.duel.DuelMatch;
+import com.collabothon.back.entities.duel.MatchStatus;
 
 @Repository
 @Transactional(propagation = Propagation.MANDATORY)
 public interface DuelMatchRepository extends JpaRepository<DuelMatch, Long> {
 
 	Optional<DuelMatch> findByIdAndUserId(Long id, String userId);
+
+	/** The player's live duels that are in the given status. */
+	List<DuelMatch> findByUserIdAndStatusAndOpponentMatchIdIsNotNull(String userId, MatchStatus status);
 
 	List<DuelMatch> findTop2ByUserIdAndIdLessThanOrderByIdDesc(String userId, Long matchId);
 

@@ -91,10 +91,10 @@ public class JevClient {
 			  "mastery_debt":      {"type": "noul", "instructions": "Do this person's borrowing answers, the entries of `answers` whose `area` is debt, show that they understand ideas such as instalments, card debt and the full cost of a loan?"},
 			  "mastery_investing": {"type": "noul", "instructions": "Do this person's investing answers, the entries of `answers` whose `area` is investing, show that they understand ideas such as market falls, borrowing to invest and spreading risk?"},
 			  "next": {"type": "choice",
-			    "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers`, when they might need their money in `profile.horizon` and, when given, the topics they said are new to them in `interests`?",
+			    "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers`, when they might need their money in `profile.horizon` (when given) and, when given, the topics they said are new to them in `interests`?",
 			    "criteria": {}},
 			  "first": {"type": "choice",
-			    "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given when they might need their money in `profile.horizon` and, when given, the topics they said are new to them in `interests` and the facts about their accounts in `facts`?",
+			    "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given when they might need their money in `profile.horizon` (when given) and, when given, the topics they said are new to them in `interests` and the facts about their accounts in `facts`?",
 			    "criteria": {}},
 			  "enough": {"type": "noul", "instructions": "Do the answers so far show clearly enough what this person already understands and what they should learn first?"}
 			}
@@ -142,7 +142,7 @@ public class JevClient {
 	public Optional<StepJudgement> step(ProfileRangesDto profile, List<JevInterestDto> interests, FactsDto facts,
 			List<JevAnswerDto> answers, List<FocusArea> answeredAreas, List<CheckLesson> lessons) {
 		Map<String, Object> state = new LinkedHashMap<>();
-		state.put("profile", profile);
+		putIfGiven(state, "profile", givenProfile(profile));
 		putIfGiven(state, "interests", interests);
 		putIfGiven(state, "facts", facts);
 		putIfGiven(state, "answers", answers);
@@ -239,7 +239,7 @@ public class JevClient {
 		putIfGiven(state, "facts", facts);
 		ObjectNode asked = questions;
 		if (quickCheck != null) {
-			state.put("profile", quickCheck.profile());
+			putIfGiven(state, "profile", givenProfile(quickCheck.profile()));
 			// F1 already names the onboarding answers `answers`, so the knowledge answers get their own key.
 			state.put("checkAnswers", quickCheck.answers());
 			asked = questions.deepCopy();
@@ -280,6 +280,16 @@ public class JevClient {
 		putIfGiven(given, "experience", answers.experience());
 		if (answers.skipped()) {
 			given.put("skipped", true);
+		}
+		return given;
+	}
+
+	private static Map<String, Object> givenProfile(ProfileRangesDto profile) {
+		Map<String, Object> given = new LinkedHashMap<>();
+		if (profile != null) {
+			putIfGiven(given, "ageBand", profile.ageBand());
+			putIfGiven(given, "savingsCover", profile.savingsCover());
+			putIfGiven(given, "horizon", profile.horizon());
 		}
 		return given;
 	}

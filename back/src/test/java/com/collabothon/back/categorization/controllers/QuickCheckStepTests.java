@@ -369,7 +369,7 @@ class QuickCheckStepTests {
 
 		assertEquals("jev-1.14.0", sent.get().get("model").stringValue());
 		assertEquals(json.readTree("""
-				{"profile": {"ageBand": null, "savingsCover": "1-3", "horizon": "1-5y"}, "interests": [%s],
+				{"profile": {"savingsCover": "1-3", "horizon": "1-5y"}, "interests": [%s],
 				 "answers": [
 				   {"area": "saving", "lessonId": "berlin-1", "topic": "Why safe money can lose value",
 				    "concepts": ["inflation", "real-return", "fixed-term-deposit", "time-horizon"], "result": "correct"},
@@ -409,9 +409,9 @@ class QuickCheckStepTests {
 					{"mastery": {"saving": null, "debt": null, "investing": null}, "nextQuestionId": "tokyo-1/q1",
 					 "done": false, "useRules": false, "stepFellBack": false}""", JsonCompareMode.STRICT));
 
-		// No `answers` key: an empty list would read as a signal.
+		// No `answers` key and no empty range: either would read as a signal.
 		assertEquals(json.readTree("""
-				{"profile": {"ageBand": null, "savingsCover": null, "horizon": "1-5y"}, "interests": [%s],
+				{"profile": {"horizon": "1-5y"}, "interests": [%s],
 				 "facts": %s}""".formatted(TestPool.interest("berlin"), FACTS)), sent.get().get("state"));
 		ObjectNode first = (ObjectNode) SpecBlocks.read(json, "jev-step-questions").get("first").deepCopy();
 		ObjectNode criteria = first.putObject("criteria");

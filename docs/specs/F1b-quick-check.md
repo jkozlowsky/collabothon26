@@ -221,7 +221,7 @@ v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / f
 `POST {jev.base-url}/v1/systemone` as in F1. 3 s limit (`JevConsts.STEP_READ_TIMEOUT`): the step waits 3 s on a `Future` over the shared client and then cancels it, because Boot binds `MockRestServiceServer` to one `RestClient.Builder` and a second client would reach the real API in tests. The abandoned HTTP read may run on to the shared 7 s read timeout. The final call keeps the shared 7 s. `state`:
 ```json
 {
-  "profile": {"ageBand": null, "savingsCover": null, "horizon": "within-1y"},
+  "profile": {"horizon": "within-1y"},
   "interests": [{"category": "<picked path category>", "topic": "<picked path topic>"}],
   "facts": {"...": "F1 facts, only with consent"},
   "answers": [
@@ -230,7 +230,7 @@ v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / f
   ]
 }
 ```
-`interests` is left out when empty, `facts` without consent and `answers` before the first answer. `result` is `correct` | `wrong` | `not-sure`; `lessonId`, `topic` and `concepts` are those of the lesson the question came from. Questions, verbatim (`mastery_<area>` only for areas with at least one answer; `next` only with 2+ lessons to choose from). `next.criteria` is built per request (v5): one option per candidate lesson, named by the lesson's topic in snake case and described by an object with the same fields on every option, `{"topic": <topic>, "concepts": [<concepts, hyphens as spaces>]}` (22.11; replaces the "<topic>. Covers: <concepts>." text of v5); the candidates are at most `LESSON_CHOICES_PER_AREA` (2) lessons per area in the area order, lessons with a question left, each story's first such lesson before any story's second. The backend test compares each sent question with its entry below, the criteria filled from the lessons, and finds no extra keys.
+`profile` holds only the ranges given and is left out when none is, `interests` is left out when empty, `facts` without consent and `answers` before the first answer. `result` is `correct` | `wrong` | `not-sure`; `lessonId`, `topic` and `concepts` are those of the lesson the question came from. Questions, verbatim (`mastery_<area>` only for areas with at least one answer; `next` only with 2+ lessons to choose from). `next.criteria` is built per request (v5): one option per candidate lesson, named by the lesson's topic in snake case and described by an object with the same fields on every option, `{"topic": <topic>, "concepts": [<concepts, hyphens as spaces>]}` (22.11; replaces the "<topic>. Covers: <concepts>." text of v5); the candidates are at most `LESSON_CHOICES_PER_AREA` (2) lessons per area in the area order, lessons with a question left, each story's first such lesson before any story's second. The backend test compares each sent question with its entry below, the criteria filled from the lessons, and finds no extra keys.
 
 <!-- jev-step-questions: the backend test compares the Jev request with this block -->
 ```json
@@ -239,10 +239,10 @@ v1 `checks` is removed. Rows without these fields read as null / {} / 0 / [] / f
   "mastery_debt":      {"type": "noul", "instructions": "Do this person's borrowing answers, the entries of `answers` whose `area` is debt, show that they understand ideas such as instalments, card debt and the full cost of a loan?"},
   "mastery_investing": {"type": "noul", "instructions": "Do this person's investing answers, the entries of `answers` whose `area` is investing, show that they understand ideas such as market falls, borrowing to invest and spreading risk?"},
   "next": {"type": "choice",
-    "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers`, when they might need their money in `profile.horizon` and, when given, the topics they said are new to them in `interests`?",
+    "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers`, when they might need their money in `profile.horizon` (when given) and, when given, the topics they said are new to them in `interests`?",
     "criteria": {"<lesson topic in snake case>": {"topic": "<lesson topic>", "concepts": ["<lesson concept>"]}}},
   "first": {"type": "choice",
-    "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given when they might need their money in `profile.horizon` and, when given, the topics they said are new to them in `interests` and the facts about their accounts in `facts`?",
+    "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given when they might need their money in `profile.horizon` (when given) and, when given, the topics they said are new to them in `interests` and the facts about their accounts in `facts`?",
     "criteria": {"<lesson topic in snake case>": {"topic": "<lesson topic>", "concepts": ["<lesson concept>"]}}},
   "enough": {"type": "noul", "instructions": "Do the answers so far show clearly enough what this person already understands and what they should learn first?"}
 }
@@ -255,7 +255,7 @@ Step outcome, in this order:
 5. Removed in v5 (the D8 question swap went with the bank); `within-1y` still moves saving before investing in the area order.
 
 ### Jev final call
-F1's request (role and `focus_*` verbatim from F1's `jev-questions` block) plus `state.profile` and `state.checkAnswers` (the step call's `answers`; F1's `state.answers` already holds the onboarding answers), plus this question (`first_lesson` only with 2+ lessons to choose from, its criteria built per request as in the step call: per area of the candidate pool at most 2 lessons not completed, those with an answer that was not correct first, then one per story, v5; then the interest lessons, whose options also have `personal_context`, one sentence saying that the person picked the path and, in a Solid area, that the test showed they already know the basics; no other option has that field). No `mastery_*` (D4). Same per-key comparison as the step block.
+F1's request (role and `focus_*` verbatim from F1's `jev-questions` block) plus `state.profile` (as in the step call) and `state.checkAnswers` (the step call's `answers`; F1's `state.answers` already holds the onboarding answers), plus this question (`first_lesson` only with 2+ lessons to choose from, its criteria built per request as in the step call: per area of the candidate pool at most 2 lessons not completed, those with an answer that was not correct first, then one per story, v5; then the interest lessons, whose options also have `personal_context`, one sentence saying that the person picked the path and, in a Solid area, that the test showed they already know the basics; no other option has that field). No `mastery_*` (D4). Same per-key comparison as the step block.
 
 <!-- jev-final-questions: the backend test compares the Jev request with this block -->
 ```json

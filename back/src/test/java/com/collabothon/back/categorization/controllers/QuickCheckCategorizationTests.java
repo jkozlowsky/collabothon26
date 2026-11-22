@@ -98,6 +98,8 @@ class QuickCheckCategorizationTests {
 
 	private static final String PROFILE_WITH_CONSENT = PROFILE.replace("\"1-3\"", "null");
 
+	private static final String PROFILE_FOR_JEV = "{\"horizon\": \"1-5y\"}";
+
 	/** The same Quick check with consent: an account that saves every month and holds investments. */
 	private static final String WITH_FACTS = QUICK_CHECK
 		.replace("\"consent\": false", "\"consent\": true, \"facts\": " + FACTS)
@@ -245,7 +247,7 @@ class QuickCheckCategorizationTests {
 
 		assertEquals(json.readTree("""
 				{"answers": %s, "interests": [%s], "facts": %s, "profile": %s, "checkAnswers": [%s]}"""
-			.formatted(ANSWERS_FOR_JEV, TestPool.interest("berlin"), FACTS, PROFILE_WITH_CONSENT, String.join(", ",
+			.formatted(ANSWERS_FOR_JEV, TestPool.interest("berlin"), FACTS, PROFILE_FOR_JEV, String.join(", ",
 					jevAnswer("saving", "berlin-1", "correct"), jevAnswer("saving", "berlin-2", "wrong"),
 					jevAnswer("investing", "seoul-1", "correct"), jevAnswer("investing", "tokyo-1", "not-sure")))),
 				sent.get().get("state"));

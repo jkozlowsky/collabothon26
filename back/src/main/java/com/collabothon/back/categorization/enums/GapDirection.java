@@ -4,8 +4,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum GapDirection {
 
-	// ALIGNED is a Jev label only: it means no gap, so it never reaches a GapDto.
-	HABIT_AHEAD, KNOWLEDGE_AHEAD, ALIGNED;
+	HABIT_AHEAD, KNOWLEDGE_AHEAD;
 
 	@JsonValue
 	public String wire() {

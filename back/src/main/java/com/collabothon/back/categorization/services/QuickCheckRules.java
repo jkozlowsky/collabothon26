@@ -23,9 +23,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.function.ToDoubleFunction;
 import java.util.random.RandomGenerator;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.FactsDto;
@@ -37,9 +38,9 @@ import com.collabothon.back.categorization.enums.Role;
 
 final class QuickCheckRules {
 
-	/** Goal areas first, then the fixed order, only areas with questions; a short horizon puts saving first. */
-	static List<FocusArea> areaOrder(List<String> goals, String horizon, List<CheckQuestion> pool) {
-		Set<FocusArea> order = new LinkedHashSet<>(FocusArea.fromGoals(goals));
+	/** Interest areas first, then the fixed order, only areas with questions; a short horizon puts saving first. */
+	static List<FocusArea> areaOrder(List<FocusArea> interests, String horizon, List<CheckQuestion> pool) {
+		Set<FocusArea> order = new LinkedHashSet<>(interests);
 		order.addAll(Arrays.asList(FocusArea.values()));
 		List<FocusArea> areas = new ArrayList<>(order.stream()
 			.filter(area -> pool.stream().anyMatch(q -> q.area() == area))
@@ -52,6 +53,22 @@ final class QuickCheckRules {
 		return areas;
 	}
 
+	/**
+	 * The pool with the picked stories' questions first, in pick order. Every rule takes the first of an area, so this
+	 * order is what puts a pick ahead within its area; the sort is stable, so a story keeps its own order.
+	 */
+	static List<CheckQuestion> pickedFirst(List<CheckQuestion> pool, List<Story> picked) {
+		return pool.stream().sorted(Comparator.comparingInt(q -> pickRank(picked, q.storyId()))).toList();
+	}
+
+	/** A story's place among the picks; those not picked share the place after them. */
+	private static int pickRank(List<Story> picked, String storyId) {
+		return IntStream.range(0, picked.size())
+			.filter(i -> picked.get(i).id().equals(storyId))
+			.findFirst()
+			.orElse(picked.size());
+	}
+
 	/** Keeps the nulls: every area with questions is a key, null until it has an answer. */
 	static Map<String, Double> byWire(Map<FocusArea, Double> values) {
 		Map<String, Double> wire = new LinkedHashMap<>();
@@ -60,14 +77,9 @@ final class QuickCheckRules {
 	}
 
 	static Map<FocusArea, Double> mastery(List<FocusArea> areas, List<Answer> answers) {
-		return meanPerArea(areas, answers, Answer::score);
-	}
-
-	private static Map<FocusArea, Double> meanPerArea(List<FocusArea> areas, List<Answer> answers,
-			ToDoubleFunction<Answer> value) {
 		Map<FocusArea, Double> means = new LinkedHashMap<>();
 		for (FocusArea area : areas) {
-			OptionalDouble mean = inArea(answers, area).stream().mapToDouble(value).average();
+			OptionalDouble mean = inArea(answers, area).stream().mapToDouble(Answer::score).average();
 			means.put(area, mean.isPresent() ? mean.getAsDouble() : null);
 		}
 		return means;
@@ -79,6 +91,14 @@ final class QuickCheckRules {
 			.filter(q -> !completed.contains(q.lessonId())
 					&& answers.stream().noneMatch(a -> a.question().id().equals(q.id())))
 			.toList();
+	}
+
+	/** Before the first answer only the picked stories' questions, while they have one open. */
+	static List<CheckQuestion> askable(List<CheckQuestion> open, List<Answer> answers, List<Story> picked) {
+		List<CheckQuestion> ofPicked = open.stream()
+			.filter(q -> picked.stream().anyMatch(story -> story.id().equals(q.storyId())))
+			.toList();
+		return answers.isEmpty() && !ofPicked.isEmpty() ? ofPicked : open;
 	}
 
 	/** The lesson the next question comes from; empty when no question is left. */
@@ -117,9 +137,9 @@ final class QuickCheckRules {
 			.findFirst();
 	}
 
-	/** In story order, a lesson with no answer yet before one already asked about. */
+	/** In pool order, a lesson with no answer yet before one already asked about. */
 	private static Optional<CheckQuestion> firstIn(List<CheckQuestion> open, FocusArea area, List<Answer> answers) {
-		// min keeps the first of equals, so story order decides among lessons of the same kind.
+		// min keeps the first of equals, so pool order decides among lessons of the same kind.
 		return open.stream()
 			.filter(q -> q.area() == area)
 			.min(Comparator.comparing(q -> answers.stream().anyMatch(a -> a.question().lessonId().equals(q.lessonId()))));
@@ -216,29 +236,17 @@ final class QuickCheckRules {
 		};
 	}
 
-	/** Answered areas the facts say something about: the only ones a gap can be about. None without facts. */
-	static List<FocusArea> gapAreas(List<FocusArea> order, List<Answer> answers, FactsDto facts) {
-		return order.stream()
-			.filter(area -> facts != null && habit(area, facts) != null && !inArea(answers, area).isEmpty())
-			.toList();
-	}
-
 	/** The habit with an answer not right is habit ahead; no habit with every answer right is knowledge ahead. */
 	static Optional<GapDirection> ruleGap(FocusArea area, List<Answer> inArea, FactsDto facts) {
-		if (gapAreas(List.of(area), inArea, facts).isEmpty()) {
+		Boolean habit = facts == null ? null : habit(area, facts);
+		if (habit == null || inArea.isEmpty()) {
 			return Optional.empty();
 		}
 		boolean allRight = inArea.stream().allMatch(a -> a.result() == AnswerResult.CORRECT);
-		if (habit(area, facts)) {
+		if (habit) {
 			return allRight ? Optional.empty() : Optional.of(GapDirection.HABIT_AHEAD);
 		}
 		return allRight ? Optional.of(GapDirection.KNOWLEDGE_AHEAD) : Optional.empty();
-	}
-
-	/** A Jev label counts only when the rule finds the same gap in the area; otherwise aligned. */
-	static Optional<GapDirection> checkedJevGap(GapDirection label, FocusArea area, List<Answer> inArea,
-			FactsDto facts) {
-		return ruleGap(area, inArea, facts).filter(label::equals);
 	}
 
 	/** The card about the start lesson's area first, then area order; at most MAX_GAP_CARDS cards. */
@@ -263,10 +271,8 @@ final class QuickCheckRules {
 	}
 
 	/** The questions' lessons, each once, in the questions' order. */
-	static List<CheckLesson> lessons(List<CheckQuestion> questions, Function<CheckQuestion, CheckLesson> toLesson) {
-		Map<String, CheckLesson> lessons = new LinkedHashMap<>();
-		questions.forEach(q -> lessons.computeIfAbsent(q.lessonId(), id -> toLesson.apply(q)));
-		return List.copyOf(lessons.values());
+	static List<CheckLesson> lessons(List<CheckQuestion> questions) {
+		return questions.stream().map(CheckQuestion::lesson).distinct().toList();
 	}
 
 	static Optional<Story> storyOf(String lessonId, List<Story> stories) {
@@ -291,17 +297,12 @@ final class QuickCheckRules {
 			.comparing((CheckLesson l) -> inArea(answers, l.area()).isEmpty())
 			.thenComparing(l -> inArea(answers, l.area()).isEmpty() ? 0 : masteryOrStart(mastery, l.area()))
 			.thenComparing(l -> order.indexOf(l.area()));
-		// The sort is stable, so lessons of one area stay in story order.
+		// The sort is stable, so lessons of one area stay in pool order.
 		return lessons.stream()
 			.filter(l -> order.contains(l.area()) && !solid(l.area(), mastery, answers)
 					&& storyOf(l.id(), stories).flatMap(s -> startLesson(s, completed)).isPresent())
 			.sorted(pathOrder)
 			.toList();
-	}
-
-	/** The candidates' stories, each once, in candidate order. */
-	static List<Story> stories(List<CheckLesson> candidates, List<Story> stories) {
-		return candidates.stream().flatMap(l -> storyOf(l.id(), stories).stream()).distinct().toList();
 	}
 
 	/** Jev and the rule pick from answered areas when any have a candidate. */
@@ -312,53 +313,100 @@ final class QuickCheckRules {
 
 	/**
 	 * What Jev chooses the first lesson from: per area of the pool, lessons not completed, those with an answer that
-	 * was not right first, then across the area's stories. Empty below two: one lesson needs no question.
+	 * was not right first, then across the area's stories; then the interest lessons, outside that per-area limit.
+	 * Empty below two: one lesson needs no question.
 	 */
-	static List<CheckLesson> firstLessonChoices(List<CheckLesson> pool, List<Answer> answers, Set<String> completed) {
+	static List<CheckLesson> firstLessonChoices(List<CheckLesson> pool, List<CheckLesson> interestLessons,
+			List<Answer> answers, Set<String> completed) {
 		Comparator<CheckLesson> gapFirst = Comparator.comparing(l -> answers.stream()
 			.noneMatch(a -> a.result() != AnswerResult.CORRECT && a.question().lessonId().equals(l.id())));
-		List<CheckLesson> choices = pool.stream().map(CheckLesson::area).distinct()
+		Stream<CheckLesson> gapLessons = pool.stream().map(CheckLesson::area).distinct()
 			.flatMap(area -> acrossStories(pool.stream()
 				.filter(l -> l.area() == area && !completed.contains(l.id()))
 				.toList()).stream()
 				.sorted(gapFirst)
-				.limit(LESSON_CHOICES_PER_AREA))
-			.toList();
+				.limit(LESSON_CHOICES_PER_AREA));
+		List<CheckLesson> choices = Stream.concat(gapLessons, interestLessons.stream()).distinct().toList();
 		return choices.size() < JevConsts.MIN_CHOICE_LABELS ? List.of() : choices;
 	}
 
-	static CheckLesson ruleFirstLesson(List<CheckLesson> pool, List<FocusArea> order, Map<FocusArea, Double> mastery,
+	/** Per picked path its first quiz lesson left; in a Solid area the first one left that was not answered right. */
+	static List<CheckLesson> interestLessons(List<Story> interests, List<CheckLesson> lessons,
+			Map<FocusArea, Double> mastery, List<Answer> answers, Set<String> completed) {
+		return interests.stream()
+			.flatMap(story -> lessons.stream()
+				.filter(l -> l.storyId().equals(story.id()) && !completed.contains(l.id())
+						&& !(solid(l.area(), mastery, answers) && answeredRight(l, answers)))
+				.limit(1))
+			.toList();
+	}
+
+	private static boolean answeredRight(CheckLesson lesson, List<Answer> answers) {
+		List<Answer> inLesson = answers.stream().filter(a -> a.question().lessonId().equals(lesson.id())).toList();
+		return !inLesson.isEmpty() && inLesson.stream().allMatch(a -> a.result() == AnswerResult.CORRECT);
+	}
+
+	/** By lesson id, what Jev is told about each interest lesson. */
+	static Map<String, String> interestNotes(List<CheckLesson> interestLessons, Map<FocusArea, Double> mastery,
 			List<Answer> answers) {
-		FocusArea weakest = pool.stream()
-			.map(CheckLesson::area)
-			.min(Comparator.comparing((FocusArea area) -> masteryOrStart(mastery, area)).thenComparing(order::indexOf))
+		return interestLessons.stream()
+			.collect(Collectors.toMap(CheckLesson::id, l -> solid(l.area(), mastery, answers)
+					? JevConsts.SOLID_INTEREST_NOTE : JevConsts.INTEREST_NOTE));
+	}
+
+	static CheckLesson ruleFirstLesson(List<CheckLesson> pool, List<Story> picked, List<FocusArea> order,
+			Map<FocusArea, Double> mastery, List<Answer> answers) {
+		// Without a check every area ties, so the first picked story with a lesson left starts.
+		CheckLesson first = pool.stream()
+			.min(Comparator.comparing((CheckLesson l) -> masteryOrStart(mastery, l.area()))
+				.thenComparingInt(l -> pickRank(picked, l.storyId()))
+				.thenComparingInt(l -> order.indexOf(l.area())))
 			.orElseThrow();
+		FocusArea weakest = first.area();
 		List<CheckLesson> inWeakest = pool.stream().filter(l -> l.area() == weakest).toList();
-		// min keeps the first of equal scores, so a tie goes to the earlier answer.
+		// min keeps the first of equals, so a tie goes to the picked story, then to the earlier answer.
 		return inArea(answers, weakest).stream()
 			.filter(a -> inWeakest.stream().anyMatch(l -> l.id().equals(a.question().lessonId())))
-			.min(Comparator.comparingDouble(Answer::score))
+			.min(Comparator.comparingDouble(Answer::score)
+				.thenComparingInt(a -> pickRank(picked, a.question().storyId())))
 			.flatMap(a -> inWeakest.stream().filter(l -> l.id().equals(a.question().lessonId())).findFirst())
-			.orElse(inWeakest.getFirst());
+			.orElse(first);
 	}
 
 	/**
 	 * The path starts in the story of the picked lesson (Jev's, else the rule's). The app opens a story's lessons in
 	 * order, so the start lesson itself is that story's first lesson not completed.
 	 */
-	static StoryPlan plan(List<Story> stories, List<CheckLesson> candidates, CheckLesson picked, List<FocusArea> order,
-			Map<FocusArea, Double> mastery, List<Answer> answers, Set<String> completed) {
-		if (candidates.isEmpty()) {
-			Optional<Story> next = stories.stream().filter(s -> startLesson(s, completed).isPresent()).findFirst();
-			return new StoryPlan(next.orElse(null), null, order.stream().allMatch(area -> solid(area, mastery, answers)),
-					next.map(s -> List.of(s.id())).orElse(List.of()));
+	static StoryPlan plan(List<Story> stories, List<CheckLesson> candidates, CheckLesson picked, List<Story> interests,
+			List<FocusArea> order, Map<FocusArea, Double> mastery, List<Answer> answers, Set<String> completed) {
+		boolean readyForNext = order.stream().allMatch(area -> solid(area, mastery, answers));
+		if (picked == null && candidates.isEmpty()) {
+			// Nothing left to learn: the first pick with a lesson left, else the first such story.
+			Optional<Story> next = Stream.concat(interests.stream(), stories.stream())
+				.filter(s -> startLesson(s, completed).isPresent())
+				.findFirst();
+			return new StoryPlan(next.orElse(null), null, readyForNext,
+					next.map(s -> path(s, List.of(), interests, completed)).orElse(List.of()));
 		}
 		CheckLesson lesson = picked != null ? picked
-				: ruleFirstLesson(pool(candidates, answers), order, mastery, answers);
+				: ruleFirstLesson(pool(candidates, answers), interests, order, mastery, answers);
 		Story start = storyOf(lesson.id(), stories).orElseThrow();
-		List<String> path = new ArrayList<>(List.of(start.id()));
-		stories(candidates, stories).stream().map(Story::id).filter(id -> !id.equals(start.id())).forEach(path::add);
-		return new StoryPlan(start, lesson.area(), false, path);
+		return new StoryPlan(start, lesson.area(), readyForNext,
+				path(start,
+				candidates.stream().flatMap(l -> storyOf(l.id(), stories).stream()).toList(), interests, completed));
+	}
+
+	/** After a start outside the interests, the first picked path with a lesson left goes ahead of the others. */
+	private static List<String> path(Story start, List<Story> others, List<Story> interests, Set<String> completed) {
+		Set<String> path = new LinkedHashSet<>(List.of(start.id()));
+		if (!interests.contains(start)) {
+			interests.stream()
+				.filter(story -> startLesson(story, completed).isPresent())
+				.findFirst()
+				.ifPresent(story -> path.add(story.id()));
+		}
+		others.forEach(story -> path.add(story.id()));
+		return List.copyOf(path);
 	}
 
 	private static double masteryOrStart(Map<FocusArea, Double> mastery, FocusArea area) {

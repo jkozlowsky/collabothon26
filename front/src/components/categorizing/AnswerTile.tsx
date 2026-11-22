@@ -23,7 +23,7 @@ const RADIO = 24;
 const MARK = { selected: 'check', correct: 'check', wrong: 'x' } as const;
 const SPOKEN = { correct: 'Correct answer', wrong: 'Not the right answer' } as const;
 
-/** One single-choice tile, an `OptionCard` without the icon; after an answer it shows right, wrong or dimmed. */
+/** One single-choice tile; after an answer it shows right, wrong or dimmed. */
 export function AnswerTile({ title, subtitle, state, checked, disabled, onPress, testID }: Props) {
   const mark = state === 'default' || state === 'dimmed' ? null : MARK[state];
   const spoken = state === 'correct' || state === 'wrong' ? SPOKEN[state] : null;

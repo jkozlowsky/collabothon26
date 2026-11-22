@@ -14,17 +14,26 @@ let fetchMock: jest.Mock;
 const profile = (onboardingCompleted: boolean) => ({
   userId: 'demo-user',
   lifeStage: onboardingCompleted ? 'family' : null,
-  goals: onboardingCompleted ? ['budget'] : [],
+  interests: onboardingCompleted ? ['seoul'] : [],
   experience: onboardingCompleted ? 'occasional' : null,
   onboardingCompleted,
   onboardingSkipped: false,
   onboardingCompletedAt: null,
 });
 
+const story = (id: string, area: string, category: string, icon: string) => ({ id, area, category, topic: category, icon, status: 'available', lessons: [] });
+const STORIES = [
+  story('seoul', 'Risk', 'Hype & leverage', 'message-circle'),
+  story('berlin', 'Saving', 'Inflation & savings', 'shield'),
+  story('tokyo', 'Investing', 'Diversification', 'layers'),
+  story('mumbai', 'Investing', 'Gold', 'database'),
+];
+
 /** Backend stub: the user's profile, no categorisation yet, an empty lesson list and question bank, and writes that succeed. */
 function stubBackend({ onboardingCompleted }: { onboardingCompleted: boolean }) {
   const bodyFor = (url: string) => {
     if (PROFILE_URL.test(url)) return profile(onboardingCompleted);
+    if (url.includes('/api/stories')) return STORIES;
     return CATEGORIZATION_URL.test(url) ? categorization() : [];
   };
   fetchMock = jest.fn((url: string, init?: RequestInit) => {
@@ -60,15 +69,6 @@ async function openLearn() {
   await renderRouter(routes, { initialUrl: '/' });
   await fireEvent.press(await screen.findByTestId('nav-learn'));
 }
-/** Picks an answer and continues; "Continue" is off until the question is answered. */
-async function choose(step: string, label: string, pick: string) {
-  expect(get(`onboarding-${step}`)).toBeOnTheScreen();
-  expect(screen.getByText(label)).toBeOnTheScreen();
-  expect(get('onboarding-continue')).toBeDisabled();
-  await press(pick);
-  await press('onboarding-continue');
-}
-
 test('app opens on the bank; the first Learn tap runs onboarding, and Close goes back to the bank and saves nothing', async () => {
   await renderRouter(routes, { initialUrl: '/' });
   expect(await screen.findByTestId('screen-overview')).toBeOnTheScreen();
@@ -86,7 +86,7 @@ test('app opens on the bank; the first Learn tap runs onboarding, and Close goes
   await walkSurvey();
   await press('check-start');
   await passSummary();
-  expect(savedOnboarding()).toEqual({ goals: ['start-saving', 'inflation'], skipped: false });
+  expect(savedOnboarding()).toEqual({ interests: [], skipped: false });
 });
 
 test('a user whose profile says onboarding is completed goes from the bank straight to Learn', async () => {
@@ -134,9 +134,10 @@ test('the consent screen lists what the account shows and the notice', async () 
   // The icons are glyphs, not words.
   const lines = (id: string) => within(get(id)).getAllByText(/\w/).map((line) => line.props.children);
   expect(lines('consent-facts')).toEqual(['Your account already shows', ...factLabels(factsFrom(seedAccount())), 'Age 26–40']);
-  expect(screen.getByText('Only these summaries are shared, never your transactions.')).toBeOnTheScreen();
-  expect(get('consent-notice')).toHaveTextContent(/the ranges you pick and ranges from your accounts are checked/);
-  expect(get('consent-notice')).toHaveTextContent(/Your choices are checked by an AI service\./);
+  expect(screen.queryByText(/Only these summaries/)).toBeNull();
+  expect(get('consent-notice')).toHaveTextContent(
+    'Your answers, the topics you pick and ranges from your accounts are checked by an external AI provider to pick your first lesson. Exact account numbers never leave this phone. We keep the result, your topics and the ranges. Your choices are checked by an AI service.',
+  );
 });
 
 test('the consent screen offers only "Use my account data" and "Not now"; "Not now" leaves and saves nothing', async () => {
@@ -156,15 +157,18 @@ test('the consent screen offers only "Use my account data" and "Not now"; "Not n
   expect(categorized()).toHaveLength(0);
 });
 
-test('two questions follow the consent, then the quick check intro; the purpose is saved as goals', async () => {
+test('one question follows the consent, then the quick check intro; the picked paths are saved as interests, in the order picked', async () => {
   await openLearn();
   await fireEvent.press(await screen.findByTestId('onboarding-start'));
   await press('onboarding-next');
   await press('onboarding-challenge-next');
   await press('consent-accept');
 
-  await choose('purpose', 'Step 1 of 2', 'option-home');
-  await choose('horizon', 'Step 2 of 2', 'option-1-5y');
+  expect(get('onboarding-interests')).toBeOnTheScreen();
+  expect(get('onboarding-continue')).toBeDisabled();
+  await fireEvent.press(await screen.findByTestId('interest-investing'));
+  await press('interest-risk');
+  await press('onboarding-continue');
 
   expect(get('onboarding-check-intro')).toBeOnTheScreen();
   expect(screen.getByTestId('quick-check-hero', { includeHiddenElements: true })).toBeOnTheScreen();
@@ -175,9 +179,27 @@ test('two questions follow the consent, then the quick check intro; the purpose 
   await press('check-start');
   // The stub's question bank is empty, so the test is left out and the path is built with the account facts.
   await passSummary();
-  expect(savedOnboarding()).toEqual({ goals: ['start-saving', 'inflation'], skipped: false });
+  expect(savedOnboarding()).toEqual({ interests: ['tokyo', 'mumbai', 'seoul'], skipped: false });
   expect(categorized()).toEqual([{ consent: true, facts: factsFrom(seedAccount()) }]);
   expect(calls('/api/check-questions')).toHaveLength(1);
+});
+
+test('Skip after a failed request saves no interests and goes on to the quick check', async () => {
+  const stub = fetchMock;
+  fetchMock = jest.fn((url: string, init?: RequestInit) =>
+    url.includes('/api/stories') ? Promise.resolve({ ok: false, status: 500, statusText: 'Server Error' }) : stub(url, init),
+  );
+  globalThis.fetch = fetchMock;
+  await openLearn();
+  await fireEvent.press(await screen.findByTestId('onboarding-start'));
+  await press('onboarding-next');
+  await press('onboarding-challenge-next');
+  await press('consent-accept');
+
+  await fireEvent.press(await screen.findByTestId('interests-skip'));
+  await press('check-start');
+  await passSummary();
+  expect(savedOnboarding()).toEqual({ interests: [], skipped: false });
 });
 
 // Last: it leaves the onboarding open, with Learn still waiting behind it.
@@ -189,7 +211,7 @@ test('the back button goes back one step, down to the consent screen', async () 
   expect(get('onboarding-welcome')).toBeOnTheScreen();
 
   await walkSurvey();
-  for (const step of ['horizon', 'purpose', 'consent']) {
+  for (const step of ['interests', 'consent']) {
     await press('onboarding-back');
     expect(get(`onboarding-${step}`)).toBeOnTheScreen();
   }

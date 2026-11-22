@@ -16,8 +16,7 @@ import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
 import com.collabothon.back.categorization.dto.StepRequestDto;
 import com.collabothon.back.categorization.dto.StepResponseDto;
 import com.collabothon.back.categorization.enums.FocusArea;
-import com.collabothon.back.categorization.mappers.CheckLessonMapper;
-import com.collabothon.back.categorization.mappers.JevAnswerMapper;
+import com.collabothon.back.categorization.mappers.JevInterestMapper;
 import com.collabothon.back.lesson.repositories.LessonCompletionRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -35,9 +34,7 @@ public class QuickCheckService {
 
 	private final JevClient jev;
 
-	private final JevAnswerMapper jevAnswerMapper;
-
-	private final CheckLessonMapper lessonMapper;
+	private final JevInterestMapper jevInterestMapper;
 
 	private final LessonCompletionRepository completions;
 
@@ -45,27 +42,31 @@ public class QuickCheckService {
 
 	public StepResponseDto step(String userId, StepRequestDto request) {
 		OnboardingAnswersDto onboarding = categorization.onboarding(userId);
-		List<CheckQuestion> pool = checkQuestions.pool();
 		List<Answer> answers = checkQuestions.resolve(request.history());
 		String horizon = request.profile() == null ? null : request.profile().horizon();
-		List<FocusArea> order = QuickCheckRules.areaOrder(onboarding.goals(), horizon, pool);
+		List<Story> stories = categorization.stories();
+		List<Story> interests = Story.picked(onboarding.interests(), stories);
+		List<CheckQuestion> pool = QuickCheckRules.pickedFirst(checkQuestions.pool(), interests);
+		List<FocusArea> order = QuickCheckRules.areaOrder(FocusArea.fromInterests(onboarding.interests(), stories),
+				horizon, pool);
 		Set<String> completed = new HashSet<>(completions.findLessonIdsByUserId(userId));
-		List<CheckQuestion> open = QuickCheckRules.open(pool, answers, completed);
+		List<CheckQuestion> open = QuickCheckRules.askable(QuickCheckRules.open(pool, answers, completed), answers,
+				interests);
 		Map<FocusArea, Double> ruleMastery = QuickCheckRules.mastery(order, answers);
 		boolean useRules = request.useRules() || !jevProperties.callsJev();
 		if (useRules || request.stepFellBack()) {
 			return byRule(order, pool, open, answers, ruleMastery, useRules, request.stepFellBack());
 		}
-		List<CheckLesson> choices = QuickCheckRules.nextLessonChoices(order,
-				QuickCheckRules.lessons(open, lessonMapper::toLesson));
+		List<CheckLesson> choices = QuickCheckRules.nextLessonChoices(order, QuickCheckRules.lessons(open));
 		// Before the first answer Jev only chooses the lesson, so without a choice there is nothing to ask it.
 		if (answers.isEmpty() && choices.size() < JevConsts.MIN_CHOICE_LABELS) {
 			return byRule(order, pool, open, answers, ruleMastery, false, false);
 		}
 		List<FocusArea> answered = order.stream().filter(area -> !QuickCheckRules.inArea(answers, area).isEmpty())
 			.toList();
-		Optional<StepJudgement> fromJev = jev.step(request.profile(), onboarding.goals(), request.facts(),
-				answers.stream().map(jevAnswerMapper::toJev).toList(), answered, choices);
+		Optional<StepJudgement> fromJev = jev.step(request.profile(),
+				jevInterestMapper.toJev(interests), request.facts(),
+				answers.stream().map(Answer::toJev).toList(), answered, choices);
 		if (fromJev.isEmpty()) {
 			return byRule(order, pool, open, answers, ruleMastery, false, true);
 		}

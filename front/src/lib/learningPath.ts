@@ -1,12 +1,7 @@
-import type { Categorization, FocusArea } from '@/types/categorization';
+import type { Categorization } from '@/types/categorization';
 
-/** Everything but the categorisation is known only right after the test; a reload rebuilds the summary from the stored row. */
-export type Summary = {
-  categorization: Categorization;
-  counts?: Partial<Record<FocusArea, number>>;
-  /** "Saving for: A home of my own · needed 1–5 years", from the survey. */
-  savingFor?: string;
-};
+/** What the summary shows; a reload rebuilds it from the stored row. */
+export type Summary = { categorization: Categorization };
 
 // ponytail: module state, gone when the app restarts; the summary is a one-off screen after /categorizing.
 let summary: Summary | null = null;

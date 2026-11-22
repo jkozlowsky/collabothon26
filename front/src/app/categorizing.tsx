@@ -20,7 +20,7 @@ import { isE2E } from '@/lib/e2e';
 import { categorize, checkBackend, factLabels, factsFrom, isRetryable, withTimeout } from '@/lib/categorization';
 import { setSummary } from '@/lib/learningPath';
 import { useCurrentUser } from '@/lib/user';
-import { answerCounts, fetchCheckQuestions, savingForLine } from '@/lib/quickCheck';
+import { fetchCheckQuestions } from '@/lib/quickCheck';
 import type { CheckQuestion, ProfileRanges, QuickResult } from '@/types/quickCheck';
 
 const STEP_MS = 800;
@@ -63,7 +63,6 @@ export default function CategorizingScreen() {
   const [openFailed, setOpenFailed] = useState(false);
   const [openAttempt, setOpenAttempt] = useState(0);
   const [phase, setPhase] = useState<Phase>('opening');
-  const pool = useRef<CheckQuestion[]>([]);
   const sent = useRef<Partial<QuickResult> | undefined>(undefined);
   const [step, setStep] = useState(0);
   const [retryable, setRetryable] = useState(true);
@@ -91,12 +90,7 @@ export default function CategorizingScreen() {
     const [result] = await Promise.allSettled([judged, new Promise((r) => setTimeout(r, isE2E() ? 0 : MIN_MS))]);
     if (outer.aborted) return;
     if (result.status === 'fulfilled') {
-      const history = quickResult?.history;
-      setSummary({
-        categorization: result.value,
-        counts: history && answerCounts(history, pool.current),
-        savingFor: savingForLine(intake?.purpose ?? null, intake?.horizon ?? null),
-      });
+      setSummary({ categorization: result.value });
       return router.replace('/learning-path');
     }
     inFlight.current = false;
@@ -114,7 +108,6 @@ export default function CategorizingScreen() {
 
   // No questions (or no hand-over) leaves the test out: the F1 path.
   const opened = useEffectEvent((questions: CheckQuestion[]) => {
-    pool.current = questions;
     if (!wantsCheck || !questions.length) return void start();
     setPhase('quick');
     quick.begin(questions);
@@ -174,7 +167,6 @@ export default function CategorizingScreen() {
         <QuickCheckPage
           view={quick.view}
           position={quick.position}
-          total={quick.total}
           status={quick.status}
           onAnswer={quick.answer}
           onContinue={quick.proceed}

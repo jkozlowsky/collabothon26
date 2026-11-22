@@ -40,18 +40,14 @@ describe('Personas registry and seeds', () => {
     expect(PERSONAS['demo-user'].hints).toBeNull();
 
     expect(PERSONAS['demo-daniel'].hints).toEqual({
-      purpose: 'growing',
-      horizon: '5y+',
+      interests: ['seoul', 'mumbai'],
       lifeStage: 'settled',
-      goals: ['stocks-etfs', 'retirement'],
       experience: 'investing',
     });
 
     expect(PERSONAS['demo-elena'].hints).toEqual({
-      purpose: 'safety-net',
-      horizon: '1-5y',
+      interests: ['berlin', 'buenos-aires'],
       lifeStage: 'later-life',
-      goals: ['inflation', 'scams'],
       experience: 'regular',
     });
 

@@ -9,6 +9,7 @@ import static com.collabothon.back.categorization.controllers.TestPool.notSure;
 import static com.collabothon.back.categorization.controllers.TestPool.right;
 import static com.collabothon.back.categorization.controllers.TestPool.wrong;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -68,12 +69,15 @@ class QuickCheckCategorizationTests {
 	private static final String JEV_URL = "https://api.typesafe.ai/v1/systemone";
 
 	private static final String ONBOARDING = """
-			{"lifeStage": "building", "goals": ["start-saving"], "experience": "occasional", "skipped": false}""";
+			{"lifeStage": "building", "interests": ["berlin"], "experience": "occasional", "skipped": false}""";
+
+	private static final String ANSWERS_FOR_JEV = """
+			{"lifeStage": "building", "experience": "occasional"}""";
 
 	private static final String PROFILE = "{\"ageBand\": null, \"savingsCover\": \"1-3\", \"horizon\": \"1-5y\"}";
 
 	// Saving: right in berlin-1, then wrong in berlin-2. Investing: right in seoul-1, then Not sure in tokyo-1.
-	// The saving goal puts saving first; debt has no answer.
+	// The picked Berlin path puts saving first; debt has no answer.
 	private static final String HISTORY = "[" + history(right("berlin-1/q1"), wrong("berlin-2/q1"), right("seoul-1/q2"),
 			notSure("tokyo-1/q1")) + "]";
 
@@ -94,10 +98,22 @@ class QuickCheckCategorizationTests {
 
 	private static final String PROFILE_WITH_CONSENT = PROFILE.replace("\"1-3\"", "null");
 
+	private static final String PROFILE_FOR_JEV = "{\"horizon\": \"1-5y\"}";
+
 	/** The same Quick check with consent: an account that saves every month and holds investments. */
 	private static final String WITH_FACTS = QUICK_CHECK
 		.replace("\"consent\": false", "\"consent\": true, \"facts\": " + FACTS)
 		.replace(PROFILE, PROFILE_WITH_CONSENT);
+
+	private static final String ALL_SOLID = QUICK_CHECK
+		.replace(HISTORY, "[" + history(right("berlin-1/q1"), right("berlin-2/q1"), right("sao-paulo-1/q1"),
+				right("sao-paulo-3/q2"), right("seoul-1/q2"), right("tokyo-1/q1")) + "]")
+		.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": 0.9, \"debt\": 0.9, \"investing\": 0.9}");
+
+	private static final String PICKED = "The person picked this path as new to them.";
+
+	private static final String PICKED_AND_SOLID = "The person picked this path as new to them; the test showed they"
+			+ " already know the basics.";
 
 	private static final String F1_ANSWERS = """
 			"role": {"type": "choice", "choice": "intermediate", "confidence": 0.8,
@@ -145,6 +161,11 @@ class QuickCheckCategorizationTests {
 			.content(answers)).andExpect(status().isOk());
 	}
 
+	private void onboardWithInterests(String... storyIds) throws Exception {
+		onboard("{\"interests\": %s, \"experience\": \"occasional\", \"skipped\": false}"
+			.formatted(json.writeValueAsString(storyIds)));
+	}
+
 	private ResultActions categorize(String body) throws Exception {
 		return mvc.perform(post("/api/users/{id}/categorization", userId).contentType(MediaType.APPLICATION_JSON)
 			.content(body));
@@ -187,10 +208,6 @@ class QuickCheckCategorizationTests {
 			.formatted(key, chosen, probabilities);
 	}
 
-	private static String gap(String area, String chosen) {
-		return choice("gap_" + area, chosen, "habit_ahead", "knowledge_ahead", "aligned");
-	}
-
 	private static String jevFinal(String extra) {
 		return "{\"model\": \"jev-2026-05\", \"answers\": {" + F1_ANSWERS + extra + "}}";
 	}
@@ -201,20 +218,20 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void theFinalCallIsF1PlusTheSpecifiedQuestionsAndItsLabelsPickTheLessonAndGaps() throws Exception {
+	void theFinalCallIsF1PlusTheSpecifiedQuestionsAndItsLabelPicksTheLesson() throws Exception {
 		AtomicReference<JsonNode> sent = new AtomicReference<>();
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(request -> sent.set(json.readTree(((MockClientHttpRequest) request).getBodyAsString())))
-			.andRespond(withSuccess(jevFinal(gap("saving", "habit_ahead") + gap("investing", "knowledge_ahead")
-					+ firstLesson("tokyo-1", CHOICES)), MediaType.APPLICATION_JSON));
+			.andRespond(withSuccess(jevFinal(firstLesson("tokyo-1", CHOICES)), MediaType.APPLICATION_JSON));
 
 		// The rule would start in Berlin (berlin-2, the weakest area's lowest score); Jev's Tokyo lesson wins.
-		// Jev's "knowledge_ahead" for investing is dropped: the account holds investments.
 		categorize(WITH_FACTS).andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"source": "jev", "role": "intermediate", "profile": %s,
 					 "mastery": {"saving": 0.425, "debt": null, "investing": 0.5}, "answerCount": 4,
 					 "gaps": [
+					   {"area": "investing", "direction": "habit-ahead",
+					    "because": "Your account shows you already invest. Your Investing answers leave a few things open, which is where your first lesson starts."},
 					   {"area": "saving", "direction": "habit-ahead",
 					    "because": "Your account shows you move money to savings every month. Your Saving answers leave a few things open to explore."}],
 					 "startLesson": {"lessonId": "tokyo-1", "title": "%2$s", "area": "investing", "storyId": "tokyo",
@@ -226,11 +243,11 @@ class QuickCheckCategorizationTests {
 					 "sharedWithModel": {"facts": %4$s, "answers": %3$s, "profile": %1$s, "answerCount": 4, "stepCallsMade": 3}}"""
 				.formatted(PROFILE_WITH_CONSENT, title("tokyo-1"), ONBOARDING, FACTS),
 					JsonCompareMode.LENIENT))
-			.andExpect(jsonPath("$.gaps.length()").value(1));
+			.andExpect(jsonPath("$.gaps[0].area").value("investing"));
 
 		assertEquals(json.readTree("""
-				{"answers": %s, "facts": %s, "profile": %s, "goals": ["start-saving"], "checkAnswers": [%s]}"""
-			.formatted(ONBOARDING, FACTS, PROFILE_WITH_CONSENT, String.join(", ",
+				{"answers": %s, "interests": [%s], "facts": %s, "profile": %s, "checkAnswers": [%s]}"""
+			.formatted(ANSWERS_FOR_JEV, TestPool.interest("berlin"), FACTS, PROFILE_FOR_JEV, String.join(", ",
 					jevAnswer("saving", "berlin-1", "correct"), jevAnswer("saving", "berlin-2", "wrong"),
 					jevAnswer("investing", "seoul-1", "correct"), jevAnswer("investing", "tokyo-1", "not-sure")))),
 				sent.get().get("state"));
@@ -240,17 +257,21 @@ class QuickCheckCategorizationTests {
 				sent.get().at("/state/checkAnswers/1"));
 		JsonNode block = SpecBlocks.read(json, "jev-final-questions");
 		ObjectNode expected = (ObjectNode) SpecBlocks.read(json, SpecBlocks.F1, "jev-questions").deepCopy();
-		expected.set("gap_saving", block.get("gap_saving"));
-		expected.set("gap_investing", block.get("gap_investing"));
 		ObjectNode firstLesson = (ObjectNode) block.get("first_lesson").deepCopy();
 		ObjectNode criteria = firstLesson.putObject("criteria");
 		for (String lessonId : CHOICES) {
-			criteria.put(label(lessonId), TestPool.criterion(lessonId));
+			ObjectNode criterion = TestPool.criterion(lessonId);
+			// berlin-1 is the picked path's start lesson; berlin-2 is there as a gap lesson.
+			if (lessonId.equals("berlin-1")) {
+				criterion.put("personal_context", PICKED);
+			}
+			criteria.set(label(lessonId), criterion);
 		}
 		expected.set("first_lesson", firstLesson);
 		assertEquals(expected, sent.get().get("questions"));
-		assertEquals("Saving, bonds, stocks and funds. Covers: stock, bond, etf, time horizon.",
-				sent.get().at("/questions/first_lesson/criteria/saving_bonds_stocks_and_funds").stringValue());
+		assertEquals(json.readTree("""
+				{"topic": "Saving, bonds, stocks and funds", "concepts": ["stock", "bond", "etf", "time horizon"]}"""),
+				sent.get().at("/questions/first_lesson/criteria/saving_bonds_stocks_and_funds"));
 	}
 
 	@Test
@@ -285,10 +306,10 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void aJevGapLabelTheRuleDoesNotBackReadsAsAligned() throws Exception {
+	void everyAnswerRightWithBothHabitsLeavesNoGap() throws Exception {
 		jev.expect(requestTo(JEV_URL))
-			.andRespond(withSuccess(jevFinal(gap("saving", "habit_ahead") + gap("investing", "knowledge_ahead")
-					+ firstLesson("berlin-1", "berlin-1", "buenos-aires-1", "seoul-1", "tokyo-1")), MediaType.APPLICATION_JSON));
+			.andRespond(withSuccess(jevFinal(firstLesson("berlin-1", "berlin-1", "buenos-aires-1", "seoul-1", "tokyo-1")),
+					MediaType.APPLICATION_JSON));
 		// Right on saving and on investing, with both habits in the account: the rule finds no gap.
 		String history = "[" + history(right("berlin-1/q1"), right("seoul-1/q2")) + "]";
 
@@ -298,10 +319,8 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void withoutFactsJevIsNotAskedAboutGapsAndThereAreNone() throws Exception {
+	void withoutFactsThereAreNoGaps() throws Exception {
 		jev.expect(requestTo(JEV_URL))
-			.andExpect(MockRestRequestMatchers.jsonPath("$.questions.gap_saving").doesNotExist())
-			.andExpect(MockRestRequestMatchers.jsonPath("$.questions.gap_investing").doesNotExist())
 			.andRespond(withSuccess(jevFinal(firstLesson("berlin-2", CHOICES)), MediaType.APPLICATION_JSON));
 
 		categorize(QUICK_CHECK).andExpect(status().isOk())
@@ -310,10 +329,8 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void aBrokenGapAnswerPutsTheWholeCategorisationOnRules() throws Exception {
-		jev.expect(requestTo(JEV_URL))
-			.andRespond(withSuccess(jevFinal(gap("saving", "habit_ahead") + firstLesson("tokyo-1", CHOICES)),
-					MediaType.APPLICATION_JSON));
+	void theGapsDoNotDependOnTheJevCall() throws Exception {
+		jev.expect(requestTo(JEV_URL)).andRespond(withServerError());
 
 		// The rule: both habits are in the account, and each area has an answer that is not right.
 		categorize(WITH_FACTS).andExpect(status().isOk())
@@ -327,12 +344,25 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
+	void withoutInterestsTheFinalCallSendsNeitherThemNorEmptyAnswers() throws Exception {
+		onboard("{\"interests\": [], \"skipped\": false}");
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(MockRestRequestMatchers.jsonPath("$.state.answers").doesNotExist())
+			.andExpect(MockRestRequestMatchers.jsonPath("$.state.goals").doesNotExist())
+			.andExpect(MockRestRequestMatchers.jsonPath("$.state.interests").doesNotExist())
+			.andExpect(MockRestRequestMatchers.jsonPath("$.state.checkAnswers").exists())
+			.andRespond(withSuccess(jevFinal(firstLesson("berlin-2", CHOICES)), MediaType.APPLICATION_JSON));
+
+		categorize(QUICK_CHECK).andExpect(status().isOk()).andExpect(jsonPath("$.source").value("jev"));
+	}
+
+	@Test
 	void useRulesMakesNoFinalCallAndSharedWithModelStillCountsTheSteps() throws Exception {
 		categorize(onRules(QUICK_CHECK)).andExpect(status().isOk())
 			.andExpect(jsonPath("$.source").value("fallback"))
 			.andExpect(jsonPath("$.sharedWithModel.stepCallsMade").value(3))
 			.andExpect(jsonPath("$.sharedWithModel.answers").isEmpty())
-			.andExpect(jsonPath("$.sharedWithModel.goals[0]").value("start-saving"));
+			.andExpect(jsonPath("$.sharedWithModel.interests[0]").value("berlin"));
 
 		categorize(onRules(QUICK_CHECK).replace("\"stepCallsMade\": 3", "\"stepCallsMade\": 0"))
 			.andExpect(status().isOk())
@@ -356,7 +386,7 @@ class QuickCheckCategorizationTests {
 
 	@Test
 	void withLifeStageSkippedTheAgeBandGivesItOnlyAtTheEnds() throws Exception {
-		onboard("{\"goals\": [\"start-saving\"], \"experience\": \"occasional\", \"skipped\": false}");
+		onboard("{\"interests\": [\"berlin\"], \"experience\": \"occasional\", \"skipped\": false}");
 
 		categorize(onRules(QUICK_CHECK.replace("\"ageBand\": null", "\"ageBand\": \"60+\"")))
 			.andExpect(jsonPath("$.lifeStage").value("pre-retirement"))
@@ -467,7 +497,7 @@ class QuickCheckCategorizationTests {
 	void anF1ResendAfterStepCallsStillDisclosesThem() throws Exception {
 		categorize("{\"consent\": false, \"useRules\": true, \"stepCallsMade\": 2}").andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"sharedWithModel": {"facts": null, "answers": null, "goals": ["start-saving"], "profile": null,
+					{"sharedWithModel": {"facts": null, "answers": null, "interests": ["berlin"], "profile": null,
 					 "answerCount": 0, "stepCallsMade": 2}}""", JsonCompareMode.LENIENT));
 	}
 
@@ -519,13 +549,59 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void withoutTheQuickCheckTheFirstLessonFollowsTheJudgedFocus() throws Exception {
-		// Goals put saving first; Jev's focus puts investing ahead of it.
+	void withoutTheQuickCheckAndWithoutPicksTheFirstLessonFollowsTheJudgedFocus() throws Exception {
+		onboardWithInterests();
+		// The area order has saving first; Jev's focus puts investing ahead of it.
 		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(jevFinal(""), MediaType.APPLICATION_JSON));
 
 		categorize(NO_QUICK_CHECK).andExpect(status().isOk())
 			.andExpect(jsonPath("$.startLesson.lessonId").value("seoul-1"))
 			.andExpect(jsonPath("$.pathStoryIds[0]").value("seoul"));
+	}
+
+	@Test
+	void withoutTheQuickCheckThePickedPathStartsWhateverTheJudgedFocus() throws Exception {
+		// Berlin is picked; Jev's focus puts investing ahead of saving.
+		jev.expect(requestTo(JEV_URL)).andRespond(withSuccess(jevFinal(""), MediaType.APPLICATION_JSON));
+
+		categorize(NO_QUICK_CHECK).andExpect(status().isOk())
+			.andExpect(jsonPath("$.startLesson.lessonId").value("berlin-1"))
+			.andExpect(jsonPath("$.startLesson.area").value("saving"));
+	}
+
+	private String investingPickedStartsIn(String... history) throws Exception {
+		onboardWithInterests("tokyo", "mumbai");
+		return categorized(onRules(QUICK_CHECK.replace(HISTORY, "[" + history(history) + "]")
+			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{}"))).at("/startLesson/storyId").stringValue();
+	}
+
+	@Test
+	void aMeasuredGapBeatsThePick() throws Exception {
+		// In the picked path's area, then in another one.
+		assertEquals("seoul",
+				investingPickedStartsIn(right("tokyo-1/q1"), right("tokyo-1/q2"), wrong("seoul-1/q1")));
+		assertEquals("berlin", investingPickedStartsIn(right("tokyo-1/q1"), wrong("berlin-1/q1")));
+	}
+
+	@Test
+	void onATieThePickedPathWinsOverTheEarlierAnswer() throws Exception {
+		assertEquals("tokyo", investingPickedStartsIn(wrong("seoul-1/q1"), wrong("tokyo-1/q1")));
+		assertEquals("tokyo", investingPickedStartsIn(wrong("berlin-1/q1"), wrong("tokyo-1/q1")));
+	}
+
+	@Test
+	void jevStillChoosesFromTheGapLessonsAndThePicks() throws Exception {
+		onboardWithInterests("tokyo", "mumbai");
+		jev.expect(requestTo(JEV_URL))
+			.andRespond(withSuccess(jevFinal(firstLesson("seoul-1", "seoul-1", "tokyo-1", "mumbai-1")),
+					MediaType.APPLICATION_JSON));
+
+		// The Seoul mistake leads the options; Jev may take it over both picks.
+		categorize(QUICK_CHECK.replace(HISTORY, "[" + history(right("tokyo-1/q1"), wrong("seoul-1/q1")) + "]")
+			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"investing\": 0.55}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.source").value("jev"))
+			.andExpect(jsonPath("$.startLesson.storyId").value("seoul"));
 	}
 
 	@Test
@@ -535,6 +611,7 @@ class QuickCheckCategorizationTests {
 				.doesNotExist())
 			.andRespond(withSuccess(jevFinal(""), MediaType.APPLICATION_JSON));
 
+		onboardWithInterests();
 		// Of the investing lessons only seoul-5 is left to do.
 		completeStory("tokyo");
 		completeStory("mumbai");
@@ -548,22 +625,62 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void withConsentTheFactsReachJevAndItsAlignedLabelsLeaveNoGap() throws Exception {
+	void aSolidPickedPathOffersItsLaterLessonAndOnlyInterestLessonsSayWhy() throws Exception {
+		onboardWithInterests("berlin", "sao-paulo");
+		AtomicReference<JsonNode> sent = new AtomicReference<>();
+		jev.expect(requestTo(JEV_URL))
+			.andExpect(request -> sent.set(json.readTree(((MockClientHttpRequest) request).getBodyAsString())))
+			.andRespond(withSuccess(jevFinal(firstLesson("berlin-3", "seoul-1", "tokyo-1", "berlin-3", "sao-paulo-1")),
+					MediaType.APPLICATION_JSON));
+
+		// Saving is Solid through berlin-1 and berlin-2, investing has the gap, debt was not asked about.
+		// Jev weighs berlin-3, yet the app still opens Berlin at its first lesson not done.
+		categorize(QUICK_CHECK
+			.replace(HISTORY, "[" + history(right("berlin-1/q1"), right("berlin-2/q1"), wrong("seoul-1/q2")) + "]")
+			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": 0.9, \"investing\": 0.25}"))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"source": "jev", "readyForNext": false,
+					 "startLesson": {"lessonId": "berlin-1", "area": "saving", "storyId": "berlin"},
+					 "pathStoryIds": ["berlin", "seoul", "tokyo", "mumbai", "sao-paulo"]}""", JsonCompareMode.LENIENT));
+
+		ObjectNode criteria = json.createObjectNode();
+		criteria.set(label("seoul-1"), TestPool.criterion("seoul-1"));
+		criteria.set(label("tokyo-1"), TestPool.criterion("tokyo-1"));
+		criteria.set(label("berlin-3"), TestPool.criterion("berlin-3").put("personal_context", PICKED_AND_SOLID));
+		criteria.set(label("sao-paulo-1"), TestPool.criterion("sao-paulo-1").put("personal_context", PICKED));
+		assertEquals(criteria, sent.get().at("/questions/first_lesson/criteria"));
+	}
+
+	@Test
+	void withEveryAreaSolidJevsPickAmongTheInterestsIsHonoured() throws Exception {
+		onboardWithInterests("berlin", "tokyo");
+		jev.expect(requestTo(JEV_URL))
+			.andRespond(withSuccess(jevFinal(firstLesson("tokyo-2", "berlin-3", "tokyo-2")), MediaType.APPLICATION_JSON));
+
+		categorize(ALL_SOLID).andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"source": "jev", "readyForNext": true,
+					 "startLesson": {"lessonId": "tokyo-1", "area": "investing", "storyId": "tokyo"},
+					 "pathStoryIds": ["tokyo"]}""", JsonCompareMode.LENIENT));
+	}
+
+	@Test
+	void withConsentTheFactsReachJevAndTheRuleGivesTheGaps() throws Exception {
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(MockRestRequestMatchers.jsonPath("$.state.facts.incomeBand")
 				.value("2-3.5k"))
-			.andRespond(withSuccess(jevFinal(gap("saving", "aligned") + gap("investing", "aligned")
-					+ firstLesson("berlin-2", CHOICES)), MediaType.APPLICATION_JSON));
+			.andRespond(withSuccess(jevFinal(firstLesson("berlin-2", CHOICES)), MediaType.APPLICATION_JSON));
 
-		// The rule alone, and F1's facts table, would each give two cards for these answers and facts.
 		categorize(WITH_FACTS).andExpect(status().isOk())
 			.andExpect(jsonPath("$.bankData").value(true))
-			.andExpect(jsonPath("$.gaps").isEmpty());
+			.andExpect(jsonPath("$.source").value("jev"))
+			.andExpect(jsonPath("$.gaps.length()").value(2));
 	}
 
 	@Test
 	void theSavingsCoverAndTheAgeBandFeedTheRuleFocus() throws Exception {
-		onboard("{\"goals\": [\"stocks-etfs\"], \"experience\": \"planning\", \"skipped\": false}");
+		onboard("{\"interests\": [\"tokyo\"], \"experience\": \"planning\", \"skipped\": false}");
 
 		assertEquals(json.readTree("[\"saving\", \"investing\"]"),
 				categorized(onRules(QUICK_CHECK.replace("\"1-3\"", "\"<1\""))).get("focusAreas"));
@@ -576,11 +693,9 @@ class QuickCheckCategorizationTests {
 
 	@Test
 	void everyAreaSolidStartsTheFirstStoryWithALessonLeftAndStartHereEndsWhenItIsDone() throws Exception {
-		String history = "[" + history(right("berlin-1/q1"), right("berlin-2/q1"), right("sao-paulo-1/q1"),
-				right("sao-paulo-3/q2"), right("seoul-1/q2"), right("tokyo-1/q1")) + "]";
+		onboardWithInterests();
 
-		categorize(onRules(QUICK_CHECK.replace(HISTORY, history)
-			.replace("{\"saving\": 0.425, \"investing\": 0.5}", "{\"saving\": 0.9, \"debt\": 0.9, \"investing\": 0.9}")))
+		categorize(onRules(ALL_SOLID))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"readyForNext": true, "startLesson": {"lessonId": "seoul-1", "storyId": "seoul"},
@@ -588,6 +703,16 @@ class QuickCheckCategorizationTests {
 
 		completeStory("seoul");
 		stored().andExpect(status().isOk()).andExpect(jsonPath("$.startHere").isEmpty());
+	}
+
+	@Test
+	void everyAreaSolidStartsThePickedPathAndAFinishedOneGivesWayToTheNextPick() throws Exception {
+		assertEquals(json.readTree("[\"berlin\"]"), categorized(onRules(ALL_SOLID)).get("pathStoryIds"));
+		stored().andExpect(jsonPath("$.startHere.lessonId").value("berlin-1"));
+
+		onboardWithInterests("berlin", "tokyo");
+		completeStory("berlin");
+		assertEquals("tokyo", categorized(onRules(ALL_SOLID)).at("/startLesson/storyId").stringValue());
 	}
 
 	@ParameterizedTest(name = "Jev {0}, saving mastery {1} -> {2}")
@@ -615,7 +740,7 @@ class QuickCheckCategorizationTests {
 			"'\"regular\"', 0, intermediate" })
 	void onRulesTheRoleComesFromTheAnswersOnlyWithoutADeclaredExperience(String experience, int solidAreas,
 			String role) throws Exception {
-		onboard("{\"goals\": [\"start-saving\"], \"experience\": %s, \"skipped\": false}".formatted(experience));
+		onboard("{\"interests\": [\"berlin\"], \"experience\": %s, \"skipped\": false}".formatted(experience));
 		// Two right answers make an area Solid, one wrong answer leaves it at Building; debt was not asked about.
 		String history = "[" + history(right("berlin-1/q1"),
 				solidAreas < 1 ? wrong("berlin-2/q1") : right("berlin-2/q1"), right("seoul-1/q2"),

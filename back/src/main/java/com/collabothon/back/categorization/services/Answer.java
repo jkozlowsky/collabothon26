@@ -1,6 +1,7 @@
 package com.collabothon.back.categorization.services;
 
 import com.collabothon.back.categorization.consts.CategorizationConsts;
+import com.collabothon.back.categorization.dto.JevAnswerDto;
 import com.collabothon.back.categorization.enums.AnswerResult;
 import com.collabothon.back.categorization.enums.FocusArea;
 
@@ -19,6 +20,10 @@ public record Answer(
 			return AnswerResult.NOT_SURE;
 		}
 		return optionIndex == question.correctIndex() ? AnswerResult.CORRECT : AnswerResult.WRONG;
+	}
+
+	public JevAnswerDto toJev() {
+		return new JevAnswerDto(area(), question.lessonId(), question.topic(), question.concepts(), result());
 	}
 
 	public double score() {

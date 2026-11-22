@@ -5,7 +5,7 @@ import { appRoutes } from '@/test-utils/routes';
 let fetchMock: jest.Mock;
 
 const RESPONSES: [RegExp, unknown][] = [
-  [/\/profile$/, { userId: 'demo-user', goals: ['budget', 'scams'], onboardingCompleted: true }],
+  [/\/profile$/, { userId: 'demo-user', interests: ['seoul'], onboardingCompleted: true }],
   [/\/account$/, { userId: 'demo-user', firstName: 'Alex', lastName: 'Krause', avatar: 'm1' }],
   [
     /\/stats\?today=\d{4}-\d{2}-\d{2}$/,

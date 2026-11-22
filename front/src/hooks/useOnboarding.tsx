@@ -21,7 +21,7 @@ type OnboardingState = {
 
 const OnboardingContext = createContext<OnboardingState | null>(null);
 
-const EMPTY_ANSWERS: OnboardingAnswers = { goals: [] };
+const EMPTY_ANSWERS: OnboardingAnswers = { interests: [] };
 
 /** Profile writes run in order, so a reset's DELETE can never land after the next onboarding's PUT. */
 let profileWrites: Promise<unknown> = Promise.resolve();
@@ -39,7 +39,7 @@ function writeProfile(userId: string, init: RequestInit, failure: string) {
 function toAnswers(p: UserProfile): OnboardingAnswers {
   return {
     lifeStage: p.lifeStage ?? undefined,
-    goals: p.goals,
+    interests: p.interests,
     experience: p.experience ?? undefined,
   };
 }

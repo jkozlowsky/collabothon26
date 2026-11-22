@@ -10,18 +10,18 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -31,6 +31,7 @@ import org.springframework.core.NestedExceptionUtils;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -38,11 +39,11 @@ import com.collabothon.back.categorization.config.JevProperties;
 import com.collabothon.back.categorization.consts.JevConsts;
 import com.collabothon.back.categorization.dto.FactsDto;
 import com.collabothon.back.categorization.dto.JevAnswerDto;
+import com.collabothon.back.categorization.dto.JevInterestDto;
 import com.collabothon.back.categorization.dto.JevRequestDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
 import com.collabothon.back.categorization.dto.ProfileRangesDto;
 import com.collabothon.back.categorization.enums.FocusArea;
-import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.Role;
 import com.collabothon.back.categorization.enums.WireNames;
 
@@ -51,6 +52,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 @Service
@@ -68,16 +70,16 @@ public class JevClient {
 	private static final String QUESTIONS = """
 			{
 			  "role": {"type": "choice",
-			    "instructions": "Based on how this person describes their money habits (from not saving yet to planning ahead) and, when given, facts about their accounts, which learner level fits best?",
+			    "instructions": "Which learner level fits this person best, judging by the facts about their accounts in `facts` and their knowledge answers in `checkAnswers`, when present?",
 			    "criteria": {
-			      "novice": "Does not save yet or saves only now and then, and shows few healthy money habits such as regular saving or a cash buffer.",
-			      "intermediate": "Saves regularly or has a safety net, but does not invest yet or does not act on it consistently.",
-			      "advanced": "Saves and invests, or plans their finances ahead; habits such as regular saving support this."}},
-			  "focus_saving":     {"type": "noul", "instructions": "Would this person benefit most from learning about building an emergency fund and saving right now?"},
-			  "focus_debt":       {"type": "noul", "instructions": "Would this person benefit most from learning about avoiding overdrafts and expensive debt right now?"},
-			  "focus_investing":  {"type": "noul", "instructions": "Would this person benefit most from learning how investing works, for example funds and ETFs, right now?"},
-			  "focus_risk":       {"type": "noul", "instructions": "Would this person benefit most from learning about risk, diversification and protection right now?"},
-			  "focus_retirement": {"type": "noul", "instructions": "Would this person benefit most from learning about planning for retirement and the family's future right now?"}
+			      "novice": "Is starting out: has no habit of regular saving and no investments, and any knowledge answers show that basic money ideas are still new to them.",
+			      "intermediate": "Has some of the basics: saves regularly or invests but not both, or their knowledge answers are mixed or ahead of these habits.",
+			      "advanced": "Is past the basics: saves regularly and invests, and any knowledge answers show that they understand the ideas they were asked about."}},
+			  "focus_saving":     {"type": "noul", "instructions": "Would learning how to build an emergency fund help this person now?"},
+			  "focus_debt":       {"type": "noul", "instructions": "Would learning how to avoid expensive debt help this person now?"},
+			  "focus_investing":  {"type": "noul", "instructions": "Would learning how investing works help this person now?"},
+			  "focus_risk":       {"type": "noul", "instructions": "Would learning how to spread financial risk help this person now?"},
+			  "focus_retirement": {"type": "noul", "instructions": "Would learning how to plan for retirement help this person now?"}
 			}
 			""";
 
@@ -89,31 +91,18 @@ public class JevClient {
 			  "mastery_debt":      {"type": "noul", "instructions": "Do this person's borrowing answers, the entries of `answers` whose `area` is debt, show that they understand ideas such as instalments, card debt and the full cost of a loan?"},
 			  "mastery_investing": {"type": "noul", "instructions": "Do this person's investing answers, the entries of `answers` whose `area` is investing, show that they understand ideas such as market falls, borrowing to invest and spreading risk?"},
 			  "next": {"type": "choice",
-			    "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers` and when they might need their money in `profile.horizon`?",
+			    "instructions": "The next test question will come from one of these lessons. Which lesson would show best what this person still needs to learn, given their answers so far in `answers`, when they might need their money in `profile.horizon` (when given) and, when given, the topics they said are new to them in `interests`?",
 			    "criteria": {}},
 			  "first": {"type": "choice",
-			    "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given their goals in `goals`, when they might need their money in `profile.horizon` and, when given, the facts about their accounts in `facts`?",
+			    "instructions": "The first test question will come from one of these lessons. Which lesson's topic matters most for this person's situation, given when they might need their money in `profile.horizon` (when given) and, when given, the topics they said are new to them in `interests` and the facts about their accounts in `facts`?",
 			    "criteria": {}},
 			  "enough": {"type": "noul", "instructions": "Do the answers so far show clearly enough what this person already understands and what they should learn first?"}
 			}
 			""";
 
-	// Verbatim from docs/specs/F1b-quick-check.md ("Jev final call"); a gap question for each area that has a habit,
-	// `first_lesson.criteria` filled per request.
+	// Verbatim from docs/specs/F1b-quick-check.md ("Jev final call"); `first_lesson.criteria` is filled per request.
 	private static final String FINAL_QUESTIONS = """
 			{
-			  "gap_saving": {"type": "choice",
-			    "instructions": "How does this person's saving habit in `facts.savesRegularly` (true when they move money to savings every month) compare with their knowledge answers about saving, the entries of `checkAnswers` whose `area` is saving?",
-			    "criteria": {
-			      "habit_ahead": "They move money to savings every month, and at least one of their saving answers is wrong or not sure.",
-			      "knowledge_ahead": "Every one of their saving answers is correct, and they do not move money to savings every month.",
-			      "aligned": "The habit and the answers match: they move money to savings every month and every saving answer is correct, or they do not and at least one saving answer is wrong or not sure."}},
-			  "gap_investing": {"type": "choice",
-			    "instructions": "How does this person's investing habit in `facts.holdsInvestments` (true when they hold investment products) compare with their knowledge answers about investing, the entries of `checkAnswers` whose `area` is investing?",
-			    "criteria": {
-			      "habit_ahead": "They hold investment products, and at least one of their investing answers is wrong or not sure.",
-			      "knowledge_ahead": "Every one of their investing answers is correct, and they hold no investment products.",
-			      "aligned": "The habit and the answers match: they hold investment products and every investing answer is correct, or they hold none and at least one investing answer is wrong or not sure."}},
 			  "first_lesson": {"type": "choice",
 			    "instructions": "Which of these lessons should this person start with, given which ideas their knowledge answers in `checkAnswers` show they have not mastered yet?",
 			    "criteria": {}}
@@ -150,19 +139,15 @@ public class JevClient {
 		this.finalQuestions = (ObjectNode) json.readTree(FINAL_QUESTIONS);
 	}
 
-	public Optional<StepJudgement> step(ProfileRangesDto profile, List<String> goals, FactsDto facts,
+	public Optional<StepJudgement> step(ProfileRangesDto profile, List<JevInterestDto> interests, FactsDto facts,
 			List<JevAnswerDto> answers, List<FocusArea> answeredAreas, List<CheckLesson> lessons) {
 		Map<String, Object> state = new LinkedHashMap<>();
-		state.put("profile", profile);
-		state.put("goals", goals);
-		if (facts != null) {
-			state.put("facts", facts);
-		}
-		// Before the first answer there is nothing to rate, and an empty list would read as a signal.
+		putIfGiven(state, "profile", givenProfile(profile));
+		putIfGiven(state, "interests", interests);
+		putIfGiven(state, "facts", facts);
+		putIfGiven(state, "answers", answers);
+		// Before the first answer there is nothing to rate.
 		boolean first = answers.isEmpty();
-		if (!first) {
-			state.put("answers", answers);
-		}
 		ObjectNode asked = stepQuestions.objectNode();
 		answeredAreas.stream()
 			.map(area -> "mastery_" + area.wire())
@@ -170,7 +155,7 @@ public class JevClient {
 			.filter(stepQuestions::has)
 			.forEach(key -> asked.set(key, stepQuestions.get(key).deepCopy()));
 		if (lessons.size() >= JevConsts.MIN_CHOICE_LABELS) {
-			asked.set("next", lessonChoice(stepQuestions.get(first ? "first" : "next"), lessons));
+			asked.set("next", lessonChoice(stepQuestions.get(first ? "first" : "next"), lessons, Map.of()));
 		}
 		if (!first) {
 			asked.set("enough", stepQuestions.get("enough").deepCopy());
@@ -222,15 +207,11 @@ public class JevClient {
 			}
 		}
 		Double enough = asked.has("enough") ? probability(answers.path("enough").path("noul")) : Double.valueOf(0);
-		String next = null;
-		if (asked.has("next")) {
-			JevChoice<String> choice = choice(answers.path("next"), lessonsByLabel(lessons));
-			if (choice == null) {
-				return Optional.empty();
-			}
-			next = choice.value();
+		String next = asked.has("next") ? lessonId(answers.path("next"), lessons) : null;
+		if (enough == null || (asked.has("next") && next == null)) {
+			return Optional.empty();
 		}
-		return enough == null ? Optional.empty() : Optional.of(new StepJudgement(mastery, next, enough, elapsed));
+		return Optional.of(new StepJudgement(mastery, next, enough, elapsed));
 	}
 
 	private JsonNode post(JevRequestDto body) {
@@ -247,27 +228,24 @@ public class JevClient {
 	}
 
 	/** {@code quickCheck} null = the Quick check did not run, so the request is F1's exactly. */
-	public JevResult ask(OnboardingAnswersDto answers, FactsDto facts, JevQuickCheck quickCheck) {
+	public JevResult ask(OnboardingAnswersDto answers, List<JevInterestDto> interests, FactsDto facts,
+			JevQuickCheck quickCheck) {
 		if (!properties.callsJev()) {
 			return JevResult.SKIPPED;
 		}
 		Map<String, Object> state = new LinkedHashMap<>();
-		state.put("answers", answers);
-		if (facts != null) {
-			state.put("facts", facts);
-		}
+		putIfGiven(state, "answers", givenAnswers(answers));
+		putIfGiven(state, "interests", interests);
+		putIfGiven(state, "facts", facts);
 		ObjectNode asked = questions;
 		if (quickCheck != null) {
-			state.put("profile", quickCheck.profile());
-			state.put("goals", quickCheck.goals());
+			putIfGiven(state, "profile", givenProfile(quickCheck.profile()));
 			// F1 already names the onboarding answers `answers`, so the knowledge answers get their own key.
 			state.put("checkAnswers", quickCheck.answers());
 			asked = questions.deepCopy();
-			for (FocusArea area : quickCheck.gapAreas()) {
-				asked.set(gapKey(area), finalQuestions.get(gapKey(area)).deepCopy());
-			}
 			if (!quickCheck.lessons().isEmpty()) {
-				asked.set("first_lesson", lessonChoice(finalQuestions.get("first_lesson"), quickCheck.lessons()));
+				asked.set("first_lesson", lessonChoice(finalQuestions.get("first_lesson"), quickCheck.lessons(),
+						quickCheck.interestNotes()));
 			}
 		}
 		try {
@@ -296,32 +274,47 @@ public class JevClient {
 			.anyMatch(cause -> NOT_SENT.stream().anyMatch(type -> type.isInstance(cause)));
 	}
 
-	private static String gapKey(FocusArea area) {
-		return "gap_" + area.wire();
+	private static Map<String, Object> givenAnswers(OnboardingAnswersDto answers) {
+		Map<String, Object> given = new LinkedHashMap<>();
+		putIfGiven(given, "lifeStage", answers.lifeStage());
+		putIfGiven(given, "experience", answers.experience());
+		if (answers.skipped()) {
+			given.put("skipped", true);
+		}
+		return given;
 	}
 
-	/** Jev's option names for a gap: the enum names in lower case, with their underscores. */
-	private static Map<String, GapDirection> gapLabels() {
-		Map<String, GapDirection> labels = new LinkedHashMap<>();
-		for (GapDirection direction : GapDirection.values()) {
-			labels.put(direction.name().toLowerCase(Locale.ROOT), direction);
+	private static Map<String, Object> givenProfile(ProfileRangesDto profile) {
+		Map<String, Object> given = new LinkedHashMap<>();
+		if (profile != null) {
+			putIfGiven(given, "ageBand", profile.ageBand());
+			putIfGiven(given, "savingsCover", profile.savingsCover());
+			putIfGiven(given, "horizon", profile.horizon());
 		}
-		return labels;
+		return given;
+	}
+
+	// The model can read a null or empty field as a signal, so such a field is not sent.
+	private static void putIfGiven(Map<String, Object> state, String key, Object value) {
+		if (!ObjectUtils.isEmpty(value)) {
+			state.put(key, value);
+		}
 	}
 
 	/** A choice among lessons: each option is named by the lesson's topic and described by what the lesson covers. */
-	private static ObjectNode lessonChoice(JsonNode question, List<CheckLesson> lessons) {
+	private static ObjectNode lessonChoice(JsonNode question, List<CheckLesson> lessons, Map<String, String> notes) {
 		ObjectNode choice = (ObjectNode) question.deepCopy();
 		ObjectNode criteria = choice.putObject("criteria");
-		lessons.forEach(lesson -> criteria.put(lesson.label(), "%s. Covers: %s.".formatted(lesson.topic(),
-				String.join(", ", lesson.concepts()).replace('-', ' '))));
+		lessons.forEach(lesson -> {
+			ObjectNode option = criteria.putObject(lesson.label()).put("topic", lesson.topic());
+			ArrayNode concepts = option.putArray("concepts");
+			lesson.concepts().forEach(concept -> concepts.add(concept.replace('-', ' ')));
+			String note = notes.get(lesson.id());
+			if (note != null) {
+				option.put("personal_context", note);
+			}
+		});
 		return choice;
-	}
-
-	private static Map<String, String> lessonsByLabel(List<CheckLesson> lessons) {
-		Map<String, String> byLabel = new LinkedHashMap<>();
-		lessons.forEach(lesson -> byLabel.put(lesson.label(), lesson.id()));
-		return byLabel;
 	}
 
 	private static Optional<Judgement> parse(JsonNode response, JevQuickCheck quickCheck) {
@@ -329,53 +322,39 @@ public class JevClient {
 			return Optional.empty();
 		}
 		JsonNode answers = response.path("answers");
-		JevChoice<Role> role = choice(answers.path("role"), Role.values());
+		JevChoice<Role> role = choice(answers.path("role"), List.of(Role.values()), WireNames::of);
+		if (role == null) {
+			return Optional.empty();
+		}
 		Map<FocusArea, Double> noul = new EnumMap<>(FocusArea.class);
-		Map<String, Double> focus = new LinkedHashMap<>();
 		for (FocusArea area : FocusArea.values()) {
-			Double p = probability(answers.path(area.jevQuestion()).path("noul"));
+			Double p = probability(answers.path("focus_" + area.wire()).path("noul"));
 			if (p == null) {
 				return Optional.empty();
 			}
 			noul.put(area, p);
-			focus.put(area.wire(), p);
 		}
-		if (role == null) {
-			return Optional.empty();
-		}
-		Map<FocusArea, GapDirection> gaps = new EnumMap<>(FocusArea.class);
 		String firstLesson = null;
-		if (quickCheck != null) {
-			for (FocusArea area : quickCheck.gapAreas()) {
-				JevChoice<GapDirection> gap = choice(answers.path(gapKey(area)), gapLabels());
-				if (gap == null) {
-					return Optional.empty();
-				}
-				gaps.put(area, gap.value());
-			}
-			if (!quickCheck.lessons().isEmpty()) {
-				JevChoice<String> lesson = choice(answers.path("first_lesson"), lessonsByLabel(quickCheck.lessons()));
-				if (lesson == null) {
-					return Optional.empty();
-				}
-				firstLesson = lesson.value();
+		if (quickCheck != null && !quickCheck.lessons().isEmpty()) {
+			firstLesson = lessonId(answers.path("first_lesson"), quickCheck.lessons());
+			if (firstLesson == null) {
+				return Optional.empty();
 			}
 		}
 		JsonNode model = response.path("model");
 		boolean validModel = model.isString() && MODEL_ID.matcher(model.stringValue()).matches();
 		return Optional.of(new Judgement(role.value(), role.probabilities(), CategorizationRules.focusFromNoul(noul),
-				focus, validModel ? model.stringValue() : null, gaps, firstLesson));
+				QuickCheckRules.byWire(noul), validModel ? model.stringValue() : null, firstLesson));
 	}
 
-	private static <E extends Enum<E>> JevChoice<E> choice(JsonNode answer, E[] values) {
-		Map<String, E> byLabel = new LinkedHashMap<>();
-		for (E value : values) {
-			byLabel.put(WireNames.of(value), value);
-		}
-		return choice(answer, byLabel);
+	/** Null when the answer broke the contract. */
+	private static String lessonId(JsonNode answer, List<CheckLesson> lessons) {
+		JevChoice<CheckLesson> choice = choice(answer, lessons, CheckLesson::label);
+		return choice == null ? null : choice.value().id();
 	}
 
-	private static <T> JevChoice<T> choice(JsonNode answer, Map<String, T> byLabel) {
+	private static <T> JevChoice<T> choice(JsonNode answer, List<T> options, Function<T, String> labelOf) {
+		Map<String, T> byLabel = options.stream().collect(Collectors.toMap(labelOf, Function.identity()));
 		JsonNode label = answer.path("choice");
 		JsonNode probabilities = answer.path("probabilities");
 		if (!label.isString() || !byLabel.containsKey(label.stringValue()) || !probabilities.isObject()) {

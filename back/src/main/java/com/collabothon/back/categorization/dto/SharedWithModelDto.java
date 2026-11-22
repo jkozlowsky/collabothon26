@@ -6,7 +6,7 @@ import java.util.List;
 public record SharedWithModelDto(
 		FactsDto facts,
 		OnboardingAnswersDto answers,
-		List<String> goals,
+		List<String> interests,
 		ProfileRangesDto profile,
 		int answerCount,
 		int stepCallsMade

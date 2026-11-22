@@ -60,7 +60,7 @@ test('the spotlight dims around the feature and closes from its note', async () 
 
 beforeEach(() => {
   globalThis.fetch = jest.fn((url: string) => {
-    const body = url.endsWith('/profile') ? { userId: 'demo-user', goals: [], onboardingCompleted: true } : [];
+    const body = url.endsWith('/profile') ? { userId: 'demo-user', interests: [], onboardingCompleted: true } : [];
     return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
   }) as jest.Mock;
 });

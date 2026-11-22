@@ -142,42 +142,6 @@ export function IconTile({ icon, active, size = 44 }: { icon: IconName; active?:
   );
 }
 
-type OptionCardProps = {
-  title: string;
-  subtitle: string;
-  icon: IconName;
-  selected: boolean;
-  onPress: () => void;
-  testID?: string;
-};
-
-export function OptionCard({ title, subtitle, icon, selected, onPress, testID }: OptionCardProps) {
-  return (
-    <Tappable
-      testID={testID}
-      accessibilityRole="radio"
-      aria-checked={selected}
-      onPress={onPress}
-      haptic="selection"
-      pressedScale={0.98}
-      style={[styles.option, selected && styles.optionSelected, motion.colors]}
-    >
-      <IconTile icon={icon} active={selected} />
-      <View style={styles.optionText}>
-        <Text style={styles.optionTitle}>{title}</Text>
-        <Text style={styles.optionSubtitle}>{subtitle}</Text>
-      </View>
-      <Animated.View style={[styles.radio, selected && styles.radioSelected, motion.colors]}>
-        {selected && (
-          <Animated.View style={motion.pop}>
-            <Feather name="check" size={14} color="#fff" />
-          </Animated.View>
-        )}
-      </Animated.View>
-    </Tappable>
-  );
-}
-
 type StepHeaderProps = {
   /** The control on the left: `BackButton` in the survey; the quick check has none. */
   left?: ReactNode;
@@ -308,30 +272,6 @@ const styles = StyleSheet.create({
   buttonDisabled: { backgroundColor: colors.borderDefault },
   buttonLabel: { fontFamily: fonts.semiBold, fontSize: 15 },
   tile: { borderRadius: radii.tile, alignItems: 'center', justifyContent: 'center' },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    padding: spacing.lg - 1,
-    borderRadius: radii.card,
-    borderWidth: 2,
-    borderColor: colors.borderDefault,
-    backgroundColor: colors.bgSurface,
-  },
-  optionSelected: { backgroundColor: colors.brandAccentSoft, borderColor: colors.brandPrimary },
-  optionText: { flex: 1, gap: 2 },
-  optionTitle: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.textPrimary },
-  optionSubtitle: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
-  radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.borderStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioSelected: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
   stepHeader: { gap: spacing.lg },
   stepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   back: {

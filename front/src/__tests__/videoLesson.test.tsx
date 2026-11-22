@@ -72,7 +72,7 @@ beforeEach(() => {
     if (init?.method === 'POST') posted = JSON.parse(String(init.body));
     if (init?.method === 'PUT') modes.push(JSON.parse(String(init.body)).mode);
     const body = url.endsWith('/profile')
-      ? { userId: 'demo-user', goals: [], onboardingCompleted: true }
+      ? { userId: 'demo-user', interests: [], onboardingCompleted: true }
       : url.includes('/result')
         ? { xpAwarded: 50, firstCompletion: true, totalXp: 50, next: 'seoul-2' }
         : url.includes('/api/lessons/seoul-1')

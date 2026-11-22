@@ -8,7 +8,7 @@ import * as theme from '@/constants/theme';
 import { colors, radii, spacing } from '@/constants/theme';
 
 type Props = {
-  /** What the account shows in plain words, exactly what a consent shares. */
+  /** What the account shows in plain words. */
   facts: string[];
 };
 
@@ -26,7 +26,7 @@ function Lines({ title, lines, icon, color, testID }: { title: string; lines: st
   );
 }
 
-/** The one consent screen: what the account already shows and what a consent shares. */
+/** The one consent screen: what the account already shows, and the notice of what is shared and kept. */
 export function ConsentCard({ facts }: Props) {
   return (
     <>
@@ -38,14 +38,10 @@ export function ConsentCard({ facts }: Props) {
         Atlas reads a few summaries from your account to build your learning path. Learn needs them to work.
       </Text>
       <Lines title="Your account already shows" lines={facts} icon="check" color={colors.feedbackSuccess} testID="consent-facts" />
-      <View style={styles.line}>
-        <Feather name="lock" size={GLYPH} color={colors.brandPrimary} />
-        <Text style={styles.promise}>Only these summaries are shared, never your transactions.</Text>
-      </View>
       <Text style={type.label} testID="consent-notice">
-        Your answers, the ranges you pick and ranges from your accounts are checked by
-        an external AI provider to pick your first lesson. Exact account numbers never leave this phone. We keep the
-        result and the ranges. Your choices are checked by an AI service.
+        Your answers, the topics you pick and ranges from your accounts are checked by an external AI provider to pick
+        your first lesson. Exact account numbers never leave this phone. We keep the result, your topics and the ranges.
+        Your choices are checked by an AI service.
       </Text>
     </>
   );
@@ -62,5 +58,4 @@ const styles = StyleSheet.create({
   },
   line: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   lineText: { ...theme.type.bodyDefault, flex: 1 },
-  promise: { ...theme.type.labelStrong, color: colors.brandPrimary, flex: 1 },
 });

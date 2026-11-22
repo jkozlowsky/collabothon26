@@ -117,10 +117,8 @@ async function onboard(page: Page, rec: ClipRecorder): Promise<boolean> {
   await expect(page.getByTestId('onboarding-consent')).toBeVisible();
   await beat(page, 3000);
   await tap(page, 'consent-accept');
-  // What the money is for, and when: a flat in 2–3 years → "1–5 years".
-  await tap(page, 'option-home', 1000);
-  await tap(page, 'onboarding-continue');
-  await tap(page, 'option-1-5y', 1000);
+  // What to learn first: the Berlin take starts from Saving.
+  await tap(page, 'interest-saving', 1000);
   await tap(page, 'onboarding-continue');
 
   // The Quick check: after each answer the right one shows with the lesson's explanation.

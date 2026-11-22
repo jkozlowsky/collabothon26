@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import OnboardingScreen from '@/app/onboarding';
 import { BankProvider } from '@/hooks/useBank';
+import * as useOnboardingModule from '@/hooks/useOnboarding';
 import { OnboardingProvider } from '@/hooks/useOnboarding';
 import * as personasModule from '@/lib/personas';
 import { CurrentUserContext } from '@/lib/user';
@@ -22,7 +23,7 @@ describe('Onboarding and Quick check hints', () => {
       json: async () => ({
         userId: 'demo-user',
         lifeStage: null,
-        goals: [],
+        interests: [],
         experience: null,
         onboardingCompleted: false,
       }),
@@ -62,14 +63,24 @@ describe('Onboarding and Quick check hints', () => {
     expect(screen.getByTestId('onboarding-welcome')).toBeTruthy();
   });
 
-  test('Persona with hints has purpose and horizon preselected in onboarding', async () => {
+  test('a hint with one id of an area selects its chip and saves the whole area; an id with no chip is ignored', async () => {
     const mockPersona: personasModule.Persona = {
       userId: 'demo-daniel',
       bankSeed: personasModule.PERSONAS['demo-daniel'].bankSeed,
-      hints: { purpose: 'growing', horizon: '5y+' },
+      hints: { interests: ['seoul', 'mumbai', 'gone'] },
     };
 
     jest.spyOn(personasModule, 'personaFor').mockReturnValue(mockPersona);
+    const profile = await fetchMock();
+    const story = ([id, area]: string[]) => ({ id, area, category: id, topic: id, icon: 'shield', status: 'available' });
+    const stories = [['seoul', 'Risk'], ['berlin', 'Saving'], ['tokyo', 'Investing'], ['mumbai', 'Investing']].map(story);
+    const complete = jest.fn().mockResolvedValue(undefined);
+    jest.spyOn(useOnboardingModule, 'useOnboarding').mockReturnValue({ complete, done: false } as never);
+    fetchMock.mockImplementation((url: string) =>
+      url.includes('/api/stories')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => stories })
+        : Promise.resolve(profile),
+    );
 
     await render(
       <SafeAreaProvider initialMetrics={metrics}>
@@ -97,10 +108,13 @@ describe('Onboarding and Quick check hints', () => {
     for (const id of ['onboarding-start', 'onboarding-next', 'onboarding-challenge-next', 'consent-accept']) {
       await fireEvent.press(await screen.findByTestId(id));
     }
-    expect(await screen.findByTestId('option-growing')).toBeChecked();
-    expect(screen.getByTestId('option-home')).not.toBeChecked();
-
+    expect(await screen.findByTestId('interest-risk')).toBeChecked();
+    expect(screen.getByTestId('interest-investing')).toBeChecked();
+    expect(screen.getByTestId('interest-saving')).not.toBeChecked();
+    expect(screen.queryByTestId('interest-gone')).toBeNull();
+    expect(screen.getByTestId('onboarding-continue')).toBeEnabled();
     await fireEvent.press(screen.getByTestId('onboarding-continue'));
-    expect(await screen.findByTestId('option-5y+')).toBeChecked();
+    await fireEvent.press(await screen.findByTestId('check-start'));
+    expect(complete.mock.calls[0][0]).toEqual({ interests: ['seoul', 'tokyo', 'mumbai'] });
   });
 });

@@ -19,4 +19,10 @@ public record CheckQuestion(
 		List<String> options,
 		int correctIndex,
 		String explanation
-) {}
+) {
+
+	public CheckLesson lesson() {
+		return new CheckLesson(lessonId, storyId, area, topic, concepts);
+	}
+
+}

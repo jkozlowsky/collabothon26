@@ -7,7 +7,7 @@ const ONBOARDING_URL = `${PROFILE_URL}/onboarding`;
 export type SavedProfile = {
   userId: string;
   lifeStage: string | null;
-  goals: string[];
+  interests: string[];
   experience: string | null;
   onboardingCompleted: boolean;
   onboardingSkipped: boolean;
@@ -22,7 +22,7 @@ export async function resetOnboarding(request: APIRequestContext) {
 
 /** Mark onboarding as skipped through the API, for specs that start on the map and don't test onboarding. */
 export async function skipOnboarding(request: APIRequestContext) {
-  const res = await request.put(ONBOARDING_URL, { data: { goals: [], skipped: true } });
+  const res = await request.put(ONBOARDING_URL, { data: { interests: [], skipped: true } });
   expect(res.ok()).toBe(true);
 }
 
@@ -78,15 +78,14 @@ export async function goToConsent(page: Page) {
   await expect(page.getByTestId('onboarding-consent')).toBeVisible();
 }
 
-export type Survey = { purpose?: string; horizon?: string };
+/** Area slugs to pick on the interests screen; each saves the story ids of its area. */
+export type Survey = { interests?: string[] };
 
-/** Agrees on the consent screen and answers the two questions, up to "Let's see what you already know". */
-export async function answerFromConsent(page: Page, { purpose = 'home', horizon = '1-5y' }: Survey = {}) {
+/** Agrees on the consent screen and picks the interests, up to "Let's see what you already know". */
+export async function answerFromConsent(page: Page, { interests = ['saving'] }: Survey = {}) {
   await tap(page, 'consent-accept');
-  for (const pick of [`option-${purpose}`, `option-${horizon}`]) {
-    await tap(page, pick);
-    await tap(page, 'onboarding-continue');
-  }
+  for (const id of interests) await tap(page, `interest-${id}`);
+  await tap(page, 'onboarding-continue');
   await expect(page.getByTestId('onboarding-check-intro')).toBeVisible();
 }
 

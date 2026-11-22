@@ -18,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.restclient.test.autoconfigure.AutoConfigureMockRestServiceServer;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -77,7 +79,7 @@ class CategorizationWithoutKeyTests {
 	@Test
 	void fallsBackWithoutCallingJev() throws Exception {
 		mvc.perform(put("/api/users/tom/profile/onboarding").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"goals\": [\"stocks-etfs\"], \"experience\": \"occasional\", \"skipped\": false}"))
+			.content("{\"interests\": [\"tokyo\"], \"experience\": \"occasional\", \"skipped\": false}"))
 			.andExpect(status().isOk());
 
 		mvc.perform(post("/api/users/tom/categorization").contentType(MediaType.APPLICATION_JSON)
@@ -102,7 +104,7 @@ class CategorizationWithoutKeyTests {
 	void aStepWithoutAKeyRunsOnTheRuleAndSaysSo() throws Exception {
 		String userId = "keyless-" + UUID.randomUUID();
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
-			.content("{\"goals\": [\"start-saving\"], \"experience\": \"occasional\", \"skipped\": false}"))
+			.content("{\"interests\": [\"berlin\"], \"experience\": \"occasional\", \"skipped\": false}"))
 			.andExpect(status().isOk());
 		jev.expect(ExpectedCount.never(), requestTo("https://api.typesafe.ai/v1/systemone"));
 
@@ -125,9 +127,9 @@ class CategorizationWithoutKeyTests {
 			.andExpect(jsonPath("$.mastery.saving").value(0.85))
 			.andExpect(jsonPath("$.mastery.debt").value(0.85))
 			.andExpect(jsonPath("$.mastery.investing").value(0.85))
-			// Every area is Solid, so the path is the first story with a lesson left.
+			// Every area is Solid, so the path is the first picked story with a lesson left.
 			.andExpect(jsonPath("$.readyForNext").value(true))
-			.andExpect(jsonPath("$.startLesson.lessonId").value("seoul-1"))
+			.andExpect(jsonPath("$.startLesson.lessonId").value("berlin-1"))
 			.andExpect(jsonPath("$.gaps").isEmpty());
 
 		assertEquals(List.of("berlin-1/q1", "sao-paulo-1/q1", "seoul-1/q1", "berlin-2/q1", "sao-paulo-2/q1", "seoul-2/q1"),
@@ -199,18 +201,83 @@ class CategorizationWithoutKeyTests {
 		assertEquals(List.of("berlin-1/q1", "berlin-1/q2", "berlin-1/q3", "berlin-2/q1"), asked);
 	}
 
+	@Test
+	void thePickedPathIsFirstOrSecondOnARulesRunAndEveryAreaIsStillAskedAbout() throws Exception {
+		String mumbai = "\"mumbai\"";
+		List<String> asked = new ArrayList<>();
+
+		// Investing is weakest, and within it the picked Gold path is asked about and started first.
+		play(ALEX, mumbai, asked, false, true, true, true)
+			.andExpect(jsonPath("$.startLesson.storyId").value("mumbai"))
+			.andExpect(jsonPath("$.pathStoryIds[0]").value("mumbai"))
+			.andExpect(jsonPath("$.pathStoryIds[1]").value("seoul"));
+		assertEquals(List.of("mumbai-1/q2", "mumbai-1/q3", "berlin-1/q1", "sao-paulo-1/q1"), asked);
+
+		// Saving is weakest.
+		play(NO_FACTS, mumbai, new ArrayList<>(), true, false, true, true)
+			.andExpect(jsonPath("$.startLesson.storyId").value("berlin"))
+			.andExpect(jsonPath("$.pathStoryIds[1]").value("mumbai"));
+
+		// Every area is Solid.
+		play(ALEX, mumbai, new ArrayList<>(), true, true, true, true, true, true)
+			.andExpect(jsonPath("$.readyForNext").value(true))
+			.andExpect(jsonPath("$.pathStoryIds[0]").value("mumbai"));
+
+		// The picked path is the weakest one, so it comes first.
+		play(ALEX, "\"berlin\"", new ArrayList<>(), false, true, true, true)
+			.andExpect(jsonPath("$.pathStoryIds[0]").value("berlin"));
+	}
+
+	// What each chip saves, then what the chips preselected for each persona save. Alex picks nothing: as before C25.
+	@ParameterizedTest(name = "{0}: first question {2}, start {3} all right, {4} all wrong, {5} without a check")
+	@CsvSource({ "Risk, seoul, seoul, seoul, seoul, seoul",
+			"Saving, berlin nairobi, berlin, berlin, berlin, berlin",
+			"Borrowing, sao-paulo, sao-paulo, sao-paulo, sao-paulo, sao-paulo",
+			"Investing, tokyo mumbai, tokyo, tokyo, tokyo, tokyo",
+			"Money basics, buenos-aires, buenos-aires, buenos-aires, buenos-aires, buenos-aires",
+			"Daniel, seoul tokyo mumbai, seoul, seoul, seoul, seoul",
+			"Elena, berlin nairobi buenos-aires, berlin, berlin, berlin, berlin",
+			"Alex, '', berlin, seoul, berlin, sao-paulo" })
+	void thePickedAreaOpensTheCheckAndStartsThePath(String who, String picked, String first, String allRight,
+			String allWrong, String noCheck) throws Exception {
+		String interests = picked.isEmpty() ? "" : "\"" + picked.replace(" ", "\", \"") + "\"";
+		List<String> asked = new ArrayList<>();
+
+		play(ALEX, interests, asked, true, true, true, true, true, true)
+			.andExpect(jsonPath("$.startLesson.storyId").value(allRight));
+		assertTrue(asked.getFirst().startsWith(first + "-"), asked.toString());
+		play(ALEX, interests, new ArrayList<>(), false, false, false, false)
+			.andExpect(jsonPath("$.startLesson.storyId").value(allWrong));
+		// His loan puts borrowing first in the judged focus; a pick still comes before it.
+		withoutCheck(ALEX, interests).andExpect(jsonPath("$.startLesson.storyId").value(noCheck))
+			.andExpect(jsonPath("$.startLesson.area").isNotEmpty());
+	}
+
+	private ResultActions withoutCheck(String account, String interests) throws Exception {
+		String userId = "no-check-" + UUID.randomUUID();
+		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
+			.content("{\"interests\": [%s], \"skipped\": false}".formatted(interests)))
+			.andExpect(status().isOk());
+		return mvc.perform(post("/api/users/{id}/categorization", userId).contentType(MediaType.APPLICATION_JSON)
+			.content("{%s, \"useRules\": true}".formatted(account))).andExpect(status().isOk());
+	}
+
 	private ResultActions play(List<String> asked, boolean... right) throws Exception {
 		return play(ALEX, asked, right);
 	}
 
 	/**
-	 * Plays the Quick check on the rule (saving goals, money needed in 1-5 years) until it is done,
+	 * Plays the Quick check on the rule (by default two saving paths picked; money needed in 1-5 years) until it is done,
 	 * answering question i right or wrong as {@code right[i]} says, then categorizes.
 	 */
 	private ResultActions play(String account, List<String> asked, boolean... right) throws Exception {
+		return play(account, "\"berlin\", \"buenos-aires\"", asked, right);
+	}
+
+	private ResultActions play(String account, String interests, List<String> asked, boolean... right) throws Exception {
 		String userId = "run-" + UUID.randomUUID();
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
-			.content("{\"goals\": [\"start-saving\", \"inflation\"], \"skipped\": false}"))
+			.content("{\"interests\": [%s], \"skipped\": false}".formatted(interests)))
 			.andExpect(status().isOk());
 		String pool = mvc.perform(get("/api/check-questions")).andReturn().getResponse().getContentAsString();
 		List<String> history = new ArrayList<>();
@@ -252,7 +319,7 @@ class CategorizationWithoutKeyTests {
 	void aDoubleTapOnCategorizeKeepsOneResultAndFailsNothing() throws Exception {
 		String userId = "tap-" + UUID.randomUUID();
 		mvc.perform(put("/api/users/{id}/profile/onboarding", userId).contentType(MediaType.APPLICATION_JSON)
-			.content("{\"goals\": [\"stocks-etfs\"], \"experience\": \"occasional\", \"skipped\": false}"))
+			.content("{\"interests\": [\"tokyo\"], \"experience\": \"occasional\", \"skipped\": false}"))
 			.andExpect(status().isOk());
 
 		int second = Race.secondDuringFirst(tx, () -> categorize(userId), () -> categorize(userId));

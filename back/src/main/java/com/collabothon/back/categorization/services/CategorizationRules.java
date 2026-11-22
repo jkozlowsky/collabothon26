@@ -65,10 +65,10 @@ final class CategorizationRules {
 	 * is the role the Quick check showed for a user who declared no experience, null otherwise.
 	 */
 	static Judgement fallback(OnboardingAnswersDto a, FactsDto f, LifeStage lifeStage, String savingsCover,
-			Role measured) {
+			Role measured, List<Story> stories) {
 		Role role = measured != null ? measured : fallbackRole(a, f);
-		return new Judgement(role, Map.of(), fallbackFocus(a, f, role, lifeStage, savingsCover), Map.of(), null,
-				Map.of(), null);
+		return new Judgement(role, Map.of(), fallbackFocus(a, f, role, lifeStage, savingsCover, stories), Map.of(), null,
+				null);
 	}
 
 	/** The declaration decides; facts only lift someone who saves now and then but does so every month. */
@@ -83,7 +83,7 @@ final class CategorizationRules {
 	}
 
 	static List<FocusArea> fallbackFocus(OnboardingAnswersDto a, FactsDto f, Role role, LifeStage lifeStage,
-			String savingsCover) {
+			String savingsCover, List<Story> stories) {
 		Set<FocusArea> areas = new LinkedHashSet<>();
 		if (f != null) {
 			if (f.inOverdraft() || f.hasLoan()) {
@@ -105,7 +105,7 @@ final class CategorizationRules {
 		if (role == Role.NOVICE) {
 			areas.add(FocusArea.RISK);
 		}
-		areas.addAll(FocusArea.fromGoals(a.goals()));
+		areas.addAll(FocusArea.fromInterests(a.interests(), stories));
 		return areas.isEmpty() ? List.of(FocusArea.SAVING) : List.copyOf(areas);
 	}
 
@@ -175,14 +175,14 @@ final class CategorizationRules {
 		return lines;
 	}
 
-	static List<String> focusBecause(List<FocusArea> areas, OnboardingAnswersDto a, FactsDto f) {
-		List<FocusArea> goals = FocusArea.fromGoals(a.goals());
+	static List<String> focusBecause(List<FocusArea> areas, OnboardingAnswersDto a, FactsDto f, List<Story> stories) {
+		List<Story> picked = Story.picked(a.interests(), stories);
 		Set<String> lines = new LinkedHashSet<>();
 		for (FocusArea area : areas) {
 			List<String> own = supportingLines(area, a, f);
-			if (goals.contains(area)) {
-				own.add("You picked " + area.wire() + " as a goal.");
-			}
+			picked.stream()
+				.filter(story -> FocusArea.ofStoryArea(story.area()) == area)
+				.forEach(story -> own.add("You said " + story.area() + " is new to you."));
 			lines.addAll(own.isEmpty() ? List.of(NEUTRAL_LINE) : own);
 		}
 		return List.copyOf(lines);

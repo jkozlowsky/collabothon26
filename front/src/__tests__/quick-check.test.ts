@@ -1,10 +1,8 @@
 import { seedAccount } from '@/lib/bank/seed';
-import { PURPOSES } from '@/constants/onboarding';
 import { FEEDBACK } from '@/constants/quickCheck';
 import { ageBandOf, ageLabel } from '@/lib/categorization';
-import { answerCounts, feedbackFor, fetchCheckQuestions, levelOf, plainText, savingForLine } from '@/lib/quickCheck';
+import { feedbackFor, fetchCheckQuestions, plainText } from '@/lib/quickCheck';
 import { POOL } from '@/test-utils/checkPool';
-import type { HistoryEntry } from '@/types/quickCheck';
 
 test('pool items the front cannot use are skipped and a repeated id keeps its first item', async () => {
   const good = POOL[0];
@@ -39,23 +37,6 @@ test('pool items the front cannot use are skipped and a repeated id keeps its fi
   expect(await fetchCheckQuestions(new AbortController().signal)).toEqual([]);
 });
 
-const entry = (questionId: string, optionIndex: number | null): HistoryEntry => ({ questionId, optionIndex });
-
-test('answers are counted per area, "Not sure" included', () => {
-  const history = [entry('berlin-1/q1', 0), entry('seoul-1/q1', null), entry('berlin-2/q1', 0), entry('sao-paulo-1/q1', 1)];
-  expect(answerCounts(history, POOL)).toEqual({ saving: 2, investing: 1, debt: 1 });
-});
-
-test('levels: no answer, under 0.4, up to 0.75, and above 0.75 only with two answers', () => {
-  expect(levelOf(null, 0)).toBe('none');
-  expect(levelOf(undefined, 0)).toBe('none');
-  expect(levelOf(0.39, 3)).toBe('starting');
-  expect(levelOf(0.4, 1)).toBe('building');
-  expect(levelOf(0.75, 3)).toBe('building');
-  expect(levelOf(0.76, 1)).toBe('building');
-  expect(levelOf(0.76, 2)).toBe('solid');
-});
-
 test('the feedback is right, wrong or not sure, each with the question\'s explanation', () => {
   const q = POOL.find((item) => item.id === 'berlin-1/q2')!;
   const wrong = q.correctIndex + 1;
@@ -75,25 +56,6 @@ test('glossary markup in an explanation reads as plain words', () => {
   const marked = POOL.find((item) => item.id === 'berlin-1/q1')!;
   expect(feedbackFor(null, marked).body).toMatch(/^inflation is an average over a basket\./);
   for (const q of POOL) expect(feedbackFor(null, q).body).not.toContain('[[');
-});
-
-test('each purpose is saved as the goals of its area', () => {
-  expect(Object.fromEntries(PURPOSES.map((p) => [p.title, p.goals]))).toEqual({
-    'A home of my own': ['start-saving', 'inflation'],
-    'A safety net': ['emergency-fund'],
-    Retirement: ['retirement'],
-    'Growing it long term': ['start-investing'],
-    'No plan yet': [],
-  });
-});
-
-test('the summary line names the purpose and, when known, the time frame', () => {
-  expect(savingForLine('A home of my own', '1-5y')).toBe('Saving for: A home of my own · needed in 1–5 years');
-  expect(savingForLine('A safety net', 'within-1y')).toBe('Saving for: A safety net · needed within a year');
-  expect(savingForLine('Retirement', '5y+')).toBe('Saving for: Retirement · needed in 5+ years');
-  expect(savingForLine('Retirement', 'not-sure')).toBe('Saving for: Retirement');
-  expect(savingForLine('Retirement', null)).toBe('Saving for: Retirement');
-  expect(savingForLine(null, '5y+')).toBeUndefined();
 });
 
 test('the age band is computed from the owner\'s age', () => {

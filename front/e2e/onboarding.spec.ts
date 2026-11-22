@@ -37,8 +37,10 @@ test('the welcome screen introduces Atlas, and the map and duel slides lead to t
   await expect(page.getByText('Learn needs them to work.')).toBeVisible();
   await expect(page.getByTestId('consent-facts')).toContainText('Your account already shows');
   await expect(page.getByTestId('consent-facts')).toContainText('Age 26–40');
-  await expect(page.getByText('Only these summaries are shared, never your transactions.')).toBeVisible();
-  await expect(page.getByTestId('consent-notice')).toContainText('Your choices are checked by an AI service.');
+  await expect(page.getByText('Only these summaries')).toHaveCount(0);
+  await expect(page.getByTestId('consent-notice')).toHaveText(
+    'Your answers, the topics you pick and ranges from your accounts are checked by an external AI provider to pick your first lesson. Exact account numbers never leave this phone. We keep the result, your topics and the ranges. Your choices are checked by an AI service.',
+  );
   await expect(page.getByTestId('consent-accept')).toHaveText('Use my account data');
   await expect(page.getByTestId('consent-not-now')).toHaveText('Not now');
   await expect(page.getByTestId('consent-decline')).toHaveCount(0);
@@ -55,22 +57,24 @@ test('"Not now" on the consent screen returns to the bank and saves nothing; Lea
   await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
 });
 
-test('two questions lead to the quick check intro, with no way to skip; the purpose is saved as goals', async ({ page, request }) => {
+test('one question leads to the quick check intro, with no way to skip; the picked paths are saved as interests', async ({ page, request }) => {
   await openApp(page);
   await goToConsent(page);
   await tap(page, 'consent-accept');
 
-  await expect(page.getByText('Step 1 of 2')).toBeVisible();
-  await expect(page.getByText('What are you saving for?')).toBeVisible();
+  await expect(page.getByText('What would you like to learn?')).toBeVisible();
+  await expect(page.getByText(/^Step \d/)).toHaveCount(0);
   await expect(page.getByTestId('onboarding-skip')).toHaveCount(0);
+  await expect(page.getByTestId('interest-saving')).toBeVisible();
   await expectDisabled(page, 'onboarding-continue');
-  await tap(page, 'option-home');
+  await tap(page, 'interest-risk');
+  await tap(page, 'interest-saving');
   await expectDisabled(page, 'onboarding-continue', false);
-  await tap(page, 'onboarding-continue');
-
-  await expect(page.getByText('Step 2 of 2')).toBeVisible();
-  await expectDisabled(page, 'onboarding-continue');
-  await tap(page, 'option-1-5y');
+  await tap(page, 'interest-not-sure');
+  await expect(page.getByTestId('interest-risk')).toHaveAttribute('aria-checked', 'false');
+  await tap(page, 'interest-saving');
+  await expect(page.getByTestId('interest-not-sure')).toHaveAttribute('aria-checked', 'false');
+  await tap(page, 'interest-risk');
   await tap(page, 'onboarding-continue');
 
   await expect(page.getByTestId('onboarding-check-intro')).toBeVisible();
@@ -81,11 +85,10 @@ test('two questions lead to the quick check intro, with no way to skip; the purp
   await expect(page.getByTestId('check-skip')).toHaveCount(0);
   // openApp serves an empty question bank, so the test is left out and the path is built at once.
   await tap(page, 'check-start');
-  await expect(page.getByTestId('summary-saving-for')).toHaveText('Saving for: A home of my own · needed in 1–5 years', { timeout: 15_000 });
   await passSummary(page);
 
   const profile = await waitForCompletedOnboarding(request);
-  expect(profile).toMatchObject({ lifeStage: null, goals: ['start-saving', 'inflation'], experience: null, onboardingSkipped: false });
+  expect(profile).toMatchObject({ lifeStage: null, interests: ['berlin', 'nairobi', 'seoul'], experience: null, onboardingSkipped: false });
   const categorization = await (await request.get('/api/users/demo-user/categorization')).json();
   expect(categorization).toMatchObject({ consent: true, bankData: true });
 
@@ -102,12 +105,9 @@ test('the back arrow steps back through every screen, keeping answers', async ({
   await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
 
   await answerSurvey(page);
-  for (const step of ['horizon', 'purpose']) {
-    await tap(page, 'onboarding-back');
-    await expect(page.getByTestId(`onboarding-${step}`)).toBeVisible();
-  }
-  await expect(page.getByText('Step 1 of 2')).toBeVisible();
-  await expect(page.getByTestId('option-home')).toHaveAttribute('aria-checked', 'true');
+  await tap(page, 'onboarding-back');
+  await expect(page.getByTestId('onboarding-interests')).toBeVisible();
+  await expect(page.getByTestId('interest-saving')).toHaveAttribute('aria-checked', 'true');
   await tap(page, 'onboarding-back');
   await expect(page.getByTestId('onboarding-consent')).toBeVisible();
 });
@@ -123,7 +123,7 @@ test('"Restart onboarding" on Profile clears the answers and the flag; onboardin
   // Restart goes back to the bank; the next Learn tap shows onboarding again.
   await expect(page.getByTestId('screen-overview')).toBeVisible();
   await expect.poll(async () => (await getProfile(request)).onboardingCompleted).toBe(false);
-  expect((await getProfile(request)).goals).toEqual([]);
+  expect((await getProfile(request)).interests).toEqual([]);
   await tap(page, 'nav-learn');
   await expect(page.getByTestId('onboarding-welcome')).toBeVisible();
 

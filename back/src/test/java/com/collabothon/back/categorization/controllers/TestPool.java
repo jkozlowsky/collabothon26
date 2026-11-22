@@ -37,8 +37,10 @@ final class TestPool {
 		return topic(lessonId).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "_").replaceAll("^_|_$", "");
 	}
 
-	static String criterion(String lessonId) {
-		return "%s. Covers: %s.".formatted(topic(lessonId), String.join(", ", concepts(lessonId)).replace('-', ' '));
+	static ObjectNode criterion(String lessonId) {
+		ObjectNode criterion = JSON.createObjectNode().put("topic", topic(lessonId));
+		criterion.set("concepts", JSON.valueToTree(concepts(lessonId).stream().map(c -> c.replace('-', ' ')).toList()));
+		return criterion;
 	}
 
 	static String topic(String lessonId) {
@@ -62,6 +64,19 @@ final class TestPool {
 		return answer.toString();
 	}
 
+	/** A picked path as the Jev state carries it. */
+	static String interest(String storyId) {
+		for (JsonNode story : read("/content/stories.json")) {
+			if (story.path("id").asString().equals(storyId)) {
+				return JSON.createObjectNode()
+					.put("category", story.path("category").asString())
+					.put("topic", story.path("topic").asString())
+					.toString();
+			}
+		}
+		throw new IllegalArgumentException(storyId);
+	}
+
 	private static String entry(String questionId, Integer optionIndex) {
 		return "{\"questionId\": \"%s\", \"optionIndex\": %s}".formatted(questionId, optionIndex);
 	}
@@ -77,7 +92,11 @@ final class TestPool {
 	}
 
 	private static JsonNode lesson(String lessonId) {
-		try (InputStream in = TestPool.class.getResourceAsStream("/content/lessons/" + lessonId + ".json")) {
+		return read("/content/lessons/" + lessonId + ".json");
+	}
+
+	private static JsonNode read(String resource) {
+		try (InputStream in = TestPool.class.getResourceAsStream(resource)) {
 			return JSON.readTree(in);
 		}
 		catch (IOException e) {

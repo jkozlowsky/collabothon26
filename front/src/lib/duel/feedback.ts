@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { createAudioPlayer } from 'expo-audio';
 
-export type SoundEffect = 'correct' | 'wrong' | 'win' | 'level-up' | 'rank-up';
+export type SoundEffect = 'correct' | 'wrong' | 'win' | 'level-up' | 'rank-up' | 'firework';
 export type HapticKind = 'success' | 'error' | 'light';
 
 const SOUND_ASSETS: Record<SoundEffect, number> = {
@@ -11,6 +11,7 @@ const SOUND_ASSETS: Record<SoundEffect, number> = {
   win: require('../../../assets/sounds/win.wav'),
   'level-up': require('../../../assets/sounds/level-up.wav'),
   'rank-up': require('../../../assets/sounds/rank-up.wav'),
+  firework: require('../../../assets/sounds/firework.wav'),
 };
 
 type AudioPlayerInstance = {

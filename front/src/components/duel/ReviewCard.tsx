@@ -1,10 +1,19 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
+import { Icon } from '@/components/bank/Icon';
 import { Tappable } from '@/components/onboarding/ui';
-import { colors, elevation, radii, spacing, type } from '@/constants/theme';
+import { colors, elevation, fonts, radii, spacing, type } from '@/constants/theme';
+import { useLessonLookup, type LessonPlace } from '@/hooks/useLessonLookup';
 import { getStoryCategoryMeta } from '@/lib/duel/meta';
 import { partitionReview } from '@/lib/duel/reducer';
 import type { ReviewItem } from '@/types/duel';
@@ -12,6 +21,11 @@ import type { ReviewItem } from '@/types/duel';
 type Props = {
   review: ReviewItem[];
 };
+
+/** Expand and collapse take 250 ms ease-out (Figma frame 13). */
+const EXPAND_MS = 250;
+/** More wrong answers than this: the first one stays a card, the rest fold into "More to review". */
+const MAX_WRONG_CARDS = 3;
 
 function formatAnswerTexts(item: ReviewItem): { yourText: string; rightText: string } {
   const step = item.step;
@@ -22,400 +36,286 @@ function formatAnswerTexts(item: ReviewItem): { yourText: string; rightText: str
       yourAnswer && 'option' in yourAnswer && yourAnswer.option >= 0 && yourAnswer.option < step.options.length
         ? step.options[yourAnswer.option]
         : 'No answer';
-    const rightText = step.options[step.correctIndex] ?? 'Correct answer';
-    return { yourText, rightText };
+    return { yourText, rightText: step.options[step.correctIndex] ?? 'Correct answer' };
   }
-
-  if (step.type === 'predict') {
-    const unit = step.input?.unit ?? '';
-    const yourText =
-      yourAnswer && 'value' in yourAnswer ? `${yourAnswer.value} ${unit}`.trim() : 'No answer';
-    const rightText = `${step.answer} ${unit}`.trim();
-    return { yourText, rightText };
+  if (step.type === 'predict' || step.type === 'chart') {
+    const unit = step.input?.unit ?? ('output' in step ? step.output?.unit : '') ?? '';
+    const yourText = yourAnswer && 'value' in yourAnswer ? `${yourAnswer.value} ${unit}`.trim() : 'No answer';
+    return { yourText, rightText: `${step.answer} ${unit}`.trim() };
   }
-
-  if (step.type === 'chart') {
-    const unit = step.input?.unit ?? step.output?.unit ?? '';
-    const yourText =
-      yourAnswer && 'value' in yourAnswer ? `${yourAnswer.value} ${unit}`.trim() : 'No answer';
-    const rightText = `${step.answer} ${unit}`.trim();
-    return { yourText, rightText };
-  }
-
   if (step.type === 'sort') {
-    const yourText =
-      yourAnswer && 'buckets' in yourAnswer ? 'Cards placed' : 'No answer';
-    const rightText = 'All placed correctly';
-    return { yourText, rightText };
+    return { yourText: yourAnswer && 'buckets' in yourAnswer ? 'Cards placed' : 'No answer', rightText: 'All placed correctly' };
   }
-
   if (step.type === 'match') {
-    const yourText =
-      yourAnswer && 'pairs' in yourAnswer ? 'Pairs matched' : 'No answer';
-    const rightText = 'All matched correctly';
-    return { yourText, rightText };
+    return { yourText: yourAnswer && 'pairs' in yourAnswer ? 'Pairs matched' : 'No answer', rightText: 'All matched correctly' };
   }
-
   return { yourText: '—', rightText: '—' };
 }
 
-/** Review section: WRONG answers first, expanded; RIGHT answers collapsed (Figma 154:3813 / 157:4454). */
-export function ReviewCard({ review }: Props) {
-  const [showCorrect, setShowCorrect] = useState(false);
-  const { wrong, correct } = partitionReview(review);
+/** "Questions 1, 2, 3, 5 and 6". */
+function questionList(items: ReviewItem[]): string {
+  const numbers = items.map((i) => i.index + 1);
+  if (numbers.length === 1) return `Question ${numbers[0]}`;
+  return `Questions ${numbers.slice(0, -1).join(', ')} and ${numbers[numbers.length - 1]}`;
+}
 
+/** Button label by lesson status: a lesson never taken is not a "repeat" (frame 13 notes). */
+export function lessonLabel(title: string, place: LessonPlace | null): string {
+  if (place?.status === 'done') return `Repeat lesson: ${title}`;
+  if (place?.status === 'available') return `Start lesson: ${title}`;
+  return `Go to lesson: ${title}`;
+}
+
+function placeLine(place: LessonPlace): string {
+  const where = `${place.city} · stop ${place.stop} of ${place.stops}`;
+  if (place.status === 'locked') return `${where} · not unlocked yet`;
+  return `${where} · ${place.status === 'done' ? 'done' : 'ready to start'}`;
+}
+
+function Pill({ tone, text, lines }: { tone: 'wrong' | 'right'; text: string; lines: number }) {
+  const wrong = tone === 'wrong';
+  const color = wrong ? colors.feedbackDanger : colors.feedbackSuccess;
   return (
-    <View style={styles.container} testID="result-review">
-      {/* Wrong answers (first, expanded) */}
-      {wrong.length > 0 && (
-        <View style={styles.group}>
-          <Text style={styles.groupTitle} testID="review-wrong-title">
-            Review mistakes ({wrong.length})
-          </Text>
-          {wrong.map((item) => (
-            <ReviewItemView key={item.index} item={item} />
-          ))}
-        </View>
-      )}
-
-      {/* Correct answers (collapsed toggle) */}
-      {correct.length > 0 && (
-        <View style={styles.group}>
-          <Tappable
-            onPress={() => setShowCorrect((prev) => !prev)}
-            accessibilityRole="button"
-            accessibilityLabel={`Correct (${correct.length})`}
-            testID="toggle-correct-review"
-            style={styles.collapseToggle}
-          >
-            <View style={styles.toggleLeft}>
-              <Feather name="check-circle" size={18} color={colors.feedbackSuccess} />
-              <Text style={styles.toggleTitle}>Correct ({correct.length})</Text>
-            </View>
-            <Feather
-              name={showCorrect ? 'chevron-up' : 'chevron-down'}
-              size={18}
-              color={colors.textPrimary}
-            />
-          </Tappable>
-
-          {showCorrect && (
-            <View style={styles.collapsedList}>
-              {correct.map((item) => (
-                <ReviewItemView key={item.index} item={item} />
-              ))}
-            </View>
-          )}
-        </View>
-      )}
+    <View style={[styles.pill, { backgroundColor: wrong ? colors.feedbackDangerTint : colors.feedbackSuccessTint }]} testID={wrong ? 'review-your-answer' : 'review-right-answer'}>
+      <Feather name={wrong ? 'x' : 'check'} size={12} color={color} />
+      <Text style={[styles.pillText, { color }]} numberOfLines={lines}>
+        {text}
+      </Text>
     </View>
   );
 }
 
-function ReviewItemView({ item }: { item: ReviewItem }) {
+type CardProps = {
+  item: ReviewItem;
+  place: LessonPlace | null;
+  testID?: string;
+};
+
+/** Review Card (Figma 166:9324): collapsed shows question and answers; the whole card expands for the explanation and lesson button. */
+function ReviewItemCard({ item, place, testID }: CardProps) {
+  const reduced = useReducedMotion();
+  const [expanded, setExpanded] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [contentHeight, setContentHeight] = useState(0);
+  const height = useSharedValue(0);
+  const turn = useSharedValue(0);
+  const duration = reduced ? 0 : EXPAND_MS;
+
+  // The extra content stays mounted until the collapse has finished.
+  useEffect(() => {
+    height.value = withTiming(expanded ? contentHeight : 0, { duration, easing: Easing.out(Easing.cubic) });
+    turn.value = withTiming(expanded ? 1 : 0, { duration, easing: Easing.out(Easing.cubic) });
+    if (expanded) return;
+    const timer = setTimeout(() => setMounted(false), duration);
+    return () => clearTimeout(timer);
+  }, [expanded, contentHeight, duration, height, turn]);
+
+  const bodyStyle = useAnimatedStyle(() => ({ height: height.value, opacity: contentHeight > 0 ? 1 : 0 }));
+  const chevronStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value * 180}deg` }] }));
+
   const catMeta = getStoryCategoryMeta(item.category);
   const { yourText, rightText } = formatAnswerTexts(item);
   const explanation = 'explanation' in item.step ? item.step.explanation : null;
+  const prompt = 'prompt' in item.step ? item.step.prompt : '';
+  const lines = expanded ? 4 : 1;
 
-  function repeatLesson() {
-    router.push({
-      pathname: '/story/[id]',
-      params: { id: item.category, lesson: item.lessonId },
-    });
+  function goToLesson() {
+    router.push({ pathname: '/story/[id]', params: { id: item.category, lesson: item.lessonId } });
   }
 
-  const isInteractiveSortOrMatch = item.step.type === 'sort' || item.step.type === 'match';
+  return (
+    <Tappable
+      onPress={() => {
+        if (!expanded) setMounted(true);
+        setExpanded((open) => !open);
+      }}
+      // No button role: the lesson button inside would nest a <button> in a <button> on web.
+      aria-expanded={expanded}
+      accessibilityLabel={`Question ${item.index + 1}, ${expanded ? 'collapse' : 'expand'}`}
+      testID={testID ?? (item.correct ? `review-correct-${item.index}` : `review-mistake-${item.index}`)}
+      style={styles.card}
+      pressedScale={0.99}
+    >
+      <View style={styles.head}>
+        <View style={[styles.status, { backgroundColor: item.correct ? colors.feedbackSuccess : colors.feedbackDanger }]} />
+        <Text style={styles.overline} numberOfLines={1}>
+          Question {item.index + 1} · {catMeta.name}
+        </Text>
+        <Animated.View style={chevronStyle}>
+          <Feather name="chevron-down" size={18} color={colors.textPrimary} />
+        </Animated.View>
+      </View>
+      <Text style={styles.question}>{prompt}</Text>
+      <View style={styles.answers}>
+        {item.correct ? (
+          <View style={styles.answerCell}>
+            <Pill tone="right" text={rightText} lines={lines} />
+          </View>
+        ) : (
+          <>
+            <View style={styles.answerCell}>
+              <Pill tone="wrong" text={yourText} lines={lines} />
+            </View>
+            <Feather name="arrow-right" size={14} color={colors.textMuted} />
+            <View style={styles.answerCell}>
+              <Pill tone="right" text={rightText} lines={lines} />
+            </View>
+          </>
+        )}
+      </View>
+      {(expanded || mounted) && (
+        <Animated.View style={[styles.body, bodyStyle]}>
+          <View style={styles.bodyInner} onLayout={(e) => setContentHeight(Math.ceil(e.nativeEvent.layout.height))}>
+            <View style={styles.divider} />
+            {explanation ? <Text style={styles.explanation}>{explanation}</Text> : null}
+            {!item.correct && (
+              <Tappable
+                onPress={goToLesson}
+                accessibilityRole="button"
+                accessibilityLabel={lessonLabel(item.lessonTitle, place)}
+                testID={`review-repeat-lesson-${item.index}`}
+                containerStyle={styles.lessonWrap}
+                style={styles.lessonButton}
+                pressedScale={0.98}
+              >
+                <Text style={styles.lessonText} numberOfLines={1}>
+                  {lessonLabel(item.lessonTitle, place)}
+                </Text>
+                <Feather name="arrow-right" size={16} color={colors.textOnAccent} />
+              </Tappable>
+            )}
+            {!item.correct && place && (
+              <View style={styles.placeRow} testID={`review-lesson-place-${item.index}`}>
+                <Icon name={place.status === 'locked' ? 'lock' : 'target'} size={14} color={colors.textMuted} />
+                <Text style={styles.placeText}>{placeLine(place)}</Text>
+              </View>
+            )}
+          </View>
+        </Animated.View>
+      )}
+    </Tappable>
+  );
+}
+
+type GroupProps = {
+  tone: 'correct' | 'wrong';
+  title: string;
+  items: ReviewItem[];
+  place: (item: ReviewItem) => LessonPlace | null;
+  testID: string;
+};
+
+/** Review Group: one collapsed row that opens a list of cards ("Correct (5)", "More to review (5)"). */
+function ReviewGroup({ tone, title, items, place, testID }: GroupProps) {
+  const [open, setOpen] = useState(false);
+  const correct = tone === 'correct';
+  return (
+    <View style={styles.group}>
+      <Tappable
+        onPress={() => setOpen((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={title}
+        testID={testID}
+        style={styles.groupRow}
+        pressedScale={0.99}
+      >
+        <View style={[styles.groupStatus, { backgroundColor: correct ? colors.feedbackSuccess : colors.feedbackDanger }]}>
+          <Feather name={correct ? 'check' : 'x'} size={14} color={colors.textOnBrand} />
+        </View>
+        <View style={styles.groupText}>
+          <Text style={styles.groupTitle}>{title}</Text>
+          <Text style={styles.groupMeta}>{questionList(items)} · tap to {open ? 'collapse' : 'expand'}</Text>
+        </View>
+        <Feather name={open ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textMuted} />
+      </Tappable>
+      {open && items.map((item) => <ReviewItemCard key={item.index} item={item} place={place(item)} />)}
+    </View>
+  );
+}
+
+/** The review section of the result screen: wrong answers as collapsed cards, right ones in one group. */
+export function ReviewCard({ review }: Props) {
+  const lookup = useLessonLookup();
+  const { wrong, correct } = partitionReview(review);
+  const place = (item: ReviewItem) => lookup(item.category, item.lessonId);
+  const folded = wrong.length > MAX_WRONG_CARDS;
+  const cards = folded ? wrong.slice(0, 1) : wrong;
+  const rest = folded ? wrong.slice(1) : [];
 
   return (
-    <View
-      style={styles.itemCard}
-      testID={item.correct ? `review-correct-${item.index}` : `review-mistake-${item.index}`}
-    >
-      <View style={styles.itemHeader}>
-        <Text style={styles.questionNumber}>
-          QUESTION {item.index + 1} · {catMeta.name.toUpperCase()}
+    <View style={styles.container} testID="result-review">
+      {wrong.length > 0 && (
+        <Text style={styles.sectionTitle} accessibilityRole="header" testID="review-wrong-title">
+          To review ({wrong.length})
         </Text>
-        <View
-          style={[
-            styles.badge,
-            { backgroundColor: item.correct ? colors.feedbackSuccessSoft : colors.feedbackDangerSoft },
-          ]}
-        >
-          <Feather
-            name={item.correct ? 'check' : 'x'}
-            size={12}
-            color={item.correct ? colors.feedbackSuccess : colors.feedbackDanger}
-          />
-        </View>
-      </View>
-
-      <Text style={styles.prompt}>{'prompt' in item.step ? item.step.prompt : ''}</Text>
-
-      {/* Answer comparison */}
-      {!isInteractiveSortOrMatch && (
-        <View style={styles.answerComparison}>
-          {!item.correct && (
-            <View style={[styles.pill, styles.wrongPill]}>
-              <Feather name="x" size={12} color={colors.feedbackDanger} />
-              <Text style={styles.wrongPillText} numberOfLines={2}>
-                Your answer: {yourText}
-              </Text>
-            </View>
-          )}
-          <View style={[styles.pill, styles.rightPill]}>
-            <Feather name="check" size={12} color={colors.feedbackSuccess} />
-            <Text style={styles.rightPillText} numberOfLines={2}>
-              Correct: {rightText}
-            </Text>
-          </View>
-        </View>
       )}
-
-      {/* Sort compact breakdown */}
-      {item.step.type === 'sort' && 'buckets' in item.step && (
-        <View style={styles.breakdownList} testID={`review-sort-breakdown-${item.index}`}>
-          {((item.step as any).shownItems ?? (item.step as any).items?.map((it: any) => (typeof it === 'string' ? it : it.text)) ?? []).map((text: string, i: number) => {
-            const items = (item.step as any).items;
-            const itemObj = items?.find((it: any) => (typeof it === 'string' ? it : it.text) === text);
-            const rightBucketIdx = itemObj && typeof itemObj === 'object' ? itemObj.bucket : 0;
-            const yourBucketIdx =
-              item.yourAnswer && 'buckets' in item.yourAnswer ? item.yourAnswer.buckets[i] : null;
-            const isRight = yourBucketIdx === rightBucketIdx;
-
-            return (
-              <View key={i} style={[styles.breakdownRow, !isRight && styles.breakdownRowWrong]}>
-                <Text style={styles.breakdownItemText} numberOfLines={2}>
-                  {text}
-                </Text>
-                <View style={styles.breakdownTags}>
-                  <Text style={[styles.breakdownTag, isRight ? styles.tagSuccess : styles.tagDanger]}>
-                    Your: {yourBucketIdx !== null ? (item.step as any).buckets[yourBucketIdx] : 'None'}
-                  </Text>
-                  {!isRight && (
-                    <Text style={[styles.breakdownTag, styles.tagSuccess]}>
-                      Right: {(item.step as any).buckets[rightBucketIdx]}
-                    </Text>
-                  )}
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      )}
-
-      {/* Match compact breakdown */}
-      {item.step.type === 'match' && (
-        <View style={styles.breakdownList} testID={`review-match-breakdown-${item.index}`}>
-          {((item.step as any).shownLeft ?? (item.step as any).pairs?.map((p: any) => p[0]) ?? []).map((term: string, i: number) => {
-            const pairs = (item.step as any).pairs ?? [];
-            const correctPair = pairs.find((p: any) => p[0] === term);
-            const rightDef = correctPair ? correctPair[1] : '';
-
-            const shownRight = (item.step as any).shownRight;
-            const yourPairIdx =
-              item.yourAnswer && 'pairs' in item.yourAnswer ? item.yourAnswer.pairs[i] : null;
-            const yourDef =
-              yourPairIdx !== null && yourPairIdx !== undefined
-                ? shownRight
-                  ? shownRight[yourPairIdx]
-                  : pairs[yourPairIdx]?.[1]
-                : null;
-            const isRight = yourDef === rightDef;
-
-            return (
-              <View key={i} style={[styles.breakdownRow, !isRight && styles.breakdownRowWrong]}>
-                <Text style={styles.breakdownItemText} numberOfLines={2}>
-                  {term}
-                </Text>
-                <View style={styles.breakdownTags}>
-                  <Text style={[styles.breakdownTag, isRight ? styles.tagSuccess : styles.tagDanger]}>
-                    Your: {yourDef ?? 'None'}
-                  </Text>
-                  {!isRight && (
-                    <Text style={[styles.breakdownTag, styles.tagSuccess]}>
-                      Right: {rightDef}
-                    </Text>
-                  )}
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      )}
-
-      {explanation && <Text style={styles.explanation}>{explanation}</Text>}
-
-      {/* Yellow CTA button to review lesson */}
-      {!item.correct && (
-        <Tappable
-          onPress={repeatLesson}
-          accessibilityRole="button"
-          accessibilityLabel={`Review lesson: ${item.lessonTitle}`}
-          testID={`review-repeat-lesson-${item.index}`}
-          style={styles.repeatButton}
-        >
-          <Feather name="book-open" size={14} color={colors.textOnAccent} />
-          <Text style={styles.repeatButtonText} numberOfLines={1}>
-            Review lesson: {item.lessonTitle}
-          </Text>
-        </Tappable>
-      )}
+      {cards.map((item) => (
+        <ReviewItemCard key={item.index} item={item} place={place(item)} />
+      ))}
+      {rest.length > 0 && <ReviewGroup tone="wrong" title={`More to review (${rest.length})`} items={rest} place={place} testID="toggle-more-review" />}
+      {correct.length > 0 && <ReviewGroup tone="correct" title={`Correct (${correct.length})`} items={correct} place={place} testID="toggle-correct-review" />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: spacing.lg,
-  },
-  group: {
-    gap: spacing.sm,
-  },
-  groupTitle: {
-    ...type.titleSection,
-    color: colors.textPrimary,
-  },
-  collapseToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  container: { gap: spacing.md },
+  sectionTitle: { ...type.titleSection, color: colors.textPrimary },
+  card: {
     backgroundColor: colors.bgSurface,
     borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    padding: spacing.md,
-  },
-  toggleLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  toggleTitle: {
-    ...type.labelStrong,
-    color: colors.textPrimary,
-  },
-  collapsedList: {
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  itemCard: {
-    backgroundColor: colors.bgSurface,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    padding: spacing.lg,
-    gap: spacing.sm,
+    paddingVertical: spacing.mdPlus,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.smPlus,
+    overflow: 'hidden',
     ...elevation.low,
   },
-  itemHeader: {
+  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 18 },
+  status: { width: 10, height: 10, borderRadius: radii.pill },
+  overline: { ...type.labelStrong, color: colors.textMuted, flex: 1 },
+  question: { ...type.titleCard, color: colors.textPrimary },
+  answers: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
+  answerCell: { flex: 1 },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2, paddingVertical: 6, paddingHorizontal: spacing.sm, borderRadius: 8 },
+  pillText: { fontFamily: fonts.semiBold, fontSize: 12, lineHeight: 16, flex: 1 },
+  body: { overflow: 'hidden' },
+  bodyInner: { position: 'absolute', top: 0, left: 0, right: 0, gap: spacing.smPlus },
+  divider: { height: 1, backgroundColor: colors.borderDefault },
+  explanation: { ...type.bodyDefault, color: colors.textPrimary },
+  lessonWrap: { alignSelf: 'flex-start', maxWidth: '100%' },
+  lessonButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  questionNumber: {
-    ...type.overline,
-    color: colors.textMuted,
-  },
-  badge: {
-    width: 20,
-    height: 20,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  prompt: {
-    ...type.titleCard,
-    color: colors.textPrimary,
-  },
-  answerComparison: {
-    gap: spacing.xs,
-  },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.button,
-  },
-  wrongPill: {
-    backgroundColor: colors.feedbackDangerSoft,
-  },
-  wrongPillText: {
-    ...type.bodyDefault,
-    color: colors.feedbackDanger,
-    flex: 1,
-  },
-  rightPill: {
-    backgroundColor: colors.feedbackSuccessSoft,
-  },
-  rightPillText: {
-    ...type.bodyDefault,
-    color: colors.feedbackSuccess,
-    flex: 1,
-  },
-  breakdownList: {
-    gap: spacing.xs,
-    marginTop: spacing.xxs,
-  },
-  breakdownRow: {
-    backgroundColor: colors.bgCanvas,
-    borderRadius: radii.button,
-    padding: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    gap: spacing.xxs,
-  },
-  breakdownRowWrong: {
-    borderColor: colors.feedbackDangerSoft,
-  },
-  breakdownItemText: {
-    ...type.bodyDefault,
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  breakdownTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  breakdownTag: {
-    ...type.labelTab,
-    fontSize: 11,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: radii.pill,
-  },
-  tagSuccess: {
-    backgroundColor: colors.feedbackSuccessSoft,
-    color: colors.feedbackSuccess,
-  },
-  tagDanger: {
-    backgroundColor: colors.feedbackDangerSoft,
-    color: colors.feedbackDanger,
-  },
-  explanation: {
-    ...type.bodyDefault,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-    paddingTop: spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderDefault,
-  },
-  repeatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
+    gap: spacing.xs + 2,
     backgroundColor: colors.brandAccent,
     borderRadius: radii.button,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    marginTop: spacing.xs,
+    paddingLeft: spacing.mdPlus,
+    paddingRight: spacing.md,
+    minHeight: 44,
   },
-  repeatButtonText: {
-    ...type.labelStrong,
-    color: colors.textOnAccent,
+  lessonText: { ...type.labelStrong, color: colors.textOnAccent, flexShrink: 1 },
+  placeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
+  placeText: { ...type.labelDefault, color: colors.textMuted },
+  group: { gap: spacing.md },
+  groupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.smPlus,
+    backgroundColor: colors.bgSurface,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    paddingVertical: spacing.mdPlus,
+    paddingLeft: spacing.lg,
+    paddingRight: spacing.mdPlus,
+    ...elevation.low,
   },
+  groupStatus: { width: 24, height: 24, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
+  groupText: { flex: 1, gap: 2 },
+  groupTitle: { ...type.titleCard, color: colors.textPrimary },
+  groupMeta: { ...type.labelDefault, color: colors.textMuted },
 });

@@ -4,6 +4,7 @@ import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/bank/Icon';
+import { TargetFrame, type TargetKind } from '@/components/path/TargetFrame';
 import { Tappable } from '@/components/onboarding/ui';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import type { LessonSummary } from '@/types/lessons';
@@ -17,8 +18,8 @@ type Props = {
   /** The track above is coloured when the stop before is done. */
   previousDone: boolean;
   last: boolean;
-  /** Opened from a link to this lesson: outlined in petrol. */
-  highlighted?: boolean;
+  /** The lesson the user came for (from a duel review): outlined, with a chip and a pulse. */
+  target?: { kind: TargetKind; active: boolean; outline: boolean };
   accent: string;
   onLayout?: (e: LayoutChangeEvent) => void;
 };
@@ -36,13 +37,68 @@ const open = (id: string) => router.push({ pathname: '/lesson/[id]', params: { i
  * One mission on the path's route. Done: a compact row with replay. Current: the one large card with the yellow
  * action. Locked: dimmed, with a lock. The track between markers fills in the path colour as missions are done.
  */
-export function PathStop({ lesson, index, state, previousDone, last, highlighted, accent, onLayout }: Props) {
+export function PathStop({ lesson, index, state, previousDone, last, target, accent, onLayout }: Props) {
   const reduceMotion = useReducedMotion();
   const current = state === 'current';
   const done = state === 'done';
   const locked = state === 'locked';
   const filled = { backgroundColor: accent };
+  const marked = Boolean(target?.active && (target.kind === 'duel' || target.outline));
+  // A finished lesson that is a duel target gets the full card with its button, like Figma frame 17.
+  const asCard = current || state === 'open' || (done && target?.kind === 'duel');
   const meta = [`${lesson.minutes} min`, done ? 'Done' : locked ? 'Locked' : `+${lesson.xp} XP`].join(' · ');
+
+  const content = (
+    <>
+        {asCard ? (
+          <View style={[styles.card, current && styles.cardCurrent, marked && styles.cardMarked]}>
+            {current && (
+              <View style={styles.upNext}>
+                <Text style={styles.upNextText}>Up next</Text>
+              </View>
+            )}
+            <Text style={[styles.overline, { color: accent }]}>Mission {index + 1}</Text>
+            <Text style={styles.titleLarge}>{lesson.title}</Text>
+            {lesson.topic && <Text style={styles.topic}>{lesson.topic}</Text>}
+            <View style={styles.metaRow}>
+              <Text style={styles.meta}>{meta}</Text>
+              {lesson.video && (
+                <View accessible accessibilityLabel="Also as video" testID={`lesson-video-${lesson.id}`} style={styles.videoChip}>
+                  <Icon name="film" size={13} color={colors.textMuted} />
+                  <Text style={styles.meta}>Video</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.action}>
+              <Button label={done ? 'Repeat lesson' : 'Start mission'} testID={`lesson-${lesson.id}`} onPress={() => open(lesson.id)} />
+            </View>
+          </View>
+        ) : (
+          <Tappable
+            disabled={locked}
+            onPress={() => open(lesson.id)}
+            accessibilityRole="button"
+            accessibilityLabel={locked ? `${lesson.title}, locked` : `Replay ${lesson.title}`}
+            testID={done ? `lesson-${lesson.id}` : undefined}
+            containerStyle={styles.rowWrap}
+            style={[styles.row, locked && styles.rowLocked, marked && styles.rowMarked]}
+          >
+            <View style={styles.rowText}>
+              <Text style={[styles.overline, { color: locked ? colors.textMuted : accent }]}>Mission {index + 1}</Text>
+              <Text style={[styles.title, locked && styles.mutedText]} numberOfLines={2}>
+                {lesson.title}
+              </Text>
+              <Text style={styles.meta}>{meta}</Text>
+            </View>
+            {done && (
+              <View style={styles.replay}>
+                <Icon name="replay" size={16} color={colors.brandPrimary} />
+              </View>
+            )}
+          </Tappable>
+        )}
+    </>
+  );
 
   return (
     <View style={styles.stop} onLayout={onLayout} testID={`path-stop-${lesson.id}`}>
@@ -68,52 +124,12 @@ export function PathStop({ lesson, index, state, previousDone, last, highlighted
         </View>
       </View>
 
-      {current || state === 'open' ? (
-        <View style={[styles.card, current && styles.cardCurrent, highlighted && styles.cardHighlighted]}>
-          {current && (
-            <View style={styles.upNext}>
-              <Text style={styles.upNextText}>Up next</Text>
-            </View>
-          )}
-          <Text style={[styles.overline, { color: accent }]}>Mission {index + 1}</Text>
-          <Text style={styles.titleLarge}>{lesson.title}</Text>
-          {lesson.topic && <Text style={styles.topic}>{lesson.topic}</Text>}
-          <View style={styles.metaRow}>
-            <Text style={styles.meta}>{meta}</Text>
-            {lesson.video && (
-              <View accessible accessibilityLabel="Also as video" testID={`lesson-video-${lesson.id}`} style={styles.videoChip}>
-                <Icon name="film" size={13} color={colors.textMuted} />
-                <Text style={styles.meta}>Video</Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.action}>
-            <Button label="Start mission" testID={`lesson-${lesson.id}`} onPress={() => open(lesson.id)} />
-          </View>
-        </View>
+      {target ? (
+        <TargetFrame kind={target.kind} active={target.active} outline={target.outline} bottomInset={asCard ? spacing.lg : spacing.md}>
+          {content}
+        </TargetFrame>
       ) : (
-        <Tappable
-          disabled={locked}
-          onPress={() => open(lesson.id)}
-          accessibilityRole="button"
-          accessibilityLabel={locked ? `${lesson.title}, locked` : `Replay ${lesson.title}`}
-          testID={done ? `lesson-${lesson.id}` : undefined}
-          containerStyle={styles.rowWrap}
-          style={[styles.row, highlighted && styles.cardHighlighted, locked && styles.rowLocked]}
-        >
-          <View style={styles.rowText}>
-            <Text style={[styles.overline, { color: locked ? colors.textMuted : accent }]}>Mission {index + 1}</Text>
-            <Text style={[styles.title, locked && styles.mutedText]} numberOfLines={2}>
-              {lesson.title}
-            </Text>
-            <Text style={styles.meta}>{meta}</Text>
-          </View>
-          {done && (
-            <View style={styles.replay}>
-              <Icon name="replay" size={16} color={colors.brandPrimary} />
-            </View>
-          )}
-        </Tappable>
+        content
       )}
     </View>
   );
@@ -155,7 +171,9 @@ const styles = StyleSheet.create({
     borderColor: colors.borderDefault,
   },
   cardCurrent: { borderWidth: 2, borderColor: colors.brandAccent, ...elevation.mid },
-  cardHighlighted: { borderWidth: 2, borderColor: colors.brandPrimary },
+  // The target frame draws the fill and outline behind the card, so the card itself turns see-through.
+  cardMarked: { backgroundColor: 'transparent', borderColor: 'transparent', boxShadow: 'none' },
+  rowMarked: { backgroundColor: 'transparent', borderColor: 'transparent', borderStyle: 'solid' },
   upNext: {
     alignSelf: 'flex-start',
     backgroundColor: colors.brandAccent,

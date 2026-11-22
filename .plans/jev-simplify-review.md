@@ -36,7 +36,7 @@ Line numbers refer to that commit.
 - front/src/hooks/useQuickCheck.ts:L29,L52,L151,L191: delete: stage `first` behaves exactly like `waiting` (same status line, same staleness check, same position; `step` reads "first" from `history.length`). `begin` sets `waiting`.
 - front/src/hooks/useQuickCheck.ts:L198, components/categorizing/QuickCheckPage.tsx:L17,L27,L48,L60,L62, app/categorizing.tsx:L173: yagni: `total` is the constant `MAX_QUESTIONS`, threaded hook → screen → page → question as a prop. `QuickCheckPage` imports `MAX_QUESTIONS`.
 
-net: -110 lines possible.
+net: -127 lines possible.
 
 ## Checked and kept
 
@@ -51,7 +51,7 @@ net: -110 lines possible.
 
 ## Skipped
 
-- (none of the findings above change the API contract, the DB schema, the Jev payload or test-observable behaviour, so all were applied)
+- None. No finding above changes the API contract, the DB schema, the Jev payload or test-observable behaviour, so every one was applied. Only test change: `QuickCheckRulesTests` drops the hand-built `CheckLessonMapper` now that `lessons(...)` takes no mapper.
 
 ## Out of scope (noticed, not fixed)
 

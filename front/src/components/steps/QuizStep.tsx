@@ -5,13 +5,15 @@ import { Icon } from '@/components/bank/Icon';
 import { Feedback } from '@/components/lesson/Feedback';
 import { LineChart } from '@/components/lesson/LineChart';
 import { StepLayout } from '@/components/lesson/StepLayout';
-import { haptic, Tappable } from '@/components/onboarding/ui';
+import { Tappable } from '@/components/onboarding/ui';
+import { answerCue } from '@/components/steps/answerCue';
 import { colors, radii, spacing, type } from '@/constants/theme';
-import { playSfx } from '@/lib/sfx';
 import { formatValue } from '@/lib/models';
 import type { QuizStep as QuizStepData, StepOutcome } from '@/types/lessons';
 
 type Props = { step: QuizStepData; onDone: (outcome: StepOutcome) => void };
+
+type OptionState = 'idle' | 'correct' | 'wrong';
 
 /** Single choice with instant feedback and the why. */
 export function QuizStep({ step, onDone }: Props) {
@@ -22,8 +24,14 @@ export function QuizStep({ step, onDone }: Props) {
   function pick(i: number) {
     if (answered) return;
     setPicked(i);
-    haptic(i === step.correctIndex ? 'success' : 'light');
-    playSfx(i === step.correctIndex ? 'correct' : 'wrong');
+    answerCue(i === step.correctIndex);
+  }
+
+  /** Once answered, the right option is marked, and the picked one when it was wrong. */
+  function stateOf(i: number): OptionState {
+    if (!answered) return 'idle';
+    if (i === step.correctIndex) return 'correct';
+    return i === picked ? 'wrong' : 'idle';
   }
 
   return (
@@ -34,7 +42,7 @@ export function QuizStep({ step, onDone }: Props) {
       {step.chart && <QuizChart chart={step.chart} />}
       <View style={styles.options}>
         {step.options.map((option, i) => {
-          const state = !answered ? 'idle' : i === step.correctIndex ? 'correct' : i === picked ? 'wrong' : 'idle';
+          const state = stateOf(i);
           return (
             <Tappable
               key={option}

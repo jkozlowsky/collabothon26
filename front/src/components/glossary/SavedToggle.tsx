@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { colors, radii, type } from '@/constants/theme';
+import { colors, pressFeedback, radii, type } from '@/constants/theme';
 
 type Props = {
   count: number;
@@ -18,7 +18,7 @@ export function SavedToggle({ count, active, onPress }: Props) {
       accessibilityLabel={active ? 'Show all terms' : `Show saved terms (${count})`}
       accessibilityState={{ selected: active }}
       onPress={onPress}
-      style={({ pressed }) => [styles.pill, active && styles.active, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.pill, active && styles.active, pressed && pressFeedback]}
     >
       <Ionicons
         name={active || count > 0 ? 'star' : 'star-outline'}
@@ -44,5 +44,4 @@ const styles = StyleSheet.create({
   },
   active: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
   activeLabel: { color: colors.textOnBrand },
-  pressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
 });

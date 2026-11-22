@@ -4,8 +4,6 @@
 
 import type { SliderModel, SliderParam, Step } from '@/types/lessons';
 
-export type { AvatarId } from '@/types/account';
-
 export type DuelMode = 'HUMAN' | 'SOLO';
 export type StoryColor = 'rose' | 'violet' | 'orange' | 'teal' | 'slate';
 
@@ -259,14 +257,4 @@ export type RankingRow = {
 export type Rankings = {
   top: RankingRow[];
   me: RankingRow | null;
-};
-
-/** GET /api/xp/{userId}/categories */
-export type CategoryXp = {
-  category: string;
-  xp: number;
-  level: number;
-  xpIntoLevel: number;
-  xpForLevel: number;
-  weeklyXp: number;
 };

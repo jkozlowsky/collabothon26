@@ -1,11 +1,12 @@
-import { memo, useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { memo, useEffect, useEffectEvent } from 'react';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 
 import { endOf, type Particle } from '@/lib/fx/particles';
@@ -19,7 +20,15 @@ type Props = {
   testID?: string;
 };
 
-type PieceProps = { p: Particle; clock: { value: number } };
+type PieceProps = { p: Particle; clock: SharedValue<number> };
+
+function pieceShape({ shape, size, color }: Particle): ViewStyle {
+  if (shape === 'ring') {
+    return { width: size, height: size, borderRadius: size / 2, borderWidth: 3, borderColor: color, marginLeft: -size / 2, marginTop: -size / 2 };
+  }
+  if (shape === 'circle') return { width: size, height: size, borderRadius: size / 2, backgroundColor: color };
+  return { width: size, height: size * 0.6, borderRadius: 2, backgroundColor: color };
+}
 
 /** One piece. Only transform and opacity change, and all of it is computed on the UI thread from the shared clock. */
 const Piece = memo(function Piece({ p, clock }: PieceProps) {
@@ -44,14 +53,7 @@ const Piece = memo(function Piece({ p, clock }: PieceProps) {
     };
   });
 
-  const size = p.size;
-  const shape =
-    p.shape === 'ring'
-      ? { width: size, height: size, borderRadius: size / 2, borderWidth: 3, borderColor: p.color, marginLeft: -size / 2, marginTop: -size / 2 }
-      : p.shape === 'circle'
-        ? { width: size, height: size, borderRadius: size / 2, backgroundColor: p.color }
-        : { width: size, height: size * 0.6, borderRadius: 2, backgroundColor: p.color };
-  return <Animated.View style={[styles.piece, shape, style]} />;
+  return <Animated.View style={[styles.piece, pieceShape(p), style]} />;
 });
 
 /**
@@ -60,19 +62,20 @@ const Piece = memo(function Piece({ p, clock }: PieceProps) {
  */
 export function ParticleField({ particles, onDone, clip = true, testID }: Props) {
   const reduced = useReducedMotion();
-  const total = endOf(particles);
   const clock = useSharedValue(0);
   const skip = reduced || process.env.NODE_ENV === 'test' || particles.length === 0;
+  // An Effect Event: a parent that re-renders with a new `onDone` must not restart the field.
+  const done = useEffectEvent(() => onDone?.());
 
+  // A new set of particles restarts the clock.
   useEffect(() => {
     if (skip) return;
+    const total = endOf(particles);
     clock.value = 0;
     clock.value = withTiming(total, { duration: total, easing: Easing.linear });
-    const timer = setTimeout(() => onDone?.(), total);
+    const timer = setTimeout(() => done(), total);
     return () => clearTimeout(timer);
-    // `particles` identity is the trigger: a new set restarts the clock.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [particles, skip]);
+  }, [particles, skip, clock]);
 
   return (
     <View style={[styles.field, !clip && styles.open]} pointerEvents="none" testID={testID}>

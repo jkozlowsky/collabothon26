@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { useReducedMotion } from 'react-native-reanimated';
+
+import { easeOutCubic } from '@/hooks/useCountUp';
 
 type Options = {
   delayMs?: number;
@@ -16,10 +18,12 @@ export function useRollUp(target: number, { delayMs = 0, durationMs = 800, onDon
   const reduced = useReducedMotion();
   const instant = reduced || process.env.NODE_ENV === 'test' || target <= 0;
   const [value, setValue] = useState(0);
+  // An Effect Event: a new `onDone` identity must not restart the roll.
+  const done = useEffectEvent(() => onDone?.());
 
   useEffect(() => {
     if (instant) {
-      onDone?.();
+      done();
       return;
     }
     let frame = 0;
@@ -28,9 +32,9 @@ export function useRollUp(target: number, { delayMs = 0, durationMs = 800, onDon
       const step = (now: number) => {
         start ||= now;
         const k = Math.min(1, (now - start) / durationMs);
-        setValue(Math.round(target * (1 - (1 - k) ** 3)));
+        setValue(Math.round(target * easeOutCubic(k)));
         if (k < 1) frame = requestAnimationFrame(step);
-        else onDone?.();
+        else done();
       };
       frame = requestAnimationFrame(step);
     }, delayMs);
@@ -38,8 +42,6 @@ export function useRollUp(target: number, { delayMs = 0, durationMs = 800, onDon
       clearTimeout(timer);
       cancelAnimationFrame(frame);
     };
-    // onDone is a one-shot callback: re-running on its identity would restart the roll.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target, delayMs, durationMs, instant]);
 
   return instant ? target : value;

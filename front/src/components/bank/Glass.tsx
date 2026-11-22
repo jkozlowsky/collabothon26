@@ -2,7 +2,7 @@ import { BlurView } from 'expo-blur';
 import type { ReactNode } from 'react';
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, elevation } from '@/constants/theme';
+import { colors, elevation, radii } from '@/constants/theme';
 
 type Props = { style?: StyleProp<ViewStyle>; children?: ReactNode };
 
@@ -25,7 +25,7 @@ export function Glass({ style, children }: Props) {
 
 const styles = StyleSheet.create({
   base: { borderWidth: 1, borderColor: colors.glassBorder, ...elevation.glass },
-  clip: { borderRadius: 999, overflow: 'hidden' },
+  clip: { borderRadius: radii.pill, overflow: 'hidden' },
   fill: { backgroundColor: colors.glassFill },
   fallback: { backgroundColor: colors.glassFallback },
 });

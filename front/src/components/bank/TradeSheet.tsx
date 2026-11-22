@@ -23,10 +23,10 @@ type Props = {
 };
 
 /**
- * Buy flow with a Atlas nudge in front of it. The nudge explains, it does not advise:
+ * Buy flow with an Atlas nudge in front of it. The nudge explains, it does not advise:
  * it shows the user's own concentration and offers a short lesson before they decide.
+ * The parent re-keys this per opening, so it always starts at the nudge.
  */
-/** The parent re-keys this per opening, so it always starts at the nudge. */
 export function TradeSheet({ holding: next, onClose, onLearn }: Props) {
   // Keep the last holding while the sheet slides out after it was closed.
   const [holding, setHolding] = useState(next);
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     padding: spacing.md,
   },
-  nudgeBody: { flex: 1, gap: 2 },
+  nudgeBody: { flex: 1, gap: spacing.xxs },
   overline: { ...type.overline, color: colors.brandPrimary },
   nudgeTitle: type.titleCard,
   body: { ...type.bodyDefault, color: colors.textMuted },

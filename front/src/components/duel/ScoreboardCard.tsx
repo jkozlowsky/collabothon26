@@ -259,7 +259,6 @@ const styles = StyleSheet.create({
   levelMeta: {
     ...type.labelTab,
     color: colors.onBrandMuted,
-    fontSize: 11,
     fontWeight: '600',
   },
   centreCol: {

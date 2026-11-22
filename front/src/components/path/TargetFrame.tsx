@@ -30,6 +30,11 @@ type Props = {
 
 const PULSE_MS = 700;
 const SHAKE_PX = 6;
+/** One leg of the shake; three there-and-backs make the 300 ms. */
+const SHAKE_LEG_MS = 50;
+const SHAKE_TIMES = 3;
+const OUTLINE_IN_MS = 150;
+const OUTLINE_OUT_MS = 300;
 
 /**
  * Wraps one path stop to mark it as the lesson the user came for (Figma frames 15 and 17).
@@ -50,15 +55,18 @@ export function TargetFrame({ kind, active, outline = true, bottomInset, childre
     if (!active) return;
     // Closing the sheet fades the red outline out (300 ms); the card goes back to its own look.
     if (locked && !outline) {
-      show.value = withTiming(0, { duration: reduced ? 0 : 300 });
+      show.value = withTiming(0, { duration: reduced ? 0 : OUTLINE_OUT_MS });
       return;
     }
-    show.value = withTiming(1, { duration: reduced ? 0 : 150 });
+    show.value = withTiming(1, { duration: reduced ? 0 : OUTLINE_IN_MS });
     if (locked) haptic('error');
     if (reduced) return;
     if (locked) {
       shake.value = withSequence(
-        ...Array.from({ length: 3 }, () => [withTiming(SHAKE_PX, { duration: 50 }), withTiming(-SHAKE_PX, { duration: 50 })]).flat(),
+        ...Array.from({ length: SHAKE_TIMES }, () => [
+          withTiming(SHAKE_PX, { duration: SHAKE_LEG_MS }),
+          withTiming(-SHAKE_PX, { duration: SHAKE_LEG_MS }),
+        ]).flat(),
         withTiming(0, { duration: 0 })
       );
     }

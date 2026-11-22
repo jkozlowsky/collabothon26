@@ -54,7 +54,6 @@ export type BankIconName =
   | 'wifi-off'
   | 'coins'
   | 'flame'
-  | 'refresh'
   | 'arrow-right'
   | 'film'
   | 'volume-on'

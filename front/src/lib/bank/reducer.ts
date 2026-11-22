@@ -1,14 +1,13 @@
 /** Pure state changes for the mock bank. Validation lives next to the action so the UI and tests share it. */
 import { groupIban, isValidIban, normaliseIban } from '@/lib/bank/money';
-import type { BankState, Contact, OrderInput, TransferInput } from '@/types/bank';
+import type { BankState, Contact, OrderInput, TransferInput, TransferRecipient } from '@/types/bank';
 
 export type BankAction =
   | { type: 'transfer'; input: TransferInput; time: string }
   | { type: 'order'; input: OrderInput };
 
 /** The contact a transfer goes to: an existing one, or a new one built from name + IBAN. */
-export function resolveRecipient(state: BankState, input: TransferInput): Contact | null {
-  const r = input.recipient;
+export function resolveRecipient(state: BankState, r: TransferRecipient): Contact | null {
   if ('contactId' in r) return state.contacts.find((c) => c.id === r.contactId) ?? null;
   const name = r.name.trim();
   if (!name || !isValidIban(r.iban)) return null;
@@ -29,7 +28,7 @@ export function validateTransfer(state: BankState, input: TransferInput): string
   if ('name' in r) {
     if (!r.name.trim()) return 'Enter the recipient’s name.';
     if (!isValidIban(r.iban)) return 'Enter a German IBAN: DE followed by 20 digits.';
-  } else if (!resolveRecipient(state, input)) {
+  } else if (!resolveRecipient(state, r)) {
     return 'Pick a recipient.';
   }
   if (!Number.isInteger(input.amount) || input.amount <= 0) return 'Enter an amount above € 0.';
@@ -50,9 +49,9 @@ export function validateOrder(state: BankState, input: OrderInput): string | nul
 export function bankReducer(state: BankState, action: BankAction): BankState {
   switch (action.type) {
     case 'transfer': {
+      const contact = resolveRecipient(state, action.input.recipient);
       // Invalid input is a no-op; the UI shows the validation message before it gets here.
-      if (validateTransfer(state, action.input)) return state;
-      const contact = resolveRecipient(state, action.input)!;
+      if (!contact || validateTransfer(state, action.input)) return state;
       const { amount } = action.input;
       const id = `tx-${state.transactions.length + 1}-${action.time}`;
       const title = `Transfer to ${contact.name}`;

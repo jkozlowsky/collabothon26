@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { radii } from '@/constants/theme';
 import type { LandmarkKind } from '@/types/stories';
@@ -16,47 +16,59 @@ export function skyline(city: string) {
 
 /** A city's landmark silhouette over the story hero skyline, in the story tint. */
 export function StoryLandmark({ kind, at, color }: Props) {
-  const fill = { backgroundColor: color };
   return (
     <View pointerEvents="none" style={[styles.anchor, { left: `${at * 100}%` }]}>
-      {kind === 'tower' ? (
-        // A broadcast tower: mast with an observation deck.
-        <View style={[styles.mast, fill]}>
-          <View style={[styles.deck, fill]} />
+      <Silhouette kind={kind} fill={{ backgroundColor: color }} />
+    </View>
+  );
+}
+
+function Silhouette({ kind, fill }: { kind: LandmarkKind; fill: ViewStyle }) {
+  if (kind === 'tower') {
+    // A broadcast tower: mast with an observation deck.
+    return (
+      <View style={[styles.mast, fill]}>
+        <View style={[styles.deck, fill]} />
+      </View>
+    );
+  }
+  if (kind === 'lattice') {
+    // A lattice tower: tiers that narrow towards the top, with a spire and one observation deck.
+    return (
+      <View style={styles.lattice}>
+        <View style={[styles.spire, fill]} />
+        {[10, 16, 24, 34, 46].map((width, i) => (
+          <View key={width} style={[styles.tier, fill, { width }, i === 2 && styles.latticeDeck]} />
+        ))}
+        <View style={styles.legs}>
+          <View style={[styles.leg, fill]} />
+          <View style={[styles.leg, fill]} />
         </View>
-      ) : kind === 'lattice' ? (
-        // A lattice tower: tiers that narrow towards the top, with a spire and one observation deck.
-        <View style={styles.lattice}>
-          <View style={[styles.spire, fill]} />
-          {[10, 16, 24, 34, 46].map((width, i) => (
-            <View key={width} style={[styles.tier, fill, { width }, i === 2 && styles.latticeDeck]} />
-          ))}
-          <View style={styles.legs}>
-            <View style={[styles.leg, fill]} />
-            <View style={[styles.leg, fill]} />
-          </View>
+      </View>
+    );
+  }
+  if (kind === 'raised') {
+    // A raised block: a long box held up by two frames, with an open plaza underneath.
+    return (
+      <View style={styles.raised}>
+        <View style={[styles.box, fill]} />
+        <View style={styles.frames}>
+          <View style={[styles.frame, fill]} />
+          <View style={[styles.frame, fill]} />
         </View>
-      ) : kind === 'raised' ? (
-        // A raised block: a long box held up by two frames, with an open plaza underneath.
-        <View style={styles.raised}>
-          <View style={[styles.box, fill]} />
-          <View style={styles.frames}>
-            <View style={[styles.frame, fill]} />
-            <View style={[styles.frame, fill]} />
-          </View>
-        </View>
-      ) : (
-        // A columned gate: roof block, beam and six columns.
-        <View style={styles.gate}>
-          <View style={[styles.roof, fill]} />
-          <View style={[styles.beam, fill]} />
-          <View style={styles.columns}>
-            {Array.from({ length: 6 }, (_, i) => (
-              <View key={i} style={[styles.column, fill]} />
-            ))}
-          </View>
-        </View>
-      )}
+      </View>
+    );
+  }
+  // A columned gate: roof block, beam and six columns.
+  return (
+    <View style={styles.gate}>
+      <View style={[styles.roof, fill]} />
+      <View style={[styles.beam, fill]} />
+      <View style={styles.columns}>
+        {Array.from({ length: 6 }, (_, i) => (
+          <View key={i} style={[styles.column, fill]} />
+        ))}
+      </View>
     </View>
   );
 }

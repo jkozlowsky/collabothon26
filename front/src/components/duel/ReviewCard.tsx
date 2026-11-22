@@ -12,7 +12,7 @@ import Animated, {
 
 import { Icon } from '@/components/bank/Icon';
 import { Tappable } from '@/components/onboarding/ui';
-import { colors, elevation, fonts, radii, spacing, type } from '@/constants/theme';
+import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import { useLessonLookup, type LessonPlace } from '@/hooks/useLessonLookup';
 import { getStoryCategoryMeta } from '@/lib/duel/meta';
 import { partitionReview } from '@/lib/duel/reducer';
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
   answers: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
   answerCell: { flex: 1 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2, paddingVertical: 6, paddingHorizontal: spacing.sm, borderRadius: 8 },
-  pillText: { fontFamily: fonts.semiBold, fontSize: 12, lineHeight: 16, flex: 1 },
+  pillText: { ...type.labelStrong, flex: 1 },
   body: { overflow: 'hidden' },
   bodyInner: { position: 'absolute', top: 0, left: 0, right: 0, gap: spacing.smPlus },
   divider: { height: 1, backgroundColor: colors.borderDefault },

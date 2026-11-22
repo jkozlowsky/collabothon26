@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/bank/Icon';
 import { Tappable } from '@/components/onboarding/ui';
-import { colors, elevation, radii, spacing, type } from '@/constants/theme';
+import { colors, elevation, motion, radii, spacing, type } from '@/constants/theme';
 
 type Props = {
   visible: boolean;
@@ -36,17 +36,21 @@ const MAX_WIDTH = 430;
 /** Release past this distance (px) or speed (px/s) closes the sheet; anything less springs back. */
 const CLOSE_DISTANCE = 120;
 const CLOSE_VELOCITY = 900;
+/** Pulling up past the top moves the sheet by only this share of the finger's travel (rubber band). */
+const RUBBER_BAND = 0.15;
+/** Brings the 36 px header buttons up to a 44 px touch target. */
+const ICON_BUTTON_HIT_SLOP = 4;
 /** The JS driver on web (no native animated module there). */
-const NATIVE = Platform.OS !== 'web';
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 /** iOS-style sheet curve: quick start, long soft landing. One curve for open, close and snap-back. */
-const SHEET_EASING = Easing.bezier(0.32, 0.72, 0, 1);
+const SHEET_EASING = Easing.bezier(...motion.drawer);
 const OPEN_MS = 380;
 const CLOSE_MS = 260;
 const SNAP_MS = 260;
 
 /** Moves the sheet; `done` runs only if the animation was not interrupted. */
 function slide(offset: Animated.Value, toValue: number, duration: number, done?: () => void) {
-  Animated.timing(offset, { toValue, duration, easing: SHEET_EASING, useNativeDriver: NATIVE }).start(({ finished }) => {
+  Animated.timing(offset, { toValue, duration, easing: SHEET_EASING, useNativeDriver: USE_NATIVE_DRIVER }).start(({ finished }) => {
     if (finished) done?.();
   });
 }
@@ -127,8 +131,7 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
         return;
       }
       const dy = e.translationY - dragBase.current;
-      // Pulling up past the top only gives a little (rubber band).
-      offset.setValue(dy > 0 ? dy : dy * 0.15);
+      offset.setValue(dy > 0 ? dy : dy * RUBBER_BAND);
     },
     onDeactivate: (e) => {
       const dy = e.translationY - dragBase.current;
@@ -180,6 +183,7 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
                     accessibilityRole="button"
                     accessibilityLabel="Back"
                     testID="sheet-back"
+                    hitSlop={ICON_BUTTON_HIT_SLOP}
                     style={styles.iconButton}
                   >
                     <Icon name="chevron-left" size={20} color={colors.brandPrimary} />
@@ -193,6 +197,7 @@ export function Sheet({ visible, onClose, title, onBack, children, testID }: Pro
                   accessibilityRole="button"
                   accessibilityLabel="Close"
                   testID="sheet-close"
+                  hitSlop={ICON_BUTTON_HIT_SLOP}
                   style={styles.iconButton}
                 >
                   <Icon name="close" size={20} color={colors.brandPrimary} />
@@ -232,7 +237,7 @@ const styles = StyleSheet.create({
   // Taller than the visible handle so it is easy to grab.
   handleArea: {
     alignItems: 'center',
-    paddingTop: 10,
+    paddingTop: spacing.smPlus,
     paddingBottom: spacing.md,
   },
   handle: {
@@ -256,5 +261,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.brandPrimarySoft,
   },
-  content: { gap: 10, paddingBottom: spacing.xs },
+  content: { gap: spacing.smPlus, paddingBottom: spacing.xs },
 });

@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ComponentRef } from 'react';
-import { AccessibilityInfo, findNodeHandle, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AnswerTile, type AnswerState } from '@/components/categorizing/AnswerTile';
 import { FeedbackBanner } from '@/components/categorizing/FeedbackBanner';
@@ -63,11 +63,12 @@ function Question({ view, position, onAnswer }: QuestionProps) {
   const { result, correctIndex } = view;
 
   // A new question moves focus to its prompt (WCAG 2.2 SC 2.4.3); the screen's live region announces the rest.
+  // Web focuses the element itself: react-native-web's AccessibilityInfo cannot move focus.
   useEffect(() => {
     const prompt = promptRef.current;
     if (!prompt) return;
-    if (Platform.OS === 'web') (prompt as unknown as HTMLElement).focus();
-    else AccessibilityInfo.setAccessibilityFocus(findNodeHandle(prompt) ?? 0);
+    if (Platform.OS === 'web') prompt.focus();
+    else AccessibilityInfo.sendAccessibilityEvent(prompt, 'focus');
   }, []);
 
   const pick = (index: number | null) => {

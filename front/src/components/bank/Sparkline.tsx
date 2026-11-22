@@ -4,8 +4,9 @@ import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg'
 
 import { colors } from '@/constants/theme';
 
-type Props = { points: number[]; height?: number };
+type Props = { points: number[] };
 
+const HEIGHT = 64;
 const PAD = 6;
 
 /** Smoothed line through the points (Catmull-Rom → cubic Bézier), so the chart reads calm, not jagged. */
@@ -21,7 +22,7 @@ function smoothPath(xy: [number, number][]): string {
 }
 
 /** Depot chart: petrol line, yellow fade under it, yellow dot on today's value. */
-export function Sparkline({ points, height = 64 }: Props) {
+export function Sparkline({ points }: Props) {
   const [width, setWidth] = useState(0);
   const gradientId = `spark-${useId().replace(/:/g, '')}`;
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
@@ -31,22 +32,22 @@ export function Sparkline({ points, height = 64 }: Props) {
   const span = max - min || 1;
   const xy: [number, number][] = points.map((p, i) => [
     PAD + (i / (points.length - 1)) * (width - PAD * 2),
-    PAD + (1 - (p - min) / span) * (height - PAD * 2),
+    PAD + (1 - (p - min) / span) * (HEIGHT - PAD * 2),
   ]);
   const line = width ? smoothPath(xy) : '';
   const last = xy[xy.length - 1];
 
   return (
-    <View style={[styles.wrap, { height }]} onLayout={onLayout} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+    <View style={styles.wrap} onLayout={onLayout} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {width > 0 && (
-        <Svg width={width} height={height}>
+        <Svg width={width} height={HEIGHT}>
           <Defs>
             <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor={colors.brandAccent} stopOpacity={0.45} />
               <Stop offset="1" stopColor={colors.brandAccent} stopOpacity={0} />
             </LinearGradient>
           </Defs>
-          <Path d={`${line} L ${last[0]} ${height} L ${xy[0][0]} ${height} Z`} fill={`url(#${gradientId})`} />
+          <Path d={`${line} L ${last[0]} ${HEIGHT} L ${xy[0][0]} ${HEIGHT} Z`} fill={`url(#${gradientId})`} />
           <Path d={line} stroke={colors.brandPrimary} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
           <Circle cx={last[0]} cy={last[1]} r={4.5} fill={colors.brandAccent} stroke={colors.brandPrimary} strokeWidth={1.5} />
         </Svg>
@@ -56,5 +57,5 @@ export function Sparkline({ points, height = 64 }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { width: '100%' },
+  wrap: { width: '100%', height: HEIGHT },
 });

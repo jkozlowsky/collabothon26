@@ -6,7 +6,7 @@
  */
 import type { Lesson, LessonMode, LessonResultRequest, Step, StepOutcome, StepType } from '@/types/lessons';
 
-export const GRADED: ReadonlySet<StepType> = new Set(['quiz', 'match', 'sort']);
+const GRADED: ReadonlySet<StepType> = new Set(['quiz', 'match', 'sort']);
 
 export type LessonProgress = {
   mode: LessonMode;

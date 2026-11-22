@@ -6,7 +6,7 @@ import { Slider } from '@/components/bank/Slider';
 import { LineChart } from '@/components/lesson/LineChart';
 import { DuelMatchView } from '@/components/duel/questions/DuelMatchView';
 import { DuelSortView } from '@/components/duel/questions/DuelSortView';
-import { colors, elevation, radii, spacing, type } from '@/constants/theme';
+import { colors, elevation, pressFeedback, radii, spacing, type } from '@/constants/theme';
 import { formatValue, MODELS, sweep } from '@/lib/models';
 import type {
   DuelAnswer,
@@ -127,7 +127,7 @@ function DuelQuizView({
                 styles.quizOption,
                 isSelected && styles.quizOptionSelected,
                 isLocked && !isSelected && styles.optionDisabled,
-                pressed && !isLocked && styles.quizOptionPressed,
+                pressed && !isLocked && pressFeedback,
               ]}
             >
               <Text style={[styles.quizOptionText, isSelected && styles.quizOptionTextSelected]}>
@@ -319,10 +319,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandPrimarySoft,
     borderColor: colors.brandPrimary,
     borderWidth: 2,
-  },
-  quizOptionPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.9,
   },
   optionDisabled: {
     opacity: 0.6,

@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { Slider } from '@/components/bank/Slider';
 import { Tappable } from '@/components/onboarding/ui';
 import { Scene } from '@/components/video/Scene';
+import { CANVAS } from '@/components/video/kit/canvas';
 import { colors, radii, scenePalette, spacing, storyColors, type } from '@/constants/theme';
 import { captionAt, resolveScene } from '@/lib/sceneClock';
 import type { Lesson } from '@/types/lessons';
@@ -39,7 +40,7 @@ export function ScenePreview({ lesson, sceneId }: Props) {
   );
   if (!scene || !resolved) return <Text style={styles.body}>No scene {sceneId} in {lesson.id}.</Text>;
 
-  const height = Math.round(width * 0.8);
+  const height = Math.round(width * (CANVAS.height / CANVAS.width));
   const caption = resolved.captions[captionAt(resolved.captions, time)]?.text;
   const choices = scene.byChoice ? Object.keys(scene.byChoice).filter((k) => k !== 'step') : [];
   const nudge = (d: number) => setTime((v) => Math.min(resolved.duration, Math.max(0, Math.round((v + d) * 10) / 10)));

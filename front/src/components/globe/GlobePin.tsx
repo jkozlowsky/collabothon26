@@ -19,17 +19,27 @@ type Props = {
 /** The pin's touch box. Its bottom-centre is the pin tip, which the globe places on the city. */
 export const PIN_BOX = { width: 60, height: 64 } as const;
 
+/** Head of a pin: a square turned 45° with one sharp corner, which reads as a pin; that corner is the tip. The active pin is larger. */
+export function pinHead(active: boolean) {
+  const size = active ? 44 : 36;
+  const top = PIN_BOX.height - size * Math.SQRT1_2 - size / 2;
+  return {
+    size,
+    iconSize: active ? 20 : 16,
+    box: { width: size, height: size, left: (PIN_BOX.width - size) / 2, top },
+    // Three round corners, set one by one: react-native-web lets a `borderRadius` shorthand win over a longhand.
+    corners: { borderTopLeftRadius: size / 2, borderTopRightRadius: size / 2, borderBottomLeftRadius: size / 2 },
+  };
+}
+
 /** Figma "Globe Pin": a teardrop in the story colour; the current one is larger and yellow, with a pulse. */
 export function GlobePin({ story, state, justDone, onPress }: Props) {
   const reduced = useReducedMotion();
   const active = state === 'active';
   const locked = state === 'comingSoon';
-  const size = active ? 44 : 36;
-  // A square turned 45° with one sharp corner reads as a pin; that corner is the tip.
-  const headTop = PIN_BOX.height - size * Math.SQRT1_2 - size / 2;
-  const head = { width: size, height: size, left: (PIN_BOX.width - size) / 2, top: headTop };
+  const head = pinHead(active);
   const progress = calloutState(story);
-  const badgeAt = { left: head.left + size - 10, top: headTop - 6 };
+  const badgeAt = { left: head.box.left + head.size - 10, top: head.box.top - 6 };
   const fill = active ? colors.brandAccent : locked ? colors.storySlate : storyColors[story.color];
 
   return (
@@ -43,17 +53,9 @@ export function GlobePin({ story, state, justDone, onPress }: Props) {
       style={styles.box}
     >
       {active && <Animated.View style={[styles.pulse, !reduced && pulse]} />}
-      <View
-        style={[
-          styles.head,
-          head,
-          // Three round corners and one sharp one, which becomes the tip once turned. Set one by one:
-          // react-native-web lets a `borderRadius` shorthand win over a longhand.
-          { borderTopLeftRadius: size / 2, borderTopRightRadius: size / 2, borderBottomLeftRadius: size / 2, backgroundColor: fill },
-        ]}
-      />
-      <View style={[styles.icon, head]}>
-        <Feather name={locked ? 'lock' : story.icon} size={active ? 20 : 16} color={active ? colors.textOnAccent : colors.textOnBrand} />
+      <View style={[styles.head, head.box, head.corners, { backgroundColor: fill }]} />
+      <View style={[styles.icon, head.box]}>
+        <Feather name={locked ? 'lock' : story.icon} size={head.iconSize} color={active ? colors.textOnAccent : colors.textOnBrand} />
       </View>
       {progress === 'done' && (
         // Keyed so a fresh finish remounts the badge and plays its entrance.

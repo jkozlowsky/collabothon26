@@ -3,14 +3,17 @@ import { StyleSheet, View } from 'react-native';
 
 import { colors, radii, spacing, tints } from '@/constants/theme';
 
+/** Widths of each card's title and meta bars, in percent. */
+const CARDS = [
+  [60, 35],
+  [48, 30],
+] as const;
+
 /** Placeholder lesson cards at the end of the path, still locked while the path is built. */
 export function LockedLessons() {
   return (
     <View style={styles.list} aria-hidden>
-      {[
-        [60, 35],
-        [48, 30],
-      ].map(([title, meta]) => (
+      {CARDS.map(([title, meta]) => (
         <View key={title} style={styles.card}>
           <View style={styles.tile}>
             <Feather name="lock" size={16} color={colors.storySlate} />

@@ -18,14 +18,15 @@ type Props = {
   onStart: () => void;
 };
 
+/** What to finish before the target opens. */
+function finishLine({ next, missing, targetTitle }: Pick<Props, 'next' | 'missing' | 'targetTitle'>) {
+  if (!next) return `Finish the earlier lessons to unlock "${targetTitle}".`;
+  if (missing > 1) return `Finish "${next.title}" and ${missing - 1} more first.`;
+  return `Finish "${next.title}" to unlock "${targetTitle}".`;
+}
+
 /** "Oops, lesson locked" (Figma frame 16): why it is locked, the two stops that matter, and a way forward. */
 export function LockedLessonSheet({ visible, onClose, city, targetTitle, next, missing, onStart }: Props) {
-  const finish = next
-    ? missing > 1
-      ? `Finish "${next.title}" and ${missing - 1} more first.`
-      : `Finish "${next.title}" to unlock "${targetTitle}".`
-    : `Finish the earlier lessons to unlock "${targetTitle}".`;
-
   return (
     <Sheet visible={visible} onClose={onClose} testID="story-locked-sheet">
       <View style={styles.content}>
@@ -36,7 +37,7 @@ export function LockedLessonSheet({ visible, onClose, city, targetTitle, next, m
           Oops, lesson locked
         </Text>
         <Text style={styles.body} testID="story-locked-message">
-          Lessons in {city} open one by one. {finish}
+          Lessons in {city} open one by one. {finishLine({ next, missing, targetTitle })}
         </Text>
         {next && (
           <View style={styles.mini}>
@@ -60,7 +61,7 @@ export function LockedLessonSheet({ visible, onClose, city, targetTitle, next, m
                 <Text style={styles.stopTitle} numberOfLines={1}>
                   {targetTitle}
                 </Text>
-                <Text style={[styles.stopMeta, { color: colors.feedbackDanger }]}>Locked</Text>
+                <Text style={[styles.stopMeta, styles.stopMetaLocked]}>Locked</Text>
               </View>
             </View>
           </View>
@@ -88,5 +89,6 @@ const styles = StyleSheet.create({
   stopText: { flex: 1, minWidth: 0 },
   stopTitle: { ...type.labelStrong, color: colors.textPrimary },
   stopMeta: { ...type.labelDefault, color: colors.textMuted },
+  stopMetaLocked: { color: colors.feedbackDanger },
   actions: { alignSelf: 'stretch', gap: spacing.xs },
 });

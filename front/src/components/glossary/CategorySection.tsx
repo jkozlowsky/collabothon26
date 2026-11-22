@@ -5,7 +5,7 @@ import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated
 
 import { TermRow } from '@/components/glossary/TermRow';
 import { categoryStyle } from '@/constants/glossary';
-import { colors, elevation, radii, type } from '@/constants/theme';
+import { colors, elevation, motion, radii, type } from '@/constants/theme';
 import type { GlossaryCategory, TermSummary } from '@/types/glossary';
 
 type Props = {
@@ -19,7 +19,7 @@ type Props = {
 };
 
 const DURATION_MS = 240;
-const EASE_OUT = cubicBezier(0.23, 1, 0.32, 1);
+const EASE_OUT = cubicBezier(...motion.easeOut);
 // The card's shadow is drawn outside its box; the clipping wrapper gets this much room so it is not cut off.
 const SHADOW_ROOM = 8;
 

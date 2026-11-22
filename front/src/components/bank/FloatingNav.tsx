@@ -8,9 +8,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Glass } from '@/components/bank/Glass';
 import { Icon } from '@/components/bank/Icon';
 import { motion, Tappable } from '@/components/onboarding/ui';
-import { colors, elevation, nav, radii, type } from '@/constants/theme';
+import { colors, elevation, nav, radii, spacing, type } from '@/constants/theme';
 import { useOpenLearn } from '@/hooks/useOpenLearn';
-import { setAtlasDot, setOrbMeasure, useAtlasDot } from '@/lib/atlasOrb';
+import { registerOrbMeasure, setAtlasDot, useAtlasDot } from '@/lib/atlasOrb';
 import type { BankIconName } from '@/types/bank';
 
 type Mode = 'bank' | 'learn';
@@ -32,8 +32,17 @@ const ITEMS: Record<Mode, Item[]> = {
   ],
 };
 
+/** The orb leads to the other side of the app. */
+const ORB: Record<Mode, { testID: string; label: string; icon: BankIconName; text: string }> = {
+  bank: { testID: 'nav-learn', label: 'Open Atlas', icon: 'globe', text: 'Atlas' },
+  learn: { testID: 'nav-bank', label: 'Back to the bank', icon: 'card', text: 'Bank' },
+};
+
+const MORPH_MS = 320;
+const FADE_IN_MS = 220;
+const FADE_OUT_MS = 120;
 /** Shared spring-free move for the morph: the orb slides across, the pill resizes. */
-const MORPH = LinearTransition.duration(320);
+const MORPH = LinearTransition.duration(MORPH_MS);
 
 /**
  * Figma "Floating Nav". One component for both sides of the app, used as the tab bar of the
@@ -50,25 +59,29 @@ export function FloatingNav({ state, navigateToTab }: BottomTabBarProps) {
   // Group routes have no path segment, so "/" is Overview and "/payments" is Payments.
   // Only the first segment picks the tab, so a nested screen ("/glossary/<slug>") keeps its tab lit.
   const activeRoute = pathname.split('/')[1] || 'index';
-  const groupKey = (name: string) => state.routes.find((r) => r.name === name)!.key;
+  const orb = ORB[mode];
 
   // The Atlas popup flies into this button when it closes (AtlasNudge); the dot stays until it is tapped.
   const orbRef = useRef<ComponentRef<typeof View>>(null);
   const dot = useAtlasDot() && mode === 'bank';
   useEffect(() => {
-    if (mode !== 'bank') return setOrbMeasure(null);
-    setOrbMeasure((done) => {
+    if (mode !== 'bank') return;
+    return registerOrbMeasure((done) => {
       if (!orbRef.current) return done(null);
       orbRef.current.measureInWindow((x, y, width, height) => done(width ? { x, y, width, height } : null));
     });
-    return () => setOrbMeasure(null);
   }, [mode]);
 
   // Switching by tab key (not by URL) brings back the tab the user left on that side.
+  const switchTo = (group: '(bank)' | '(learn)') => {
+    const route = state.routes.find((r) => r.name === group);
+    if (route) navigateToTab(route.key);
+  };
+
   const onOrb = () => {
     setAtlasDot(false);
-    if (mode === 'bank') openLearn('/map', () => navigateToTab(groupKey('(learn)')));
-    else navigateToTab(groupKey('(bank)'));
+    if (mode === 'bank') openLearn('/map', () => switchTo('(learn)'));
+    else switchTo('(bank)');
   };
 
   return (
@@ -78,7 +91,7 @@ export function FloatingNav({ state, navigateToTab }: BottomTabBarProps) {
         <Animated.View layout={MORPH}>
           <Glass style={styles.pill}>
             {ITEMS[mode].map((item) => (
-              <Animated.View key={`${mode}-${item.route}`} entering={FadeIn.duration(220)} exiting={FadeOut.duration(120)} layout={MORPH}>
+              <Animated.View key={`${mode}-${item.route}`} entering={FadeIn.duration(FADE_IN_MS)} exiting={FadeOut.duration(FADE_OUT_MS)} layout={MORPH}>
                 <NavItem item={item} active={item.route === activeRoute} />
               </Animated.View>
             ))}
@@ -87,17 +100,17 @@ export function FloatingNav({ state, navigateToTab }: BottomTabBarProps) {
         <Animated.View layout={MORPH}>
           <View ref={orbRef} collapsable={false}>
             <Tappable
-              testID={mode === 'bank' ? 'nav-learn' : 'nav-bank'}
+              testID={orb.testID}
               accessibilityRole="button"
-              accessibilityLabel={mode === 'bank' ? (dot ? 'Open Atlas, a lesson is waiting' : 'Open Atlas') : 'Back to the bank'}
+              accessibilityLabel={dot ? 'Open Atlas, a lesson is waiting' : orb.label}
               haptic="light"
               pressedScale={0.94}
               onPress={onOrb}
               style={[styles.orb, mode === 'bank' ? styles.orbLearn : styles.orbBank]}
             >
-              <Animated.View key={mode} entering={FadeIn.duration(220)} style={styles.orbInner}>
-                <Icon name={mode === 'bank' ? 'globe' : 'card'} size={22} color={colors.brandPrimary} />
-                <Text style={styles.orbLabel}>{mode === 'bank' ? 'Atlas' : 'Bank'}</Text>
+              <Animated.View key={mode} entering={FadeIn.duration(FADE_IN_MS)} style={styles.orbInner}>
+                <Icon name={orb.icon} size={22} color={colors.brandPrimary} />
+                <Text style={styles.orbLabel}>{orb.text}</Text>
               </Animated.View>
             </Tappable>
             {/* Lands with the popup: a pop, then a quiet dot until the user opens Atlas. */}
@@ -137,7 +150,7 @@ const styles = StyleSheet.create({
     width: nav.itemWidth,
     paddingVertical: 7,
     alignItems: 'center',
-    gap: 2,
+    gap: spacing.xxs,
     borderRadius: radii.pill,
     backgroundColor: 'transparent',
   },
@@ -157,7 +170,7 @@ const styles = StyleSheet.create({
   orbLearn: { borderWidth: 2, borderColor: colors.brandAccent },
   // Learn side: a quiet glass-like way back.
   orbBank: { borderWidth: 1, borderColor: colors.glassBorder },
-  orbInner: { alignItems: 'center', gap: 2 },
+  orbInner: { alignItems: 'center', gap: spacing.xxs },
   dot: {
     position: 'absolute',
     top: 2,

@@ -15,3 +15,6 @@ export const CANVAS = {
 
 /** Duration of a pop-in (tags, bubbles) and of the amount's fade, in seconds. */
 export const POP = 0.25;
+
+/** Where the phone stands unless the scene places it: its centre, 0–1 of the canvas width. */
+export const PHONE_X = 0.72;

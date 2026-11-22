@@ -29,10 +29,14 @@ import type { Detail } from '@/types/bank';
 /** Width of a payment card in the carousel: the next card peeks in from the right, as in Figma. */
 const CARD_PEEK = 70;
 const PHONE_MAX = 430;
+/** Rows in "Recent activity"; "See all" opens the rest. */
+const RECENT_COUNT = 4;
 
 function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
 }
 
 /** Bank — Home (Figma 11:452): the first screen of the app. */
@@ -144,7 +148,7 @@ export default function OverviewScreen() {
 
       <Section title="Recent activity" action={{ label: 'See all', onPress: () => setAllActivity(true), testID: 'activity-see-all' }}>
         <ListCard testID="recent-activity">
-          {state.transactions.slice(0, 4).map((t) => (
+          {state.transactions.slice(0, RECENT_COUNT).map((t) => (
             <ListRow
               key={t.id}
               icon={t.icon}

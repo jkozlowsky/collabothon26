@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
   toast: {
     backgroundColor: colors.brandPrimary,
     borderRadius: radii.pill,
-    paddingVertical: 10,
+    paddingVertical: spacing.smPlus,
     paddingHorizontal: spacing.lg,
     ...elevation.mid,
   },

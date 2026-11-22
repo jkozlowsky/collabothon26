@@ -21,6 +21,8 @@ import { calloutState, isDone, LEARNER, sortStories, STORIES, withCurrent, withL
 import { useCurrentUser } from '@/lib/user';
 import type { LessonSummary } from '@/types/lessons';
 
+/** The success haptic lands as the finished city's check pops in. */
+const CHECK_HAPTIC_MS = 300;
 /** After a city's check pops in, the plane takes off for the next one. */
 const TAKE_OFF_MS = 1300;
 /** With the sheet low, the globe moves down to the middle of the free space, by at most this much. */
@@ -78,11 +80,10 @@ export default function MapScreen() {
     played.current = celebrate;
     globe.current?.face(celebrate);
     const next = sortStories(stories).find((s) => s.id !== celebrate && ['inProgress', 'notStarted'].includes(calloutState(s)));
-    timers.current.push(setTimeout(() => haptic('success'), 300));
+    timers.current.push(setTimeout(() => haptic('success'), CHECK_HAPTIC_MS));
     if (next) timers.current.push(setTimeout(() => globe.current?.flyTo(next.id, true), TAKE_OFF_MS));
-    // Plays once per finished path; `stories` only feeds the pick of the next city.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, celebrate]);
+    // `played` makes this once per finished path, so a lessons reload (new `stories`) does not replay it.
+  }, [ready, celebrate, stories]);
   // Only unmount cancels the take-off: a lessons reload may flip `ready` while the timers run.
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 

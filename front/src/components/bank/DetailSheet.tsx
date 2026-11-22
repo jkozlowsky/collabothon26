@@ -7,7 +7,6 @@ import { Button } from '@/components/Button';
 import { colors, radii, spacing, type } from '@/constants/theme';
 import type { Detail } from '@/types/bank';
 
-
 type Props = {
   detail: Detail | null;
   onClose: () => void;

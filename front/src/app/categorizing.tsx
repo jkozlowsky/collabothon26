@@ -2,14 +2,14 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useEffectEvent, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, ActivityIndicator, BackHandler, Platform } from 'react-native';
 
+import { ErrorActions } from '@/components/categorizing/ErrorActions';
 import { FlowMessage } from '@/components/categorizing/FlowMessage';
 import { LiveRegions } from '@/components/categorizing/LiveRegions';
 import { LockedLessons } from '@/components/categorizing/LockedLessons';
-import { preloadGlobe } from '@/components/globe/Globe';
 import { PathSteps, type Step } from '@/components/categorizing/PathSteps';
 import { QuickCheckPage } from '@/components/categorizing/QuickCheckPage';
+import { preloadGlobe } from '@/components/globe/Globe';
 import { Page } from '@/components/onboarding/Page';
-import { BigButton } from '@/components/onboarding/ui';
 import { STATUS_TEXT } from '@/constants/quickCheck';
 import { colors } from '@/constants/theme';
 import { useBank } from '@/hooks/useBank';
@@ -38,6 +38,7 @@ const ANSWERS_ONLY: StepId[] = ['answers', 'picking'];
 
 const ERROR_TITLE = 'Your path stopped halfway';
 const CHECK_ERROR_TITLE = "Your learning path didn't load";
+const SKIP_NOTE = "You'll start with the general lessons.";
 
 type Phase = 'opening' | 'quick' | 'loading' | 'error';
 
@@ -186,17 +187,15 @@ export default function CategorizingScreen() {
         <Page
           testID="categorizing-check-error"
           center
-          note="You'll start with the general lessons."
+          note={SKIP_NOTE}
           footer={
-            <>
-              {retryable && <BigButton label="Retry" onPress={reopen} testID="categorizing-check-retry" />}
-              <BigButton
-                label="Continue to Learn"
-                variant={retryable ? 'ghost' : 'primary'}
-                onPress={() => continueToLearn()}
-                testID="categorizing-check-skip"
-              />
-            </>
+            <ErrorActions
+              retryable={retryable}
+              onRetry={reopen}
+              onSkip={continueToLearn}
+              retryTestID="categorizing-check-retry"
+              skipTestID="categorizing-check-skip"
+            />
           }
         >
           <FlowMessage
@@ -230,19 +229,15 @@ export default function CategorizingScreen() {
       <Page
         testID="categorizing-error"
         center
-        note="You'll start with the general lessons."
+        note={SKIP_NOTE}
         footer={
-          <>
-            {retryable && (
-              <BigButton label="Retry" onPress={() => void start(sent.current)} testID="categorizing-retry" />
-            )}
-            <BigButton
-              label="Continue to Learn"
-              variant={retryable ? 'ghost' : 'primary'}
-              onPress={() => continueToLearn()}
-              testID="categorizing-skip"
-            />
-          </>
+          <ErrorActions
+            retryable={retryable}
+            onRetry={() => void start(sent.current)}
+            onSkip={continueToLearn}
+            retryTestID="categorizing-retry"
+            skipTestID="categorizing-skip"
+          />
         }
       >
         <FlowMessage

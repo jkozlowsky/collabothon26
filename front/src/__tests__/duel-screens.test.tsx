@@ -1,7 +1,7 @@
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import { appRoutes } from '@/test-utils/routes';
-import { clearStoredActiveMatch } from '@/lib/duel/useDuelMatch';
+import { clearStoredActiveMatch } from '@/lib/duel/activeMatch';
 import type { DuelCategory, MatchEnd, MatchSummary, Rankings } from '@/types/duel';
 
 let matchApi: ((url: string, init?: RequestInit) => { status?: number; body?: unknown } | undefined) | null = null;

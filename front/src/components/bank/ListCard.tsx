@@ -1,7 +1,7 @@
-import { Children, Fragment, type ReactNode } from 'react';
+import { Children, Fragment, isValidElement, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { colors, radii } from '@/constants/theme';
+import { colors, radii, spacing } from '@/constants/theme';
 
 /** White card holding ListRows, with hairline dividers between them. */
 export function ListCard({ children, testID }: { children: ReactNode; testID?: string }) {
@@ -9,7 +9,8 @@ export function ListCard({ children, testID }: { children: ReactNode; testID?: s
   return (
     <View style={styles.card} testID={testID}>
       {rows.map((row, i) => (
-        <Fragment key={i}>
+        // Children.toArray gives every element a stable key; the index only covers plain text.
+        <Fragment key={isValidElement(row) ? row.key : i}>
           {i > 0 && <View style={styles.divider} />}
           {row}
         </Fragment>
@@ -26,5 +27,5 @@ const styles = StyleSheet.create({
     borderColor: colors.borderDefault,
     overflow: 'hidden',
   },
-  divider: { height: 1, backgroundColor: colors.borderDefault, marginHorizontal: 12 },
+  divider: { height: 1, backgroundColor: colors.borderDefault, marginHorizontal: spacing.md },
 });

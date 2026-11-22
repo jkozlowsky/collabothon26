@@ -1,24 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { AccountCard } from '@/components/accounts/AccountCard';
 import { CommerzbankLogo } from '@/components/bank/CommerzbankLogo';
 import { Icon } from '@/components/bank/Icon';
-import { Avatar } from '@/components/profile/Avatar';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
-import {
-  fetchDemoAccounts,
-  getDeviceId,
-  type DemoAccount,
-} from '@/lib/session';
+import { fetchDemoAccounts, getDeviceId, type DemoAccount } from '@/lib/session';
 import { useCurrentUser } from '@/lib/user';
 
 type Props = {
@@ -60,11 +50,11 @@ export function AccountPicker({ notice, onSelect }: Props) {
     };
   }, [refreshKey]);
 
-  const loadAccounts = useCallback(() => {
+  function loadAccounts() {
     setLoading(true);
     setError(null);
     setRefreshKey((k) => k + 1);
-  }, []);
+  }
 
   const handleSelect = async (account: DemoAccount) => {
     if (account.status === 'in-use' || pickingId) return;
@@ -131,48 +121,15 @@ export function AccountPicker({ notice, onSelect }: Props) {
           </View>
         ) : (
           <View style={styles.list}>
-            {accounts.map((acc) => {
-              const inUse = acc.status === 'in-use';
-              const isSelected = pickingId === acc.userId;
-
-              return (
-                <Pressable
-                  key={acc.userId}
-                  testID={`account-${acc.userId}`}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${acc.firstName} ${acc.lastName}${inUse ? ', in use' : ''}`}
-                  accessibilityState={{ disabled: inUse || Boolean(pickingId) }}
-                  aria-disabled={inUse}
-                  disabled={inUse || Boolean(pickingId)}
-                  onPress={() => handleSelect(acc)}
-                  style={({ pressed }) => [
-                    styles.card,
-                    inUse ? styles.cardInUse : styles.cardActive,
-                    pressed && !inUse && styles.cardPressed,
-                  ]}
-                >
-                  <View style={[styles.cardContent, inUse && styles.contentInUse]}>
-                    <Avatar id={acc.avatar} size={52} />
-                    <Text style={styles.cardName} numberOfLines={1}>
-                      {acc.firstName} {acc.lastName}
-                    </Text>
-                  </View>
-                  {inUse ? (
-                    <View
-                      style={styles.inUsePill}
-                      testID={`account-${acc.userId}-in-use`}
-                    >
-                      <Icon name="lock" size={14} color={colors.textMuted} />
-                      <Text style={styles.inUseText}>In use</Text>
-                    </View>
-                  ) : isSelected ? (
-                    <ActivityIndicator size="small" color={colors.brandPrimary} />
-                  ) : (
-                    <Icon name="chevron-right" size={20} color={colors.textMuted} />
-                  )}
-                </Pressable>
-              );
-            })}
+            {accounts.map((acc) => (
+              <AccountCard
+                key={acc.userId}
+                account={acc}
+                picking={pickingId === acc.userId}
+                busy={Boolean(pickingId)}
+                onPress={() => handleSelect(acc)}
+              />
+            ))}
           </View>
         )}
       </View>
@@ -188,7 +145,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bgCanvas,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xxl,
     justifyContent: 'space-between',
   },
   content: {
@@ -197,12 +154,12 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   headerText: {
     alignItems: 'center',
-    marginTop: 8,
-    gap: 8,
+    marginTop: spacing.sm,
+    gap: spacing.sm,
   },
   title: {
     ...type.displayLarge,
@@ -235,10 +192,10 @@ const styles = StyleSheet.create({
   errorCard: {
     backgroundColor: colors.bgSurface,
     borderRadius: 20,
-    paddingTop: 24,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    gap: 12,
+    paddingTop: spacing.xxl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
+    gap: spacing.md,
     alignItems: 'center',
     ...elevation.low,
   },
@@ -249,7 +206,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.feedbackDangerSoft,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   errorTitle: {
     ...type.titleCard,
@@ -260,63 +217,13 @@ const styles = StyleSheet.create({
     ...type.bodyDefault,
     color: colors.textMuted,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   errorButtonWrapper: {
     width: '100%',
   },
   list: {
-    gap: 12,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.bgSurface,
-    borderRadius: 20,
-    paddingVertical: 14,
-    paddingLeft: 14,
-    paddingRight: 16,
-    gap: 14,
-  },
-  cardActive: {
-    ...elevation.low,
-  },
-  cardInUse: {
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-  },
-  cardPressed: {
-    backgroundColor: colors.brandPrimarySoft,
-    transform: [{ scale: 0.99 }],
-  },
-  cardContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  contentInUse: {
-    opacity: 0.45,
-  },
-  cardName: {
-    ...type.titleCard,
-    color: colors.textPrimary,
-    flex: 1,
-  },
-  inUsePill: {
-    backgroundColor: colors.borderDefault,
-    borderRadius: radii.pill,
-    paddingVertical: 4,
-    paddingLeft: 8,
-    paddingRight: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  inUseText: {
-    ...type.labelStrong,
-    color: colors.textMuted,
+    gap: spacing.md,
   },
   footnote: {
     ...type.labelDefault,

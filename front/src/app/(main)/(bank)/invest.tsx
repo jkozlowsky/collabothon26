@@ -18,6 +18,12 @@ import { holdingDetail } from '@/lib/bank/details';
 import { formatPercent } from '@/lib/bank/money';
 import type { Holding } from '@/types/bank';
 
+function changeTone(change: number) {
+  if (change > 0) return 'positive';
+  if (change < 0) return 'negative';
+  return 'default';
+}
+
 /** Bank — Invest (Figma 26:1128). Buying goes through the Atlas nudge first. */
 export default function InvestScreen() {
   const { state, money } = useBank();
@@ -62,7 +68,7 @@ export default function InvestScreen() {
               meta={h.meta}
               value={money(h.value)}
               valueNote={formatPercent(h.change)}
-              noteTone={h.change > 0 ? 'positive' : h.change < 0 ? 'negative' : 'default'}
+              noteTone={changeTone(h.change)}
               onPress={() => setSelectedId(h.id)}
               testID={`holding-${h.id}`}
             />

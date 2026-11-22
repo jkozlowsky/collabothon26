@@ -40,10 +40,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     api<unknown>(`${userPath}/account`)
-      .then((a) => !cancelled && isAccount(a) && setAccount(a))
+      .then((a) => {
+        if (!cancelled && isAccount(a)) setAccount(a);
+      })
       .catch((e: unknown) => console.warn('Could not load account', e));
     api<unknown>(`${userPath}/stats?today=${localDate()}`)
-      .then((s) => !cancelled && isStats(s) && setStats(s))
+      .then((s) => {
+        if (!cancelled && isStats(s)) setStats(s);
+      })
       .catch((e: unknown) => console.warn('Could not load stats', e));
     return () => {
       cancelled = true;
@@ -75,7 +79,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const resetProgress = useCallback(() => {
     setStreakBump(null);
     api<unknown>(`${userPath}/progress/reset?today=${localDate()}`, { method: 'POST' })
-      .then((s) => isStats(s) && setStats(s))
+      .then((s) => {
+        if (isStats(s)) setStats(s);
+      })
       .catch((e: unknown) => console.warn('Could not reset progress', e));
   }, [userPath]);
 

@@ -35,7 +35,7 @@ export function ProductRow({ product, onPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: 12, paddingVertical: 10, minHeight: 60 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.smPlus, minHeight: 60 },
   pressed: { backgroundColor: colors.bgCanvas },
   tile: {
     width: 36,
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  body: { flex: 1, gap: 2 },
+  body: { flex: 1, gap: spacing.xxs },
   title: type.titleCard,
   meta: { ...type.labelDefault, color: colors.textMuted },
   button: {

@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { ChoiceChip } from '@/components/onboarding/ChoiceChip';
+import { BackButton } from '@/components/onboarding/HeaderButtons';
 import { Page } from '@/components/onboarding/Page';
-import { BackButton, BigButton, type } from '@/components/onboarding/ui';
+import { BigButton, type } from '@/components/onboarding/ui';
 import { colors, spacing } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import { useCurrentUser } from '@/lib/user';

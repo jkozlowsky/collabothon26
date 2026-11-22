@@ -9,7 +9,7 @@ export function categorizationPath(userId: string = 'demo-user'): string {
   return `/api/users/${encodeURIComponent(userId)}/categorization`;
 }
 
-export const TIMEOUT_MS = 10_000;
+const TIMEOUT_MS = 10_000;
 /** A 404 that arrives after the profile write has settled can still be transient on the backend, so it is retried. */
 const PROFILE_RETRIES = 3;
 const PROFILE_BACKOFF_MS = 400;

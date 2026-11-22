@@ -60,8 +60,10 @@ export const Setting = memo(function Setting({ place, time, part, color, landmar
   const base = area.y + area.height;
   const buildings = useMemo(() => skyline(seed, CANVAS.width, base, area.height * 0.55), [seed, base, area.height]);
 
-  const twinkle = [useLoop(ambient, 3200), useLoop(ambient, 4100, 600), useLoop(ambient, 2700, 1200)];
-  const stars = useLoop(ambient && time === 'night', 3000);
+  // Only the back part draws the lit windows and the stars, so the front part leaves their loops off.
+  const loops = ambient && part === 'back';
+  const twinkle = [useLoop(loops, 3200), useLoop(loops, 4100, 600), useLoop(loops, 2700, 1200)];
+  const stars = useLoop(loops && time === 'night', 3000);
   const g0 = useAnimatedStyle(() => ({ opacity: interpolate(twinkle[0].get(), [0, 1], [1, 0.35]) }));
   const g1 = useAnimatedStyle(() => ({ opacity: interpolate(twinkle[1].get(), [0, 1], [0.4, 1]) }));
   const g2 = useAnimatedStyle(() => ({ opacity: interpolate(twinkle[2].get(), [0, 1], [0.9, 0.5]) }));
@@ -72,10 +74,11 @@ export const Setting = memo(function Setting({ place, time, part, color, landmar
     if (!indoor) return null;
     // Desk (office), table (cafe) or sofa back (home): one line the seated characters sit behind.
     const top = place === 'home' ? CANVAS.desk + 8 : CANVAS.desk;
+    const cafe = place === 'cafe';
     return (
       <Svg pointerEvents="none" style={StyleSheet.absoluteFill} viewBox={`0 0 ${CANVAS.width} ${CANVAS.height}`}>
-        <Rect x={place === 'cafe' ? 120 : 0} y={top} width={place === 'cafe' ? 240 : CANVAS.width} height={10} rx={radii.bar} fill={scenePalette.desk} />
-        {place !== 'home' && <Rect x={place === 'cafe' ? 230 : 300} y={top + 10} width={6} height={CANVAS.floor - top - 10} fill={scenePalette.desk} />}
+        <Rect x={cafe ? 120 : 0} y={top} width={cafe ? 240 : CANVAS.width} height={10} rx={radii.bar} fill={scenePalette.desk} />
+        {place !== 'home' && <Rect x={cafe ? 230 : 300} y={top + 10} width={6} height={CANVAS.floor - top - 10} fill={scenePalette.desk} />}
       </Svg>
     );
   }

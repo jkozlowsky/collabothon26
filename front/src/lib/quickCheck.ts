@@ -8,10 +8,10 @@ const MIN_OPTIONS = 2;
 
 function wellFormed(q: Partial<CheckQuestion> | null): q is CheckQuestion {
   if (!q || typeof q.id !== 'string' || !q.area || !AREAS.includes(q.area)) return false;
-  const texts = typeof q.prompt === 'string' && typeof q.explanation === 'string' && typeof q.lessonId === 'string';
-  const options = Array.isArray(q.options) && q.options.length >= MIN_OPTIONS && q.options.every((o) => typeof o === 'string');
-  const correct = options && Number.isInteger(q.correctIndex) && q.correctIndex! >= 0 && q.correctIndex! < q.options!.length;
-  return texts && correct;
+  const { options, correctIndex } = q;
+  if (typeof q.prompt !== 'string' || typeof q.explanation !== 'string' || typeof q.lessonId !== 'string') return false;
+  if (!Array.isArray(options) || options.length < MIN_OPTIONS || !options.every((o) => typeof o === 'string')) return false;
+  return typeof correctIndex === 'number' && Number.isInteger(correctIndex) && correctIndex >= 0 && correctIndex < options.length;
 }
 
 /** A failed GET counts as no questions and an unusable item as no item; an empty list skips the Quick check. */

@@ -29,6 +29,7 @@ export function LessonPlayer({ lesson, session, onClose, onNext, onOpenGlossary,
   const [concept, setConcept] = useState<string | null>(null);
   const step = progress.current === null ? undefined : lesson.steps.find((s) => s.id === progress.current);
   const weak = weakConcepts(progress, lesson.steps, lesson.concepts);
+  const nextId = lesson.next;
 
   return (
     <ConceptLinkContext.Provider value={setConcept}>
@@ -50,7 +51,7 @@ export function LessonPlayer({ lesson, session, onClose, onNext, onOpenGlossary,
             xp={xp}
             concepts={lesson.concepts.map((key) => ({ key, term: lesson.glossary[key]?.term ?? key, weak: weak.has(key) }))}
             onConcept={setConcept}
-            onNext={lesson.next ? () => onNext(lesson.next!) : undefined}
+            onNext={nextId ? () => onNext(nextId) : undefined}
             onOffers={onOffers}
             onClose={onClose}
           />

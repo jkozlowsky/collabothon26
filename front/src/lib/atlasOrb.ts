@@ -11,9 +11,12 @@ let measure: Measure | null = null;
 let dot = false;
 const listeners = new Set<() => void>();
 
-/** The nav registers how to find the Atlas button on screen; null when it is not shown. */
-export function setOrbMeasure(m: Measure | null) {
+/** The nav registers how to find the Atlas button while it shows it. Returns the unregister function. */
+export function registerOrbMeasure(m: Measure) {
   measure = m;
+  return () => {
+    measure = null;
+  };
 }
 
 /** Window position of the Atlas button, measured now (the nav may have moved since it laid out). */

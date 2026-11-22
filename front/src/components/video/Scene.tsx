@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, type SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 
 import { Amount } from '@/components/video/kit/Amount';
-import { CANVAS } from '@/components/video/kit/canvas';
+import { CANVAS, PHONE_X } from '@/components/video/kit/canvas';
 import { Character } from '@/components/video/kit/Character';
 import { Chart } from '@/components/video/kit/Chart';
 import { Phone } from '@/components/video/kit/Phone';
@@ -53,7 +53,7 @@ export const Scene = memo(function Scene({ scene, t, length, width, height, colo
   });
 
   const { place, time } = scene.setting;
-  const phoneRight = scene.layers.some((l) => l.kind === 'phone' && (l.x ?? 0.72) > 0.5);
+  const phoneRight = scene.layers.some((l) => l.kind === 'phone' && (l.x ?? PHONE_X) > 0.5);
   return (
     <View style={[styles.frame, { width, height }]} pointerEvents="none">
       <View

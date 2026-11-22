@@ -1,7 +1,7 @@
 import type Feather from '@expo/vector-icons/Feather';
 import type { ComponentProps } from 'react';
 
-import { colors } from '@/constants/theme';
+import { colors, tints } from '@/constants/theme';
 
 type IconName = ComponentProps<typeof Feather>['name'];
 
@@ -9,14 +9,14 @@ type IconName = ComponentProps<typeof Feather>['name'];
 export type CategoryStyle = { icon: IconName; color: string; tint: string };
 
 const CATEGORY_STYLES: Record<string, CategoryStyle> = {
-  basics: { icon: 'book', color: colors.storyTeal, tint: colors.storyTealSoft },
-  investing: { icon: 'trending-up', color: colors.storyViolet, tint: colors.storyVioletSoft },
+  basics: { icon: 'book', color: colors.storyTeal, tint: tints.teal },
+  investing: { icon: 'trending-up', color: colors.storyViolet, tint: tints.violet },
   saving: { icon: 'database', color: colors.feedbackSuccess, tint: colors.feedbackSuccessSoft },
-  'credit-debt': { icon: 'percent', color: colors.storyOrange, tint: colors.storyOrangeSoft },
-  risk: { icon: 'shield', color: colors.storyRose, tint: colors.storyRoseSoft },
+  'credit-debt': { icon: 'percent', color: colors.storyOrange, tint: tints.orange },
+  risk: { icon: 'shield', color: colors.storyRose, tint: tints.rose },
 };
 
-const FALLBACK_STYLE: CategoryStyle = { icon: 'book-open', color: colors.storySlate, tint: colors.storySlateSoft };
+const FALLBACK_STYLE: CategoryStyle = { icon: 'book-open', color: colors.storySlate, tint: tints.slateSoft };
 
 export function categoryStyle(slug: string): CategoryStyle {
   return CATEGORY_STYLES[slug] ?? FALLBACK_STYLE;

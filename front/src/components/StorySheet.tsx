@@ -33,6 +33,8 @@ const EXPANDED_GAP = 0.1;
 /** A fling's travel is projected this many seconds ahead when picking the snap position. */
 const PROJECTION = 0.15;
 const SPRING = { damping: 26, stiffness: 260 };
+/** A tap on the handle steps the sheet up, then back down. */
+const NEXT_STOP: Record<SheetStop, SheetStop> = { peek: 'half', half: 'full', full: 'peek' };
 
 /**
  * Figma story list sheet (3:616) with three stops: peek (low, the default), half (just under the globe) and
@@ -90,7 +92,7 @@ export function StorySheet({ stories, height, halfTop, peekTop, top, onSelect, s
           <View>
             <Pressable
               style={styles.handleArea}
-              onPress={() => setStop((s) => (s === 'peek' ? 'half' : s === 'half' ? 'full' : 'peek'))}
+              onPress={() => setStop((s) => NEXT_STOP[s])}
               accessibilityRole="button"
               accessibilityLabel={expanded ? 'Collapse stories' : 'Expand stories'}
               testID="story-sheet-handle"
@@ -137,11 +139,11 @@ const styles = StyleSheet.create({
     ...elevation.sheet,
   },
   // Taller than the visible handle so it is easy to grab.
-  handleArea: { alignItems: 'center', paddingTop: 10, paddingBottom: spacing.md },
+  handleArea: { alignItems: 'center', paddingTop: spacing.smPlus, paddingBottom: spacing.md },
   handle: { width: 40, height: 5, borderRadius: radii.pill, backgroundColor: colors.borderStrong },
   header: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: spacing.md },
   title: type.titleSection,
   meta: { ...type.labelDefault, color: colors.textMuted },
   // Clears the floating nav. Collapsed, the lower cards sit below the screen; expanding reaches them.
-  list: { gap: 10, paddingBottom: nav.clearance + spacing.lg },
+  list: { gap: spacing.smPlus, paddingBottom: nav.clearance + spacing.lg },
 });

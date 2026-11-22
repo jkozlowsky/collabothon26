@@ -1,7 +1,7 @@
 /** Euro formatting for the bank shell. Hand-rolled so web, Android and Jest all print the same string. */
 
 const MINUS = '−';
-export const MASK = '€ ••••';
+const MASK = '€ ••••';
 
 type FormatOptions = {
   /** Prefix positive amounts with "+" (incoming money). Negative amounts always get "−". */
@@ -12,13 +12,19 @@ type FormatOptions = {
   whole?: boolean;
 };
 
+/** "−" for a negative value; "+" for a positive one when `signed`. */
+function signOf(value: number, signed: boolean): string {
+  if (value < 0) return MINUS;
+  return signed && value > 0 ? '+' : '';
+}
+
 export function groupThousands(n: number): string {
   return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 /** 428052 → "€ 4,280.52"; −4218 → "−€ 42.18"; with `signed`, 215000 → "+€ 2,150.00". */
 export function formatEUR(cents: number, { signed = false, hidden = false, whole = false }: FormatOptions = {}): string {
-  const sign = cents < 0 ? MINUS : signed && cents > 0 ? '+' : '';
+  const sign = signOf(cents, signed);
   if (hidden) return `${sign}${MASK}`;
   const abs = Math.abs(Math.round(cents));
   const euros = groupThousands(Math.floor(abs / 100));
@@ -28,8 +34,7 @@ export function formatEUR(cents: number, { signed = false, hidden = false, whole
 
 /** "+3.2%" / "−2.3%" / "0.0%". */
 export function formatPercent(value: number, { signed = true }: { signed?: boolean } = {}): string {
-  const sign = value < 0 ? MINUS : signed && value > 0 ? '+' : '';
-  return `${sign}${Math.abs(value).toFixed(1)}%`;
+  return `${signOf(value, signed)}${Math.abs(value).toFixed(1)}%`;
 }
 
 /**

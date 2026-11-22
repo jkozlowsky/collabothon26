@@ -11,21 +11,24 @@ import { depotChart, depotTotal, positionCount } from '@/lib/bank/selectors';
 import type { ChartRange } from '@/types/bank';
 
 const RANGES: ChartRange[] = ['1W', '1M', '1Y', 'Max'];
+/** Brings the 26 px chips up to a 44 px touch target without overlapping their neighbours (8 px apart). */
+const RANGE_HIT_SLOP = { top: 9, bottom: 9, left: 4, right: 4 };
 
 /** Depot value, % change chip, chart and range chips. Used on Home and Invest. */
-export function DepotCard({ testID }: { testID?: string }) {
+export function DepotCard() {
   const { state, money } = useBank();
   const [range, setRange] = useState<ChartRange>('1Y');
   const chart = depotChart(state, range);
+  const total = depotTotal(state);
   const up = chart.change >= 0;
 
   return (
-    <View style={styles.card} testID={testID}>
+    <View style={styles.card}>
       <View style={styles.top}>
         <View style={styles.titles}>
           <Text style={styles.label}>Depot · {positionCount(state)} positions</Text>
           <Text style={styles.amount} testID="depot-total">
-            {money(depotTotal(state))}
+            {money(total)}
           </Text>
         </View>
         <View style={[styles.chip, !up && styles.chipDown]} testID="depot-change">
@@ -35,7 +38,7 @@ export function DepotCard({ testID }: { testID?: string }) {
           </Text>
         </View>
       </View>
-      {depotTotal(state) > 0 && <Sparkline points={chart.points} />}
+      {total > 0 && <Sparkline points={chart.points} />}
       <View style={styles.ranges} accessibilityRole="tablist">
         {RANGES.map((r) => (
           <Tappable
@@ -45,6 +48,7 @@ export function DepotCard({ testID }: { testID?: string }) {
             accessibilityState={{ selected: r === range }}
             testID={`range-${r}`}
             haptic="selection"
+            hitSlop={RANGE_HIT_SLOP}
             style={[styles.range, motion.colors, r === range && styles.rangeActive]}
           >
             <Text style={[styles.rangeText, r === range && styles.rangeTextActive]}>{r}</Text>
@@ -65,13 +69,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  titles: { gap: 2 },
+  titles: { gap: spacing.xxs },
   label: { ...type.labelDefault, color: colors.textMuted },
   amount: type.displayLarge,
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
     backgroundColor: colors.feedbackSuccessSoft,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
@@ -81,7 +85,7 @@ const styles = StyleSheet.create({
   chipText: { ...type.labelStrong, color: colors.feedbackSuccess },
   down: { color: colors.feedbackDanger },
   ranges: { flexDirection: 'row', gap: spacing.sm },
-  range: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radii.pill, backgroundColor: colors.brandPrimarySoft },
+  range: { paddingHorizontal: spacing.smPlus, paddingVertical: 5, borderRadius: radii.pill, backgroundColor: colors.brandPrimarySoft },
   rangeActive: { backgroundColor: colors.brandPrimary },
   rangeText: { ...type.labelStrong, color: colors.brandPrimary },
   rangeTextActive: { color: colors.textOnBrand },

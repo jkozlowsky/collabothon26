@@ -28,25 +28,25 @@ export type Particle = {
 };
 
 /** The confetti palette: yellow, green, the story colours and white. */
-export const CONFETTI_PALETTE = [
+export const CONFETTI_PALETTE: string[] = [
   colors.brandAccent,
   colors.feedbackSuccess,
   colors.storyTeal,
   colors.storyOrange,
   colors.storyRose,
   colors.storyViolet,
-  '#FFFFFF',
+  colors.textOnBrand,
 ];
 
 /** Gold sparks and coins for the XP count-up. */
-export const COIN_PALETTE = [colors.brandAccent, colors.feedbackXp, colors.brandAccentSoft, '#FFFFFF'];
+export const COIN_PALETTE: string[] = [colors.brandAccent, colors.feedbackXp, colors.brandAccentSoft, colors.textOnBrand];
 
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
 const pick = <T,>(list: T[], i: number) => list[i % list.length];
 
 const base: Particle = {
   x0: 0, y0: 0, vx: 0, vy: 0, g: 0, drag: 0.0001, spin: 0, flip: 0, sway: 0, swayHz: 0,
-  size: 8, shape: 'rect', color: '#FFFFFF', delay: 0, life: 1000, s0: 1, s1: 1,
+  size: 8, shape: 'rect', color: colors.textOnBrand, delay: 0, life: 1000, s0: 1, s1: 1,
 };
 
 /** A firework: a quick flash ring plus `count` sparks flying out radially, pulled down by gravity. */

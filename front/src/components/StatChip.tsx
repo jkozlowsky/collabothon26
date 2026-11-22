@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.smPlus,
     borderRadius: radii.pill,
     backgroundColor: colors.bgSurface,
     borderWidth: 1,

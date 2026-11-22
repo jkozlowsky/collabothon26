@@ -7,9 +7,16 @@ import { Icon } from '@/components/bank/Icon';
 import { TargetFrame, type TargetKind } from '@/components/path/TargetFrame';
 import { Tappable } from '@/components/onboarding/ui';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
-import type { LessonSummary } from '@/types/lessons';
+import type { LessonStatus, LessonSummary } from '@/types/lessons';
 
 export type StopState = 'done' | 'current' | 'locked' | 'open';
+
+/** The stop's variant from its lesson's status; `isNext` marks the first open lesson of the path. */
+export function stopState(status: LessonStatus, isNext: boolean): StopState {
+  if (status === 'done') return 'done';
+  if (status === 'locked') return 'locked';
+  return isNext ? 'current' : 'open';
+}
 
 type Props = {
   lesson: LessonSummary;
@@ -48,56 +55,52 @@ export function PathStop({ lesson, index, state, previousDone, last, target, acc
   const asCard = current || state === 'open' || (done && target?.kind === 'duel');
   const meta = [`${lesson.minutes} min`, done ? 'Done' : locked ? 'Locked' : `+${lesson.xp} XP`].join(' · ');
 
-  const content = (
-    <>
-        {asCard ? (
-          <View style={[styles.card, current && styles.cardCurrent, marked && styles.cardMarked]}>
-            {current && (
-              <View style={styles.upNext}>
-                <Text style={styles.upNextText}>Up next</Text>
-              </View>
-            )}
-            <Text style={[styles.overline, { color: accent }]}>Mission {index + 1}</Text>
-            <Text style={styles.titleLarge}>{lesson.title}</Text>
-            {lesson.topic && <Text style={styles.topic}>{lesson.topic}</Text>}
-            <View style={styles.metaRow}>
-              <Text style={styles.meta}>{meta}</Text>
-              {lesson.video && (
-                <View accessible accessibilityLabel="Also as video" testID={`lesson-video-${lesson.id}`} style={styles.videoChip}>
-                  <Icon name="film" size={13} color={colors.textMuted} />
-                  <Text style={styles.meta}>Video</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.action}>
-              <Button label={done ? 'Repeat lesson' : 'Start mission'} testID={`lesson-${lesson.id}`} onPress={() => open(lesson.id)} />
-            </View>
+  const content = asCard ? (
+    <View style={[styles.card, current && styles.cardCurrent, marked && styles.cardMarked]}>
+      {current && (
+        <View style={styles.upNext}>
+          <Text style={styles.upNextText}>Up next</Text>
+        </View>
+      )}
+      <Text style={[styles.overline, { color: accent }]}>Mission {index + 1}</Text>
+      <Text style={styles.titleLarge}>{lesson.title}</Text>
+      {lesson.topic && <Text style={styles.topic}>{lesson.topic}</Text>}
+      <View style={styles.metaRow}>
+        <Text style={styles.meta}>{meta}</Text>
+        {lesson.video && (
+          <View accessible accessibilityLabel="Also as video" testID={`lesson-video-${lesson.id}`} style={styles.videoChip}>
+            <Icon name="film" size={13} color={colors.textMuted} />
+            <Text style={styles.meta}>Video</Text>
           </View>
-        ) : (
-          <Tappable
-            disabled={locked}
-            onPress={() => open(lesson.id)}
-            accessibilityRole="button"
-            accessibilityLabel={locked ? `${lesson.title}, locked` : `Replay ${lesson.title}`}
-            testID={done ? `lesson-${lesson.id}` : undefined}
-            containerStyle={styles.rowWrap}
-            style={[styles.row, locked && styles.rowLocked, marked && styles.rowMarked]}
-          >
-            <View style={styles.rowText}>
-              <Text style={[styles.overline, { color: locked ? colors.textMuted : accent }]}>Mission {index + 1}</Text>
-              <Text style={[styles.title, locked && styles.mutedText]} numberOfLines={2}>
-                {lesson.title}
-              </Text>
-              <Text style={styles.meta}>{meta}</Text>
-            </View>
-            {done && (
-              <View style={styles.replay}>
-                <Icon name="replay" size={16} color={colors.brandPrimary} />
-              </View>
-            )}
-          </Tappable>
         )}
-    </>
+      </View>
+      <View style={styles.action}>
+        <Button label={done ? 'Repeat lesson' : 'Start mission'} testID={`lesson-${lesson.id}`} onPress={() => open(lesson.id)} />
+      </View>
+    </View>
+  ) : (
+    <Tappable
+      disabled={locked}
+      onPress={() => open(lesson.id)}
+      accessibilityRole="button"
+      accessibilityLabel={locked ? `${lesson.title}, locked` : `Replay ${lesson.title}`}
+      testID={done ? `lesson-${lesson.id}` : undefined}
+      containerStyle={styles.rowWrap}
+      style={[styles.row, locked && styles.rowLocked, marked && styles.rowMarked]}
+    >
+      <View style={styles.rowText}>
+        <Text style={[styles.overline, { color: locked ? colors.textMuted : accent }]}>Mission {index + 1}</Text>
+        <Text style={[styles.title, locked && styles.mutedText]} numberOfLines={2}>
+          {lesson.title}
+        </Text>
+        <Text style={styles.meta}>{meta}</Text>
+      </View>
+      {done && (
+        <View style={styles.replay}>
+          <Icon name="replay" size={16} color={colors.brandPrimary} />
+        </View>
+      )}
+    </Tappable>
   );
 
   return (
@@ -179,7 +182,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandAccent,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
     marginBottom: spacing.xs,
   },
   upNextText: { ...type.overline, color: colors.textOnAccent },

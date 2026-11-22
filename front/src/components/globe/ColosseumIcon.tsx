@@ -1,11 +1,13 @@
 import Svg, { Path } from 'react-native-svg';
 
+import { colors } from '@/constants/theme';
+
 type Props = {
   size?: number;
   color?: string;
 };
 
-export function ColosseumIcon({ size = 20, color = '#FFFFFF' }: Props) {
+export function ColosseumIcon({ size = 20, color = colors.textOnBrand }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       {/* Outer amphitheatre wall */}

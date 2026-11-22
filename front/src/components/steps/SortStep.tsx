@@ -5,27 +5,27 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { Button } from '@/components/Button';
 import { Feedback } from '@/components/lesson/Feedback';
 import { StepLayout } from '@/components/lesson/StepLayout';
-import { haptic } from '@/components/onboarding/ui';
+import { answerCue } from '@/components/steps/answerCue';
 import { colors, elevation, radii, spacing, type } from '@/constants/theme';
-import { playSfx } from '@/lib/sfx';
 import { shuffle } from '@/lib/lessonPlayer';
 import type { SortStep as SortStepData, StepOutcome } from '@/types/lessons';
 
-type Props = {
-  step: SortStepData;
-  retry?: boolean;
-  onDone?: (outcome: StepOutcome) => void;
-};
+type Props = { step: SortStepData; retry: boolean; onDone: (outcome: StepOutcome) => void };
 
 /** Drag past this (px) and let go to sort the card; less springs back. */
 const SWIPE_DISTANCE = 90;
+/** A drag starts after this much sideways movement (px), so a tap or a vertical move is not one. */
+const DRAG_SLOP = 8;
+/** A sorted card flies this far off to its side (px), in this time. */
+const FLY_DISTANCE = 500;
+const FLY_MS = 180;
 const NATIVE = Platform.OS !== 'web';
 
 /**
  * Cards one at a time: swipe left/right or use the two buttons (web, screen readers). Feedback for each card
  * shows while the next one is up; cards are shuffled on a repeat.
  */
-export function SortStep({ step, retry = false, onDone }: Props) {
+export function SortStep({ step, retry, onDone }: Props) {
   const reduceMotion = useReducedMotion();
   const [order] = useState(() => (retry ? shuffle([...step.items.keys()]) : [...step.items.keys()]));
   const [pos, setPos] = useState(0);
@@ -44,8 +44,7 @@ export function SortStep({ step, retry = false, onDone }: Props) {
     const correct = currentItem.bucket === bucket;
     setLast({ text: currentItem.text, correct, bucket: currentItem.bucket });
     if (!correct) setMistakes((m) => m + 1);
-    haptic(correct ? 'success' : 'light');
-    playSfx(correct ? 'correct' : 'wrong');
+    answerCue(correct);
     x.setValue(0);
     setPos((p) => p + 1);
   }
@@ -55,21 +54,23 @@ export function SortStep({ step, retry = false, onDone }: Props) {
     if (flying) return;
     if (reduceMotion) return decide(bucket);
     setFlying(true);
-    Animated.timing(x, { toValue: bucket === 0 ? -500 : 500, duration: 180, useNativeDriver: NATIVE }).start(() => {
+    Animated.timing(x, { toValue: bucket === 0 ? -FLY_DISTANCE : FLY_DISTANCE, duration: FLY_MS, useNativeDriver: NATIVE }).start(() => {
       setFlying(false);
       decide(bucket);
     });
   }
 
+  const springBack = () => Animated.spring(x, { toValue: 0, useNativeDriver: NATIVE }).start();
+
   // Rebuilt each render so it sees the current card; renders only happen between cards, never mid-drag.
   const pan = PanResponder.create({
-    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
+    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > DRAG_SLOP && Math.abs(g.dx) > Math.abs(g.dy),
     onPanResponderMove: (_, g) => x.setValue(g.dx),
     onPanResponderRelease: (_, g) => {
       if (Math.abs(g.dx) > SWIPE_DISTANCE) fling(g.dx < 0 ? 0 : 1);
-      else Animated.spring(x, { toValue: 0, useNativeDriver: NATIVE }).start();
+      else springBack();
     },
-    onPanResponderTerminate: () => Animated.spring(x, { toValue: 0, useNativeDriver: NATIVE }).start(),
+    onPanResponderTerminate: springBack,
   });
 
   const rotate = x.interpolate({ inputRange: [-200, 0, 200], outputRange: ['-10deg', '0deg', '10deg'] });
@@ -85,7 +86,7 @@ export function SortStep({ step, retry = false, onDone }: Props) {
           <Feedback
             correct={mistakes === 0}
             explanation={step.explanation}
-            onContinue={() => onDone?.({ correct: mistakes === 0 })}
+            onContinue={() => onDone({ correct: mistakes === 0 })}
           />
         ) : (
           <View style={styles.buttons}>

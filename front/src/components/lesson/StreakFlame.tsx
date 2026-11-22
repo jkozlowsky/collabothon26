@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { EASE_OUT, haptic } from '@/components/onboarding/ui';
-import { colors, radii, spacing, type } from '@/constants/theme';
+import { colors, radii, spacing, tints, type } from '@/constants/theme';
 
 type Props = {
   /** Days before and after this lesson. `from === to`: the streak was already kept today, the flame just burns. */
@@ -33,6 +33,9 @@ const GLOW = {
   animationFillMode: 'both',
 } as const;
 
+/** When the flame has caught: the day count and the haptic land together. */
+const CAUGHT_AT_MS = 1150;
+
 /** Lesson end: the streak flame lights up when this lesson grew the streak, and the day count ticks up. */
 export function StreakFlame({ from, to }: Props) {
   const reduceMotion = useReducedMotion();
@@ -45,7 +48,7 @@ export function StreakFlame({ from, to }: Props) {
     const t = setTimeout(() => {
       setDays(to);
       haptic('success');
-    }, 1150);
+    }, CAUGHT_AT_MS);
     return () => clearTimeout(t);
   }, [grew, reduceMotion, to]);
 
@@ -71,7 +74,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.storyOrangeSoft,
+    backgroundColor: tints.orange,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,

@@ -309,7 +309,7 @@ class QuickCheckRulesTests {
 		assertEquals(Map.of(SAVING, GapDirection.HABIT_AHEAD), ruleGaps(bothHabits, right(S11_A), wrong(S31)));
 		assertEquals(Map.of(SAVING, GapDirection.HABIT_AHEAD), ruleGaps(bothHabits, notSure(S11_A), right(I21_A)));
 		assertEquals(Map.of(INVESTING, GapDirection.HABIT_AHEAD), ruleGaps(bothHabits, right(S11_A), wrong(I21_A)));
-		// A habit with every answer right is aligned.
+		// A habit with every answer right is no gap.
 		assertEquals(Map.of(), ruleGaps(bothHabits, right(S11_A), right(S31), right(I21_A)));
 	}
 
@@ -318,7 +318,7 @@ class QuickCheckRulesTests {
 		FactsDto noHabits = facts(false, false);
 		assertEquals(Map.of(SAVING, GapDirection.KNOWLEDGE_AHEAD), ruleGaps(noHabits, right(S11_A), right(S31)));
 		assertEquals(Map.of(INVESTING, GapDirection.KNOWLEDGE_AHEAD), ruleGaps(noHabits, wrong(S11_A), right(I21_A)));
-		// No habit with an answer not right is aligned.
+		// No habit with an answer not right is no gap.
 		assertEquals(Map.of(), ruleGaps(noHabits, right(S11_A), notSure(S31), wrong(I21_A)));
 		// Each area reads its own habit.
 		assertEquals(Map.of(SAVING, GapDirection.HABIT_AHEAD, INVESTING, GapDirection.KNOWLEDGE_AHEAD),
@@ -354,20 +354,6 @@ class QuickCheckRulesTests {
 		assertEquals(Role.NOVICE,
 				QuickCheckRules.measuredRole(QuickCheckRules.mastery(ORDER, nothingRight), nothingRight));
 		assertEquals(Role.NOVICE, QuickCheckRules.measuredRole(QuickCheckRules.mastery(ORDER, List.of()), List.of()));
-	}
-
-	@Test
-	void aJevLabelThatTheRuleDoesNotBackReadsAsAligned() {
-		List<Answer> oneWrong = List.of(wrong(S11_A));
-		FactsDto saves = facts(true, false);
-		assertEquals(Optional.of(GapDirection.HABIT_AHEAD),
-				QuickCheckRules.checkedJevGap(GapDirection.HABIT_AHEAD, SAVING, oneWrong, saves));
-		assertEquals(Optional.empty(),
-				QuickCheckRules.checkedJevGap(GapDirection.KNOWLEDGE_AHEAD, SAVING, oneWrong, saves));
-		assertEquals(Optional.empty(), QuickCheckRules.checkedJevGap(GapDirection.ALIGNED, SAVING, oneWrong, saves));
-		assertEquals(Optional.empty(),
-				QuickCheckRules.checkedJevGap(GapDirection.HABIT_AHEAD, SAVING, oneWrong, facts(false, false)));
-		assertEquals(Optional.empty(), QuickCheckRules.checkedJevGap(GapDirection.HABIT_AHEAD, SAVING, oneWrong, null));
 	}
 
 	@Test
@@ -523,12 +509,9 @@ class QuickCheckRulesTests {
 	}
 
 	@Test
-	void onlyAnsweredAreasTheFactsSpeakAboutCanHaveAGap() {
-		List<Answer> investingOnly = List.of(right(I21_A));
-		assertEquals(List.of(INVESTING), QuickCheckRules.gapAreas(ORDER, investingOnly, facts(true, true)));
-		assertEquals(List.of(), QuickCheckRules.gapAreas(ORDER, investingOnly, null));
-		assertEquals(List.of(), QuickCheckRules.gapAreas(List.of(FocusArea.RISK),
-				List.of(right(q("s1-1", "q9", FocusArea.RISK))), facts(true, true)));
+	void anAreaTheFactsSayNothingAboutHasNoGap() {
+		List<Answer> riskRight = List.of(right(q("s1-1", "q9", FocusArea.RISK)));
+		assertEquals(Optional.empty(), QuickCheckRules.ruleGap(FocusArea.RISK, riskRight, facts(false, false)));
 	}
 
 }

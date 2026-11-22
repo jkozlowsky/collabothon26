@@ -210,29 +210,17 @@ final class QuickCheckRules {
 		};
 	}
 
-	/** Answered areas the facts say something about: the only ones a gap can be about. None without facts. */
-	static List<FocusArea> gapAreas(List<FocusArea> order, List<Answer> answers, FactsDto facts) {
-		return order.stream()
-			.filter(area -> facts != null && habit(area, facts) != null && !inArea(answers, area).isEmpty())
-			.toList();
-	}
-
 	/** The habit with an answer not right is habit ahead; no habit with every answer right is knowledge ahead. */
 	static Optional<GapDirection> ruleGap(FocusArea area, List<Answer> inArea, FactsDto facts) {
-		if (gapAreas(List.of(area), inArea, facts).isEmpty()) {
+		Boolean habit = facts == null ? null : habit(area, facts);
+		if (habit == null || inArea.isEmpty()) {
 			return Optional.empty();
 		}
 		boolean allRight = inArea.stream().allMatch(a -> a.result() == AnswerResult.CORRECT);
-		if (habit(area, facts)) {
+		if (habit) {
 			return allRight ? Optional.empty() : Optional.of(GapDirection.HABIT_AHEAD);
 		}
 		return allRight ? Optional.of(GapDirection.KNOWLEDGE_AHEAD) : Optional.empty();
-	}
-
-	/** A Jev label counts only when the rule finds the same gap in the area; otherwise aligned. */
-	static Optional<GapDirection> checkedJevGap(GapDirection label, FocusArea area, List<Answer> inArea,
-			FactsDto facts) {
-		return ruleGap(area, inArea, facts).filter(label::equals);
 	}
 
 	/** The card about the start lesson's area first, then area order; at most MAX_GAP_CARDS cards. */

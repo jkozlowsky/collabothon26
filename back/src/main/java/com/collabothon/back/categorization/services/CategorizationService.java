@@ -105,9 +105,8 @@ public class CategorizationService {
 		List<CheckLesson> choices = QuickCheckRules.firstLessonChoices(QuickCheckRules.pool(
 				QuickCheckRules.candidates(lessons, stories, order, mastery, history, completed), history), history,
 				completed);
-		List<FocusArea> gapAreas = QuickCheckRules.gapAreas(order, history, facts);
 		JevQuickCheck quickCheck = ran ? new JevQuickCheck(profile, answers.goals(),
-				history.stream().map(Answer::toJev).toList(), gapAreas, choices) : null;
+				history.stream().map(Answer::toJev).toList(), choices) : null;
 		JevResult fromJev = request.useRules() ? JevResult.SKIPPED : jev.ask(answers, facts, quickCheck);
 
 		LifeStage lifeStage = answers.lifeStage() == null && ran ? LifeStage.fromAgeBand(profile.ageBand())
@@ -129,7 +128,7 @@ public class CategorizationService {
 		StartLessonDto startLesson = plan.start() == null ? null : startLesson(plan.start(), plan.area(), completed);
 		FocusArea startArea = startLesson == null ? null : startLesson.area();
 		List<GapDto> gaps = ran
-				? QuickCheckRules.gapCards(gaps(order, history, facts, fromJev.judgement()), startArea)
+				? QuickCheckRules.gapCards(gaps(order, history, facts), startArea)
 				: CategorizationRules.saidGaps(answers, facts);
 		SharedWithModelDto shared = fromJev.sent() || request.stepCallsMade() > 0
 				? new SharedWithModelDto(facts, fromJev.sent() ? answers : null, answers.goals(),
@@ -157,17 +156,11 @@ public class CategorizationService {
 		return c.withStartHere(startHere(c, stories, lessons, completed));
 	}
 
-	/** Jev's labels where its call answered, each checked against the rule; the rule otherwise. In area order. */
-	private static Map<FocusArea, GapDirection> gaps(List<FocusArea> order, List<Answer> history, FactsDto facts,
-			Optional<Judgement> fromJev) {
+	private static Map<FocusArea, GapDirection> gaps(List<FocusArea> order, List<Answer> history, FactsDto facts) {
 		Map<FocusArea, GapDirection> gaps = new LinkedHashMap<>();
 		for (FocusArea area : order) {
-			List<Answer> inArea = QuickCheckRules.inArea(history, area);
-			Optional<GapDirection> gap = fromJev.isPresent()
-					? Optional.ofNullable(fromJev.get().gaps().get(area))
-						.flatMap(label -> QuickCheckRules.checkedJevGap(label, area, inArea, facts))
-					: QuickCheckRules.ruleGap(area, inArea, facts);
-			gap.ifPresent(direction -> gaps.put(area, direction));
+			QuickCheckRules.ruleGap(area, QuickCheckRules.inArea(history, area), facts)
+				.ifPresent(direction -> gaps.put(area, direction));
 		}
 		return gaps;
 	}

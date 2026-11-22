@@ -9,6 +9,7 @@ import static com.collabothon.back.categorization.controllers.TestPool.notSure;
 import static com.collabothon.back.categorization.controllers.TestPool.right;
 import static com.collabothon.back.categorization.controllers.TestPool.wrong;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -187,10 +188,6 @@ class QuickCheckCategorizationTests {
 			.formatted(key, chosen, probabilities);
 	}
 
-	private static String gap(String area, String chosen) {
-		return choice("gap_" + area, chosen, "habit_ahead", "knowledge_ahead", "aligned");
-	}
-
 	private static String jevFinal(String extra) {
 		return "{\"model\": \"jev-2026-05\", \"answers\": {" + F1_ANSWERS + extra + "}}";
 	}
@@ -201,20 +198,20 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void theFinalCallIsF1PlusTheSpecifiedQuestionsAndItsLabelsPickTheLessonAndGaps() throws Exception {
+	void theFinalCallIsF1PlusTheSpecifiedQuestionsAndItsLabelPicksTheLesson() throws Exception {
 		AtomicReference<JsonNode> sent = new AtomicReference<>();
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(request -> sent.set(json.readTree(((MockClientHttpRequest) request).getBodyAsString())))
-			.andRespond(withSuccess(jevFinal(gap("saving", "habit_ahead") + gap("investing", "knowledge_ahead")
-					+ firstLesson("tokyo-1", CHOICES)), MediaType.APPLICATION_JSON));
+			.andRespond(withSuccess(jevFinal(firstLesson("tokyo-1", CHOICES)), MediaType.APPLICATION_JSON));
 
 		// The rule would start in Berlin (berlin-2, the weakest area's lowest score); Jev's Tokyo lesson wins.
-		// Jev's "knowledge_ahead" for investing is dropped: the account holds investments.
 		categorize(WITH_FACTS).andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"source": "jev", "role": "intermediate", "profile": %s,
 					 "mastery": {"saving": 0.425, "debt": null, "investing": 0.5}, "answerCount": 4,
 					 "gaps": [
+					   {"area": "investing", "direction": "habit-ahead",
+					    "because": "Your account shows you already invest. Your Investing answers leave a few things open, which is where your first lesson starts."},
 					   {"area": "saving", "direction": "habit-ahead",
 					    "because": "Your account shows you move money to savings every month. Your Saving answers leave a few things open to explore."}],
 					 "startLesson": {"lessonId": "tokyo-1", "title": "%2$s", "area": "investing", "storyId": "tokyo",
@@ -226,7 +223,7 @@ class QuickCheckCategorizationTests {
 					 "sharedWithModel": {"facts": %4$s, "answers": %3$s, "profile": %1$s, "answerCount": 4, "stepCallsMade": 3}}"""
 				.formatted(PROFILE_WITH_CONSENT, title("tokyo-1"), ONBOARDING, FACTS),
 					JsonCompareMode.LENIENT))
-			.andExpect(jsonPath("$.gaps.length()").value(1));
+			.andExpect(jsonPath("$.gaps[0].area").value("investing"));
 
 		assertEquals(json.readTree("""
 				{"answers": %s, "facts": %s, "profile": %s, "goals": ["start-saving"], "checkAnswers": [%s]}"""
@@ -240,8 +237,6 @@ class QuickCheckCategorizationTests {
 				sent.get().at("/state/checkAnswers/1"));
 		JsonNode block = SpecBlocks.read(json, "jev-final-questions");
 		ObjectNode expected = (ObjectNode) SpecBlocks.read(json, SpecBlocks.F1, "jev-questions").deepCopy();
-		expected.set("gap_saving", block.get("gap_saving"));
-		expected.set("gap_investing", block.get("gap_investing"));
 		ObjectNode firstLesson = (ObjectNode) block.get("first_lesson").deepCopy();
 		ObjectNode criteria = firstLesson.putObject("criteria");
 		for (String lessonId : CHOICES) {
@@ -285,10 +280,10 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void aJevGapLabelTheRuleDoesNotBackReadsAsAligned() throws Exception {
+	void everyAnswerRightWithBothHabitsLeavesNoGap() throws Exception {
 		jev.expect(requestTo(JEV_URL))
-			.andRespond(withSuccess(jevFinal(gap("saving", "habit_ahead") + gap("investing", "knowledge_ahead")
-					+ firstLesson("berlin-1", "berlin-1", "buenos-aires-1", "seoul-1", "tokyo-1")), MediaType.APPLICATION_JSON));
+			.andRespond(withSuccess(jevFinal(firstLesson("berlin-1", "berlin-1", "buenos-aires-1", "seoul-1", "tokyo-1")),
+					MediaType.APPLICATION_JSON));
 		// Right on saving and on investing, with both habits in the account: the rule finds no gap.
 		String history = "[" + history(right("berlin-1/q1"), right("seoul-1/q2")) + "]";
 
@@ -298,10 +293,8 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void withoutFactsJevIsNotAskedAboutGapsAndThereAreNone() throws Exception {
+	void withoutFactsThereAreNoGaps() throws Exception {
 		jev.expect(requestTo(JEV_URL))
-			.andExpect(MockRestRequestMatchers.jsonPath("$.questions.gap_saving").doesNotExist())
-			.andExpect(MockRestRequestMatchers.jsonPath("$.questions.gap_investing").doesNotExist())
 			.andRespond(withSuccess(jevFinal(firstLesson("berlin-2", CHOICES)), MediaType.APPLICATION_JSON));
 
 		categorize(QUICK_CHECK).andExpect(status().isOk())
@@ -310,10 +303,8 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void aBrokenGapAnswerPutsTheWholeCategorisationOnRules() throws Exception {
-		jev.expect(requestTo(JEV_URL))
-			.andRespond(withSuccess(jevFinal(gap("saving", "habit_ahead") + firstLesson("tokyo-1", CHOICES)),
-					MediaType.APPLICATION_JSON));
+	void theGapsDoNotDependOnTheJevCall() throws Exception {
+		jev.expect(requestTo(JEV_URL)).andRespond(withServerError());
 
 		// The rule: both habits are in the account, and each area has an answer that is not right.
 		categorize(WITH_FACTS).andExpect(status().isOk())
@@ -548,17 +539,16 @@ class QuickCheckCategorizationTests {
 	}
 
 	@Test
-	void withConsentTheFactsReachJevAndItsAlignedLabelsLeaveNoGap() throws Exception {
+	void withConsentTheFactsReachJevAndTheRuleGivesTheGaps() throws Exception {
 		jev.expect(requestTo(JEV_URL))
 			.andExpect(MockRestRequestMatchers.jsonPath("$.state.facts.incomeBand")
 				.value("2-3.5k"))
-			.andRespond(withSuccess(jevFinal(gap("saving", "aligned") + gap("investing", "aligned")
-					+ firstLesson("berlin-2", CHOICES)), MediaType.APPLICATION_JSON));
+			.andRespond(withSuccess(jevFinal(firstLesson("berlin-2", CHOICES)), MediaType.APPLICATION_JSON));
 
-		// The rule alone, and F1's facts table, would each give two cards for these answers and facts.
 		categorize(WITH_FACTS).andExpect(status().isOk())
 			.andExpect(jsonPath("$.bankData").value(true))
-			.andExpect(jsonPath("$.gaps").isEmpty());
+			.andExpect(jsonPath("$.source").value("jev"))
+			.andExpect(jsonPath("$.gaps.length()").value(2));
 	}
 
 	@Test

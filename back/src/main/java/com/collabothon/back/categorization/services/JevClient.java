@@ -10,7 +10,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -43,7 +42,6 @@ import com.collabothon.back.categorization.dto.JevRequestDto;
 import com.collabothon.back.categorization.dto.OnboardingAnswersDto;
 import com.collabothon.back.categorization.dto.ProfileRangesDto;
 import com.collabothon.back.categorization.enums.FocusArea;
-import com.collabothon.back.categorization.enums.GapDirection;
 import com.collabothon.back.categorization.enums.Role;
 import com.collabothon.back.categorization.enums.WireNames;
 
@@ -99,22 +97,9 @@ public class JevClient {
 			}
 			""";
 
-	// Verbatim from docs/specs/F1b-quick-check.md ("Jev final call"); a gap question for each area that has a habit,
-	// `first_lesson.criteria` filled per request.
+	// Verbatim from docs/specs/F1b-quick-check.md ("Jev final call"); `first_lesson.criteria` is filled per request.
 	private static final String FINAL_QUESTIONS = """
 			{
-			  "gap_saving": {"type": "choice",
-			    "instructions": "How does this person's saving habit in `facts.savesRegularly` (true when they move money to savings every month) compare with their knowledge answers about saving, the entries of `checkAnswers` whose `area` is saving?",
-			    "criteria": {
-			      "habit_ahead": "They move money to savings every month, and at least one of their saving answers is wrong or not sure.",
-			      "knowledge_ahead": "Every one of their saving answers is correct, and they do not move money to savings every month.",
-			      "aligned": "The habit and the answers match: they move money to savings every month and every saving answer is correct, or they do not and at least one saving answer is wrong or not sure."}},
-			  "gap_investing": {"type": "choice",
-			    "instructions": "How does this person's investing habit in `facts.holdsInvestments` (true when they hold investment products) compare with their knowledge answers about investing, the entries of `checkAnswers` whose `area` is investing?",
-			    "criteria": {
-			      "habit_ahead": "They hold investment products, and at least one of their investing answers is wrong or not sure.",
-			      "knowledge_ahead": "Every one of their investing answers is correct, and they hold no investment products.",
-			      "aligned": "The habit and the answers match: they hold investment products and every investing answer is correct, or they hold none and at least one investing answer is wrong or not sure."}},
 			  "first_lesson": {"type": "choice",
 			    "instructions": "Which of these lessons should this person start with, given which ideas their knowledge answers in `checkAnswers` show they have not mastered yet?",
 			    "criteria": {}}
@@ -260,9 +245,6 @@ public class JevClient {
 			// F1 already names the onboarding answers `answers`, so the knowledge answers get their own key.
 			state.put("checkAnswers", quickCheck.answers());
 			asked = questions.deepCopy();
-			for (FocusArea area : quickCheck.gapAreas()) {
-				asked.set("gap_" + area.wire(), finalQuestions.get("gap_" + area.wire()).deepCopy());
-			}
 			if (!quickCheck.lessons().isEmpty()) {
 				asked.set("first_lesson", lessonChoice(finalQuestions.get("first_lesson"), quickCheck.lessons()));
 			}
@@ -319,29 +301,17 @@ public class JevClient {
 			}
 			noul.put(area, p);
 		}
-		Map<FocusArea, GapDirection> gaps = new EnumMap<>(FocusArea.class);
 		String firstLesson = null;
-		if (quickCheck != null) {
-			for (FocusArea area : quickCheck.gapAreas()) {
-				// Gap options are the enum names in lower case with underscores, not the hyphenated wire names.
-				JevChoice<GapDirection> gap = choice(answers.path("gap_" + area.wire()), List.of(GapDirection.values()),
-						direction -> direction.name().toLowerCase(Locale.ROOT));
-				if (gap == null) {
-					return Optional.empty();
-				}
-				gaps.put(area, gap.value());
-			}
-			if (!quickCheck.lessons().isEmpty()) {
-				firstLesson = lessonId(answers.path("first_lesson"), quickCheck.lessons());
-				if (firstLesson == null) {
-					return Optional.empty();
-				}
+		if (quickCheck != null && !quickCheck.lessons().isEmpty()) {
+			firstLesson = lessonId(answers.path("first_lesson"), quickCheck.lessons());
+			if (firstLesson == null) {
+				return Optional.empty();
 			}
 		}
 		JsonNode model = response.path("model");
 		boolean validModel = model.isString() && MODEL_ID.matcher(model.stringValue()).matches();
 		return Optional.of(new Judgement(role.value(), role.probabilities(), CategorizationRules.focusFromNoul(noul),
-				QuickCheckRules.byWire(noul), validModel ? model.stringValue() : null, gaps, firstLesson));
+				QuickCheckRules.byWire(noul), validModel ? model.stringValue() : null, firstLesson));
 	}
 
 	/** Null when the answer broke the contract. */

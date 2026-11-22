@@ -133,7 +133,7 @@ The build follows the option marked "chosen".
 
 - **C1 Migration number.** (a) V25: collides with `V25__duel_live.sql` in open PR #51, and Flyway refuses to start
   once both merge. (b) **chosen:** V26. PR #51 should merge first; otherwise a database that already ran V26 rejects
-  the late V25.
+  the late V25. (Resolved during the build: #51 merged as `03d5f8f` and is merged into this branch.)
 - **C2 List limit.** (a) **chosen:** `MAX_INTERESTS = 32`, well above the 7 paths. (b) the live story count.
 - **C3 Final Jev call.** The onboarding answers are serialised to Jev as they are, so ids such as `seoul` would leave
   the backend and read like the person's location. (a) **chosen:** §4's rule holds for both calls: `state.interests`
@@ -158,10 +158,18 @@ The build follows the option marked "chosen".
   while this was built) rewrites `JevClient`, `QuickCheckRules`, `CategorizationService` and their tests. (a)
   **chosen:** build on `origin/main` with narrow hunks; whichever lands second merges and resolves. (b) build on that
   branch: depends on unfinished, unreviewed work.
+- **C12 Final call without a Quick check.** (a) **chosen:** it also gets `state.interests` (C3 says both calls), so
+  the list is an argument of `JevClient.ask` and `JevQuickCheck` drops `goals` instead of renaming it. (b) only inside
+  `JevQuickCheck`: that call would lose the interests entirely.
+- **C13 Several picks in one area.** (a) **chosen:** one "You said X is new to you." line per picked path. (b) one per
+  area: needs a rule for which category to name.
+- **C14 Lesson ids in Jev's knowledge answers.** `answers[].lessonId` and `checkAnswers[].lessonId` (`seoul-1`) already
+  reach Jev on main. (a) **chosen:** left as is, outside this change. (b) drop them from `JevAnswerDto` in the Jev
+  simplification branch.
 
 ## Tasks
 
-- [ ] T1 Contract (§3, C1, C2), backend, first and in its own commit: done when the backend compiles, its tests pass,
+- [x] T1 Contract (§3, C1, C2), backend, first and in its own commit: done when the backend compiles, its tests pass,
       `interests` round-trips through the profile and an unknown id is a 400.
 - [ ] T2 Quick check, pool, plan, Jev (§4, §5, C3-C8): done when every backend case of §6 has a passing test.
 - [ ] T3 Screen, personas, frontend contract (§1, §2, §3, C9, C10): done when the jest cases of §6 pass, with tsc and

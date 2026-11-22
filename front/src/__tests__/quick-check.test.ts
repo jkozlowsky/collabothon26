@@ -1,9 +1,8 @@
 import { seedAccount } from '@/lib/bank/seed';
 import { FEEDBACK } from '@/constants/quickCheck';
 import { ageBandOf, ageLabel } from '@/lib/categorization';
-import { answerCounts, feedbackFor, fetchCheckQuestions, levelOf, plainText } from '@/lib/quickCheck';
+import { feedbackFor, fetchCheckQuestions, plainText } from '@/lib/quickCheck';
 import { POOL } from '@/test-utils/checkPool';
-import type { HistoryEntry } from '@/types/quickCheck';
 
 test('pool items the front cannot use are skipped and a repeated id keeps its first item', async () => {
   const good = POOL[0];
@@ -36,23 +35,6 @@ test('pool items the front cannot use are skipped and a repeated id keeps its fi
   expect(await fetchCheckQuestions(new AbortController().signal)).toEqual([]);
   globalThis.fetch = jest.fn(() => Promise.reject(new Error('offline'))) as jest.Mock;
   expect(await fetchCheckQuestions(new AbortController().signal)).toEqual([]);
-});
-
-const entry = (questionId: string, optionIndex: number | null): HistoryEntry => ({ questionId, optionIndex });
-
-test('answers are counted per area, "Not sure" included', () => {
-  const history = [entry('berlin-1/q1', 0), entry('seoul-1/q1', null), entry('berlin-2/q1', 0), entry('sao-paulo-1/q1', 1)];
-  expect(answerCounts(history, POOL)).toEqual({ saving: 2, investing: 1, debt: 1 });
-});
-
-test('levels: no answer, under 0.4, up to 0.75, and above 0.75 only with two answers', () => {
-  expect(levelOf(null, 0)).toBe('none');
-  expect(levelOf(undefined, 0)).toBe('none');
-  expect(levelOf(0.39, 3)).toBe('starting');
-  expect(levelOf(0.4, 1)).toBe('building');
-  expect(levelOf(0.75, 3)).toBe('building');
-  expect(levelOf(0.76, 1)).toBe('building');
-  expect(levelOf(0.76, 2)).toBe('solid');
 });
 
 test('the feedback is right, wrong or not sure, each with the question\'s explanation', () => {

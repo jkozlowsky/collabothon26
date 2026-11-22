@@ -130,7 +130,6 @@ test('three questions with the right answer shown after each, the summary, then 
   await expect(page.getByTestId('summary-based-on')).toHaveText('Based on 3 answers and what your account shows.');
   await expect(page.getByTestId('summary-first-lesson')).toContainText('Emergency fund');
   await expect(page.getByTestId('summary-first-lesson')).toContainText('Berlin · stop 3 of 5');
-  await expect(page.getByTestId('area-bar-saving')).toBeAttached();
   await expect(page.getByText(/confiden/i)).toHaveCount(0);
   await expect(page.getByTestId('summary-disclaimer')).toHaveText('This picks lessons for you. It is not investment advice.');
 
@@ -220,26 +219,6 @@ test('the line "We used a simpler check this time" shows when the model was aske
   await expect(page.getByTestId('summary-simple')).toHaveText('We used a simpler check this time', { timeout: 15_000 });
 });
 
-test('a gap shows its card, titled by its direction', async ({ page }) => {
-  const gaps = [
-    { area: 'saving', direction: 'habit-ahead', because: 'Your account shows you move money to savings every month. Your Saving answers leave a few things open, which is where your first lesson starts.' },
-    { area: 'investing', direction: 'knowledge-ahead', because: 'Your Investing answers show you understand how it works. Your account shows no investment products.' },
-  ];
-  await toCheck(page, { step: stepper(1), reply: ran({ gaps }) });
-  await answer(page, 0);
-
-  await expect(page.getByTestId('summary-gap-saving')).toContainText('Your habits are ahead of the theory', { timeout: 15_000 });
-  await expect(page.getByTestId('summary-gap-investing')).toContainText('You know more than your account shows');
-});
-
-test('no gap note shows when no gap was found', async ({ page }) => {
-  await toCheck(page, { step: stepper(1) });
-  await answer(page, 0);
-
-  await summary(page);
-  await expect(page.getByTestId(/^summary-gap-/)).toHaveCount(0);
-});
-
 test('a reload of the summary rebuilds it from the stored row', async ({ page }) => {
   await toCheck(page, { step: stepper(1) });
   await answer(page, 0);
@@ -268,18 +247,4 @@ test('with reduced motion the intro picture and the reveal show at once', async 
   await tap(page, `quick-check-option-${CORRECT[0]}`);
   await expect(page.getByTestId(`quick-check-option-${CORRECT[0]}-correct`)).toBeVisible();
   await expect(page.getByTestId('quick-check-feedback')).toBeVisible();
-});
-
-test('after a reload the summary draws both markers from the stored row', async ({ page }) => {
-  await toCheck(page, { step: stepper(1) });
-  await answer(page, 0);
-  await expect(page.getByTestId('summary-map')).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByTestId('area-level-saving')).toHaveText('Building');
-
-  await page.route(CATEGORIZATION_URL, (route) => route.fulfill({ json: ran({ readyForNext: true, mastery: { saving: 0.9, investing: 0.2 } }) }));
-  await page.reload();
-  await pickAlex(page);
-  await expect(page.getByTestId('summary-map')).toBeVisible();
-  await expect(page.getByTestId('area-level-saving')).toHaveText('Solid');
-  await expect(page.getByTestId('area-level-investing')).toHaveText('Just starting');
 });

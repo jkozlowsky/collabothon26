@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
-import { BackHandler, StyleSheet } from 'react-native';
+import { BackHandler } from 'react-native';
 
 import { DONE_MS, FEEDBACK, MAX_QUESTIONS } from '@/constants/quickCheck';
 import { groupThousands } from '@/lib/bank/money';
@@ -546,15 +546,9 @@ async function toSummary(post: Categorization) {
   await summary();
 }
 
-test('the summary: the level and its basis, the first lesson, a gap note under its area, the disclaimer', async () => {
-  const gap = {
-    area: 'saving' as const,
-    direction: 'habit-ahead' as const,
-    because: 'Your account shows you move money to savings every month. Your Saving answers leave a few things open, which is where your first lesson starts.',
-  };
-  await toSummary(ran({ gaps: [gap], startLesson: { lessonId: 'berlin-3', title: 'Emergency fund', area: 'saving', storyId: 'berlin', storyCity: 'Berlin' } }));
+test('the summary: the level and its basis, the first lesson, the disclaimer', async () => {
+  await toSummary(ran({ startLesson: { lessonId: 'berlin-3', title: 'Emergency fund', area: 'saving', storyId: 'berlin', storyCity: 'Berlin' } }));
 
-  expect(get('summary-gap-saving')).toHaveTextContent('Your habits are ahead of the theory', { exact: false });
   expect(get('summary-role')).toHaveTextContent("You're an intermediate learner", { exact: false });
   expect(get('summary-based-on')).toHaveTextContent('Based on 3 answers and what your account shows.', { exact: false });
   expect(get('summary-first-lesson')).toHaveTextContent(/your first stop/i);
@@ -562,23 +556,6 @@ test('the summary: the level and its basis, the first lesson, a gap note under i
   expect(get('summary-first-lesson')).toHaveTextContent('Berlin · stop 3 of 4', { exact: false });
   expect(get('summary-disclaimer')).toHaveTextContent('This picks lessons for you. It is not investment advice.', { exact: false });
   expect(screen.queryByTestId('summary-simple')).toBeNull();
-});
-
-test('a knowledge-ahead gap says "You know more than your account shows"', async () => {
-  const gap = {
-    area: 'investing' as const,
-    direction: 'knowledge-ahead' as const,
-    because: 'Your Investing answers show you understand how it works. Your account shows no investment products.',
-  };
-  await toSummary(ran({ gaps: [gap] }));
-  expect(get('summary-gap-investing')).toHaveTextContent('You know more than your account shows', { exact: false });
-});
-
-test('with no gap the summary has no gap note, and the map has no confidence marker or legend', async () => {
-  await toSummary(ran());
-  expect(screen.queryByTestId(/^summary-gap-/)).toBeNull();
-  expect(get('summary-map')).toBeOnTheScreen();
-  expect(screen.queryByTestId(/^area-diamond-/, { includeHiddenElements: true })).toBeNull();
   expect(screen.queryByText(/confiden/i)).toBeNull();
 });
 
@@ -637,41 +614,4 @@ test('hardware back on the summary leaves for the map like Show my path', async 
   } finally {
     add.mockRestore();
   }
-});
-
-/** The markers are hidden from screen readers (the row's text says it), so they are looked up as hidden. */
-const style = (id: string) => StyleSheet.flatten(screen.getByTestId(id, { includeHiddenElements: true }).props.style);
-
-test('after a reload the summary map comes from the stored row; a ready path reads Solid', async () => {
-  backend({ onboarded: true, stored: ran({ readyForNext: true, mastery: { saving: 0.9, investing: 0.8 } }) });
-  await openAt('/learning-path');
-
-  expect(await screen.findByTestId('summary-map')).toBeOnTheScreen();
-  expect(get('area-level-saving')).toHaveTextContent('Solid');
-  expect(style('area-bar-saving').width).toBe('90%');
-  expect(style('area-bar-investing').width).toBe('80%');
-});
-
-test('after a reload a high mastery on a path that is not ready reads Building: the answer counts are gone', async () => {
-  backend({ onboarded: true, stored: ran({ mastery: { saving: 0.9, investing: 0.2 } }) });
-  await openAt('/learning-path');
-
-  expect(await screen.findByTestId('summary-map')).toBeOnTheScreen();
-  expect(get('area-level-saving')).toHaveTextContent('Building');
-  expect(get('area-level-investing')).toHaveTextContent('Just starting');
-});
-
-test('right after the test the summary map counts the answers per area: two in Saving read Solid, one in Investing does not', async () => {
-  backend({ step: stepper(3), post: () => ok(ran({ mastery: { saving: 0.9, investing: 0.9 } })) });
-  await toFirstQuestion();
-  await answer(1);
-  await question(2);
-  await answer(0);
-  await question(3);
-  await answer(1);
-  await finish();
-  await summary();
-  // ORDER is Saving, Investing, Saving.
-  expect(get('area-level-saving')).toHaveTextContent('Solid');
-  expect(get('area-level-investing')).toHaveTextContent('Building');
 });

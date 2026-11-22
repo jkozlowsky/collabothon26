@@ -1,8 +1,8 @@
-import { AREAS, FEEDBACK, JUST_STARTING_BELOW, SOLID_ABOVE, SOLID_MIN_ANSWERS, type Feedback } from '@/constants/quickCheck';
+import { AREAS, FEEDBACK, type Feedback } from '@/constants/quickCheck';
 import { api } from '@/lib/api';
 import { parseDefinition } from '@/lib/glossaryMarkup';
-import type { Facts, FocusArea } from '@/types/categorization';
-import type { CheckQuestion, HistoryEntry, Mastery, ProfileRanges, StepResponse } from '@/types/quickCheck';
+import type { Facts } from '@/types/categorization';
+import type { CheckQuestion, HistoryEntry, ProfileRanges, StepResponse } from '@/types/quickCheck';
 
 const MIN_OPTIONS = 2;
 
@@ -43,17 +43,6 @@ export const postStep = (body: StepBody, signal: AbortSignal, userId: string = '
     signal,
   });
 
-const areaOf = (pool: CheckQuestion[], entry: HistoryEntry) => pool.find((q) => q.id === entry.questionId)?.area;
-
-export function answerCounts(history: HistoryEntry[], pool: CheckQuestion[]) {
-  const counts: Partial<Record<FocusArea, number>> = {};
-  for (const h of history) {
-    const area = areaOf(pool, h);
-    if (area) counts[area] = (counts[area] ?? 0) + 1;
-  }
-  return counts;
-}
-
 /**
  * The test has no lesson glossary to open, so a [[concept|shown text]] marker reads as its plain label
  * ([[concept]] alone as the concept's words).
@@ -67,29 +56,4 @@ export const plainText = (marked: string) =>
 export function feedbackFor(picked: number | null, question: CheckQuestion): Feedback {
   const tone = picked === null ? FEEDBACK.unsure : picked === question.correctIndex ? FEEDBACK.right : FEEDBACK.wrong;
   return { ...tone, body: plainText(question.explanation) };
-}
-
-export type Level = 'none' | 'starting' | 'building' | 'solid';
-
-/** Spec Q16 and D7: Solid needs a high mastery and at least two answers. */
-export function levelOf(mastery: number | null | undefined, answers: number): Level {
-  if (mastery == null) return 'none';
-  if (mastery < JUST_STARTING_BELOW) return 'starting';
-  return mastery > SOLID_ABOVE && answers >= SOLID_MIN_ANSWERS ? 'solid' : 'building';
-}
-
-export type AreaMark = { area: FocusArea; mastery: number | null; level: Level };
-
-/** One entry per area for the summary; `fallbackAnswers` stands in for areas missing in `answers`. */
-export function areaMarks(
-  areas: FocusArea[],
-  mastery: Mastery,
-  answers: Partial<Record<FocusArea, number>>,
-  fallbackAnswers = 0,
-): AreaMark[] {
-  return areas.map((area) => ({
-    area,
-    mastery: mastery[area] ?? null,
-    level: levelOf(mastery[area], answers[area] ?? fallbackAnswers),
-  }));
 }

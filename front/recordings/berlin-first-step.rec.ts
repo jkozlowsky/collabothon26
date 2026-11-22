@@ -107,8 +107,8 @@ async function onboard(page: Page): Promise<boolean> {
   await expect(page.getByTestId('onboarding-consent')).toBeVisible();
   await beat(page, 3000);
   await tap(page, 'consent-accept');
-  // What to learn first: the Berlin take starts from inflation and savings.
-  await tap(page, 'interest-berlin', 1000);
+  // What to learn first: the Berlin take starts from Saving.
+  await tap(page, 'interest-saving', 1000);
   await tap(page, 'onboarding-continue');
 
   // The Quick check: after each answer the right one shows with the lesson's explanation.

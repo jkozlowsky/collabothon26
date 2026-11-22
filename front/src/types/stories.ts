@@ -37,11 +37,11 @@ export type StoryPage = {
   id: string;
   city: string;
   status: 'available' | 'coming-soon';
-  /** The path's name on onboarding tiles ("Hype & leverage"). */
+  /** The path's own name ("Hype & leverage"). */
   category: string;
   /** Line icon name from the Design Kit (Feather set). */
   icon: ComponentProps<typeof Feather>['name'];
-  /** Learning area shown as the story's title ("Investing"); the city moves to the overline. (`category` is the duel's name for the story.) */
+  /** Learning area shown as the story's title and as its onboarding chip ("Investing"); the city moves to the overline. (`category` is the duel's name for the story.) */
   area?: string;
   /** No character: the story is about the user's own (mock) bank data, and the city is only the backdrop. */
   personal?: boolean;

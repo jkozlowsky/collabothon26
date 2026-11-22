@@ -11,9 +11,10 @@ const metrics = {
   insets: { top: 0, left: 0, right: 0, bottom: 0 },
 };
 
-const story = (id: string, category: string, topic: string, icon: string, status = 'available') => ({
+const story = (id: string, area: string | undefined, category: string, topic: string, icon: string, status = 'available') => ({
   id,
   city: id,
+  area,
   category,
   topic,
   icon,
@@ -21,10 +22,12 @@ const story = (id: string, category: string, topic: string, icon: string, status
   lessons: [],
 });
 const STORIES = [
-  story('seoul', 'Hype & leverage', 'Hype, scams and borrowed money', 'message-circle'),
-  story('berlin', 'Inflation & savings', 'A safety net that keeps its value', 'shield'),
-  story('paris', 'Taxes', 'Coming later', 'file', 'coming-soon'),
-  story('mumbai', 'Gold', 'Why gold glitters', 'database'),
+  story('seoul', 'Risk', 'Hype & leverage', 'Hype, scams and borrowed money', 'message-circle'),
+  story('berlin', 'Saving', 'Inflation & savings', 'A safety net that keeps its value', 'shield'),
+  story('paris', 'Taxes', 'Taxes', 'Coming later', 'file', 'coming-soon'),
+  story('buenos-aires', 'Money basics', 'Fast inflation', 'When prices run away', 'trending-up'),
+  story('nairobi', 'Saving', 'Small savings', 'Saving on the go', 'smartphone'),
+  story('mumbai', undefined, 'Gold', 'Why gold glitters', 'database'),
 ];
 
 const ok = (body: unknown) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
@@ -69,15 +72,30 @@ async function openInterests() {
 
 const press = (id: string) => fireEvent.press(screen.getByTestId(id));
 
-test('one tile per available path, in the order the backend returns them, then "Not sure yet"', async () => {
+test('one chip per area in the order the backend returns them, a story without one by its category, then "Not sure yet"', async () => {
   await openInterests();
   expect(screen.getByText('What would you like to learn?')).toBeOnTheScreen();
-  expect(await screen.findByTestId('interest-seoul')).toBeOnTheScreen();
-  const tiles = within(screen.getByTestId('onboarding-interests')).getAllByRole('checkbox').map((t) => t.props.testID);
-  expect(tiles).toEqual(['interest-seoul', 'interest-berlin', 'interest-mumbai', 'interest-not-sure']);
-  expect(screen.getByTestId('interest-berlin')).toHaveTextContent('Inflation & savings', { exact: false });
-  expect(screen.getByTestId('interest-berlin')).toHaveTextContent('A safety net that keeps its value', { exact: false });
+  expect(screen.getByText("Pick every topic that is new to you. We'll build your path around them.")).toBeOnTheScreen();
+  expect(await screen.findByTestId('interest-risk')).toBeOnTheScreen();
+  const chips = within(screen.getByTestId('onboarding-interests')).getAllByRole('checkbox').map((t) => t.props.testID);
+  // Berlin and Nairobi share "Saving", so they share a chip.
+  expect(chips).toEqual(['interest-risk', 'interest-saving', 'interest-money-basics', 'interest-gold', 'interest-not-sure']);
+  expect(screen.getByRole('checkbox', { name: 'Saving' })).toBeOnTheScreen();
+  expect(screen.queryByText('Inflation & savings')).toBeNull();
+  expect(screen.queryByText('A safety net that keeps its value')).toBeNull();
   expect(screen.queryByText('Taxes')).toBeNull();
+});
+
+test('the count shows the picked chips, not their stories, and not "Not sure yet"', async () => {
+  await openInterests();
+  await screen.findByTestId('interest-saving');
+  expect(screen.queryByTestId('interests-count')).toBeNull();
+  await press('interest-saving');
+  expect(screen.getByTestId('interests-count')).toHaveTextContent('1 selected', { exact: false });
+  await press('interest-gold');
+  expect(screen.getByTestId('interests-count')).toHaveTextContent('2 selected', { exact: false });
+  await press('interest-not-sure');
+  expect(screen.queryByTestId('interests-count')).toBeNull();
 });
 
 test('a single question has no step header, only a back button', async () => {
@@ -88,35 +106,35 @@ test('a single question has no step header, only a back button', async () => {
   expect(await screen.findByTestId('onboarding-consent')).toBeOnTheScreen();
 });
 
-test('Continue is disabled until something is picked; paths are multi-select', async () => {
+test('Continue is disabled until something is picked; areas are multi-select', async () => {
   await openInterests();
-  await screen.findByTestId('interest-seoul');
+  await screen.findByTestId('interest-risk');
   expect(screen.getByTestId('onboarding-continue')).toBeDisabled();
-  await press('interest-seoul');
-  await press('interest-mumbai');
-  expect(screen.getByTestId('interest-seoul')).toBeChecked();
-  expect(screen.getByTestId('interest-mumbai')).toBeChecked();
+  await press('interest-risk');
+  await press('interest-gold');
+  expect(screen.getByTestId('interest-risk')).toBeChecked();
+  expect(screen.getByTestId('interest-gold')).toBeChecked();
   expect(screen.getByTestId('onboarding-continue')).toBeEnabled();
-  await press('interest-seoul');
-  expect(screen.getByTestId('interest-seoul')).not.toBeChecked();
-  await press('interest-mumbai');
+  await press('interest-risk');
+  expect(screen.getByTestId('interest-risk')).not.toBeChecked();
+  await press('interest-gold');
   expect(screen.getByTestId('onboarding-continue')).toBeDisabled();
 });
 
-test('"Not sure yet" is exclusive: it clears the paths, and a path clears it', async () => {
+test('"Not sure yet" is exclusive: it clears the areas, and an area clears it', async () => {
   await openInterests();
-  await screen.findByTestId('interest-seoul');
-  await press('interest-seoul');
-  await press('interest-berlin');
+  await screen.findByTestId('interest-risk');
+  await press('interest-risk');
+  await press('interest-saving');
   await press('interest-not-sure');
   expect(screen.getByTestId('interest-not-sure')).toBeChecked();
-  expect(screen.getByTestId('interest-seoul')).not.toBeChecked();
-  expect(screen.getByTestId('interest-berlin')).not.toBeChecked();
+  expect(screen.getByTestId('interest-risk')).not.toBeChecked();
+  expect(screen.getByTestId('interest-saving')).not.toBeChecked();
   expect(screen.getByTestId('onboarding-continue')).toBeEnabled();
 
-  await press('interest-berlin');
+  await press('interest-saving');
   expect(screen.getByTestId('interest-not-sure')).not.toBeChecked();
-  expect(screen.getByTestId('interest-berlin')).toBeChecked();
+  expect(screen.getByTestId('interest-saving')).toBeChecked();
 });
 
 test('while the paths load there is a spinner and Continue stays off', async () => {
@@ -126,7 +144,7 @@ test('while the paths load there is a spinner and Continue stays off', async () 
   expect(screen.getByTestId('onboarding-continue')).toBeDisabled();
 });
 
-test('a failed request offers Retry and Skip; Retry loads the tiles, Skip moves on', async () => {
+test('a failed request offers Retry and Skip; Retry loads the chips, Skip moves on', async () => {
   storiesAnswer = () => Promise.resolve({ ok: false, status: 500, statusText: 'Server Error' });
   await openInterests();
   expect(await screen.findByTestId('interests-retry')).toBeOnTheScreen();
@@ -134,7 +152,7 @@ test('a failed request offers Retry and Skip; Retry loads the tiles, Skip moves 
 
   storiesAnswer = () => ok(STORIES);
   await press('interests-retry');
-  expect(await screen.findByTestId('interest-seoul')).toBeOnTheScreen();
+  expect(await screen.findByTestId('interest-risk')).toBeOnTheScreen();
   expect(screen.queryByTestId('interests-retry')).toBeNull();
 
   storiesAnswer = () => Promise.resolve({ ok: false, status: 500, statusText: 'Server Error' });

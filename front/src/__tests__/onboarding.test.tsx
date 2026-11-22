@@ -21,8 +21,13 @@ const profile = (onboardingCompleted: boolean) => ({
   onboardingCompletedAt: null,
 });
 
-const story = (id: string, category: string, icon: string) => ({ id, category, topic: category, icon, status: 'available', lessons: [] });
-const STORIES = [story('seoul', 'Hype & leverage', 'message-circle'), story('berlin', 'Inflation & savings', 'shield'), story('mumbai', 'Gold', 'database')];
+const story = (id: string, area: string, category: string, icon: string) => ({ id, area, category, topic: category, icon, status: 'available', lessons: [] });
+const STORIES = [
+  story('seoul', 'Risk', 'Hype & leverage', 'message-circle'),
+  story('berlin', 'Saving', 'Inflation & savings', 'shield'),
+  story('tokyo', 'Investing', 'Diversification', 'layers'),
+  story('mumbai', 'Investing', 'Gold', 'database'),
+];
 
 /** Backend stub: the user's profile, no categorisation yet, an empty lesson list and question bank, and writes that succeed. */
 function stubBackend({ onboardingCompleted }: { onboardingCompleted: boolean }) {
@@ -160,8 +165,8 @@ test('one question follows the consent, then the quick check intro; the picked p
 
   expect(get('onboarding-interests')).toBeOnTheScreen();
   expect(get('onboarding-continue')).toBeDisabled();
-  await fireEvent.press(await screen.findByTestId('interest-mumbai'));
-  await press('interest-seoul');
+  await fireEvent.press(await screen.findByTestId('interest-investing'));
+  await press('interest-risk');
   await press('onboarding-continue');
 
   expect(get('onboarding-check-intro')).toBeOnTheScreen();
@@ -173,7 +178,7 @@ test('one question follows the consent, then the quick check intro; the picked p
   await press('check-start');
   // The stub's question bank is empty, so the test is left out and the path is built with the account facts.
   await passSummary();
-  expect(savedOnboarding()).toEqual({ interests: ['mumbai', 'seoul'], skipped: false });
+  expect(savedOnboarding()).toEqual({ interests: ['tokyo', 'mumbai', 'seoul'], skipped: false });
   expect(categorized()).toEqual([{ consent: true, facts: factsFrom(seedAccount()) }]);
   expect(calls('/api/check-questions')).toHaveLength(1);
 });

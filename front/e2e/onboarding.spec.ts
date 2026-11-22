@@ -63,16 +63,16 @@ test('one question leads to the quick check intro, with no way to skip; the pick
   await expect(page.getByText('What would you like to learn?')).toBeVisible();
   await expect(page.getByText(/^Step \d/)).toHaveCount(0);
   await expect(page.getByTestId('onboarding-skip')).toHaveCount(0);
-  await expect(page.getByTestId('interest-berlin')).toBeVisible();
+  await expect(page.getByTestId('interest-saving')).toBeVisible();
   await expectDisabled(page, 'onboarding-continue');
-  await tap(page, 'interest-seoul');
-  await tap(page, 'interest-berlin');
+  await tap(page, 'interest-risk');
+  await tap(page, 'interest-saving');
   await expectDisabled(page, 'onboarding-continue', false);
   await tap(page, 'interest-not-sure');
-  await expect(page.getByTestId('interest-seoul')).toHaveAttribute('aria-checked', 'false');
-  await tap(page, 'interest-berlin');
+  await expect(page.getByTestId('interest-risk')).toHaveAttribute('aria-checked', 'false');
+  await tap(page, 'interest-saving');
   await expect(page.getByTestId('interest-not-sure')).toHaveAttribute('aria-checked', 'false');
-  await tap(page, 'interest-seoul');
+  await tap(page, 'interest-risk');
   await tap(page, 'onboarding-continue');
 
   await expect(page.getByTestId('onboarding-check-intro')).toBeVisible();
@@ -86,7 +86,7 @@ test('one question leads to the quick check intro, with no way to skip; the pick
   await passSummary(page);
 
   const profile = await waitForCompletedOnboarding(request);
-  expect(profile).toMatchObject({ lifeStage: null, interests: ['berlin', 'seoul'], experience: null, onboardingSkipped: false });
+  expect(profile).toMatchObject({ lifeStage: null, interests: ['berlin', 'nairobi', 'seoul'], experience: null, onboardingSkipped: false });
   const categorization = await (await request.get('/api/users/demo-user/categorization')).json();
   expect(categorization).toMatchObject({ consent: true, bankData: true });
 
@@ -105,7 +105,7 @@ test('the back arrow steps back through every screen, keeping answers', async ({
   await answerSurvey(page);
   await tap(page, 'onboarding-back');
   await expect(page.getByTestId('onboarding-interests')).toBeVisible();
-  await expect(page.getByTestId('interest-berlin')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByTestId('interest-saving')).toHaveAttribute('aria-checked', 'true');
   await tap(page, 'onboarding-back');
   await expect(page.getByTestId('onboarding-consent')).toBeVisible();
 });

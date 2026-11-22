@@ -182,7 +182,7 @@ final class CategorizationRules {
 			List<String> own = supportingLines(area, a, f);
 			picked.stream()
 				.filter(story -> FocusArea.ofStoryArea(story.area()) == area)
-				.forEach(story -> own.add("You said " + story.category() + " is new to you."));
+				.forEach(story -> own.add("You said " + story.area() + " is new to you."));
 			lines.addAll(own.isEmpty() ? List.of(NEUTRAL_LINE) : own);
 		}
 		return List.copyOf(lines);

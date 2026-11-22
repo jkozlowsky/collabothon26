@@ -166,7 +166,7 @@ class CategorizationControllerTests {
 				                "Your accounts with us include investment products."]},
 				   {"output": "focusAreas",
 				    "probabilities": {"saving": 0.2, "debt": 0.7, "investing": 0.9, "risk": 0.6, "retirement": 0.1},
-				    "because": ["Your accounts cover more than 6 months of spending.", "You said Diversification is new to you.",
+				    "because": ["Your accounts cover more than 6 months of spending.", "You said Investing is new to you.",
 				                "You are paying off a loan with us.",
 				                "Your accounts with us include investment products."]}],
 				 "profile": null, "mastery": {}, "answerCount": 0,
@@ -269,7 +269,7 @@ class CategorizationControllerTests {
 					{"consent": false, "bankData": false, "lifeStage": "family", "gaps": [],
 					 "explanation": [{"output": "role", "because": ["You said: I save now and then."]},
 					                 {"output": "focusAreas",
-					                  "because": ["You said Diversification is new to you.", "It fits the answers you gave."]}],
+					                  "because": ["You said Investing is new to you.", "It fits the answers you gave."]}],
 					 "sharedWithModel": {"facts": null}, "source": "jev"}""", JsonCompareMode.LENIENT));
 	}
 

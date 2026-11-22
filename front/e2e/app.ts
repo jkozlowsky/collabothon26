@@ -78,11 +78,11 @@ export async function goToConsent(page: Page) {
   await expect(page.getByTestId('onboarding-consent')).toBeVisible();
 }
 
-/** Story ids to pick on the interests screen. */
+/** Area slugs to pick on the interests screen; each saves the story ids of its area. */
 export type Survey = { interests?: string[] };
 
 /** Agrees on the consent screen and picks the interests, up to "Let's see what you already know". */
-export async function answerFromConsent(page: Page, { interests = ['berlin'] }: Survey = {}) {
+export async function answerFromConsent(page: Page, { interests = ['saving'] }: Survey = {}) {
   await tap(page, 'consent-accept');
   for (const id of interests) await tap(page, `interest-${id}`);
   await tap(page, 'onboarding-continue');

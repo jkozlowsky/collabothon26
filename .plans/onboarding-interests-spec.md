@@ -9,7 +9,7 @@ Status: **review** (agreed in interview, 2026-11-22). Written against `origin/ma
 
 ## 0. Goal
 
-A fresh onboarding asks two questions today: "What are you saving for?" (`purpose`) and when the money is needed (`horizon`). Asking about savings at the very first screen makes no sense to the user. Both go. In their place: **one screen, "What would you like to learn?"**, with one tile per lesson path. Each tile comes from the backend, so the tiles match the paths on the map.
+A fresh onboarding asks two questions today: "What are you saving for?" (`purpose`) and when the money is needed (`horizon`). Asking about savings at the very first screen makes no sense to the user. Both go. In their place: **one screen, "What would you like to learn?"**, with one chip per area (C23). The areas come from the backend, so the chips carry the names the map uses.
 
 What a pick means: **"I want to get better at this because I don't know it yet."** Each pick is a self-reported weak spot. It feeds:
 
@@ -30,11 +30,14 @@ The old 15-value `goals` vocabulary is **removed** everywhere. `interests` repla
 
 - **Title:** "What would you like to learn?"
 - **Source:** `GET /api/stories?userId=…` (`useApi`, as `PathSummary` and `story/[id].tsx` already do). There is no hardcoded list in the app.
-- **Which paths:** only `status === 'available'`, in the order the endpoint returns them. Today that is 7: Hype & leverage, Inflation & savings, Instalments & debt, Diversification, Fast inflation, Small savings, Gold.
-- **Tile:** the story's `icon` (Feather), `category` as the title, `topic` as the subtitle, and a check when the tile is selected. The city is not shown; the user meets it on the map. Reuse the existing `OptionCard` and `AnswerTile` components. Follow the `finance-quest-ui` skill and the Figma Design Kit. No new design primitives.
+- **Helper:** "Pick every topic that is new to you. We'll build your path around them."
+- **Which areas:** the `available` stories grouped by `area` (`category` if a story has none), in order of first appearance. Today that is 5: Risk (seoul), Saving (berlin, nairobi), Borrowing (sao-paulo), Investing (tokyo, mumbai), Money basics (buenos-aires).
+- **Chip:** Figma "07 Survey · Goals": wrapping pills labelled with the area as spelled in the data. Unselected: white, thin border, plus. Selected: petrol, yellow check, white label, same size. Touch target at least 44 px. No subtitle, icon or city; the user meets the city on the map.
+- **What a chip saves:** every available story id of its area. Chips in pick order, stories in endpoint order within a chip. A saved or hinted id of any of its stories selects the whole chip.
+- **Counter:** a green check and "N selected" (chips) under them from one pick; none for "Not sure yet".
 - **Selection:**
-  - Multi-select. Continue is enabled once at least one tile is picked.
-  - A last tile, **"Not sure yet"**, is exclusive. Picking it clears the paths, and picking a path clears it. It saves `interests: []` and enables Continue.
+  - Multi-select. Continue is enabled once at least one chip is picked; there is no upper limit.
+  - A last chip, **"Not sure yet"**, is exclusive. Picking it clears the areas, and picking an area clears it. It saves `interests: []` and enables Continue.
 - **Loading:** show a skeleton or spinner in the list area while the request runs.
 - **Request fails:** show an error message with **Retry**, plus **Skip**. Skip moves on with `interests: []`.
 - **Personas** (`front/src/lib/personas.ts`, `hints`):
@@ -43,7 +46,7 @@ The old 15-value `goals` vocabulary is **removed** everywhere. `interests` repla
   - Elena: `['berlin', 'buenos-aires']`, for a safety net and inflation.
   - Alex: no hints, unchanged.
   - Update the doc comment.
-- **testIDs:** `onboarding-interests`, `interest-<storyId>`, `interest-not-sure`, `interests-retry`, `interests-skip`, plus the existing `onboarding-continue`.
+- **testIDs:** `onboarding-interests`, `interest-<area slug>` (`interest-money-basics`), `interest-not-sure`, `interests-count`, `interests-retry`, `interests-skip`, plus the existing `onboarding-continue`.
 
 ## 3. Contract: `interests` replaces `goals`
 
@@ -63,7 +66,7 @@ Change these deliberately and tell the team; this is a shared contract.
   - `useOnboarding` and `complete({ interests })` follow the rename.
 - **Rules fallback (`CategorizationRules`):**
   - Lines ~108 and ~179 read interests.
-  - The explanation "You picked X as a goal." becomes "You said X is new to you.", with the story `category` in place of X.
+  - The explanation "You picked X as a goal." becomes "You said X is new to you.", with the story `area` in place of X, once per area (C13).
 
 Lombok and MapStruct apply as everywhere in `back/`. Each new type goes in its own file.
 
@@ -109,14 +112,14 @@ Nothing is added for non-interest lessons. Keep the wording in `JevConsts` or th
   - The migration starts with Hibernate `validate`.
   - Update every test that sends `goals` (`UserProfileControllerTests`, `CategorizationControllerTests`, `QuickCheck*Tests`, `CategorizationRulesTests`, `JevClientTests`, `LessonControllerTests`, `CategorizationWithoutKeyTests`).
 - **Frontend (jest):**
-  - The screen renders tiles from a mocked `/api/stories`.
+  - The screen renders one chip per area from a mocked `/api/stories`; a tap or a one-id hint saves the whole area.
   - "Not sure yet" is exclusive.
   - Continue is disabled with nothing picked.
   - The error state offers Retry and Skip.
   - Persona preselection works.
   - Update `onboarding.test.tsx`, `quick-check*.test.ts(x)`, `personas.test.ts`, `hints.test.tsx` and `test-utils/onboarding.ts`.
 - **e2e and recordings:**
-  - Replace the `option-home` / `option-1-5y` taps in `front/recordings/journey.ts` with `interest-berlin` and Continue. The film is the Berlin take. Update the stubbed categorization if it echoes `goals`.
+  - Replace the `option-home` / `option-1-5y` taps in `front/recordings/journey.ts` with `interest-saving` and Continue. The film is the Berlin take. Update the stubbed categorization if it echoes `goals`.
   - Update `e2e/onboarding.spec.ts`, `quick-check.spec.ts`, `start-here.spec.ts` and `e2e/app.ts`.
 - **Smoke test** in Jan's setup, without a Jev key: the rules fallback must still start the user on a sensible lesson and put the interest path second (§5). Without the key, the Jev-side effect of interests disappears. Say so in the walkthrough.
 
@@ -161,8 +164,8 @@ The build follows the option marked "chosen".
 - **C12 Final call without a Quick check.** (a) **chosen:** it also gets `state.interests` (C3 says both calls), so
   the list is an argument of `JevClient.ask` and `JevQuickCheck` drops `goals` instead of renaming it. (b) only inside
   `JevQuickCheck`: that call would lose the interests entirely.
-- **C13 Several picks in one area.** (a) **chosen:** one "You said X is new to you." line per picked path. (b) one per
-  area: needs a rule for which category to name.
+- **C13 Several picks in one area.** (a) one "You said X is new to you." line per picked path, naming its category.
+  (b) **chosen with C23:** one per area, naming the area as the map and the chips do.
 - **C14 Lesson ids in Jev's knowledge answers.** `answers[].lessonId` and `checkAnswers[].lessonId` (`seoul-1`) already
   reach Jev on main. (a) **chosen:** left as is, outside this change. (b) drop them from `JevAnswerDto` in the Jev
   simplification branch.
@@ -171,8 +174,8 @@ The build follows the option marked "chosen".
   change to `QuickCheckRules`, closer to §0's "choice of questions".
 - **C16 Criteria note and limits.** (a) **chosen:** only the interest lesson carries the note, and it comes on top of
   the two-per-area limit of the gap lessons, as §5 words it. (b) note every lesson of a picked path.
-- **C17 Extra copy on the screen.** (a) **chosen:** a helper line "Pick every topic that is new to you." and a
-  subtitle on "Not sure yet", which `OptionCard` requires. (b) title only.
+- **C17 Extra copy on the screen.** (a) **chosen:** the helper "Pick every topic that is new to you. We'll build your
+  path around them." and the "N selected" counter. Chips need no subtitle, "Not sure yet" included. (b) title only.
 - **C18 Consent notice (high; settle before merging to main).** F1b Q20's wording still says "the ranges you pick"
   and "We keep the result and the ranges". Nothing asks for ranges now; picked topics are sent and kept. (a) keep it:
   the notice is inaccurate. (b) **recommended, not built, needs Jan:** "Your answers, the topics you pick and ranges
@@ -187,6 +190,9 @@ The build follows the option marked "chosen".
   meaning. (b) "You chose to learn about X.": softer, a weaker signal.
 - **C22 Risk and retirement focus.** No path maps to them, so a pick cannot raise them. (a) **chosen:** §3's mapping.
   (b) a separate focus mapping for interests.
+- **C23 Jan, 22.11: tiles use the map's area names; one tile selects every path of that area.** The tiles are drawn as
+  the chips of Figma "07 Survey · Goals", without its limit of three, step header and mock labels. The contract stays
+  story ids; what Jev receives and the pool and plan rules stay per path.
 
 ## Tasks
 

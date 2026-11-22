@@ -46,7 +46,8 @@ class CategorizationRulesTests {
 
 	private static final List<Story> STORIES = List.of(story("seoul", "Hype & leverage", "Risk"),
 			story("berlin", "Inflation & savings", "Saving"), story("sao-paulo", "Instalments & debt", "Borrowing"),
-			story("tokyo", "Diversification", "Investing"), story("buenos-aires", "Fast inflation", "Money basics"));
+			story("tokyo", "Diversification", "Investing"), story("buenos-aires", "Fast inflation", "Money basics"),
+			story("mumbai", "Gold", "Investing"));
 
 	private static final Pattern ADVICE = Pattern
 		.compile("\\b(should|must|consider|recommend|buy|sell|switch|invest in|open)\\b", Pattern.CASE_INSENSITIVE);
@@ -180,10 +181,10 @@ class CategorizationRulesTests {
 	}
 
 	@Test
-	void everyPickedPathOfAnAreaHasItsOwnLineInThePickedOrder() {
-		OnboardingAnswersDto picked = new OnboardingAnswersDto(null, List.of("tokyo", "seoul", "berlin"), null, false);
+	void everyPickedMapAreaHasOneLineInThePickedOrder() {
+		OnboardingAnswersDto picked = new OnboardingAnswersDto(null, List.of("tokyo", "seoul", "mumbai", "berlin"), null, false);
 
-		assertEquals(List.of("You said Diversification is new to you.", "You said Hype & leverage is new to you."),
+		assertEquals(List.of("You said Investing is new to you.", "You said Risk is new to you."),
 				focusBecause(List.of(FocusArea.INVESTING), picked, null, STORIES));
 	}
 
@@ -234,7 +235,7 @@ class CategorizationRulesTests {
 				focusBecause(List.of(FocusArea.DEBT, FocusArea.SAVING, FocusArea.RISK), SKIPPED, LENA, STORIES));
 		OnboardingAnswersDto laterLife = new OnboardingAnswersDto("later-life", List.of("tokyo"), null, false);
 		assertEquals(List.of("You said retirement is close or already here.",
-				"Your accounts cover more than 6 months of spending.", "You said Diversification is new to you.",
+				"Your accounts cover more than 6 months of spending.", "You said Investing is new to you.",
 				"You are paying off a loan with us.", "Your accounts with us include investment products."),
 				focusBecause(List.of(FocusArea.RETIREMENT, FocusArea.INVESTING, FocusArea.DEBT, FocusArea.RISK),
 						laterLife, ALEX, STORIES));

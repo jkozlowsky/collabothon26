@@ -18,7 +18,7 @@ export type PersonaId = 'demo-user' | 'demo-daniel' | 'demo-elena';
 
 /**
  * Preselected answers for the onboarding's profiling questions only (never the Quick check's knowledge questions).
- * `interests` (story ids) is asked in a fresh onboarding and preselects those tiles; `lifeStage` and `experience`
+ * `interests` (story ids) is asked in a fresh onboarding and preselects those chips; `lifeStage` and `experience`
  * only in Profile → "Edit answers", where they fill in what the profile does not hold yet. The age band is not a
  * question: it comes from the bank's `owner.age`. Every field optional; an absent field means "no hint", and any
  * hint can be changed.

@@ -1,6 +1,6 @@
 import { fireEvent, screen } from 'expo-router/testing-library';
 
-/** Walks a fresh onboarding from the welcome screen to "Let's see what you already know". Picks "Not sure yet" unless given story ids. */
+/** Walks a fresh onboarding from the welcome screen to "Let's see what you already know". Picks "Not sure yet" unless given area slugs. */
 export async function walkSurvey(interests: string[] = []) {
   const tap = (id: string) => fireEvent.press(screen.getByTestId(id));
   await fireEvent.press(await screen.findByTestId('onboarding-start'));

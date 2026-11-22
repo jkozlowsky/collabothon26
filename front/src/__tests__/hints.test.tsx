@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import OnboardingScreen from '@/app/onboarding';
 import { BankProvider } from '@/hooks/useBank';
+import * as useOnboardingModule from '@/hooks/useOnboarding';
 import { OnboardingProvider } from '@/hooks/useOnboarding';
 import * as personasModule from '@/lib/personas';
 import { CurrentUserContext } from '@/lib/user';
@@ -62,7 +63,7 @@ describe('Onboarding and Quick check hints', () => {
     expect(screen.getByTestId('onboarding-welcome')).toBeTruthy();
   });
 
-  test('Persona with hints has its interests preselected; an id with no tile is ignored', async () => {
+  test('a hint with one id of an area selects its chip and saves the whole area; an id with no chip is ignored', async () => {
     const mockPersona: personasModule.Persona = {
       userId: 'demo-daniel',
       bankSeed: personasModule.PERSONAS['demo-daniel'].bankSeed,
@@ -71,10 +72,13 @@ describe('Onboarding and Quick check hints', () => {
 
     jest.spyOn(personasModule, 'personaFor').mockReturnValue(mockPersona);
     const profile = await fetchMock();
-    const story = (id: string) => ({ id, category: id, topic: id, icon: 'shield', status: 'available' });
+    const story = ([id, area]: string[]) => ({ id, area, category: id, topic: id, icon: 'shield', status: 'available' });
+    const stories = [['seoul', 'Risk'], ['berlin', 'Saving'], ['tokyo', 'Investing'], ['mumbai', 'Investing']].map(story);
+    const complete = jest.fn().mockResolvedValue(undefined);
+    jest.spyOn(useOnboardingModule, 'useOnboarding').mockReturnValue({ complete, done: false } as never);
     fetchMock.mockImplementation((url: string) =>
       url.includes('/api/stories')
-        ? Promise.resolve({ ok: true, status: 200, json: async () => ['seoul', 'berlin', 'mumbai'].map(story) })
+        ? Promise.resolve({ ok: true, status: 200, json: async () => stories })
         : Promise.resolve(profile),
     );
 
@@ -104,10 +108,13 @@ describe('Onboarding and Quick check hints', () => {
     for (const id of ['onboarding-start', 'onboarding-next', 'onboarding-challenge-next', 'consent-accept']) {
       await fireEvent.press(await screen.findByTestId(id));
     }
-    expect(await screen.findByTestId('interest-seoul')).toBeChecked();
-    expect(screen.getByTestId('interest-mumbai')).toBeChecked();
-    expect(screen.getByTestId('interest-berlin')).not.toBeChecked();
+    expect(await screen.findByTestId('interest-risk')).toBeChecked();
+    expect(screen.getByTestId('interest-investing')).toBeChecked();
+    expect(screen.getByTestId('interest-saving')).not.toBeChecked();
     expect(screen.queryByTestId('interest-gone')).toBeNull();
     expect(screen.getByTestId('onboarding-continue')).toBeEnabled();
+    await fireEvent.press(screen.getByTestId('onboarding-continue'));
+    await fireEvent.press(await screen.findByTestId('check-start'));
+    expect(complete.mock.calls[0][0]).toEqual({ interests: ['seoul', 'tokyo', 'mumbai'] });
   });
 });

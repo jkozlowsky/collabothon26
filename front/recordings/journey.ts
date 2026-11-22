@@ -51,7 +51,7 @@ const ALEX = categorization({
   ],
   explanation: [
     { output: 'role', probabilities: {}, because: ['You save regularly and keep a solid safety net.', 'Real interest is still new to you.'] },
-    { output: 'focusAreas', probabilities: {}, because: ['You said Inflation & savings is new to you.'] },
+    { output: 'focusAreas', probabilities: {}, because: ['You said Saving is new to you.'] },
   ],
   profile: { ageBand: null, savingsCover: null, horizon: null },
   mastery: MASTERY,

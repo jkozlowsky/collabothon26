@@ -8,7 +8,7 @@ import { colors, radii, spacing, type } from '@/constants/theme';
 import { useApi } from '@/hooks/useApi';
 import type { Summary } from '@/lib/learningPath';
 import { areaMarks } from '@/lib/quickCheck';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type { Role } from '@/types/categorization';
 import type { StoryPage } from '@/types/stories';
 
@@ -23,8 +23,9 @@ const GAP_TITLE = {
 };
 
 export function PathSummary({ categorization: c, counts = {}, savingFor }: Summary) {
+  const { userId } = useCurrentUser();
   const start = c.startLesson;
-  const { data: stories } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(USER_ID)}`);
+  const { data: stories } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(userId)}`);
   const lessons = start && stories?.find((s) => s.id === start.storyId)?.lessons;
   const stop = lessons ? lessons.findIndex((l) => l.id === start!.lessonId) + 1 : 0;
   const roleLines = c.explanation.find((e) => e.output === 'role')?.because ?? [];

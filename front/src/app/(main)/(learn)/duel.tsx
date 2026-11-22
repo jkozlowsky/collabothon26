@@ -17,14 +17,14 @@ import { colors, radii, spacing, type } from '@/constants/theme';
 import { useAccount } from '@/hooks/useAccount';
 import { useApi } from '@/hooks/useApi';
 import { clearStoredActiveMatch } from '@/lib/duel/useDuelMatch';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type { DuelCategory, DuelMode, MatchSummary, Rankings } from '@/types/duel';
 
 /** A match takes at most this many categories (DuelMatchService.MAX_CATEGORIES). */
 const MAX_CATEGORIES = 4;
-const CATEGORIES_PATH = `/api/duel/categories?userId=${encodeURIComponent(USER_ID)}`;
-const WEEKLY_PATH = `/api/duel/rankings?userId=${encodeURIComponent(USER_ID)}`;
-const MATCHES_PATH = `/api/duel/matches?userId=${encodeURIComponent(USER_ID)}`;
+const categoriesPath = (userId: string) => `/api/duel/categories?userId=${encodeURIComponent(userId)}`;
+const weeklyPath = (userId: string) => `/api/duel/rankings?userId=${encodeURIComponent(userId)}`;
+const matchesPath = (userId: string) => `/api/duel/matches?userId=${encodeURIComponent(userId)}`;
 
 function getCtaText(count: number, mode: DuelMode): string {
   if (count === 0) return 'Select at least 1 category';
@@ -36,15 +36,16 @@ function getCtaText(count: number, mode: DuelMode): string {
 }
 
 export default function DuelLobbyScreen() {
+  const { userId } = useCurrentUser();
   const [activeTab, setActiveTab] = useState<'play' | 'history'>('play');
   const [mode, setMode] = useState<DuelMode>('HUMAN');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const initializedSelection = useRef(false);
 
   const { account, stats } = useAccount();
-  const { data: categories, loading: catLoading, error: catError, reload: reloadCategories } = useApi<DuelCategory[]>(CATEGORIES_PATH);
-  const { data: weekly, reload: reloadWeekly } = useApi<Rankings>(WEEKLY_PATH);
-  const { data: matches, loading: matchLoading, error: matchError, reload: reloadMatches } = useApi<MatchSummary[]>(MATCHES_PATH);
+  const { data: categories, loading: catLoading, error: catError, reload: reloadCategories } = useApi<DuelCategory[]>(categoriesPath(userId));
+  const { data: weekly, reload: reloadWeekly } = useApi<Rankings>(weeklyPath(userId));
+  const { data: matches, loading: matchLoading, error: matchError, reload: reloadMatches } = useApi<MatchSummary[]>(matchesPath(userId));
 
   // Default selection: the first categories, up to the match limit, when first loaded
   useEffect(() => {

@@ -20,11 +20,11 @@ export function createRng(seed: number) {
   };
 }
 
-type Rng = ReturnType<typeof createRng>;
+export type Rng = ReturnType<typeof createRng>;
 
-const pick = <T,>(rng: Rng, items: readonly T[]): T => items[Math.floor(rng() * items.length)];
-const between = (rng: Rng, min: number, max: number) => Math.round(min + rng() * (max - min));
-const time = (rng: Rng) => `${String(between(rng, 7, 21)).padStart(2, '0')}:${String(between(rng, 0, 59)).padStart(2, '0')}`;
+export const pick = <T,>(rng: Rng, items: readonly T[]): T => items[Math.floor(rng() * items.length)];
+export const between = (rng: Rng, min: number, max: number) => Math.round(min + rng() * (max - min));
+export const time = (rng: Rng) => `${String(between(rng, 7, 21)).padStart(2, '0')}:${String(between(rng, 0, 59)).padStart(2, '0')}`;
 
 const MAIN = 'Main account';
 const DEBIT = 'Card •• 4821';
@@ -87,7 +87,7 @@ const RANGES: Record<ChartRange, { points: number; change: number; volatility: n
 };
 
 /** A noisy walk that starts at `end / (1 + change)` and lands exactly on `end` (a Brownian bridge). */
-function series(rng: Rng, end: number, points: number, change: number, volatility: number): number[] {
+export function series(rng: Rng, end: number, points: number, change: number, volatility: number): number[] {
   const start = end / (1 + change / 100);
   let walk = 0;
   const raw = [0];
@@ -102,7 +102,7 @@ function series(rng: Rng, end: number, points: number, change: number, volatilit
   });
 }
 
-function depotSeries(rng: Rng, total: number): DepotSeries {
+export function depotSeries(rng: Rng, total: number): DepotSeries {
   const out = {} as DepotSeries;
   for (const key of Object.keys(RANGES) as ChartRange[]) {
     const r = RANGES[key];

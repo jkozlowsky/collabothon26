@@ -7,7 +7,7 @@ import {
   type DuelMatchState,
   type LocalDot,
 } from '@/lib/duel/reducer';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type {
   AnswerResult,
   DuelAnswer,
@@ -22,7 +22,10 @@ const FEEDBACK_AUTO_ADVANCE_MS = 3000;
 const COUNTDOWN_TICK_MS = 250;
 const POLL_INTERVAL_MS = 1000;
 const FINDING_RIVAL_MS = 1500;
-const ACTIVE_MATCH_STORAGE_KEY = `fq_duel_active_match:${USER_ID}`;
+
+export function activeMatchStorageKey(userId: string = 'demo-user'): string {
+  return `fq_duel_active_match:${userId}`;
+}
 
 type StoredActiveMatch = {
   matchId: number;
@@ -31,10 +34,10 @@ type StoredActiveMatch = {
   yourDots: LocalDot[];
 };
 
-function readStoredMatch(categories: string[], mode: DuelMode): StoredActiveMatch | null {
+function readStoredMatch(categories: string[], mode: DuelMode, userId: string = 'demo-user'): StoredActiveMatch | null {
   try {
     if (typeof window === 'undefined' || !window.sessionStorage) return null;
-    const raw = window.sessionStorage.getItem(ACTIVE_MATCH_STORAGE_KEY);
+    const raw = window.sessionStorage.getItem(activeMatchStorageKey(userId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<StoredActiveMatch>;
     if (
@@ -55,19 +58,19 @@ function readStoredMatch(categories: string[], mode: DuelMode): StoredActiveMatc
   return null;
 }
 
-function writeStoredMatch(data: StoredActiveMatch): void {
+function writeStoredMatch(data: StoredActiveMatch, userId: string = 'demo-user'): void {
   try {
     if (typeof window === 'undefined' || !window.sessionStorage) return;
-    window.sessionStorage.setItem(ACTIVE_MATCH_STORAGE_KEY, JSON.stringify(data));
+    window.sessionStorage.setItem(activeMatchStorageKey(userId), JSON.stringify(data));
   } catch {
     // Ignore storage errors
   }
 }
 
-export function clearStoredActiveMatch(): void {
+export function clearStoredActiveMatch(userId: string = 'demo-user'): void {
   try {
     if (typeof window === 'undefined' || !window.sessionStorage) return;
-    window.sessionStorage.removeItem(ACTIVE_MATCH_STORAGE_KEY);
+    window.sessionStorage.removeItem(activeMatchStorageKey(userId));
   } catch {
     // Ignore storage errors
   }
@@ -95,9 +98,10 @@ export function useDuelMatch({
   mode,
   reloadMatchId,
 }: UseDuelMatchParams): UseDuelMatchResult {
+  const { userId } = useCurrentUser();
   const [sessionKey, setSessionKey] = useState(0);
   const [state, dispatch] = useReducer(duelReducer, undefined, () => {
-    const stored = !reloadMatchId ? readStoredMatch(categories, mode) : null;
+    const stored = !reloadMatchId ? readStoredMatch(categories, mode, userId) : null;
     return createInitialDuelState(
       categories,
       mode,
@@ -116,7 +120,7 @@ export function useDuelMatch({
   // Persist active match in sessionStorage
   useEffect(() => {
     if (state.error?.code === 'MATCH_NOT_FOUND') {
-      clearStoredActiveMatch();
+      clearStoredActiveMatch(userId);
       return;
     }
     if (state.matchId !== null && state.phase !== 'result') {
@@ -125,17 +129,17 @@ export function useDuelMatch({
         categories: state.categories,
         mode: state.mode,
         yourDots: state.yourDots,
-      });
+      }, userId);
     } else if (state.phase === 'result') {
-      clearStoredActiveMatch();
+      clearStoredActiveMatch(userId);
     }
-  }, [state.matchId, state.categories, state.mode, state.yourDots, state.phase, state.error]);
+  }, [state.matchId, state.categories, state.mode, state.yourDots, state.phase, state.error, userId]);
 
   const fetchResult = useCallback(async (matchId: number) => {
     try {
-      const res = await api<MatchEnd>(`/api/duel/matches/${matchId}?userId=${encodeURIComponent(USER_ID)}`);
+      const res = await api<MatchEnd>(`/api/duel/matches/${matchId}?userId=${encodeURIComponent(userId)}`);
       dispatch({ type: 'match.end', result: res });
-      clearStoredActiveMatch();
+      clearStoredActiveMatch(userId);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         // Not finished yet
@@ -147,7 +151,7 @@ export function useDuelMatch({
         message: err instanceof Error ? err.message : 'Failed to load result',
       });
     }
-  }, []);
+  }, [userId]);
 
   // Match initialization / start / resume
   useEffect(() => {
@@ -158,7 +162,7 @@ export function useDuelMatch({
       if (reloadMatchId) {
         try {
           const matchState = await api<MatchState>(
-            `/api/duel/matches/${reloadMatchId}/state?userId=${encodeURIComponent(USER_ID)}`,
+            `/api/duel/matches/${reloadMatchId}/state?userId=${encodeURIComponent(userId)}`,
           );
           if (cancelled) return;
           dispatch({ type: 'match.state', state: matchState });
@@ -178,11 +182,11 @@ export function useDuelMatch({
       }
 
       // 2. Resuming stored match
-      const stored = readStoredMatch(categories, mode);
+      const stored = readStoredMatch(categories, mode, userId);
       if (stored) {
         try {
           const matchState = await api<MatchState>(
-            `/api/duel/matches/${stored.matchId}/state?userId=${encodeURIComponent(USER_ID)}`,
+            `/api/duel/matches/${stored.matchId}/state?userId=${encodeURIComponent(userId)}`,
           );
           if (cancelled) return;
           dispatch({ type: 'match.state', state: matchState });
@@ -191,7 +195,7 @@ export function useDuelMatch({
           }
           return;
         } catch {
-          clearStoredActiveMatch();
+          clearStoredActiveMatch(userId);
         }
       }
 
@@ -203,7 +207,7 @@ export function useDuelMatch({
 
       try {
         const body: StartMatchRequest = {
-          userId: USER_ID,
+          userId,
           categories,
           mode,
         };
@@ -228,7 +232,7 @@ export function useDuelMatch({
     return () => {
       cancelled = true;
     };
-  }, [categories, mode, reloadMatchId, sessionKey, fetchResult]);
+  }, [categories, mode, reloadMatchId, sessionKey, fetchResult, userId]);
 
   // Submit answer
   const submitAnswer = useCallback(
@@ -243,7 +247,7 @@ export function useDuelMatch({
       const qIndex = current.question.index;
       try {
         const payload = {
-          userId: USER_ID,
+          userId,
           index: qIndex,
           ...answer,
         };
@@ -275,7 +279,7 @@ export function useDuelMatch({
         answeringRef.current = false;
       }
     },
-    [fetchResult],
+    [fetchResult, userId],
   );
 
   // Auto advance after feedback
@@ -316,7 +320,7 @@ export function useDuelMatch({
 
     async function poll() {
       try {
-        const ms = await api<MatchState>(`/api/duel/matches/${matchId}/state?userId=${encodeURIComponent(USER_ID)}`);
+        const ms = await api<MatchState>(`/api/duel/matches/${matchId}/state?userId=${encodeURIComponent(userId)}`);
         if (!active) return;
         dispatch({ type: 'match.state', state: ms });
         if (ms.finished) {
@@ -332,15 +336,15 @@ export function useDuelMatch({
       active = false;
       clearInterval(interval);
     };
-  }, [state.phase, state.matchId, state.finished, fetchResult]);
+  }, [state.phase, state.matchId, state.finished, fetchResult, userId]);
 
   const nextQuestion = useCallback(() => {
     dispatch({ type: 'ui.advance' });
   }, []);
 
   const leave = useCallback(() => {
-    clearStoredActiveMatch();
-  }, []);
+    clearStoredActiveMatch(userId);
+  }, [userId]);
 
   const retry = useCallback(() => {
     dispatch({ type: 'ui.clearError' });

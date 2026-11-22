@@ -321,6 +321,7 @@ export function today() {
 export async function onboardToFirstLesson(page: Page, rec: ClipRecorder) {
   // 1. The everyday bank, then Learn.
   await page.goto('/');
+  await tap(page, 'account-demo-user', 800);
   await expect(page.getByTestId('screen-overview')).toBeVisible({ timeout: 120_000 });
   // The bank renders at 412 CSS px; a wider value means the 3× rendering broke the mobile layout.
   expect(await page.evaluate(() => window.innerWidth)).toBe(412);

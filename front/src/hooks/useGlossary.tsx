@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 
 import { useApi } from '@/hooks/useApi';
 import { api } from '@/lib/api';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type { GlossaryCategory } from '@/types/glossary';
 
 type GlossaryValue = {
@@ -21,10 +21,10 @@ type GlossaryValue = {
 
 const GlossaryContext = createContext<GlossaryValue | undefined>(undefined);
 
-const userPath = `/api/users/${encodeURIComponent(USER_ID)}/glossary`;
-
 /** Loads the term list and the user's favourites once for the whole Glossary tab. */
 export function GlossaryProvider({ children }: { children: ReactNode }) {
+  const { userId } = useCurrentUser();
+  const userPath = `/api/users/${encodeURIComponent(userId)}/glossary`;
   const list = useApi<GlossaryCategory[]>('/api/glossary');
   const savedFavorites = useApi<string[]>(`${userPath}/favorites`);
 
@@ -58,7 +58,7 @@ export function GlossaryProvider({ children }: { children: ReactNode }) {
         setFavoriteError('Could not update your saved terms. Please try again.');
       });
     },
-    [favorites],
+    [favorites, userPath],
   );
 
   const value = useMemo<GlossaryValue>(() => {

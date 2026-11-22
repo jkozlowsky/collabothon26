@@ -15,6 +15,10 @@ export function takeArrival() {
   return pending;
 }
 
+export function resetPendingTarget() {
+  pendingTarget = null;
+}
+
 /**
  * Opens the Atlas module from the bank. The first time (onboarding not done yet) the
  * onboarding flow opens instead, and the user lands on `target` when it is finished.

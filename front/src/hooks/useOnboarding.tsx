@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { api } from '@/lib/api';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type { Intake, OnboardingAnswers, UserProfile } from '@/types/onboarding';
 
 type OnboardingState = {
@@ -23,14 +23,16 @@ const OnboardingContext = createContext<OnboardingState | null>(null);
 
 const EMPTY_ANSWERS: OnboardingAnswers = { goals: [] };
 
-const profilePath = `/api/users/${encodeURIComponent(USER_ID)}/profile`;
-const onboardingPath = `${profilePath}/onboarding`;
-
 /** Profile writes run in order, so a reset's DELETE can never land after the next onboarding's PUT. */
 let profileWrites: Promise<unknown> = Promise.resolve();
 /** Resolves once every queued profile write has landed (or failed). */
 export const profileWritesSettled = () => profileWrites;
-function writeProfile(init: RequestInit, failure: string) {
+export function resetProfileWrites() {
+  profileWrites = Promise.resolve();
+}
+
+function writeProfile(userId: string, init: RequestInit, failure: string) {
+  const onboardingPath = `/api/users/${encodeURIComponent(userId)}/profile/onboarding`;
   profileWrites = profileWrites.then(() => api(onboardingPath, init)).catch((e: unknown) => console.warn(failure, e));
 }
 
@@ -48,6 +50,8 @@ function toAnswers(p: UserProfile): OnboardingAnswers {
  * and from then on the app opens straight on Learn.
  */
 export function OnboardingProvider({ children }: { children: ReactNode }) {
+  const { userId } = useCurrentUser();
+  const profilePath = `/api/users/${encodeURIComponent(userId)}/profile`;
   const [state, setState] = useState<Omit<OnboardingState, 'complete' | 'reset'>>({ loaded: false, done: false, answers: EMPTY_ANSWERS, intake: null });
 
   useEffect(() => {
@@ -73,18 +77,18 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [profilePath]);
 
   const complete = useCallback((answers: OnboardingAnswers, intake: Intake | null = null) => {
     // Move on right away; the save runs in the background so a slow network never blocks the user.
     setState({ loaded: true, done: true, answers, intake });
-    writeProfile({ method: 'PUT', body: JSON.stringify({ ...answers, skipped: false }) }, 'Could not save onboarding answers');
-  }, []);
+    writeProfile(userId, { method: 'PUT', body: JSON.stringify({ ...answers, skipped: false }) }, 'Could not save onboarding answers');
+  }, [userId]);
 
   const reset = useCallback(() => {
     setState({ loaded: true, done: false, answers: EMPTY_ANSWERS, intake: null });
-    writeProfile({ method: 'DELETE' }, 'Could not reset profile');
-  }, []);
+    writeProfile(userId, { method: 'DELETE' }, 'Could not reset profile');
+  }, [userId]);
 
   const value = useMemo(() => ({ ...state, complete, reset }), [state, complete, reset]);
 

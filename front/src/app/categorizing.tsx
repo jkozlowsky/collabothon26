@@ -18,6 +18,7 @@ import { useQuickCheck } from '@/hooks/useQuickCheck';
 import { isE2E } from '@/lib/e2e';
 import { categorize, checkBackend, factLabels, factsFrom, isRetryable, withTimeout } from '@/lib/categorization';
 import { setSummary } from '@/lib/learningPath';
+import { useCurrentUser } from '@/lib/user';
 import { answerCounts, fetchCheckQuestions, savingForLine } from '@/lib/quickCheck';
 import type { CheckQuestion, ProfileRanges, QuickResult } from '@/types/quickCheck';
 
@@ -48,6 +49,7 @@ const RULES_ONLY: Partial<QuickResult> = { useRules: true };
  * Without the survey's hand-over (a reload here) the path is built from the saved answers alone.
  */
 export default function CategorizingScreen() {
+  const { userId } = useCurrentUser();
   const { state: bank } = useBank();
   const { intake } = useOnboarding();
   // Computed once per visit, so every call of this visit sends the same facts.
@@ -81,7 +83,7 @@ export default function CategorizingScreen() {
     sent.current = quickResult;
     setStep(0);
     setPhase('loading');
-    const judged = withTimeout(outer, (signal) => categorize(consent ? facts : null, signal, quickResult));
+    const judged = withTimeout(outer, (signal) => categorize(consent ? facts : null, signal, quickResult, userId));
     const [result] = await Promise.allSettled([judged, new Promise((r) => setTimeout(r, isE2E() ? 0 : MIN_MS))]);
     if (outer.aborted) return;
     if (result.status === 'fulfilled') {
@@ -116,7 +118,7 @@ export default function CategorizingScreen() {
   useEffect(() => {
     const ctrl = new AbortController();
     withTimeout(ctrl.signal, async (signal) => {
-      await checkBackend(signal);
+      await checkBackend(signal, userId);
       return wantsCheck ? fetchCheckQuestions(signal) : [];
     }).then(
       (questions) => {
@@ -129,7 +131,7 @@ export default function CategorizingScreen() {
       },
     );
     return () => ctrl.abort();
-  }, [openAttempt, wantsCheck]);
+  }, [openAttempt, wantsCheck, userId]);
   const reopen = () => {
     setOpenFailed(false);
     setOpenAttempt((a) => a + 1);

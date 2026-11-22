@@ -23,6 +23,8 @@ import { colors, radii, spacing, type as text } from '@/constants/theme';
 import { useBank } from '@/hooks/useBank';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { ageBandOf, ageLabel, factLabels, factsFrom } from '@/lib/categorization';
+import { personaFor } from '@/lib/personas';
+import { useCurrentUser } from '@/lib/user';
 import type { Goal, Intake, OnboardingAnswers, Purpose } from '@/types/onboarding';
 import type { Horizon, ProfileRanges } from '@/types/quickCheck';
 
@@ -51,12 +53,24 @@ type Survey = OnboardingAnswers & {
 };
 
 export default function OnboardingScreen() {
+  const { userId } = useCurrentUser();
+  const hints = personaFor(userId).hints;
   const { complete, answers: saved } = useOnboarding();
   const { state: bank } = useBank();
   // Profile → "Edit answers": straight to the questions, prefilled, and back to the profile when done.
   const editing = useLocalSearchParams<{ edit?: string }>().edit === '1';
   const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState<Survey>(editing ? saved : { goals: [] });
+  // A demo persona starts with its answers preselected; the profile's own answers win when editing.
+  const [answers, setAnswers] = useState<Survey>(() =>
+    editing
+      ? {
+          ...saved,
+          lifeStage: saved.lifeStage ?? hints?.lifeStage,
+          experience: saved.experience ?? hints?.experience,
+          goals: saved.goals.length ? saved.goals : [...(hints?.goals ?? [])],
+        }
+      : { goals: [], purpose: hints?.purpose, horizon: hints?.horizon },
+  );
 
   const steps = editing ? EDITING : FRESH;
   const questions = steps.filter((s) => !NOT_QUESTIONS.includes(s));

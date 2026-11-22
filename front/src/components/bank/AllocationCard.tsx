@@ -16,6 +16,7 @@ const CLASS_COLOR: Record<AssetClass, string> = {
 export function AllocationCard() {
   const { state } = useBank();
   const parts = allocation(state).filter((p) => p.share > 0);
+  if (parts.length === 0) return null;
   return (
     <View style={styles.card} testID="allocation">
       <Text style={styles.title}>Allocation</Text>

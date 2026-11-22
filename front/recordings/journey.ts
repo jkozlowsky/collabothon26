@@ -318,14 +318,19 @@ export async function playLesson(
   return glossaryOpened;
 }
 
-/** The duel's stories: Berlin, finished by then, and Seoul, where only the first lesson is open. */
-export const DUEL_STORIES = ['berlin', 'seoul'];
+/**
+ * The duel's categories, which are learning-path areas: Saving (Berlin, finished by then, and Nairobi) and Risk
+ * (Seoul, where only the first mission is open).
+ */
+export const DUEL_AREAS = ['saving', 'risk'];
+/** The stories whose question banks those areas draw from (V26__duel_v4_areas.sql). */
+const DUEL_STORIES = ['berlin', 'nairobi', 'seoul'];
 
 /**
  * Plays a duel's questions, whatever their order (content: back/src/main/resources/content/duel/). Alex gets
  * everything right except two on purpose, so the review shows both kinds of link: the first Berlin question (its
- * lesson is done, so it opens) and the first Seoul question past seoul-1 (its lesson is still locked). A match draws
- * 3 questions per story and Seoul has only 2 on seoul-1, so that question always comes up.
+ * mission is done, so it opens) and the first Seoul question past seoul-1 (its mission is still locked). A match draws
+ * 3 questions per area and only 3 of Seoul's 15 are on seoul-1, so such a question almost always comes up.
  */
 export async function playDuel(page: Page): Promise<{ open: number; locked: number }> {
   const questions = loadDuelQuestions(DUEL_STORIES);
@@ -338,7 +343,7 @@ export async function playDuel(page: Page): Promise<{ open: number; locked: numb
   for (let n = 0; !(await result.isVisible()); n++) {
     await expect(question.or(result).first()).toBeVisible({ timeout: 120_000 });
     if (await result.isVisible()) break;
-    const kinds = ['duel-quiz', 'duel-predict', 'duel-chart', 'duel-sort'].map((id) => page.getByTestId(id));
+    const kinds = ['duel-quiz', 'duel-predict', 'duel-chart', 'duel-sort', 'duel-match'].map((id) => page.getByTestId(id));
     await expect(kinds.reduce((a, b) => a.or(b)).first()).toBeVisible({ timeout: 20_000 });
     const q = findQuestion(questions, await question.innerText());
     await beat(page, 2500); // reading the question
@@ -369,6 +374,27 @@ async function answer(page: Page, { step }: DuelQuestion, miss: boolean) {
     const far = step.answer - min > max - step.answer ? min : max;
     await drag(page, `duel-${step.type}-slider`, min, miss ? far : step.answer, min, max);
     await tap(page, `duel-${step.type}-submit`, 1200);
+  } else if (step.type === 'match') {
+    // Each term, then its definition; a miss swaps the first two definitions.
+    const { pairs } = step;
+    const rights = page.locator('[data-testid^="match-right-"]');
+    const rightTexts = (await rights.allInnerTexts()).map(normalise);
+    const rightIds = await rights.evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!));
+    const leftIds = await page.locator('[data-testid^="match-left-"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!));
+    const picks: string[] = [];
+    for (const leftId of leftIds) {
+      const term = normalise(await page.getByTestId(leftId).innerText());
+      const definition = pairs.find(([t]) => term.includes(normalise(t)))?.[1];
+      const j = definition ? rightTexts.findIndex((r) => r.includes(normalise(definition))) : -1;
+      expect(j, `the definition of "${term}"`).toBeGreaterThanOrEqual(0);
+      picks.push(rightIds[j]);
+    }
+    if (miss) [picks[0], picks[1]] = [picks[1], picks[0]];
+    for (const [i, leftId] of leftIds.entries()) {
+      await tap(page, leftId, 500);
+      await tap(page, picks[i], 500);
+    }
+    await tap(page, 'duel-match-submit', 900);
   } else {
     const { items } = step;
     const item = page.locator('[data-testid^="duel-sort-item-"]').filter({ visible: true }).first();

@@ -13,8 +13,11 @@ import { findQuestion, loadDuelQuestions, normalise, type DuelQuestion } from '.
  * the berlin-1 lesson and the duel.
  */
 
-/** Multiplies every pause; PACE=0.5 for a quick dry run, PACE=1.5 for a slower take. */
-export const PACE = Number(process.env.PACE ?? 1);
+/**
+ * Multiplies every pause. The default keeps all clips together under 5 minutes; PACE=0.3 for a quick dry run,
+ * PACE=1 for a slower take. Scrolling keeps its own slow speed whatever the PACE.
+ */
+export const PACE = Number(process.env.PACE ?? 0.5);
 /** The clip size: the Pixel 7 viewport (412×839) at the 3× the config renders at. */
 export const CLIP_SIZE = { width: 1236, height: 2516 };
 
@@ -76,7 +79,7 @@ const MIN_SCROLL_MS = 600;
  * `center` brings the target to the middle of the view, `end` scrolls that container to its bottom.
  */
 export async function glide(page: Page, target: Locator, align: 'center' | 'end' = 'center') {
-  await beat(page, SETTLE_MS);
+  await page.waitForTimeout(SETTLE_MS);
   await target.evaluate(
     (el, { align, pxPerS, minMs }) =>
       new Promise<void>((resolve) => {
@@ -102,7 +105,7 @@ export async function glide(page: Page, target: Locator, align: 'center' | 'end'
         };
         requestAnimationFrame(frame);
       }),
-    { align, pxPerS: SCROLL_PX_PER_S / PACE, minMs: MIN_SCROLL_MS * PACE },
+    { align, pxPerS: SCROLL_PX_PER_S, minMs: MIN_SCROLL_MS },
   );
 }
 

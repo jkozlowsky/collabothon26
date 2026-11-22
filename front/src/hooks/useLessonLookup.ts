@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
 import { useApi } from '@/hooks/useApi';
-import { USER_ID } from '@/lib/user';
+import { useCurrentUser } from '@/lib/user';
 import type { LessonStatus } from '@/types/lessons';
 import type { StoryPage } from '@/types/stories';
 
@@ -15,7 +15,8 @@ export type LessonPlace = {
 
 /** Where a lesson sits in its story and whether it is open yet, from the same stories feed as the map. */
 export function useLessonLookup(): (story: string, lessonId: string) => LessonPlace | null {
-  const { data } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(USER_ID)}`);
+  const { userId } = useCurrentUser();
+  const { data } = useApi<StoryPage[]>(`/api/stories?userId=${encodeURIComponent(userId)}`);
   return useCallback(
     (story, lessonId) => {
       const page = data?.find((s) => s.id === story);

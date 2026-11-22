@@ -49,7 +49,7 @@
     {
       "id": "tokyo-d02",
       "lessonId": "tokyo-1",
-      "sourceStepId": "q1",
+      "sourceStepId": "q2",
       "concepts": [
         "time-horizon"
       ],
@@ -70,7 +70,7 @@
     },
     {
       "id": "tokyo-d03",
-      "lessonId": "tokyo-2",
+      "lessonId": "tokyo-4",
       "sourceStepId": "s1",
       "concepts": [
         "diversification"
@@ -125,8 +125,8 @@
     },
     {
       "id": "tokyo-d04",
-      "lessonId": "tokyo-2",
-      "sourceStepId": "q2",
+      "lessonId": "tokyo-4",
+      "sourceStepId": "q3",
       "concepts": [
         "diversification"
       ],
@@ -148,7 +148,7 @@
     {
       "id": "tokyo-d05",
       "lessonId": "tokyo-3",
-      "sourceStepId": "p1",
+      "sourceStepId": "s1",
       "concepts": [
         "time-horizon",
         "drawdown"
@@ -196,7 +196,7 @@
     {
       "id": "tokyo-d07",
       "lessonId": "tokyo-4",
-      "sourceStepId": "p1",
+      "sourceStepId": "q2",
       "concepts": [
         "currency-risk"
       ],
@@ -221,7 +221,7 @@
     {
       "id": "tokyo-d08",
       "lessonId": "tokyo-4",
-      "sourceStepId": "m1",
+      "sourceStepId": "t1",
       "concepts": [
         "currency-risk",
         "diversification"

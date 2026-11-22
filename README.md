@@ -6,7 +6,11 @@
 
 ### One-Line Summary
 
-Atlas turns the bank app into a learning journey: short and engaging lessons on a globe, built from the personalized customer's own numbers, so self-directed investors gain the confidence to act.
+Atlas turns the bank app into a learning journey: short and engaging lessons on a globe, built from the customer's own data, so self-directed investors gain the confidence to act.
+
+### Live Demo
+
+**[atlas-commerzbank.duckdns.org](https://atlas-commerzbank.duckdns.org)** is the production build. It runs in the browser and is best viewed at phone width. Pick a demo customer (Alex, Daniel or Elena), open **Learn**, and follow the path from onboarding to the first lesson.
 
 ### Technology Stack
 
@@ -35,8 +39,8 @@ This hits every generation differently. A student, a young family and someone te
 1. **Personal from the first minute.** With the customer's consent, Atlas reads a few summaries of what the bank already knows, such as regular saving, the safety net and investments. It then asks which topics are new to the user, because bank data can't show that. A two minute quick check finds the knowledge gaps. **Jev**, our profiling model, suggests where to start and our rules build the path from there.
 2. **A journey, not a syllabus.** Each learning area is a city on a globe: Saving in Berlin, Investing in Tokyo, Borrowing in São Paulo, Risk in Seoul, Retirement in Cape Town. A plane flies between the pins as the user progresses.
 3. **Personalized lessons about your money.** Every mission follows the same arc: a real hook number, a plain explanation, an interactive slider to explore the effect, myths vs facts, a decision scenario, a three-question checkpoint, and finally the lesson's lens on the user's own accounts.
-4. **Customizable for everyone** Some lessons can be played as a narrated, animated "video" rendered live from the lesson data (so it can show the user's own numbers and follow their choices), or read as a transcript. The user can switch at any moment without losing progress.
-5. **Actionable** At the end of a path Atlas recaps what the user learned and shows the trade-offs with their numbers. It names product types as facts but never recommends one; the user decides and is taken straight to the right screen of their bank.
+4. **Customizable for everyone.** Some lessons can be played as a narrated, animated "video" rendered live from the lesson data (so it can show the user's own numbers and follow their choices), or read as a transcript. The user can switch at any moment without losing progress.
+5. **Actionable.** At the end of a path Atlas recaps what the user learned and shows the trade-offs with their numbers. It names product types as facts but never recommends one; the user decides and is taken straight to the right screen of their bank.
 6. **Engaging duels in the Arena.** 1v1 knowledge duels (live against another player or solo) keep what was learned fresh. Players are ranked in a weekly league by the XP they earn from lessons and duels, never by money, and a review after each match explains every mistake.
 
 #### The working prototype
@@ -104,9 +108,9 @@ Without an API key, rules do the whole job. If Jev takes over 1.5 seconds on a s
 - The app is in English only.
 
 **Next steps.**
-- Connect to real (sandboxed) banking APIs and the bank's login. 
+- Connect to real (sandboxed) banking APIs and the bank's login.
 - Event-based nudges ("lots of idle cash → inflation lesson", "market dropped → investor-emotion lesson").
 - Collaborative filtering on learning events.
-- The Retirement path and more lesson paths in general, other languages,  and video with narration for every lesson.
+- The Retirement path and more lesson paths in general, other languages, and video with narration for every lesson.
 - Accessibility pass (font scaling, contrast) and usability tests with real users from each generation.
 - Admin/expert panel and ability to add and control the lessons from inside the app.

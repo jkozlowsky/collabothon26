@@ -30,6 +30,7 @@ type Backend = {
   step?: Handler;
   post?: Handler;
   stored?: unknown;
+  stories?: Handler;
   /** Onboarding is behind the user: for the screens a reload opens directly. */
   onboarded?: boolean;
 };
@@ -57,12 +58,12 @@ function slowStep() {
 }
 
 const stop = (n: number) => ({ id: `berlin-${n}`, story: 'berlin', title: `Stop ${n}`, place: 'Mitte', topic: null, minutes: 4, xp: 50, status: 'available' });
-const BERLIN = { id: 'berlin', city: 'Berlin', lessons: [1, 2, 3, 4].map(stop) };
+const BERLIN = { id: 'berlin', city: 'Berlin', area: 'Saving', topic: 'A safety net', color: 'teal', icon: 'shield', lessons: [1, 2, 3, 4].map(stop) };
 
 let fetchMock: jest.Mock;
 const body = (init?: RequestInit) => JSON.parse(String(init?.body ?? '{}'));
 
-function backend({ pool = () => ok(POOL), step = stepper(), post = () => ok(categorization()), stored, onboarded = false }: Backend = {}) {
+function backend({ pool = () => ok(POOL), step = stepper(), post = () => ok(categorization()), stored, stories = () => ok([BERLIN]), onboarded = false }: Backend = {}) {
   fetchMock = jest.fn((url: string, init?: RequestInit) => {
     if (url.endsWith('/api/check-questions')) return pool({}, init);
     if (url.endsWith('/quick-check/step')) return step(body(init), init);
@@ -73,7 +74,7 @@ function backend({ pool = () => ok(POOL), step = stepper(), post = () => ok(cate
     if (/\/profile(\/onboarding)?$/.test(url)) {
       return init?.method ? ok({}) : ok({ userId: 'demo-user', interests: [], onboardingCompleted: onboarded });
     }
-    if (url.includes('/api/stories?')) return ok([BERLIN]);
+    if (url.includes('/api/stories?')) return stories({}, init);
     if (/\/api\/lessons\/[\w-]+/.test(url)) return ok({ id: 'berlin-2', title: 'Compound interest', steps: [], concepts: [], glossary: {}, next: null });
     return ok([]);
   });
@@ -553,7 +554,7 @@ test('the summary: the level and its basis, the first lesson, the disclaimer', a
   expect(get('summary-based-on')).toHaveTextContent('Based on 3 answers and what your account shows.', { exact: false });
   expect(get('summary-first-lesson')).toHaveTextContent(/your first stop/i);
   expect(get('summary-first-lesson')).toHaveTextContent('Emergency fund', { exact: false });
-  expect(get('summary-first-lesson')).toHaveTextContent('Berlin · stop 3 of 4', { exact: false });
+  expect(get('summary-first-lesson').props.accessibilityLabel).toBe('Stop 3, Emergency fund, 4 min, your first stop');
   expect(get('summary-disclaimer')).toHaveTextContent('This picks lessons for you. It is not investment advice.', { exact: false });
   expect(screen.queryByTestId('summary-simple')).toBeNull();
   expect(screen.queryByText(/confiden/i)).toBeNull();
@@ -567,6 +568,21 @@ test('a start lesson with no area is just "your first stop"', async () => {
 test('ready for the next step: the first-lesson card says so; with no start lesson the card is hidden', async () => {
   await toSummary(ran({ readyForNext: true }));
   expect(get('summary-first-lesson')).toHaveTextContent("You're ready for the next lesson", { exact: false });
+});
+
+test('the route lists the stops of the start story; without stories the card stands alone', async () => {
+  backend({ onboarded: true, stored: ran() });
+  await openAt('/learning-path');
+  const route = within(await screen.findByTestId('summary-route'));
+  for (const title of ['Stop 1', 'Stop 3', 'Stop 4']) expect(route.getByText(title, { includeHiddenElements: true })).toBeOnTheScreen();
+  expect(route.getByTestId('summary-first-lesson')).toHaveTextContent('Compound interest', { exact: false });
+  expect(route.getByTestId('route-stop-berlin-1').props.accessibilityLabel).toBe('Stop 1, Stop 1, 4 min, not started');
+  await screen.unmount();
+
+  backend({ onboarded: true, stored: ran(), stories: () => fail(500) });
+  await openAt('/learning-path');
+  expect(await screen.findByTestId('summary-first-lesson')).toHaveTextContent('Compound interestBerlin', { exact: false });
+  expect(screen.queryByTestId('summary-route')).toBeNull();
 });
 
 test('no first lesson hides the card and Show my path opens the map', async () => {

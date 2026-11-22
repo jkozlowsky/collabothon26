@@ -5,6 +5,15 @@ import type { LandmarkKind } from '@/types/stories';
 
 type Props = { kind: LandmarkKind; at: number; color: string };
 
+/** Building heights for the hero skyline, derived from the city name so every city gets its own, stable outline. */
+export function skyline(city: string) {
+  let seed = [...city].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  return Array.from({ length: 16 }, () => {
+    seed = (seed * 1103515245 + 12345) >>> 0;
+    return 40 + (seed % 70);
+  });
+}
+
 /** A city's landmark silhouette over the story hero skyline, in the story tint. */
 export function StoryLandmark({ kind, at, color }: Props) {
   const fill = { backgroundColor: color };

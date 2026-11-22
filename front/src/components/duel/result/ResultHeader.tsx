@@ -43,6 +43,8 @@ type Props = {
   xpGained: number;
   /** Fireworks and cannons, drawn over the header. */
   overlay?: ReactNode;
+  /** Solo only: how well the round went (100 % / at least 60 % / below); sets the headline. */
+  soloTier?: 'full' | 'good' | 'low';
   /** Called when the XP pill's number has finished counting. */
   onXpDone?: () => void;
 };
@@ -174,7 +176,7 @@ function useShake(enabled: boolean, delayMs: number) {
  * The versus header (Figma frames 7–10): trophy (win), headline, you · score · rival, reward row.
  * Win gets the full show; draw fades and scales in; loss shakes once; solo pops softly.
  */
-export function ResultHeader({ outcome, you, rival, score, rivalScore = 0, total, xpGained, overlay, onXpDone }: Props) {
+export function ResultHeader({ outcome, you, rival, score, rivalScore = 0, total, xpGained, soloTier = 'low', overlay, onXpDone }: Props) {
   // Tolerates a missing provider (tests render the header alone).
   const insets = useContext(SafeAreaInsetsContext) ?? { top: 0 };
   const reduced = useReducedMotion();
@@ -206,16 +208,17 @@ export function ResultHeader({ outcome, you, rival, score, rivalScore = 0, total
   const headlineStyle = useAnimatedStyle(() => ({ opacity: headlineOpacity.value, transform: [{ scale: headline.value }] }));
   const scoreStyle = useAnimatedStyle(() => ({ opacity: scoreOpacity.value, transform: [{ scale: scoreScale.value }] }));
 
-  const headlineText = solo ? 'Practice complete' : win ? 'You won!' : loss ? 'You lost' : 'Draw';
+  const soloHeadline = soloTier === 'full' ? 'Perfect round!' : soloTier === 'good' ? 'Great round!' : 'Practice complete';
+  const headlineText = solo ? soloHeadline : win ? 'You won!' : loss ? 'You lost' : 'Draw';
   const headlineColor = win ? colors.brandAccent : loss ? colors.feedbackDanger : colors.textOnBrand;
 
   const scoreBlock = (
     <Animated.View style={[styles.scoreBlock, solo && styles.scoreSolo, scoreStyle]}>
       <Animated.View style={shake}>
-        {win ? (
+        {win || solo ? (
           <View style={styles.scoreRow} testID="result-score">
             <CountUpText value={score} delayMs={T.score} durationMs={900} style={styles.bigScore} testID="result-score-you" />
-            <Text style={styles.bigScore}> : {rivalScore}</Text>
+            <Text style={styles.bigScore}>{solo ? ` / ${total}` : ` : ${rivalScore}`}</Text>
           </View>
         ) : (
           <Text style={styles.bigScore} testID="result-score">
@@ -228,7 +231,7 @@ export function ResultHeader({ outcome, you, rival, score, rivalScore = 0, total
   );
 
   return (
-    <Animated.View style={[styles.header, { paddingTop: Math.max(insets.top + spacing.sm, 52) }, containerStyle]} testID="result-navy-header">
+    <Animated.View style={[styles.header, { paddingTop: Math.max(insets.top + spacing.sm, 60) }, containerStyle]} testID="result-navy-header">
       {win && <TrophyBadge delayMs={T.trophy} />}
       <Animated.View style={[loss && shake]}>
         <Animated.Text style={[styles.headline, { color: headlineColor }, headlineStyle]} accessibilityRole="header" testID="result-heading">
@@ -242,7 +245,7 @@ export function ResultHeader({ outcome, you, rival, score, rivalScore = 0, total
           <Text style={styles.name} testID="result-you-name">
             {you.name}
           </Text>
-          <Text style={styles.role}>You · solo, no XP</Text>
+          <Text style={styles.role}>{xpGained > 0 ? 'You · solo' : 'You · solo, no XP'}</Text>
           {scoreBlock}
           <DotTrack dots={you.dots} onBrand size={10} gap={5} />
         </View>
@@ -254,7 +257,7 @@ export function ResultHeader({ outcome, you, rival, score, rivalScore = 0, total
         </View>
       )}
 
-      {!solo && (
+      {(!solo || xpGained > 0) && (
         <View style={styles.reward}>
           <XpPill xp={xpGained} delayMs={win ? T.pill : 400} onDone={onXpDone} />
           <Text style={styles.rewardText}>5 XP per correct answer</Text>

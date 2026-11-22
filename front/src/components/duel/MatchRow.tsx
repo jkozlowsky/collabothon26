@@ -84,8 +84,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     backgroundColor: colors.bgSurface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderDefault,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
   },
   main: {
     flex: 1,

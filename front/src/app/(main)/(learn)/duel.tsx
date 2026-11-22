@@ -1,51 +1,43 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AsyncContent } from '@/components/AsyncContent';
 import { Button } from '@/components/Button';
-import { BankScreen } from '@/components/bank/BankScreen';
-import { ListCard } from '@/components/bank/ListCard';
-import { Section } from '@/components/bank/Section';
-import { CategoryRow } from '@/components/duel/CategoryRow';
-import { LeagueCard } from '@/components/duel/LeagueCard';
+import { Icon } from '@/components/bank/Icon';
+import { CategoryChip } from '@/components/duel/CategoryChip';
 import { LobbyHeader } from '@/components/duel/LobbyHeader';
-import { MatchRow } from '@/components/duel/MatchRow';
-import { ModeToggle } from '@/components/duel/ModeToggle';
-import { Tappable } from '@/components/onboarding/ui';
-import { colors, radii, spacing, type } from '@/constants/theme';
+import { LobbyTile } from '@/components/duel/LobbyTile';
+import { ModeTile } from '@/components/duel/ModeTile';
+import { colors, nav, radii, spacing, type } from '@/constants/theme';
 import { useAccount } from '@/hooks/useAccount';
 import { useApi } from '@/hooks/useApi';
 import { clearStoredActiveMatch } from '@/lib/duel/useDuelMatch';
 import { useCurrentUser } from '@/lib/user';
-import type { DuelCategory, DuelMode, MatchSummary, Rankings } from '@/types/duel';
+import type { DuelCategory, DuelMode, Rankings } from '@/types/duel';
 
 /** A match takes at most this many categories (DuelMatchService.MAX_CATEGORIES). */
 const MAX_CATEGORIES = 4;
 const categoriesPath = (userId: string) => `/api/duel/categories?userId=${encodeURIComponent(userId)}`;
 const weeklyPath = (userId: string) => `/api/duel/rankings?userId=${encodeURIComponent(userId)}`;
-const matchesPath = (userId: string) => `/api/duel/matches?userId=${encodeURIComponent(userId)}`;
 
 function getCtaText(count: number, mode: DuelMode): string {
   if (count === 0) return 'Select at least 1 category';
   const catWord = count === 1 ? '1 category' : `${count} categories`;
-  if (mode === 'SOLO') {
-    return `Start solo · ${catWord}`;
-  }
-  return `Find rival · ${catWord}`;
+  return mode === 'SOLO' ? `Start solo · ${catWord}` : `Find rival · ${catWord}`;
 }
 
+/** Duel lobby (Figma v4·1 / v4·2): navy header, Ranking + History tiles, mode tiles, category chips, CTA. */
 export default function DuelLobbyScreen() {
   const { userId } = useCurrentUser();
-  const [activeTab, setActiveTab] = useState<'play' | 'history'>('play');
   const [mode, setMode] = useState<DuelMode>('HUMAN');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const initializedSelection = useRef(false);
 
-  const { account, stats } = useAccount();
+  const { account } = useAccount();
+  const avatar = account?.avatar ?? 'm1';
   const { data: categories, loading: catLoading, error: catError, reload: reloadCategories } = useApi<DuelCategory[]>(categoriesPath(userId));
   const { data: weekly, reload: reloadWeekly } = useApi<Rankings>(weeklyPath(userId));
-  const { data: matches, loading: matchLoading, error: matchError, reload: reloadMatches } = useApi<MatchSummary[]>(matchesPath(userId));
 
   // Default selection: the first categories, up to the match limit, when first loaded
   useEffect(() => {
@@ -65,8 +57,7 @@ export default function DuelLobbyScreen() {
       }
       reloadCategories();
       reloadWeekly();
-      reloadMatches();
-    }, [reloadCategories, reloadWeekly, reloadMatches]),
+    }, [reloadCategories, reloadWeekly]),
   );
 
   function toggleCategory(story: string) {
@@ -78,189 +69,80 @@ export default function DuelLobbyScreen() {
   function startMatch() {
     if (selectedCategories.length === 0) return;
     clearStoredActiveMatch();
-    router.push({
-      pathname: '/duel/match',
-      params: {
-        categories: selectedCategories.join(','),
-        mode,
-      },
-    });
+    router.push({ pathname: '/duel/match', params: { categories: selectedCategories.join(','), mode } });
   }
 
-  function openMatch(match: MatchSummary) {
-    clearStoredActiveMatch();
-    router.push({
-      pathname: '/duel/match',
-      params: {
-        matchId: String(match.matchId),
-        mode: match.mode,
-      },
-    });
-  }
-
-  const unfinishedMatches = matches?.filter((m) => m.status === 'PLAYING' || m.status === 'RIVAL_PLAYING') ?? [];
-  const finishedMatches = matches?.filter((m) => m.status === 'FINISHED') ?? [];
+  const me = weekly?.me ?? null;
+  const climbed = me?.previousRank != null && me.previousRank > me.rank ? me.previousRank - me.rank : 0;
 
   return (
-    <BankScreen testID="screen-duel">
-      <LobbyHeader
-        firstName={account?.firstName}
-        streak={stats?.currentStreak ?? 0}
-        xp={stats?.totalXp ?? 0}
-      />
-
-      {/* Tabs: Play | History */}
-      <View style={styles.tabBar} accessibilityRole="tablist">
-        <Tappable
-          onPress={() => setActiveTab('play')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'play' }}
-          accessibilityLabel="Play"
-          testID="duel-tab-play"
-          containerStyle={styles.item}
-          style={[styles.tab, activeTab === 'play' && styles.activeTab]}
-        >
-          <Text style={[styles.tabText, activeTab === 'play' && styles.activeTabText]}>Play</Text>
-        </Tappable>
-
-        <Tappable
-          onPress={() => setActiveTab('history')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'history' }}
-          accessibilityLabel="History"
-          testID="duel-tab-history"
-          containerStyle={styles.item}
-          style={[styles.tab, activeTab === 'history' && styles.activeTab]}
-        >
-          <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>History</Text>
-        </Tappable>
-      </View>
-
-      {activeTab === 'play' ? (
-        <View style={styles.tabContent}>
-          {/* Weekly League Hero */}
-          <LeagueCard
-            avatar={account?.avatar ?? 'm1'}
-            me={weekly?.me ?? null}
-            onOpenRankings={() => router.push('/duel/rankings')}
+    <View style={styles.screen} testID="screen-duel">
+      <LobbyHeader avatar={avatar} level={me?.level ?? 1} />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.row}>
+          <LobbyTile
+            title={me ? `Ranking #${me.rank}` : 'Ranking'}
+            tone="accent"
+            icon={<Icon name="trophy" size={24} color={colors.textOnAccent} />}
+            badge={climbed > 0 ? String(climbed) : undefined}
+            onPress={() => router.push('/duel/rankings')}
+            testID="duel-open-rankings"
           />
+          <LobbyTile
+            title="History"
+            tone="primary"
+            icon={<Icon name="timer" size={24} color={colors.textOnBrand} />}
+            onPress={() => router.push('/duel/history')}
+            testID="duel-open-history"
+          />
+        </View>
 
-          {/* Mode Toggle: With rival | Solo */}
-          <Section title="Select mode">
-            <ModeToggle mode={mode} onChange={setMode} />
-          </Section>
+        <Text style={styles.heading} accessibilityRole="header">
+          Choose a mode
+        </Text>
+        <View style={styles.row} accessibilityRole="radiogroup">
+          <ModeTile mode="HUMAN" selected={mode === 'HUMAN'} avatar={avatar} onPress={() => setMode('HUMAN')} />
+          <ModeTile mode="SOLO" selected={mode === 'SOLO'} avatar={avatar} onPress={() => setMode('SOLO')} />
+        </View>
 
-          {/* Category List with Checkboxes */}
-          <Section title="Select question categories">
-            <AsyncContent loading={catLoading} error={catError} onRetry={reloadCategories}>
-              {() => (
-                <ListCard testID="duel-category-list">
-                  {categories?.map((cat) => (
-                    <CategoryRow
-                      key={cat.story}
-                      cat={cat}
-                      checked={selectedCategories.includes(cat.story)}
-                      onToggle={() => toggleCategory(cat.story)}
-                    />
-                  ))}
-                </ListCard>
-              )}
-            </AsyncContent>
-          </Section>
-
-          {/* Yellow CTA Button */}
-          <View style={styles.ctaWrap}>
-            <Button
-              label={getCtaText(selectedCategories.length, mode)}
-              disabled={selectedCategories.length === 0}
-              onPress={startMatch}
-              testID="duel-start-cta"
-            />
+        <View style={styles.categoriesHead}>
+          <Text style={styles.heading} accessibilityRole="header">
+            Categories
+          </Text>
+          <View style={styles.counter} testID="duel-category-counter">
+            <Text style={styles.counterText}>
+              {selectedCategories.length} / {MAX_CATEGORIES}
+            </Text>
           </View>
         </View>
-      ) : (
-        <View style={styles.tabContent}>
-          <AsyncContent loading={matchLoading} error={matchError} onRetry={reloadMatches}>
-            {() => (
-              <>
-                {unfinishedMatches.length > 0 && (
-                  <Section title="In progress">
-                    <ListCard testID="duel-history-pending">
-                      {unfinishedMatches.map((m) => (
-                        <MatchRow key={m.matchId} match={m} onPress={() => openMatch(m)} />
-                      ))}
-                    </ListCard>
-                  </Section>
-                )}
+        <AsyncContent loading={catLoading} error={catError} onRetry={reloadCategories}>
+          {() => (
+            <View style={styles.chips} testID="duel-category-list">
+              {categories?.map((cat) => (
+                <CategoryChip key={cat.story} cat={cat} checked={selectedCategories.includes(cat.story)} onToggle={() => toggleCategory(cat.story)} />
+              ))}
+            </View>
+          )}
+        </AsyncContent>
 
-                <Section title="Finished">
-                  {finishedMatches.length > 0 ? (
-                    <ListCard testID="duel-history-finished">
-                      {finishedMatches.map((m) => (
-                        <MatchRow key={m.matchId} match={m} onPress={() => openMatch(m)} />
-                      ))}
-                    </ListCard>
-                  ) : (
-                    <View style={styles.emptyHistory} testID="history-empty">
-                      <Text style={styles.emptyHistoryText}>No finished duels yet</Text>
-                    </View>
-                  )}
-                </Section>
-              </>
-            )}
-          </AsyncContent>
-        </View>
-      )}
-    </BankScreen>
+        <Button
+          label={getCtaText(selectedCategories.length, mode)}
+          disabled={selectedCategories.length === 0}
+          onPress={startMatch}
+          testID="duel-start-cta"
+        />
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: colors.bgSurface,
-    borderRadius: radii.button,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    padding: spacing.xxs,
-  },
-  // Tappable puts `style` on its inner view, so the stretch goes on the Pressable.
-  item: {
-    flex: 1,
-  },
-  tab: {
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.button - 2,
-  },
-  activeTab: {
-    backgroundColor: colors.brandPrimary,
-  },
-  tabText: {
-    ...type.labelStrong,
-    color: colors.textPrimary,
-  },
-  activeTabText: {
-    color: colors.textOnBrand,
-  },
-  tabContent: {
-    gap: spacing.lg,
-  },
-  ctaWrap: {
-    paddingVertical: spacing.sm,
-  },
-  emptyHistory: {
-    padding: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bgSurface,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-  },
-  emptyHistoryText: {
-    ...type.bodyDefault,
-    color: colors.textMuted,
-  },
+  screen: { flex: 1, backgroundColor: colors.bgCanvas },
+  content: { padding: spacing.xl, gap: spacing.lg, paddingBottom: nav.clearance + spacing.xl },
+  row: { flexDirection: 'row', gap: spacing.md },
+  heading: { ...type.titleSection, color: colors.textPrimary },
+  categoriesHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  counter: { backgroundColor: colors.brandPrimarySoft, borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  counterText: { ...type.labelStrong, color: colors.textPrimary },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
 });

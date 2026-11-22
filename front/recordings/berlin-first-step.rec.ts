@@ -31,8 +31,8 @@ import {
  *  1. The bank: Atlas's notification shows, runs out and drops into the Learn button.
  *  2. Atlas's onboarding up to "How we see you", which must start in Berlin (else the step is filmed again).
  *  3. The globe: the "Start here" story (Berlin), its path, up to the "Start mission" button.
- *  4. The lesson: the video with the transcript opened halfway through the first scene, the steps, a glossary word
- *     opened in Myth or fact, up to "Lesson complete" and the XP.
+ *  4. The lesson: the first scene as video, the transcript instead of the second one and the rest as text, a
+ *     glossary word opened in Myth or fact, up to "Lesson complete" and the XP.
  *  5. Back to the path, scrolled slowly to the lessons still ahead.
  *  6. (off camera) The other four Berlin lessons are finished, as if played in between.
  *  7. "Take the first step": the recap, the bank's products, the fixed-term deposit lit in the bank, its terms, then

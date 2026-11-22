@@ -1,0 +1,847 @@
+<title>Atlas Pitch B</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: full-screen stage. Slide copy (and a phone with the app recording) on the left; a large globe,
+   mostly past the right edge, flies to each stop of Alex's journey. The pin always lands on the same spot
+   and its callout opens to the left. Single dark look from the Figma Design Kit (Learn globe screen). */
+:root {
+  --petrol: #002E3C;
+  --petrol-deep: #001F29;
+  --petrol-glow: #0B4352;
+  --ink: #F5F7F7;
+  --ink-muted: #A9C2C9;
+  --hairline: rgba(245, 247, 247, 0.16);
+  --panel: rgba(245, 247, 247, 0.06);
+  --yellow: #FFCC00;
+  --success: #3DBB86;
+  --card: #FFFFFF;
+  --card-text: #0F1E24;
+  --card-muted: #5F6F76;
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  --gutter-l: max(clamp(16px, 6vw, 112px), env(safe-area-inset-left, 0px));
+  --gutter-r: max(clamp(16px, 4vw, 72px), env(safe-area-inset-right, 0px));
+  --pad-y: clamp(10px, 2.2vh, 24px);
+  /* Type scale, bounded by width and height so a 1366×768 projector still fits */
+  --t-display: clamp(36px, min(5.6vw, 9.4vh), 108px);
+  --t-headline: clamp(24px, min(3vw, 5.2vh), 58px);
+  --t-lead: clamp(15px, min(1.4vw, 2.5vh), 26px);
+  --t-body: clamp(13px, min(1.08vw, 1.95vh), 20px);
+  --t-label: clamp(11px, min(0.8vw, 1.45vh), 15px);
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--petrol); color: var(--ink); font-family: var(--font); overflow: hidden; }
+
+.stage {
+  position: fixed; inset: 0; overflow: hidden;
+  background: radial-gradient(110% 90% at 85% 55%, var(--petrol-glow) 0%, var(--petrol) 50%, var(--petrol-deep) 100%);
+}
+#globe { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+.wordmark {
+  position: absolute; z-index: 3; left: var(--gutter-l); top: max(22px, calc(env(safe-area-inset-top, 0px) + 16px));
+  margin: 0; font-size: clamp(30px, min(3vw, 5.4vh), 56px); font-weight: 800; letter-spacing: -0.035em; line-height: 1;
+}
+.wordmark span { color: var(--yellow); }
+.wordmark { transition: opacity 300ms; }
+/* The title slide carries its own, much larger Atlas. */
+.stage:has(.stop[data-kind="overview"]:not([hidden]):not(.leaving)) .wordmark { opacity: 0; }
+
+/* Stop 1: title */
+.hero { margin: 0; font-size: clamp(72px, min(12vw, 22vh), 240px); font-weight: 800; letter-spacing: -0.05em; line-height: 0.9; }
+.hero span { color: var(--yellow); }
+.hero-bank { display: flex; align-items: center; gap: 0.8em; margin-top: clamp(4px, 1.2vh, 14px); max-width: none; text-wrap: balance; }
+.hero-bank img { flex: none; height: 2.4em; width: auto; }
+
+/* ---------- Stops ---------- */
+.content {
+  position: absolute; top: 0; bottom: 0; left: 0;
+  width: min(60vw, 1180px); box-sizing: border-box;
+  padding: var(--pad-y) 16px var(--pad-y) var(--gutter-l);
+  display: grid; align-content: center; z-index: 2;
+}
+/* The text clears the wordmark; the phone next to it runs the full height. */
+.content .text { padding-top: clamp(56px, 9vh, 110px); }
+.stop { grid-area: 1 / 1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: clamp(20px, 3vw, 56px); align-items: center; min-width: 0; }
+.stop.no-media { grid-template-columns: minmax(0, 1fr); }
+.text { display: flex; flex-direction: column; gap: clamp(10px, 1.9vh, 22px); min-width: 0; }
+.text, .media { animation: rise 640ms cubic-bezier(.2, .8, .2, 1) both; animation-delay: var(--base, 0ms); }
+.media { animation-delay: calc(var(--base, 0ms) + 120ms); }
+.stop.leaving { pointer-events: none; animation: fade-out 280ms ease-out both; }
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* Click steps: hidden ones keep their space, so nothing jumps when they appear. */
+[data-step] { transition: opacity 420ms ease, transform 420ms cubic-bezier(.2, .8, .2, 1); }
+[data-step].pending { opacity: 0; transform: translateY(12px); pointer-events: none; }
+
+.eyebrow { margin: 0; font-size: var(--t-label); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--yellow); }
+.display { margin: 0; font-size: var(--t-display); font-weight: 800; letter-spacing: -0.04em; line-height: 1; text-wrap: balance; }
+.headline { margin: 0; font-size: var(--t-headline); font-weight: 700; letter-spacing: -0.03em; line-height: 1.08; text-wrap: balance; }
+.display em, .headline em { font-style: normal; color: var(--yellow); }
+.lead { margin: 0; font-size: var(--t-lead); line-height: 1.45; color: var(--ink-muted); max-width: 36em; }
+.lead b { color: var(--ink); font-weight: 600; }
+.small { margin: 0; font-size: var(--t-body); line-height: 1.45; color: var(--ink-muted); }
+
+.card { background: var(--panel); border: 1px solid var(--hairline); border-radius: 16px; padding: clamp(12px, 1.6vh, 20px) clamp(14px, 1.3vw, 22px); display: flex; flex-direction: column; gap: clamp(6px, 1vh, 10px); min-width: 0; }
+.card-title { margin: 0; font-size: var(--t-label); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: clamp(4px, 0.8vh, 8px) 20px; margin: 0; font-size: var(--t-body); line-height: 1.35; }
+.kv dt { color: var(--ink-muted); }
+.kv dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kv dd small { font-weight: 400; color: var(--ink-muted); font-size: 1em; }
+.cards { display: grid; gap: 12px; }
+
+.ticks { list-style: none; margin: 0; padding: 0; display: grid; gap: clamp(4px, 0.8vh, 8px); font-size: var(--t-body); line-height: 1.35; }
+.ticks li { display: flex; gap: 10px; align-items: baseline; }
+.ticks li::before { content: ""; flex: none; width: 0.55em; height: 0.55em; border-radius: 50%; background: var(--c, var(--yellow)); transform: translateY(-0.05em); }
+
+.pill { margin: 0; display: inline-flex; align-items: center; gap: 8px; padding: 0.4em 0.95em; border-radius: 999px; border: 1px solid var(--hairline); background: var(--panel); font-size: var(--t-body); font-weight: 600; white-space: nowrap; }
+.pill.yellow { background: var(--yellow); border-color: var(--yellow); color: var(--petrol); }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.arrow { color: var(--ink-muted); font-size: var(--t-body); }
+
+/* Stop 2: Alex */
+.person { display: flex; gap: 16px; align-items: center; }
+.avatar { flex: none; width: clamp(44px, 4vw, 64px); aspect-ratio: 1; border-radius: 50%; background: var(--yellow); color: var(--petrol); display: grid; place-items: center; font-weight: 800; font-size: clamp(16px, 1.4vw, 24px); }
+.person-name { margin: 0; font-size: var(--t-lead); font-weight: 700; }
+.person-meta { margin: 0; font-size: var(--t-body); color: var(--ink-muted); }
+
+/* Stop 4: lesson beats and the Berlin path */
+.beats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: beat; }
+.beats li { counter-increment: beat; background: var(--panel); border: 1px solid var(--hairline); border-radius: 14px; padding: clamp(8px, 1.3vh, 14px) clamp(10px, 1vw, 16px); display: flex; flex-direction: column; gap: 2px; }
+.beats b { font-size: var(--t-body); }
+.beats b::before { content: counter(beat) "  "; color: var(--yellow); }
+.beats span { font-size: var(--t-label); color: var(--ink-muted); line-height: 1.35; }
+.beats.one { grid-template-columns: minmax(0, 1fr); }
+.beats.one span { font-size: var(--t-body); }
+
+.path { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; font-size: var(--t-body); }
+.path li { display: flex; align-items: center; gap: 10px; }
+.check { flex: none; width: 1.3em; height: 1.3em; border-radius: 50%; background: var(--success); display: grid; place-items: center; }
+.check svg { width: 0.8em; height: 0.8em; }
+
+/* Stop 5: options, the split, the bank */
+.options { width: 100%; border-collapse: collapse; font-size: var(--t-body); line-height: 1.3; }
+.options th { text-align: left; font-size: var(--t-label); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); padding: 0 12px 6px 0; }
+.options td { padding: clamp(5px, 0.9vh, 9px) 12px clamp(5px, 0.9vh, 9px) 0; border-top: 1px solid var(--hairline); vertical-align: top; }
+.options td:first-child { font-weight: 600; white-space: nowrap; }
+.split { display: flex; border-radius: 12px; overflow: hidden; font-size: var(--t-body); font-weight: 600; }
+.split > div { padding: clamp(8px, 1.3vh, 14px) 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.split small { font-weight: 400; font-size: var(--t-label); }
+.split .keep { flex: 60; background: rgba(245, 247, 247, 0.14); }
+.split .lock { flex: 40; background: var(--yellow); color: var(--petrol); }
+.split .lock small { color: var(--petrol); }
+.bank-row { display: flex; align-items: center; gap: 12px; background: var(--card); color: var(--card-text); border-radius: 14px; padding: clamp(8px, 1.3vh, 12px) 16px; font-size: var(--t-body); }
+.bank-row .check { font-size: 1.1em; }
+.bank-row b { font-weight: 700; }
+.bank-row span { color: var(--card-muted); }
+.todo { color: var(--petrol); background: #FFF4CC; border: 1px dashed #B58B00; border-radius: 6px; padding: 0 5px; font-weight: 700; }
+.footnote { margin: 0; font-size: var(--t-label); color: var(--ink-muted); }
+
+/* ---------- Phone with the app recording ---------- */
+/* The phone takes the full stage height, so the app recording is as readable as possible. */
+.media { position: relative; display: flex; flex-direction: column; align-items: center; }
+.phone {
+  --ph: calc(100vh - 2 * var(--pad-y)); --bezel: calc(var(--ph) * 0.012);
+  margin: 0; height: var(--ph); width: auto; aspect-ratio: 9 / 19.5; box-sizing: border-box;
+  border-radius: calc(var(--ph) * 0.06); padding: var(--bezel); background: #0A1418;
+  box-shadow: 0 0 0 1.5px rgba(245, 247, 247, 0.22), 0 24px 60px rgba(0, 10, 14, 0.55); cursor: pointer; position: relative;
+}
+.phone-screen { position: relative; width: 100%; height: 100%; border-radius: calc(var(--ph) * 0.06 - var(--bezel)); overflow: hidden; background: #E9EEF0; }
+.phone video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: #E9EEF0; }
+.phone-empty {
+  position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  text-align: center; padding: 18px; background: repeating-linear-gradient(135deg, rgba(245,247,247,0.04) 0 12px, rgba(245,247,247,0.0) 12px 24px), #0F2F38;
+  color: var(--ink-muted); border: 2px dashed rgba(245, 247, 247, 0.28); border-radius: inherit; box-sizing: border-box;
+}
+.phone.empty .phone-empty { display: flex; }
+.phone.empty video { visibility: hidden; }
+.phone-file { font: 600 clamp(11px, 0.85vw, 15px)/1.3 ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; color: var(--yellow); }
+.phone-what { font-size: clamp(11px, 0.85vw, 15px); line-height: 1.4; }
+.media-hint {
+  position: absolute; left: 50%; bottom: calc(var(--pad-y) * 0.5 + 24px); transform: translateX(-50%); pointer-events: none;
+  margin: 0; padding: 4px 12px; border-radius: 999px; background: rgba(0, 20, 28, 0.75); font-size: 12px; color: var(--ink);
+  opacity: 0; transition: opacity 300ms;
+}
+.phone:hover + .media-hint { opacity: 1; }
+
+.phone:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+
+/* ---------- Pin and callout ---------- */
+.pin-layer { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.pin-layer > * { position: absolute; left: 0; top: 0; opacity: 0; }
+.arrived .pin-layer > * { opacity: 1; }
+.glow { width: 64px; height: 20px; margin: -10px 0 0 -32px; border-radius: 50%; background: var(--pin, var(--yellow)); filter: blur(5px); }
+.arrived .glow { animation: breathe 1.6s 500ms ease-in-out infinite alternate both; }
+@keyframes breathe { from { opacity: 0.25; transform: scale(0.85); } to { opacity: 0.6; transform: scale(1.15); } }
+.pin { width: 0; height: 0; }
+.pin-drop { position: absolute; left: -22px; top: -54px; width: 44px; height: 44px; }
+.arrived .pin-drop { animation: drop 520ms cubic-bezier(.3, 1.4, .5, 1) both; }
+@keyframes drop { from { opacity: 0; transform: translateY(-44px); } to { opacity: 1; transform: none; } }
+.pin-head {
+  width: 44px; height: 44px; box-sizing: border-box; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  background: var(--pin, var(--yellow)); border: 4px solid #FFFFFF; box-shadow: -3px 3px 8px rgba(0, 31, 41, 0.35);
+  display: grid; place-items: center;
+}
+.pin-head::after { content: ""; width: 12px; height: 12px; border-radius: 50%; background: #FFFFFF; }
+.callout {
+  display: flex; align-items: center; gap: 14px; padding: 14px 22px 14px 14px; border-radius: 16px;
+  background: var(--card); color: var(--card-text); box-sizing: border-box; transform-origin: 100% 50%;
+  box-shadow: 0 8px 20px rgba(0, 31, 41, 0.16), 0 16px 40px rgba(0, 31, 41, 0.28);
+}
+.callout::after { content: ""; position: absolute; right: -8px; top: 50%; width: 18px; height: 18px; margin-top: -9px; background: var(--card); transform: rotate(45deg); border-radius: 0 4px 0 0; }
+.arrived .callout { animation: pop 420ms 260ms cubic-bezier(.2, 1.2, .4, 1) both; }
+@keyframes pop { from { opacity: 0; transform: translateX(14px) scale(0.92); } to { opacity: 1; transform: none; } }
+.callout-tile { flex: none; width: clamp(40px, 2.8vw, 52px); aspect-ratio: 1; border-radius: 12px; display: grid; place-items: center; position: relative; overflow: hidden; }
+.callout-tile::before { content: ""; position: absolute; inset: 0; background: var(--pin, var(--yellow)); opacity: 0.16; }
+.callout-dot { position: relative; width: 40%; aspect-ratio: 1; border-radius: 50%; background: var(--pin, var(--yellow)); }
+.callout-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.callout-over { font-size: clamp(11px, 0.8vw, 14px); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--card-muted); }
+.callout-title { font-size: clamp(17px, 1.45vw, 28px); font-weight: 700; letter-spacing: -0.01em; color: var(--card-text); line-height: 1.15; }
+
+
+/* Narrow screens: copy on top, globe rising from the bottom-right corner, no phone */
+@media (max-aspect-ratio: 19/20) {
+  .content { width: auto; right: 0; bottom: auto; padding: max(64px, calc(env(safe-area-inset-top, 0px) + 56px)) var(--gutter-r) 0 var(--gutter-l); align-content: start; }
+  .stop { grid-template-columns: minmax(0, 1fr); }
+  .content .text { padding-top: 0; }
+  .media { display: none; }
+  .callout { gap: 10px; padding: 10px 14px 10px 10px; }
+  .callout-tile { width: 32px; }
+  .callout-title { font-size: 16px; }
+  .callout-over { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ---------- Variant B: editorial look ----------
+   Serif headlines, one accent colour used once, no eyebrows, no pills, plain lists instead of cards. */
+@font-face { font-family: 'Instrument Serif'; font-style: normal; font-weight: 400; font-display: swap; src: url('instrument-serif-latin.woff2') format('woff2'); }
+@font-face { font-family: 'Instrument Serif'; font-style: italic; font-weight: 400; font-display: swap; src: url('instrument-serif-italic-latin.woff2') format('woff2'); }
+:root {
+  --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --t-display: clamp(48px, min(7vw, 12vh), 140px);
+  --t-headline: clamp(34px, min(4.2vw, 7.4vh), 84px);
+  --t-lead: clamp(16px, min(1.45vw, 2.6vh), 27px);
+}
+.hero, .display, .headline { font-family: var(--serif); font-weight: 400; letter-spacing: -0.012em; line-height: 1; }
+.hero { font-size: clamp(96px, min(15vw, 27vh), 300px); letter-spacing: -0.02em; line-height: 0.85; }
+.display em, .headline em { font-style: italic; color: inherit; }
+.headline .accent, .display .accent { color: var(--yellow); }
+.lead { color: rgba(245, 247, 247, 0.78); line-height: 1.5; max-width: 30em; }
+.lead b { font-weight: 500; }
+.text { gap: clamp(14px, 2.6vh, 30px); }
+.wordmark { font-family: var(--serif); font-weight: 400; letter-spacing: -0.01em; }
+.callout-over { display: none; }
+.callout-tile { display: none; }
+.callout { padding: 12px 20px; }
+
+/* Alex's numbers: a quiet table, no box */
+.facts { display: grid; grid-template-columns: auto auto; justify-content: start; gap: 0 clamp(20px, 2.4vw, 48px); margin: 0; font-size: var(--t-body); white-space: nowrap; }
+.facts dt, .facts dd { margin: 0; padding: clamp(6px, 1vh, 11px) 0; border-top: 1px solid var(--hairline); }
+.facts dt { color: rgba(245, 247, 247, 0.6); }
+.facts dd { font-variant-numeric: tabular-nums; }
+
+/* Steps of a lesson: numbered lines, not cards */
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: s var(--from, 0); max-width: 34em; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 2.2em minmax(0, 1fr); padding: clamp(8px, 1.4vh, 14px) 0; border-top: 1px solid var(--hairline); font-size: var(--t-lead); line-height: 1.4; color: rgba(245, 247, 247, 0.78); }
+.steps li::before { content: counter(s); font-family: var(--serif); font-style: italic; font-size: 1.25em; line-height: 1.1; color: var(--ink); }
+.steps b { color: var(--ink); font-weight: 500; }
+.quote { font-family: var(--serif); font-style: italic; font-size: 1.15em; color: var(--ink); }
+
+.result { margin: 0; font-family: var(--serif); font-size: var(--t-headline); line-height: 1.05; }
+.result i { color: rgba(245, 247, 247, 0.6); }
+.split { border-radius: 6px; }
+.bank-row { border-radius: 8px; }
+</style>
+
+<div class="stage" id="stage">
+  <canvas id="globe" aria-hidden="true"></canvas>
+  <p class="wordmark">Atlas<span>.</span></p>
+
+  <div class="pin-layer" aria-hidden="true">
+    <div class="glow" id="glow"></div>
+    <div class="pin" id="pin"><div class="pin-drop"><div class="pin-head"></div></div></div>
+    <div class="callout" id="callout">
+      <span class="callout-tile"><span class="callout-dot"></span></span>
+      <span class="callout-text">
+        <span class="callout-over" id="callout-over"></span>
+        <span class="callout-title" id="callout-title"></span>
+      </span>
+    </div>
+  </div>
+
+  <main class="content" id="content" aria-live="polite">
+
+    <!-- 1 · Title -->
+    <section class="stop no-media" data-kind="overview" data-title="Atlas">
+      <div class="text">
+        <h1 class="hero">Atlas<span>.</span></h1>
+        <p class="headline">Lets your financial decisions <span class="accent"><em>land safely.</em></span></p>
+        <p class="lead hero-bank"><img src="commerzbank-emblem.png" alt="Commerzbank"><span>A learning module inside the Commerzbank app.</span></p>
+      </div>
+    </section>
+
+    <!-- 2 · Frankfurt: Alex -->
+    <section class="stop" data-kind="city" data-city="Frankfurt" data-lat="50.11" data-lng="8.68" data-color="#FFCC00" data-title="Frankfurt" hidden>
+      <div class="text">
+        <h2 class="headline">This is Alex.</h2>
+        <p class="lead">He’s 29, lives in Frankfurt and wants to buy a flat with his partner in two or three years.</p>
+        <dl class="facts">
+          <dt>Savings account</dt><dd>€12,500, with no plan</dd>
+          <dt>Current account</dt><dd>€4,280</dd>
+          <dt>ETF savings plan</dt><dd>€100 a month</dd>
+        </dl>
+        <p class="lead" data-step="1">One morning his bank app shows a note from Atlas about his savings. <b>He taps it.</b></p>
+      </div>
+      <div class="media">
+        <figure class="phone" data-clip="01-bank-nudge" tabindex="0" aria-label="App recording, click to replay"></figure>
+      </div>
+    </section>
+
+    <!-- 3 · Frankfurt: onboarding -->
+    <section class="stop" data-kind="city" data-city="Frankfurt" data-lat="50.11" data-lng="8.68" data-color="#FFCC00" data-title="Entering Atlas" hidden>
+      <div class="text">
+        <h2 class="headline">First, Atlas gets <em>to know him.</em></h2>
+        <p class="lead">A short welcome, a look at what’s inside, then a few questions to see what he already knows.</p>
+        <p class="lead" data-step="1" data-clip="03-quick-check">He misses the one about real interest, and rates his confidence <b style="white-space:nowrap">2 out of 5</b>.</p>
+        <p class="result" data-step="2" data-clip="04-learning-path">So he starts with Saving. <i>Beginner.</i></p>
+      </div>
+      <div class="media">
+        <figure class="phone" data-clip="02-onboarding" tabindex="0" aria-label="App recording, click to replay"></figure>
+      </div>
+    </section>
+
+    <!-- 4 · Berlin: Mission 1 -->
+    <section class="stop" data-kind="city" data-city="Berlin" data-lat="52.52" data-lng="13.40" data-color="#1E9AA8" data-title="Berlin" hidden>
+      <div class="text">
+        <h2 class="headline">Mission 1: <em>safe money that shrinks.</em></h2>
+        <p class="lead">Five minutes. He can watch it as a video or read the transcript.</p>
+        <ol class="steps">
+          <li data-step="1" data-clip="06-lesson-start"><span><span class="quote">“This basket holds what €100 buys today.”</span> He moves the interest until it stays full after ten years.</span></li>
+          <li data-step="2"><span><b>Myth or fact.</b> Six statements, one swipe each.</span></li>
+          <li data-step="3"><span><span class="quote">“€10,000 is for a flat deposit in 3 years.”</span> Where should it wait? He picks, then jumps three years ahead.</span></li>
+        </ol>
+      </div>
+      <div class="media">
+        <figure class="phone" data-clip="05-map-to-berlin" tabindex="0" aria-label="App recording, click to replay"></figure>
+      </div>
+    </section>
+
+    <!-- 5 · Berlin: his own numbers -->
+    <section class="stop" data-kind="city" data-city="Berlin" data-lat="52.52" data-lng="13.40" data-color="#1E9AA8" data-title="Berlin" hidden>
+      <div class="text">
+        <h2 class="headline">Then the lesson turns to <em>his own money.</em></h2>
+        <ol class="steps" style="--from: 3">
+          <li><span><b>Three checkpoints</b>, each with a short explanation.</span></li>
+          <li data-step="1"><span><b>His real accounts:</b> €12,500 at 2.25% against inflation.</span></li>
+          <li data-step="1"><span><b>His basket</b>, now at his own real interest rate.</span></li>
+          <li data-step="2" data-clip="08-lesson-end"><span>What he got wrong comes back once more. Then the map points to Mission 2.</span></li>
+        </ol>
+      </div>
+      <div class="media">
+        <figure class="phone" data-clip="07-lesson-yours" tabindex="0" aria-label="App recording, click to replay"></figure>
+      </div>
+    </section>
+
+    <!-- 6 · Frankfurt: Alex acts -->
+    <section class="stop" data-kind="city" data-city="Frankfurt" data-lat="50.11" data-lng="8.68" data-color="#FFCC00" data-title="Frankfurt, two weeks later" hidden>
+      <div class="text">
+        <h2 class="headline">Two weeks later, he knows <em>what to do.</em></h2>
+        <p class="lead">He has finished all five Saving missions. Atlas puts his options side by side with his own numbers, and leaves the choice to him.</p>
+        <div class="split" data-step="1" role="img" aria-label="Alex splits €12,500: €7,500 safety net, €5,000 fixed-term deposit for 24 months">
+          <div class="keep">€7,500 stays as a safety net<small>about six months of his costs</small></div>
+          <div class="lock">€5,000 goes into a deposit<small>24 months, fixed rate</small></div>
+        </div>
+        <div class="bank-row" data-step="2" data-clip="10-deposit">
+          <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="#002E3C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></span>
+          <div><b>Fixed-term deposit opened in his bank</b><br><span>€5,000 for 24 months at 2.5% a year</span></div>
+        </div>
+      </div>
+      <div class="media">
+        <figure class="phone" data-clip="09-first-step" tabindex="0" aria-label="App recording, click to replay"></figure>
+      </div>
+    </section>
+
+    <!-- 7 · Rome: duels -->
+    <section class="stop" data-kind="city" data-city="Rome" data-lat="41.89" data-lng="12.49" data-color="#6F8FE0" data-title="Rome" hidden>
+      <div class="text">
+        <h2 class="headline">To keep it fresh, <em>he plays duels.</em></h2>
+        <p class="lead">Against someone else or on his own, with questions from the stories he has played.</p>
+        <p class="lead" data-step="1">After each match, every wrong answer is explained.</p>
+      </div>
+      <div class="media">
+        <figure class="phone" data-clip="11-duel" tabindex="0" aria-label="App recording, click to replay"></figure>
+      </div>
+    </section>
+
+    <!-- 8 · Tokyo -->
+    <section class="stop no-media" data-kind="city" data-city="Tokyo" data-lat="35.68" data-lng="139.69" data-color="#D9577A" data-title="Tokyo, next" hidden>
+      <div class="text">
+        <h2 class="display">Thank you.</h2>
+        <p class="lead">Alex’s next stop is Tokyo: long-term investing.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+(() => {
+  /* What each recording should show; used while a clip is missing. */
+  const CLIP_INFO = {
+    '01-bank-nudge': 'Bank app → the Atlas notification → Alex taps Atlas',
+    '02-onboarding': 'Atlas intro, how it works, what awaits',
+    '03-quick-check': 'The quick check',
+    '04-learning-path': 'The learning path: Saving, beginner learner',
+    '05-map-to-berlin': 'Main screen, the plane flies to Berlin, video or transcript',
+    '06-lesson-start': 'Basket slider, myth or fact, challenge question',
+    '07-lesson-yours': 'Checkpoints, your situation, your basket',
+    '08-lesson-end': 'Review of mistakes, Back to Learn → Mission 2',
+    '09-first-step': 'Saving done → Alex picks the fixed-term deposit',
+    '10-deposit': 'The fixed-term deposit in the mock bank',
+    '11-duel': 'A duel in the Arena',
+  };
+  const CLIP_DIR = 'clips/';
+  const TRAVEL_MS = 1900;
+
+  const stage = document.getElementById('stage');
+  const canvas = document.getElementById('globe');
+  const ctx = canvas.getContext('2d');
+  const pinEl = document.getElementById('pin');
+  const glowEl = document.getElementById('glow');
+  const calloutEl = document.getElementById('callout');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const stops = [...document.querySelectorAll('.stop')].map((el, i) => {
+    const stepEls = [...el.querySelectorAll('[data-step]')];
+    return {
+      el,
+      i,
+      kind: el.dataset.kind,
+      city: el.dataset.city || '',
+      title: el.dataset.title,
+      lat: Number(el.dataset.lat),
+      lon: Number(el.dataset.lng),
+      color: el.dataset.color || '#FFCC00',
+      stepEls,
+      steps: Math.max(1, ...stepEls.map((s) => Number(s.dataset.step) + 1)),
+      phone: el.querySelector('.phone'),
+    };
+  });
+
+  /* ---------- Phones ---------- */
+  for (const s of stops) {
+    if (!s.phone) continue;
+    s.phone.innerHTML = '<div class="phone-screen"><video muted playsinline preload="auto"></video>'
+      + '<div class="phone-empty"><span class="phone-file"></span><span class="phone-what"></span></div></div>';
+    s.phone.insertAdjacentHTML('afterend', '<p class="media-hint">Click to replay</p>');
+    const replay = (e) => { e.stopPropagation(); playClip(s.phone, true); };
+    s.phone.addEventListener('click', replay);
+    s.phone.addEventListener('keydown', (e) => { if (e.key === 'Enter') replay(e); });
+  }
+
+  function setClip(phone, name, autoplay) {
+    const video = phone.querySelector('video');
+    // The same clip on a later step keeps holding its frame; a click on the phone replays it.
+    if (phone.dataset.current === name) return;
+    phone.dataset.current = name;
+    phone.dataset.ready = '0';
+    phone.dataset.want = autoplay ? '1' : '0';
+    phone.classList.add('empty');
+    phone.querySelector('.phone-file').textContent = `${name}.mp4`;
+    phone.querySelector('.phone-what').textContent = CLIP_INFO[name] || '';
+    const attempt = (exts) => {
+      if (phone.dataset.current !== name) return;
+      if (!exts.length) { video.removeAttribute('src'); return; } // stays a labelled placeholder
+      video.onerror = () => attempt(exts.slice(1));
+      video.onloadeddata = () => {
+        if (phone.dataset.current !== name) return;
+        phone.classList.remove('empty');
+        phone.dataset.ready = '1';
+        if (phone.dataset.want === '1') video.play().catch(() => {});
+      };
+      video.src = `${CLIP_DIR}${name}.${exts[0]}`;
+      video.load();
+    };
+    attempt(['mp4', 'webm']);
+  }
+
+  /* Plays from the start once; the video then holds its last frame. */
+  function playClip(phone, restart) {
+    const video = phone.querySelector('video');
+    phone.dataset.want = '1';
+    if (phone.dataset.ready !== '1') return;
+    if (restart || video.ended || video.currentTime === 0) {
+      video.currentTime = 0;
+      video.play().catch(() => {});
+    }
+  }
+
+  function stopClip(phone) {
+    if (!phone) return;
+    phone.dataset.want = '0';
+    phone.querySelector('video').pause();
+  }
+
+  function clipFor(stop, step) {
+    let name = stop.phone ? stop.phone.dataset.clip : null;
+    for (const el of stop.stepEls) {
+      if (el.dataset.clip && Number(el.dataset.step) <= step) name = el.dataset.clip;
+    }
+    return name;
+  }
+
+  /* ---------- Globe ---------- */
+  const projection = d3.geoOrthographic().clipAngle(90).precision(0.35);
+  const path = d3.geoPath(projection, ctx);
+  const graticule = d3.geoGraticule10();
+  let land = null;
+
+  let W = 0, H = 0, portrait = false;
+  let geo = { cx: 0, cy: 0, R: 1 };
+  let rotation = [-20, -28, 0];
+  let stopIndex = 0;
+  let stepIndex = 0;
+  let raf = 0;
+  let flying = false;
+  let arrived = false;
+  const legs = []; // [fromStop, toStop, progress]
+  const visited = new Set(); // "lat,lon" of city stops reached
+
+  const key = (s) => `${s.lat},${s.lon}`;
+
+  function measure() {
+    W = stage.clientWidth;
+    H = stage.clientHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    portrait = W / H < 0.95;
+  }
+
+  // City stops: a big globe mostly past the right edge. The overview: the whole globe on the right.
+  function geometryFor(kind) {
+    if (kind === 'overview') {
+      if (portrait) { const R = Math.min(W * 0.42, H * 0.22); return { R, cx: W * 0.5, cy: H - R - 90 }; }
+      const R = Math.min(H * 0.36, W * 0.22);
+      return { R, cx: W * 0.78, cy: H * 0.5 };
+    }
+    if (portrait) { const R = Math.min(W * 0.9, H * 0.42); return { R, cx: W + R * 0.15, cy: H - R * 0.35 }; }
+    const R = Math.min(H * 0.78, W * 0.5);
+    return { R, cx: W + R * 0.12, cy: H * 0.6 };
+  }
+
+  // Where every flight ends, relative to the globe centre, in radii (x right, y up).
+  const pinTarget = () => (portrait ? { x: -0.62, y: 0.55 } : { x: -0.45, y: 0.55 });
+
+  // The rotation that puts a stop exactly on the pin target. d3 turns the globe by λ around the poles,
+  // then tilts it by φ; solve both for the stop. Far north or south it lands as close as it can.
+  const RAD = Math.PI / 180;
+  const wrap = (a) => ((((a + 180) % 360) + 360) % 360) - 180;
+  function rotationFor(stop) {
+    const t = pinTarget();
+    const lat = stop.lat * RAD;
+    const cosLat = Math.cos(lat);
+    const L = Math.asin(Math.max(-0.999, Math.min(0.999, t.x / cosLat)));
+    const x = cosLat * Math.cos(L);
+    const z = Math.sin(lat);
+    const rho = Math.hypot(x, z);
+    const alpha = Math.atan2(z, x);
+    const s = Math.asin(Math.max(-1, Math.min(1, t.y / rho)));
+    let best = null;
+    for (const phi of [s - alpha, Math.PI - s - alpha]) {
+      const front = x * Math.cos(phi) - z * Math.sin(phi);
+      if (front > 0 && (!best || front > best.front)) best = { phi, front };
+    }
+    return [wrap(L / RAD - stop.lon), wrap((best ? best.phi : -lat) / RAD), 0];
+  }
+
+  function centre() {
+    return projection.invert([geo.cx, geo.cy]);
+  }
+
+  function draw(zoom = 1) {
+    const { cx, cy } = geo;
+    const r = geo.R * zoom;
+    projection.scale(r).translate([cx, cy]).rotate(rotation);
+    ctx.clearRect(0, 0, W, H);
+
+    const halo = ctx.createRadialGradient(cx, cy, r * 0.96, cx, cy, r * 1.14);
+    halo.addColorStop(0, 'rgba(60, 140, 153, 0.38)');
+    halo.addColorStop(1, 'rgba(60, 140, 153, 0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 1.14, 0, Math.PI * 2);
+    ctx.fill();
+
+    const ocean = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.05, cx, cy, r * 1.05);
+    ocean.addColorStop(0, '#3C8C99');
+    ocean.addColorStop(0.45, '#0E4A59');
+    ocean.addColorStop(1, '#002E3C');
+    ctx.beginPath();
+    path({ type: 'Sphere' });
+    ctx.fillStyle = ocean;
+    ctx.fill();
+
+    ctx.beginPath();
+    path(graticule);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    if (land) {
+      ctx.beginPath();
+      path(land);
+      ctx.fillStyle = 'rgba(215, 234, 227, 0.92)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+
+    const rim = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.25, r * 0.55, cx, cy, r);
+    rim.addColorStop(0, 'rgba(0, 20, 28, 0)');
+    rim.addColorStop(1, 'rgba(0, 20, 28, 0.5)');
+    ctx.beginPath();
+    path({ type: 'Sphere' });
+    ctx.fillStyle = rim;
+    ctx.fill();
+
+    // The journey so far
+    ctx.save();
+    ctx.setLineDash([7, 8]);
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = 'rgba(255, 204, 0, 0.85)';
+    for (const [a, b, progress] of legs) {
+      const from = [a.lon, a.lat];
+      const end = d3.geoInterpolate(from, [b.lon, b.lat])(progress);
+      ctx.beginPath();
+      path({ type: 'LineString', coordinates: [from, end] });
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Places already visited
+    const current = stops[stopIndex];
+    const c = centre();
+    for (const s of stops) {
+      if (s.kind !== 'city' || !visited.has(key(s))) continue;
+      if (arrived && current.kind === 'city' && key(s) === key(current)) continue;
+      if (d3.geoDistance([s.lon, s.lat], c) > Math.PI / 2 - 0.04) continue;
+      const [x, y] = projection([s.lon, s.lat]);
+      ctx.beginPath();
+      ctx.arc(x, y, 7, 0, Math.PI * 2);
+      ctx.fillStyle = s.color;
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.stroke();
+    }
+  }
+
+  function placePin() {
+    const s = stops[stopIndex];
+    if (s.kind !== 'city') return;
+    const [x, y] = projection([s.lon, s.lat]);
+    stage.style.setProperty('--pin', s.color);
+    pinEl.style.transform = `translate(${x}px, ${y}px)`;
+    glowEl.style.left = `${x}px`;
+    glowEl.style.top = `${y}px`;
+    document.getElementById('callout-over').textContent = `Stop ${stopIndex + 1} of ${stops.length}`;
+    document.getElementById('callout-title').textContent = s.title;
+    const gap = 40;
+    calloutEl.style.maxWidth = `${Math.max(160, Math.min(480, x - gap - 16))}px`;
+    const w = calloutEl.offsetWidth;
+    const h = calloutEl.offsetHeight;
+    calloutEl.style.left = `${Math.max(16, x - gap - w)}px`;
+    calloutEl.style.top = `${Math.max(16, y - 32 - h / 2)}px`;
+  }
+
+  function setArrived(on) {
+    arrived = on;
+    stage.classList.remove('arrived');
+    if (on) {
+      void stage.offsetWidth; // restart the pin and callout animations
+      stage.classList.add('arrived');
+    }
+  }
+
+  function drift(prevTime) {
+    raf = requestAnimationFrame((now) => {
+      if (flying || stops[stopIndex].kind !== 'overview') return;
+      if (!reduced) rotation[0] += (now - (prevTime ?? now)) * 0.004;
+      draw();
+      drift(now);
+    });
+  }
+
+  /* ---------- Stops and steps ---------- */
+  function applySteps(stop, autoplay) {
+    for (const el of stop.stepEls) {
+      const pending = Number(el.dataset.step) > stepIndex;
+      el.classList.toggle('pending', pending);
+      el.setAttribute('aria-hidden', pending ? 'true' : 'false');
+    }
+    if (stop.phone) setClip(stop.phone, clipFor(stop, stepIndex), autoplay);
+  }
+
+  function showStop(next, delayMs) {
+    stops.forEach((s, j) => {
+      const el = s.el;
+      if (j === next) {
+        el.classList.remove('leaving');
+        el.style.setProperty('--base', `${delayMs}ms`);
+        el.hidden = false;
+        for (const part of el.querySelectorAll('.text, .media')) { part.style.animation = 'none'; void part.offsetWidth; part.style.animation = ''; }
+      } else if (!el.hidden) {
+        stopClip(s.phone);
+        el.classList.add('leaving');
+        setTimeout(() => { if (j !== stopIndex) { el.hidden = true; el.classList.remove('leaving'); } }, 280);
+      }
+    });
+  }
+
+  function goToStop(next, step = 0, instant = false) {
+    if (next < 0 || next >= stops.length) return;
+    const prev = stopIndex;
+    const from = stops[prev];
+    const to = stops[next];
+    const firstShow = instant;
+    stopIndex = next;
+    stepIndex = Math.min(step, to.steps - 1);
+    try { history.replaceState(null, '', `#stop-${next + 1}`); } catch (e) { /* the frame may refuse */ }
+    setArrived(false);
+
+    const sameCity = prev !== next && from.kind === 'city' && to.kind === 'city' && key(from) === key(to);
+    const duration = instant || reduced || sameCity || prev === next ? 0 : TRAVEL_MS;
+    showStop(next, duration ? Math.round(duration * 0.5) : 0);
+    applySteps(to, false);
+
+    let leg = null;
+    if (duration && from.kind === 'city' && to.kind === 'city') {
+      for (let k = legs.length - 1; k >= 0; k--) {
+        const [a, b] = legs[k];
+        if ((key(a) === key(from) && key(b) === key(to)) || (key(a) === key(to) && key(b) === key(from))) legs.splice(k, 1);
+      }
+      leg = [from, to, 0];
+      legs.push(leg);
+    }
+
+    const geo0 = { ...geo };
+    const geo1 = geometryFor(to.kind);
+    const rot0 = rotation.slice();
+    const rot1 = to.kind === 'city' ? rotationFor(to) : [rot0[0], -28, 0];
+    rot1[0] = rot0[0] + ((((rot1[0] - rot0[0]) % 360) + 540) % 360) - 180; // shortest way round
+    const interpRot = d3.interpolate(rot0, rot1);
+    const interpGeo = d3.interpolate(geo0, geo1);
+
+    cancelAnimationFrame(raf);
+    flying = true;
+    const start = performance.now();
+    const frame = (now) => {
+      const t = duration ? Math.min(1, (now - start) / duration) : 1;
+      const e = d3.easeCubicInOut(t);
+      rotation = interpRot(e);
+      geo = interpGeo(e);
+      if (leg) leg[2] = e;
+      draw(1 - (from.kind === to.kind ? 0.08 : 0.03) * Math.sin(Math.PI * e));
+      if (t < 1) {
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+      flying = false;
+      if (to.kind === 'city') {
+        visited.add(key(to));
+        if (from.kind === 'city') visited.add(key(from));
+        setArrived(true);
+        draw();
+        placePin();
+      } else {
+        drift();
+      }
+      if (to.phone && !firstShow) playClip(to.phone, true);
+      else if (to.phone) to.phone.dataset.want = '1';
+    };
+    raf = requestAnimationFrame(frame);
+  }
+
+  function setStep(k) {
+    const stop = stops[stopIndex];
+    stepIndex = k;
+    applySteps(stop, true);
+  }
+
+  function next() {
+    const stop = stops[stopIndex];
+    if (stepIndex < stop.steps - 1) setStep(stepIndex + 1);
+    else goToStop(stopIndex + 1);
+  }
+
+  function back() {
+    if (stepIndex > 0) setStep(stepIndex - 1);
+    else if (stopIndex > 0) goToStop(stopIndex - 1, stops[stopIndex - 1].steps - 1);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const onButton = e.target.closest && e.target.closest('button, .phone');
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) {
+      if ((e.key === 'Enter' || e.key === ' ') && onButton) return;
+      e.preventDefault();
+      next();
+    } else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) {
+      e.preventDefault();
+      back();
+    } else if (e.key === 'Home') {
+      goToStop(0);
+    } else if (e.key === 'End') {
+      goToStop(stops.length - 1);
+    }
+  });
+
+  let downX = null;
+  stage.addEventListener('pointerdown', (e) => { downX = e.clientX; });
+  stage.addEventListener('pointerup', (e) => {
+    if (downX === null || e.target.closest('a, .phone')) { downX = null; return; }
+    const dx = e.clientX - downX;
+    downX = null;
+    if (Math.abs(dx) > 40) (dx < 0 ? next : back)();
+    else next();
+  });
+
+  window.addEventListener('resize', () => {
+    measure();
+    const s = stops[stopIndex];
+    geo = geometryFor(s.kind);
+    if (s.kind === 'city') rotation = rotationFor(s);
+    draw();
+    if (arrived) placePin();
+  });
+
+  function startIndex() {
+    const m = /^#stop-(\d+)$/.exec(location.hash);
+    const n = m ? Number(m[1]) - 1 : 0;
+    return n >= 0 && n < stops.length ? n : 0;
+  }
+  window.addEventListener('hashchange', () => { const n = startIndex(); if (n !== stopIndex) goToStop(n); });
+
+  measure();
+  stopIndex = startIndex();
+  geo = geometryFor(stops[stopIndex].kind);
+  if (stops[stopIndex].kind === 'city') rotation = rotationFor(stops[stopIndex]);
+  goToStop(stopIndex, 0, true);
+
+  // Land shapes: Natural Earth 1:110m via world-atlas, published beside this page.
+  fetch('land-110m.json')
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
+    .then((topo) => { land = topojson.feature(topo, topo.objects.land); draw(); })
+    .catch((err) => console.warn('Land shapes did not load; the globe shows ocean only.', err));
+})();
+</script>

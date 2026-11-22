@@ -4,7 +4,7 @@
     {
       "id": "sao-paulo-d01",
       "lessonId": "sao-paulo-1",
-      "sourceStepId": "p1",
+      "sourceStepId": "s1",
       "concepts": [
         "hidden-interest"
       ],
@@ -51,7 +51,7 @@
     {
       "id": "sao-paulo-d03",
       "lessonId": "sao-paulo-2",
-      "sourceStepId": "p1",
+      "sourceStepId": "t1",
       "concepts": [
         "committed-income"
       ],
@@ -166,7 +166,7 @@
     {
       "id": "sao-paulo-d07",
       "lessonId": "sao-paulo-4",
-      "sourceStepId": "p1",
+      "sourceStepId": "q1",
       "concepts": [
         "total-cost-of-credit"
       ],

@@ -4,7 +4,7 @@
     {
       "id": "seoul-d01",
       "lessonId": "seoul-1",
-      "sourceStepId": "p1",
+      "sourceStepId": "q1",
       "concepts": [
         "volatility"
       ],
@@ -188,7 +188,7 @@
     {
       "id": "seoul-d07",
       "lessonId": "seoul-4",
-      "sourceStepId": "p1",
+      "sourceStepId": "t1",
       "concepts": [
         "diversification"
       ],

@@ -4,7 +4,7 @@
     {
       "id": "berlin-d01",
       "lessonId": "berlin-1",
-      "sourceStepId": "p1",
+      "sourceStepId": "s1",
       "concepts": [
         "inflation",
         "real-return"
@@ -52,7 +52,7 @@
     },
     {
       "id": "berlin-d03",
-      "lessonId": "berlin-2",
+      "lessonId": "berlin-4",
       "sourceStepId": "p1",
       "concepts": [
         "compound-interest"
@@ -77,7 +77,7 @@
     },
     {
       "id": "berlin-d04",
-      "lessonId": "berlin-2",
+      "lessonId": "berlin-4",
       "sourceStepId": "q2",
       "concepts": [
         "compound-interest"
@@ -99,7 +99,7 @@
     },
     {
       "id": "berlin-d05",
-      "lessonId": "berlin-3",
+      "lessonId": "berlin-2",
       "sourceStepId": "p1",
       "concepts": [
         "emergency-fund"
@@ -124,7 +124,7 @@
     },
     {
       "id": "berlin-d06",
-      "lessonId": "berlin-3",
+      "lessonId": "berlin-2",
       "sourceStepId": "so1",
       "concepts": [
         "time-horizon",

@@ -72,8 +72,28 @@ public class StoryRepository {
 		return Optional.empty();
 	}
 
+	public List<String> canonicalAreaSlugs() {
+		// Canonical ordering per D1: Money basics, Saving, Borrowing, Investing, Risk
+		return List.of("money-basics", "saving", "borrowing", "investing", "risk");
+	}
+
+	public List<Story> findByAreaSlug(String areaSlug) {
+		if (areaSlug == null) {
+			return List.of();
+		}
+		return storyList.stream().filter(s -> areaSlug.equals(s.areaSlug())).toList();
+	}
+
+	public Optional<Story> findFirstByAreaSlug(String areaSlug) {
+		if (areaSlug == null) {
+			return Optional.empty();
+		}
+		return storyList.stream().filter(s -> areaSlug.equals(s.areaSlug())).findFirst();
+	}
+
 	private static Story mapStory(JsonNode s) {
 		String id = s.path("id").asString("");
+		String area = s.path("area").asString("");
 		String category = s.path("category").asString("");
 		String city = s.path("city").asString("");
 		String topic = s.path("topic").asString("");
@@ -114,6 +134,6 @@ public class StoryRepository {
 
 		String duelFallback = s.hasNonNull("duelFallback") ? s.path("duelFallback").asString(null) : null;
 
-		return new Story(id, category, city, topic, status, pin, icon, color, landmark, character, intro, words, currency, lessonIds, duelFallback, s);
+		return new Story(id, area, category, city, topic, status, pin, icon, color, landmark, character, intro, words, currency, lessonIds, duelFallback, s);
 	}
 }

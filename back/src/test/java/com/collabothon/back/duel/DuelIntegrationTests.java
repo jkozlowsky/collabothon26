@@ -60,10 +60,17 @@ class DuelIntegrationTests {
 	@Autowired
 	com.collabothon.back.duel.repositories.DuelContentRepository contentRepository;
 
+	private java.util.Optional<com.collabothon.back.entities.duel.DuelQuestion> findServed(JsonNode servedStep) {
+		return java.util.stream.Stream.of("money-basics", "saving", "borrowing", "investing", "risk")
+			.flatMap(area -> contentRepository.findByStory(area).stream())
+			.filter(q -> q.step().path("prompt").asString().equals(servedStep.path("prompt").asString()))
+			.findFirst();
+	}
+
 	private String answerForQuestion(String userId, int index, long matchId, JsonNode questionNode, boolean correct) {
 		JsonNode step = questionNode.path("step");
 		String stepId = step.path("id").asString();
-		var questionOpt = contentRepository.findById("berlin-" + stepId);
+		var questionOpt = findServed(step);
 		if (questionOpt.isEmpty()) {
 			return "{\"userId\":\"" + userId + "\",\"index\":" + index + ",\"option\":0}";
 		}
@@ -79,11 +86,18 @@ class DuelIntegrationTests {
 			return "{\"userId\":\"" + userId + "\",\"index\":" + index + ",\"value\":" + val + "}";
 		}
 		if ("sort".equals(type)) {
-			List<Integer> buckets = sortBucketsForBerlin(matchId, index);
+			var items = q.step().path("items");
+			List<Integer> buckets = DuelShuffle.sortPermutation(matchId, index, items.size()).stream()
+				.map(i -> items.get(i).path("bucket").asInt()).toList();
 			return "{\"userId\":\"" + userId + "\",\"index\":" + index + ",\"buckets\":" + buckets + "}";
 		}
 		if ("match".equals(type)) {
-			List<Integer> pairs = matchPairsForBerlin(matchId, index);
+			int size = q.step().path("pairs").size();
+			DuelShuffle.MatchPermutations perms = DuelShuffle.matchPermutations(matchId, index, size);
+			List<Integer> pairs = new ArrayList<>();
+			for (int i = 0; i < size; i++) {
+				pairs.add(perms.right().indexOf(perms.left().get(i)));
+			}
 			return "{\"userId\":\"" + userId + "\",\"index\":" + index + ",\"pairs\":" + pairs + "}";
 		}
 		return "{\"userId\":\"" + userId + "\",\"index\":" + index + ",\"option\":0}";
@@ -93,19 +107,18 @@ class DuelIntegrationTests {
 	void categoriesReturnsStoriesInOrderWithFullNamesAndLevels() throws Exception {
 		mvc.perform(get("/api/duel/categories").param("userId", "demo-user"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.length()").value(7))
-			.andExpect(jsonPath("$[0].story").value("seoul"))
-			.andExpect(jsonPath("$[0].name").value("Hype & leverage"))
-			.andExpect(jsonPath("$[0].color").value("violet"))
-			.andExpect(jsonPath("$[1].story").value("berlin"))
-			.andExpect(jsonPath("$[1].name").value("Inflation & savings"))
-			.andExpect(jsonPath("$[1].color").value("teal"))
-			.andExpect(jsonPath("$[2].story").value("sao-paulo"))
-			.andExpect(jsonPath("$[2].name").value("Instalments & debt"))
-			.andExpect(jsonPath("$[3].story").value("tokyo"))
-			.andExpect(jsonPath("$[3].name").value("Diversification"))
-			.andExpect(jsonPath("$[6].story").value("mumbai"))
-			.andExpect(jsonPath("$[6].name").value("Gold"));
+			.andExpect(jsonPath("$.length()").value(5))
+			.andExpect(jsonPath("$[0].story").value("money-basics"))
+			.andExpect(jsonPath("$[0].name").value("Money basics"))
+			.andExpect(jsonPath("$[1].story").value("saving"))
+			.andExpect(jsonPath("$[1].name").value("Saving"))
+			.andExpect(jsonPath("$[2].story").value("borrowing"))
+			.andExpect(jsonPath("$[2].name").value("Borrowing"))
+			.andExpect(jsonPath("$[3].story").value("investing"))
+			.andExpect(jsonPath("$[3].name").value("Investing"))
+			.andExpect(jsonPath("$[4].story").value("risk"))
+			.andExpect(jsonPath("$[4].name").value("Risk"))
+			.andExpect(jsonPath("$[4].color").value("violet"));
 	}
 
 	@Test
@@ -125,7 +138,7 @@ class DuelIntegrationTests {
 		// Valid start SOLO
 		String soloRes = mvc.perform(post("/api/duel/matches")
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"userId\":\"player-solo\",\"categories\":[\"berlin\"],\"mode\":\"SOLO\"}"))
+			.content("{\"userId\":\"player-solo\",\"categories\":[\"saving\"],\"mode\":\"SOLO\"}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.mode").value("SOLO"))
 			.andExpect(jsonPath("$.rival").doesNotExist())
@@ -143,13 +156,13 @@ class DuelIntegrationTests {
 		// Valid start HUMAN -> rival card present
 		mvc.perform(post("/api/duel/matches")
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"userId\":\"player-human\",\"categories\":[\"berlin\",\"seoul\"],\"mode\":\"HUMAN\"}"))
+			.content("{\"userId\":\"player-human\",\"categories\":[\"saving\",\"risk\"],\"mode\":\"HUMAN\"}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.mode").value("HUMAN"))
 			.andExpect(jsonPath("$.rival.name").exists())
 			.andExpect(jsonPath("$.rival.avatar").exists())
-			.andExpect(jsonPath("$.rival.levels.berlin").exists())
-			.andExpect(jsonPath("$.you.levels.berlin").exists());
+			.andExpect(jsonPath("$.rival.levels.saving").exists())
+			.andExpect(jsonPath("$.you.levels.saving").exists());
 	}
 
 	@Test
@@ -157,7 +170,7 @@ class DuelIntegrationTests {
 		CLOCK.set(Instant.parse("2026-11-23T12:00:00Z"));
 		String startRes = mvc.perform(post("/api/duel/matches")
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"userId\":\"solo-runner\",\"categories\":[\"berlin\"],\"mode\":\"SOLO\"}"))
+			.content("{\"userId\":\"solo-runner\",\"categories\":[\"saving\"],\"mode\":\"SOLO\"}"))
 			.andExpect(status().isOk())
 			.andReturn().getResponse().getContentAsString();
 
@@ -275,7 +288,7 @@ class DuelIntegrationTests {
 		CLOCK.set(Instant.parse("2026-11-23T14:00:00Z"));
 		String startRes = mvc.perform(post("/api/duel/matches")
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"userId\":\"human-player\",\"categories\":[\"berlin\"],\"mode\":\"HUMAN\"}"))
+			.content("{\"userId\":\"human-player\",\"categories\":[\"saving\"],\"mode\":\"HUMAN\"}"))
 			.andExpect(status().isOk())
 			.andReturn().getResponse().getContentAsString();
 
@@ -304,7 +317,7 @@ class DuelIntegrationTests {
 		int totalXp = xpService.totalXp("human-player");
 		assertThat(totalXp).isEqualTo(30);
 
-		int berlinXp = xpService.xpPerCategory("human-player").get("berlin");
+		int berlinXp = xpService.xpPerCategory("human-player").get("saving");
 		assertThat(berlinXp).isEqualTo(30);
 
 		// Advance clock by 10 seconds to allow rival's last answer to arrive
@@ -321,8 +334,8 @@ class DuelIntegrationTests {
 			.andExpect(jsonPath("$.rival.name").exists())
 			.andExpect(jsonPath("$.rival.avatar").exists())
 			.andExpect(jsonPath("$.xpGained").value(30))
-			.andExpect(jsonPath("$.xpByCategory.berlin").value(30))
-			.andExpect(jsonPath("$.categories[0].story").value("berlin"))
+			.andExpect(jsonPath("$.xpByCategory.saving").value(30))
+			.andExpect(jsonPath("$.categories[0].story").value("saving"))
 			.andExpect(jsonPath("$.categories[0].xpGained").value(30))
 			.andExpect(jsonPath("$.categories[0].xpBefore").value(0))
 			.andExpect(jsonPath("$.categories[0].xpAfter").value(30));
@@ -345,7 +358,7 @@ class DuelIntegrationTests {
 		// Match 1: finished
 		String s1 = mvc.perform(post("/api/duel/matches")
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"userId\":\"hist-player\",\"categories\":[\"berlin\"],\"mode\":\"SOLO\"}"))
+			.content("{\"userId\":\"hist-player\",\"categories\":[\"saving\"],\"mode\":\"SOLO\"}"))
 			.andReturn().getResponse().getContentAsString();
 		long m1 = json.readTree(s1).get("matchId").asLong();
 		for (int i = 0; i < 6; i++) {
@@ -358,7 +371,7 @@ class DuelIntegrationTests {
 		CLOCK.advance(Duration.ofMinutes(5));
 		String s2 = mvc.perform(post("/api/duel/matches")
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"userId\":\"hist-player\",\"categories\":[\"berlin\"],\"mode\":\"SOLO\"}"))
+			.content("{\"userId\":\"hist-player\",\"categories\":[\"saving\"],\"mode\":\"SOLO\"}"))
 			.andReturn().getResponse().getContentAsString();
 		long m2 = json.readTree(s2).get("matchId").asLong();
 
@@ -366,7 +379,7 @@ class DuelIntegrationTests {
 		CLOCK.advance(Duration.ofMinutes(5));
 		String s3 = mvc.perform(post("/api/duel/matches")
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"userId\":\"hist-player\",\"categories\":[\"berlin\"],\"mode\":\"SOLO\"}"))
+			.content("{\"userId\":\"hist-player\",\"categories\":[\"saving\"],\"mode\":\"SOLO\"}"))
 			.andReturn().getResponse().getContentAsString();
 		long m3 = json.readTree(s3).get("matchId").asLong();
 
@@ -435,7 +448,7 @@ class DuelIntegrationTests {
 		CLOCK.set(Instant.parse("2026-11-23T22:00:00Z"));
 		String startRes = mvc.perform(post("/api/duel/matches")
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"userId\":\"pw-tester\",\"categories\":[\"berlin\"],\"mode\":\"SOLO\"}"))
+			.content("{\"userId\":\"pw-tester\",\"categories\":[\"saving\"],\"mode\":\"SOLO\"}"))
 			.andExpect(status().isOk())
 			.andReturn().getResponse().getContentAsString();
 

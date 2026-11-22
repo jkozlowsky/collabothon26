@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.collabothon.back.dto.duel.PlayerCardDto;
-import com.collabothon.back.dto.lesson.Story;
 import com.collabothon.back.entities.duel.DuelMatch;
 import com.collabothon.back.lesson.repositories.StoryRepository;
 import com.collabothon.back.entities.profile.Account;
@@ -38,8 +37,8 @@ public class DuelPlayerCardService {
 	public PlayerCardDto card(String userId) {
 		Map<String, Integer> xpPerCategory = xpService.xpPerCategory(userId);
 		Map<String, Integer> levels = new LinkedHashMap<>();
-		for (Story story : stories.findAll()) {
-			levels.put(story.id(), levelCurve.fromXp(xpPerCategory.getOrDefault(story.id(), 0)).level());
+		for (String area : stories.canonicalAreaSlugs()) {
+			levels.put(area, levelCurve.fromXp(xpPerCategory.getOrDefault(area, 0)).level());
 		}
 		Optional<Account> account = accounts.findById(userId);
 		String name = account.map(Account::getFullName).filter(n -> !n.isBlank()).orElse(userId);

@@ -78,7 +78,7 @@
         },
         "answer": -25,
         "tolerance": 2,
-        "explanation": "After 3 years at 10% inflation, real purchasing power drops to (1 / 1.10)^3 ≈ 75.1%, a loss of ~25%."
+        "explanation": "After 3 years at 10% inflation, real purchasing power drops to (1 / 1.10)^3 \u2248 75.1%, a loss of ~25%."
       }
     },
     {
@@ -101,54 +101,6 @@
         ],
         "correctIndex": 0,
         "explanation": "When price levels double (100% inflation), each unit of currency buys exactly half as much (1 / 2 = 50%)."
-      }
-    },
-    {
-      "id": "buenos-aires-d04",
-      "lessonId": "buenos-aires-1",
-      "sourceStepId": "q3",
-      "concepts": [
-        "inflation"
-      ],
-      "timeLimitMs": null,
-      "step": {
-        "type": "quiz",
-        "id": "d04",
-        "prompt": "When an economy enters high inflation (e.g. over 50% a year), which practice is most damaging to household wealth?",
-        "options": [
-          "Holding large amounts of idle cash in a zero-interest account",
-          "Spending money promptly on essential non-perishable goods",
-          "Investing savings in productive businesses or inflation-hedged funds",
-          "Refusing long-term installment loans with fixed low interest rates"
-        ],
-        "correctIndex": 0,
-        "explanation": "In rapid inflation, idle cash loses real purchasing power every week, guaranteeing a severe loss of wealth."
-      }
-    },
-    {
-      "id": "buenos-aires-d05",
-      "lessonId": "buenos-aires-1",
-      "sourceStepId": "s2",
-      "concepts": [
-        "inflation",
-        "real-return"
-      ],
-      "timeLimitMs": null,
-      "step": {
-        "type": "predict",
-        "id": "d05",
-        "prompt": "Mateo holds €10,000 in savings paying 2% interest while inflation runs at 12% for one year. What are his savings worth in today's purchasing power at year end?",
-        "input": {
-          "kind": "slider",
-          "min": 7000,
-          "max": 11000,
-          "step": 100,
-          "unit": "€"
-        },
-        "answer": 9100,
-        "tolerance": 200,
-        "reveal": "About €9,100. A 2% interest rate fails to protect against 12% inflation, losing ~9% in purchasing power.",
-        "explanation": "Real value = €10,000 × (1.02 / 1.12) ≈ €9,107. On a €100 step slider, €9,100 is within tolerance."
       }
     }
   ]
